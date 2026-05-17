@@ -52,7 +52,26 @@ void signal_handler(int /*signal*/) {
     g_running = false;
 }
 
-int main(int /*argc*/, char* /*argv*/[]) {
+int main(int argc, char* argv[]) {
+
+    // CLI flag handling — exits before any engine or GUI init
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--help" || arg == "-h") {
+            std::cout << "Usage: amplitron [options]\n\n"
+                      << "Options:\n"
+                      << "  -h, --help      Show this help message and exit\n"
+                      << "  -v, --version   Show version information and exit\n"
+                      << "\nAudio devices are configured via File -> Settings in the GUI.\n"
+                      << "Visit https://github.com/sudip-mondal-2002/Amplitron for docs.\n";
+            return 0;
+        }
+        if (arg == "--version" || arg == "-v") {
+            std::cout << "Amplitron v1.0\n";
+            return 0;
+        }
+    }
+
     std::signal(SIGINT, signal_handler);
     std::signal(SIGTERM, signal_handler);
 
@@ -128,7 +147,7 @@ int main(int /*argc*/, char* /*argv*/[]) {
         engine.shutdown();
         return 1;
     }
-    
+
     if (!engine.start()) {
         std::cerr << "Warning: Could not start audio stream." << std::endl;
     }

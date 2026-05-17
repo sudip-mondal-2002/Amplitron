@@ -245,6 +245,11 @@ make build
 # Windows
 .\build\Release\amplitron.exe
 ```
+### Command-line options
+| Flag | Description |
+|------|-------------|
+| `-h`, `--help` | Print usage and exit |
+| `-v`, `--version` | Print version and exit |
 
 ### Controls
 - **Menu Bar** → File → Settings to configure audio devices, buffer size, and sample rate
