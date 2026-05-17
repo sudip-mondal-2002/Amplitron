@@ -1,0 +1,786 @@
+{
+  "format_version": 1,
+  "name": "01_Sparkling_Clean",
+  "description": "",
+  "saved_at": "2026-05-15T20:44:10",
+  "input_gain": 0.8,
+  "output_gain": 0.8,
+  "effects": [
+    {
+      "type": "Noise Gate",
+      "enabled": true,
+      "mix": 1,
+      "params": {
+        "Threshold": -38.5807,
+        "Attack": 0.5,
+        "Release": 50
+      }
+    },
+    {
+      "type": "Compressor",
+      "enabled": true,
+      "mix": 1,
+      "params": {
+        "Threshold": -25,
+        "Ratio": 3,
+        "Attack": 10,
+        "Release": 150,
+        "Makeup": 2
+      }
+    },
+    {
+      "type": "Overdrive",
+      "enabled": false,
+      "mix": 1,
+      "params": {
+        "Drive": 1.5,
+        "Tone": 0.7,
+        "Level": 0.7
+      }
+    },
+    {
+      "type": "Distortion",
+      "enabled": false,
+      "mix": 1,
+      "params": {
+        "Drive": 2,
+        "Tone": 0.6,
+        "Level": 0.5
+      }
+    },
+    {
+      "type": "Equalizer",
+      "enabled": false,
+      "mix": 1,
+      "params": {
+        "Bass": 0,
+        "Mid": 0,
+        "Treble": 0,
+        "Presence": 0
+      }
+    },
+    {
+      "type": "Chorus",
+      "enabled": true,
+      "mix": 1,
+      "params": {
+        "Rate": 1.2,
+        "Depth": 7,
+        "Level": 0.4
+      }
+    },
+    {
+      "type": "Phaser",
+      "enabled": false,
+      "mix": 1,
+      "params": {
+        "Rate": 0.5,
+        "Depth": 0.7,
+        "Stages": 0,
+        "Feedback": 0.5,
+        "Mix": 0.5
+      }
+    },
+    {
+      "type": "Flanger",
+      "enabled": false,
+      "mix": 1,
+      "params": {
+        "Rate": 0.3,
+        "Depth": 2,
+        "Delay": 1,
+        "Feedback": 0.7,
+        "Mix": 0.5
+      }
+    },
+    {
+      "type": "Delay",
+      "enabled": true,
+      "mix": 1,
+      "params": {
+        "Time": 400,
+        "Feedback": 0.3,
+        "Tone": 0.6,
+        "Level": 0.25
+      }
+    },
+    {
+      "type": "Reverb",
+      "enabled": true,
+      "mix": 1,
+      "params": {
+        "Decay": 0.75,
+        "Damp": 0.3,
+        "Level": 0.35
+      }
+    },
+    {
+      "type": "Amp Sim",
+      "enabled": true,
+      "mix": 1,
+      "params": {
+        "Model": 0,
+        "Gain": 0.4,
+        "Bass": 1,
+        "Mid": -1,
+        "Treble": 2,
+        "Level": 0.75
+      }
+    }
+  ]
+}
+{
+  "format_version": 1,
+  "name": "Classic Rock Crunch",
+  "description": "Warm, mid-focused driven rock tone. Excellent for classic rock rhythm playing or blues solos. Uses the JCM800 emulation.",
+  "saved_at": "2026-03-27T12:00:00",
+  "input_gain": 0.8,
+  "output_gain": 0.8,
+  "effects": [
+    {
+      "type": "Noise Gate",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Threshold": -50.0,
+        "Attack": 0.5,
+        "Release": 50.0
+      }
+    },
+    {
+      "type": "Compressor",
+      "enabled": false,
+      "mix": 1.0,
+      "params": {
+        "Threshold": -20.0,
+        "Ratio": 4.0,
+        "Attack": 5.0,
+        "Release": 100.0,
+        "Makeup": 0.0
+      }
+    },
+    {
+      "type": "Overdrive",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Drive": 4.5,
+        "Tone": 0.65,
+        "Level": 0.8
+      }
+    },
+    {
+      "type": "Distortion",
+      "enabled": false,
+      "mix": 1.0,
+      "params": {
+        "Drive": 2.0,
+        "Tone": 0.6,
+        "Level": 0.5
+      }
+    },
+    {
+      "type": "Equalizer",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Bass": 1.5,
+        "Mid": 3.0,
+        "Treble": 1.0,
+        "Presence": 2.0
+      }
+    },
+    {
+      "type": "Chorus",
+      "enabled": false,
+      "mix": 1.0,
+      "params": {
+        "Rate": 1.5,
+        "Depth": 5.0,
+        "Level": 0.5
+      }
+    },
+    {
+      "type": "Phaser",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Rate": 0.8,
+        "Depth": 0.8,
+        "Stages": 0.0,
+        "Feedback": 0.45,
+        "Mix": 0.5
+      }
+    },
+    {
+      "type": "Flanger",
+      "enabled": false,
+      "mix": 1.0,
+      "params": {
+        "Rate": 0.3,
+        "Depth": 2.0,
+        "Delay": 1.0,
+        "Feedback": 0.7,
+        "Mix": 0.5
+      }
+    },
+    {
+      "type": "Delay",
+      "enabled": false,
+      "mix": 1.0,
+      "params": {
+        "Time": 350.0,
+        "Feedback": 0.4,
+        "Tone": 0.7,
+        "Level": 0.5
+      }
+    },
+    {
+      "type": "Reverb",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Decay": 0.4,
+        "Damp": 0.5,
+        "Level": 0.2
+      }
+    },
+    {
+      "type": "Amp Sim",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Model": 1.0,
+        "Gain": 0.65,
+        "Bass": -1.0,
+        "Mid": 2.5,
+        "Treble": 1.0,
+        "Level": 0.7
+      }
+    }
+  ]
+}
+{
+  "format_version": 1,
+  "name": "Modern Metal Lead",
+  "description": "High-gain, tight tracking lead tone for fast picking and heavy breakdowns. Uses the Mesa Boogie emulation and hard-clipping.",
+  "saved_at": "2026-03-27T12:00:00",
+  "input_gain": 0.85,
+  "output_gain": 0.8,
+  "effects": [
+    {
+      "type": "Noise Gate",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Threshold": -40.0,
+        "Attack": 0.2,
+        "Release": 20.0
+      }
+    },
+    {
+      "type": "Compressor",
+      "enabled": false,
+      "mix": 1.0,
+      "params": {
+        "Threshold": -20.0,
+        "Ratio": 4.0,
+        "Attack": 5.0,
+        "Release": 100.0,
+        "Makeup": 0.0
+      }
+    },
+    {
+      "type": "Overdrive",
+      "enabled": false,
+      "mix": 1.0,
+      "params": {
+        "Drive": 1.5,
+        "Tone": 0.7,
+        "Level": 0.7
+      }
+    },
+    {
+      "type": "Distortion",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Drive": 6.0,
+        "Tone": 0.45,
+        "Level": 0.6
+      }
+    },
+    {
+      "type": "Equalizer",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Bass": 1.5,
+        "Mid": -4.0,
+        "Treble": 3.0,
+        "Presence": 2.5
+      }
+    },
+    {
+      "type": "Chorus",
+      "enabled": false,
+      "mix": 1.0,
+      "params": {
+        "Rate": 1.5,
+        "Depth": 5.0,
+        "Level": 0.5
+      }
+    },
+    {
+      "type": "Phaser",
+      "enabled": false,
+      "mix": 1.0,
+      "params": {
+        "Rate": 0.5,
+        "Depth": 0.7,
+        "Stages": 0.0,
+        "Feedback": 0.5,
+        "Mix": 0.5
+      }
+    },
+    {
+      "type": "Flanger",
+      "enabled": false,
+      "mix": 1.0,
+      "params": {
+        "Rate": 0.3,
+        "Depth": 2.0,
+        "Delay": 1.0,
+        "Feedback": 0.7,
+        "Mix": 0.5
+      }
+    },
+    {
+      "type": "Delay",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Time": 420.0,
+        "Feedback": 0.45,
+        "Tone": 0.8,
+        "Level": 0.35
+      }
+    },
+    {
+      "type": "Reverb",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Decay": 0.5,
+        "Damp": 0.6,
+        "Level": 0.15
+      }
+    },
+    {
+      "type": "Amp Sim",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Model": 2.0,
+        "Gain": 0.85,
+        "Bass": 1.0,
+        "Mid": -3.5,
+        "Treble": 2.0,
+        "Level": 0.65
+      }
+    }
+  ]
+}
+{
+  "format_version": 1,
+  "name": "Ambient Swells",
+  "description": "Spatially massive, washed-out tone for ambient soundscapes, volume swells, and cinematic textures. Focuses on the Roland JC-120 emulation.",
+  "saved_at": "2026-03-27T12:00:00",
+  "input_gain": 0.7,
+  "output_gain": 0.8,
+  "effects": [
+    {
+      "type": "Noise Gate",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Threshold": -65.0,
+        "Attack": 5.0,
+        "Release": 500.0
+      }
+    },
+    {
+      "type": "Compressor",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Threshold": -30.0,
+        "Ratio": 10.0,
+        "Attack": 20.0,
+        "Release": 300.0,
+        "Makeup": 5.0
+      }
+    },
+    {
+      "type": "Overdrive",
+      "enabled": false,
+      "mix": 1.0,
+      "params": {
+        "Drive": 1.5,
+        "Tone": 0.7,
+        "Level": 0.7
+      }
+    },
+    {
+      "type": "Distortion",
+      "enabled": false,
+      "mix": 1.0,
+      "params": {
+        "Drive": 2.0,
+        "Tone": 0.6,
+        "Level": 0.5
+      }
+    },
+    {
+      "type": "Equalizer",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Bass": 2.0,
+        "Mid": -1.0,
+        "Treble": -2.0,
+        "Presence": 1.0
+      }
+    },
+    {
+      "type": "Chorus",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Rate": 0.8,
+        "Depth": 12.0,
+        "Level": 0.75
+      }
+    },
+    {
+      "type": "Phaser",
+      "enabled": false,
+      "mix": 1.0,
+      "params": {
+        "Rate": 0.2,
+        "Depth": 0.9,
+        "Stages": 2.0,
+        "Feedback": 0.6,
+        "Mix": 0.5
+      }
+    },
+    {
+      "type": "Flanger",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Rate": 0.15,
+        "Depth": 4.0,
+        "Delay": 2.0,
+        "Feedback": 0.65,
+        "Mix": 0.4
+      }
+    },
+    {
+      "type": "Delay",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Time": 850.0,
+        "Feedback": 0.75,
+        "Tone": 0.3,
+        "Level": 0.6
+      }
+    },
+    {
+      "type": "Reverb",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Decay": 0.95,
+        "Damp": 0.2,
+        "Level": 0.85
+      }
+    },
+    {
+      "type": "Amp Sim",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Model": 3.0,
+        "Gain": 0.3,
+        "Bass": 2.5,
+        "Mid": 0.0,
+        "Treble": -3.0,
+        "Level": 0.8
+      }
+    }
+  ]
+}
+{
+  "format_version": 1,
+  "name": "Phase Shift Lead",
+  "description": "Slow, hypnotic phase sweep on a clean American tone. Inspired by the MXR Phase 90 in 4-stage mode. Perfect for classic rock solos, funky chords, and psychedelic textures.",
+  "saved_at": "2026-04-03T12:00:00",
+  "input_gain": 0.8,
+  "output_gain": 0.8,
+  "effects": [
+    {
+      "type": "Noise Gate",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Threshold": -55.0,
+        "Attack": 0.5,
+        "Release": 50.0
+      }
+    },
+    {
+      "type": "Compressor",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Threshold": -22.0,
+        "Ratio": 2.5,
+        "Attack": 8.0,
+        "Release": 120.0,
+        "Makeup": 3.0
+      }
+    },
+    {
+      "type": "Overdrive",
+      "enabled": false,
+      "mix": 1.0,
+      "params": {
+        "Drive": 1.5,
+        "Tone": 0.7,
+        "Level": 0.7
+      }
+    },
+    {
+      "type": "Distortion",
+      "enabled": false,
+      "mix": 1.0,
+      "params": {
+        "Drive": 2.0,
+        "Tone": 0.6,
+        "Level": 0.5
+      }
+    },
+    {
+      "type": "Equalizer",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Bass": 0.5,
+        "Mid": 1.5,
+        "Treble": 0.5,
+        "Presence": 1.0
+      }
+    },
+    {
+      "type": "Chorus",
+      "enabled": false,
+      "mix": 1.0,
+      "params": {
+        "Rate": 1.5,
+        "Depth": 5.0,
+        "Level": 0.5
+      }
+    },
+    {
+      "type": "Phaser",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Rate": 0.5,
+        "Depth": 0.8,
+        "Stages": 0.0,
+        "Feedback": 0.55,
+        "Mix": 0.5
+      }
+    },
+    {
+      "type": "Flanger",
+      "enabled": false,
+      "mix": 1.0,
+      "params": {
+        "Rate": 0.3,
+        "Depth": 2.0,
+        "Delay": 1.0,
+        "Feedback": 0.7,
+        "Mix": 0.5
+      }
+    },
+    {
+      "type": "Delay",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Time": 380.0,
+        "Feedback": 0.2,
+        "Tone": 0.65,
+        "Level": 0.2
+      }
+    },
+    {
+      "type": "Reverb",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Decay": 0.45,
+        "Damp": 0.45,
+        "Level": 0.25
+      }
+    },
+    {
+      "type": "Amp Sim",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Model": 0.0,
+        "Gain": 0.55,
+        "Bass": 0.5,
+        "Mid": 1.0,
+        "Treble": 1.5,
+        "Level": 0.75
+      }
+    }
+  ]
+}
+{
+  "format_version": 1,
+  "name": "Jet Flanger",
+  "description": "Dramatic jet-plane flanger sweep with strong resonance on a warm clean tone. Inspired by the MXR M117R and Boss BF-2. Striking on open chords, harmonics, and slow single-note lines.",
+  "saved_at": "2026-04-03T12:00:00",
+  "input_gain": 0.75,
+  "output_gain": 0.8,
+  "effects": [
+    {
+      "type": "Noise Gate",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Threshold": -60.0,
+        "Attack": 1.0,
+        "Release": 80.0
+      }
+    },
+    {
+      "type": "Compressor",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Threshold": -25.0,
+        "Ratio": 3.0,
+        "Attack": 10.0,
+        "Release": 150.0,
+        "Makeup": 2.0
+      }
+    },
+    {
+      "type": "Overdrive",
+      "enabled": false,
+      "mix": 1.0,
+      "params": {
+        "Drive": 1.5,
+        "Tone": 0.7,
+        "Level": 0.7
+      }
+    },
+    {
+      "type": "Distortion",
+      "enabled": false,
+      "mix": 1.0,
+      "params": {
+        "Drive": 2.0,
+        "Tone": 0.6,
+        "Level": 0.5
+      }
+    },
+    {
+      "type": "Equalizer",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Bass": 0.5,
+        "Mid": 0.0,
+        "Treble": 1.0,
+        "Presence": 0.5
+      }
+    },
+    {
+      "type": "Chorus",
+      "enabled": false,
+      "mix": 1.0,
+      "params": {
+        "Rate": 1.5,
+        "Depth": 5.0,
+        "Level": 0.5
+      }
+    },
+    {
+      "type": "Phaser",
+      "enabled": false,
+      "mix": 1.0,
+      "params": {
+        "Rate": 0.5,
+        "Depth": 0.7,
+        "Stages": 0.0,
+        "Feedback": 0.5,
+        "Mix": 0.5
+      }
+    },
+    {
+      "type": "Flanger",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Rate": 0.15,
+        "Depth": 5.0,
+        "Delay": 2.0,
+        "Feedback": 0.82,
+        "Mix": 0.65
+      }
+    },
+    {
+      "type": "Delay",
+      "enabled": false,
+      "mix": 1.0,
+      "params": {
+        "Time": 350.0,
+        "Feedback": 0.3,
+        "Tone": 0.6,
+        "Level": 0.35
+      }
+    },
+    {
+      "type": "Reverb",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Decay": 0.55,
+        "Damp": 0.4,
+        "Level": 0.3
+      }
+    },
+    {
+      "type": "Amp Sim",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Model": 3.0,
+        "Gain": 0.45,
+        "Bass": 1.0,
+        "Mid": 0.0,
+        "Treble": 0.5,
+        "Level": 0.75
+      }
+    }
+  ]
+}
