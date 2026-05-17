@@ -6,7 +6,7 @@
 namespace Amplitron {
 
 void GuiSettings::render(bool& show) {
-    ImGui::SetNextWindowSize(ImVec2(600, 550), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(600, 700), ImGuiCond_FirstUseEver);  // Increased height for MIDI section
     if (!ImGui::Begin("Audio Settings", &show)) {
         ImGui::End();
         return;
@@ -167,6 +167,11 @@ void GuiSettings::render(bool& show) {
         }
     }
     ImGui::EndChild();
+
+    // MIDI settings are managed in a separate "MIDI Settings" window 
+    // accessible from the Utilities menu or the status bar.
+    ImGui::Separator();
+    ImGui::TextDisabled("MIDI settings are managed in a separate window (Utilities > MIDI Settings).");
 
     ImGui::End();
 }

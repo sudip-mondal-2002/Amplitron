@@ -13,6 +13,7 @@ AudioEngine::AudioEngine() {
 
 AudioEngine::~AudioEngine() {
     shutdown();
+    
     destroy_audio_backend(backend_);
     backend_ = nullptr;
 }
@@ -71,5 +72,4 @@ void AudioEngine::set_sample_rate(int rate) {
         }
     }
 }
-
 } // namespace Amplitron

@@ -47,8 +47,7 @@ ConvolutionKernel::ConvolutionKernel(const std::vector<float>& ir_samples,
 
     for (int p = 0; p < num_partitions_; ++p) {
         // Zero the time buffer
-        std::memset(time_buf.data(), 0,
-                    sizeof(kiss_fft_cpx) * static_cast<size_t>(fft_size_));
+        std::fill(time_buf.begin(), time_buf.end(), kiss_fft_cpx{0.0f, 0.0f});
 
         // Copy this partition's IR samples into the real part
         int offset = p * block_size_;
@@ -125,6 +124,8 @@ void ConvolutionEngine::reset() {
     }
 
     // Initialize frequency-domain delay line
+    if (fft_size <= 0 || fft_size > 65536) return; // Sanity check
+
     size_t cpx_bytes = sizeof(kiss_fft_cpx) * static_cast<size_t>(fft_size);
     fdl_.resize(static_cast<size_t>(num_parts));
     for (auto& buf : fdl_) {
@@ -221,8 +222,7 @@ void ConvolutionEngine::process(float* buffer, int num_samples) {
     kiss_fft(fft_cfg_, input_cpx.data(), fdl_data);
 
     // 3. Complex multiply-accumulate across all partitions
-    std::vector<kiss_fft_cpx> accum(static_cast<size_t>(fft_size));
-    std::memset(accum.data(), 0, sizeof(kiss_fft_cpx) * static_cast<size_t>(fft_size));
+    std::vector<kiss_fft_cpx> accum(static_cast<size_t>(fft_size), {0.0f, 0.0f});
 
     for (int k = 0; k < num_parts; ++k) {
         // FDL index for partition k (circular)

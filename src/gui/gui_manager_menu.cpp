@@ -92,7 +92,21 @@ void GuiManager::render_menu_bar() {
             bool has_selected_preset = gui_presets_.selected_preset_index() >= 0 &&
                                        gui_presets_.selected_preset_index() < gui_presets_.preset_count();
             if (ImGui::MenuItem("Delete Selected Preset", nullptr, false, has_selected_preset)) {
-                gui_presets_.delete_preset_by_index(gui_presets_.selected_preset_index());
+                ImGui::OpenPopup("Confirm Delete Preset");
+            }
+
+            if (ImGui::BeginPopupModal("Confirm Delete Preset", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::Text("Are you sure you want to delete the selected preset?\nThis action cannot be undone.");
+                ImGui::Separator();
+                if (ImGui::Button("Delete", ImVec2(120, 0))) {
+                    gui_presets_.delete_preset_by_index(gui_presets_.selected_preset_index());
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
             }
             ImGui::Separator();
 #ifndef AMPLITRON_NO_DESKTOP_SHELL
@@ -105,9 +119,23 @@ void GuiManager::render_menu_bar() {
                 }
             }
             if (ImGui::MenuItem("Reset to Default Presets Directory")) {
-                PresetManager::set_presets_dir("");
-                PresetManager::save_config();
-                gui_presets_.refresh_presets(false);
+                ImGui::OpenPopup("Confirm Reset Presets Dir");
+            }
+
+            if (ImGui::BeginPopupModal("Confirm Reset Presets Dir", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::Text("Reset presets directory to the default internal path?");
+                ImGui::Separator();
+                if (ImGui::Button("Reset", ImVec2(120, 0))) {
+                    PresetManager::set_presets_dir("");
+                    PresetManager::save_config();
+                    gui_presets_.refresh_presets(false);
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
             }
 #endif
             ImGui::Separator();
@@ -203,7 +231,7 @@ void GuiManager::render_menu_bar() {
         }
 
         // MIDI status
-        items.push_back({midi_manager_.is_port_open() ? "MIDI" : "MIDI", false});
+        items.push_back({midi_manager_.is_port_open() ? "MIDI" : "MIDI", true});
 
         // Check for update (leftmost of right-aligned group)
         bool show_update = false;
@@ -243,6 +271,13 @@ void GuiManager::render_menu_bar() {
                     ImGui::TextColored(Theme::Live(), "%s", it->label.c_str());
                 } else {
                     ImGui::TextColored(ImVec4(0.4f, 0.4f, 0.4f, 1.0f), "%s", it->label.c_str());
+                }
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip(midi_manager_.is_port_open() ? "MIDI Connected. Click for settings." : "MIDI Disconnected. Click for settings.");
+                    ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+                }
+                if (ImGui::IsItemClicked()) {
+                    show_midi_ = !show_midi_;
                 }
             } else if (it->label == "LIVE") {
                 ImGui::TextColored(Theme::Live(), "%s", it->label.c_str());

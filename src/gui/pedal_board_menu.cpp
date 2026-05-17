@@ -1,4 +1,6 @@
 #include "gui/pedal_board.h"
+#include "gui/gui_midi.h"
+#include "midi/midi_manager.h"
 #include "gui/theme.h"
 
 #include "audio/effects/noise_gate.h"
@@ -98,6 +100,7 @@ void PedalBoard::render_add_pedal_menu() {
     }
 }
 
+
 void PedalBoard::render_amp_selector() {
     const auto& models = get_amp_models();
     int amp_idx = find_amp_index();
@@ -139,6 +142,64 @@ void PedalBoard::render_amp_selector() {
                 }
             }
         }
+        ImGui::EndPopup();
+    }
+}
+
+// ============================================================
+// MIDI MENU — QUICK STATUS AND ACTIONS
+// ============================================================
+void PedalBoard::render_midi_menu() {
+    if (!gui_midi_) return;
+    auto& midi = gui_midi_->manager();
+
+    if (ImGui::Button("MIDI")) {
+        ImGui::OpenPopup("MidiMenuPopup");
+    }
+
+    if (ImGui::BeginPopup("MidiMenuPopup")) {
+        // Device status
+        if (midi.is_port_open()) {
+            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "● Connected");
+            ImGui::SameLine();
+            ImGui::TextDisabled("(%s)", midi.current_port_name().c_str());
+        } else {
+            ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "● Disconnected");
+        }
+
+        ImGui::Separator();
+
+        // Learn mode status
+        if (midi.is_learning()) {
+            ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f), "⚡ Learn Mode Active");
+            if (ImGui::MenuItem("Cancel Learn Mode", "Esc")) {
+                midi.cancel_learn();
+            }
+        } else {
+            ImGui::TextDisabled("Right-click any knob to MIDI learn");
+        }
+
+        ImGui::Separator();
+
+        // Quick actions
+        if (ImGui::MenuItem("Clear All Mappings")) {
+            show_confirm_midi_clear_ = true;
+        }
+
+        if (ImGui::MenuItem("Save Config")) {
+            midi.save_config();
+        }
+
+        if (ImGui::MenuItem("Load Config")) {
+            midi.load_config();
+        }
+
+        ImGui::Separator();
+
+        // Show active mappings count
+        auto& mappings = midi.mappings();
+        ImGui::TextDisabled("%zu active mappings", mappings.size());
+
         ImGui::EndPopup();
     }
 }

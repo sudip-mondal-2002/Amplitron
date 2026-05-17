@@ -245,6 +245,11 @@ make build
 # Windows
 .\build\Release\amplitron.exe
 ```
+### Command-line options
+| Flag | Description |
+|------|-------------|
+| `-h`, `--help` | Print usage and exit |
+| `-v`, `--version` | Print version and exit |
 
 ### Controls
 - **Menu Bar** → File → Settings to configure audio devices, buffer size, and sample rate
@@ -259,7 +264,10 @@ make build
 ### Default Signal Chain
 The application starts with a clean acoustic preset. Only EQ and Reverb are enabled by default — all other effects start bypassed:
 ```
-Input → Noise Gate* → Compressor* → Overdrive* → Distortion* → EQ → Chorus* → Delay* → Reverb → Cabinet* → Output
+Input → [Noise Gate] → [Compressor] → [Overdrive] → EQ → [Cabinet] → [Delay] → Reverb → Output
+
+> Brackets [ ] = bypassed by default. Only **EQ** and **Reverb** are active on startup.
+> Click any pedal's footswitch in the GUI to enable it.
 ```
 (*bypassed by default — click the footswitch to enable)
 

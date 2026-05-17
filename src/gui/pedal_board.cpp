@@ -3,6 +3,8 @@
 #include "gui/theme.h"
 #include "gui/command.h"
 #include "audio/effects/amp_simulator.h"
+#include "gui/gui_midi.h"
+#include "midi/midi_manager.h"
 
 #include <cstring>
 #include <imgui.h>
@@ -85,23 +87,83 @@ void PedalBoard::render() {
     ImGui::SameLine();
 
     if (ImGui::Button("Reset All")) {
-        for (auto& fx : engine_.effects()) {
-            fx->reset();
-            auto& p = fx->params();
-            for (auto& param : p) {
-                param.value = param.default_val;
-            }
-        }
+        show_confirm_reset_ = true;
     }
     ImGui::SameLine();
 
     if (ImGui::Button("Clear All")) {
-        if (!engine_.effects().empty()) {
-            history_.execute(std::make_unique<ClearAllCommand>(engine_));
-            rebuild_widgets();
-        }
+        show_confirm_clear_ = true;
     }
     ImGui::SameLine();
+
+    render_midi_menu();
+    ImGui::SameLine();
+
+    // --- Confirmation Modals ---
+    // OpenPopup must only be called on the transition frame, not every frame.
+    if (show_confirm_reset_) {
+        ImGui::OpenPopup("Confirm Reset##Modal");
+        show_confirm_reset_ = false;
+    }
+    if (show_confirm_clear_) {
+        ImGui::OpenPopup("Confirm Clear##Modal");
+        show_confirm_clear_ = false;
+    }
+
+    if (ImGui::BeginPopupModal("Confirm Reset##Modal", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Are you sure you want to reset ALL parameters to their default values?\nThis will affect every pedal on the board.");
+        ImGui::Separator();
+        if (ImGui::Button("Reset", ImVec2(120, 0))) {
+            history_.execute(std::make_unique<ResetAllCommand>(engine_));
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SetItemDefaultFocus();
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
+    if (ImGui::BeginPopupModal("Confirm Clear##Modal", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Are you sure you want to remove ALL pedals from the signal chain?\nThis cannot be undone easily if you have many complex settings.");
+        ImGui::Separator();
+        if (ImGui::Button("Clear All", ImVec2(120, 0))) {
+            history_.execute(std::make_unique<ClearAllCommand>(engine_));
+            rebuild_widgets();
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SetItemDefaultFocus();
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
+    if (show_confirm_midi_clear_) {
+        ImGui::OpenPopup("Confirm MIDI Clear##Modal");
+        show_confirm_midi_clear_ = false;
+    }
+
+    if (ImGui::BeginPopupModal("Confirm MIDI Clear##Modal", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Are you sure you want to clear ALL MIDI CC mappings?");
+        ImGui::TextColored(Theme::Gold(), "This action cannot be undone.");
+        ImGui::Spacing();
+
+        if (ImGui::Button("Clear All", ImVec2(120, 0))) {
+            if (gui_midi_) {
+                gui_midi_->manager().clear_mappings();
+            }
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SetItemDefaultFocus();
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
 
     ImGui::SameLine();
 
