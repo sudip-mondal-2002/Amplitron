@@ -170,15 +170,14 @@ bool AudioEngine::start() {
     // 1. Open playback stream (stereo float, AAudio exclusive mode preferred)
     // -------------------------------------------------------------------------
     oboe::AudioStreamBuilder playbackBuilder;
-    playbackBuilder
-        .setDirection(oboe::Direction::Output)
-        .setPerformanceMode(oboe::PerformanceMode::LowLatency)
-        .setSharingMode(oboe::SharingMode::Exclusive)    // AAudio exclusive — lowest latency
-        .setFormat(oboe::AudioFormat::Float)
-        .setChannelCount(oboe::ChannelCount::Stereo)
-        .setSampleRate(sample_rate_)
-        .setFramesPerDataCallback(buffer_size_)
-        .setDataCallback(backend_->playbackCallback.get());
+    playbackBuilder.setDirection(oboe::Direction::Output);
+    playbackBuilder.setPerformanceMode(oboe::PerformanceMode::LowLatency);
+    playbackBuilder.setSharingMode(oboe::SharingMode::Exclusive); // AAudio exclusive — lowest latency
+    playbackBuilder.setFormat(oboe::AudioFormat::Float);
+    playbackBuilder.setChannelCount(oboe::ChannelCount::Stereo);
+    playbackBuilder.setSampleRate(sample_rate_);
+    playbackBuilder.setFramesPerDataCallback(buffer_size_);
+    playbackBuilder.setDataCallback(backend_->playbackCallback.get());
 
     if (backend_->usb_device_id >= 0) {
         playbackBuilder.setDeviceId(backend_->usb_device_id);
@@ -211,15 +210,14 @@ bool AudioEngine::start() {
     // 2. Open capture stream (mono float, low-latency)
     // -------------------------------------------------------------------------
     oboe::AudioStreamBuilder captureBuilder;
-    captureBuilder
-        .setDirection(oboe::Direction::Input)
-        .setPerformanceMode(oboe::PerformanceMode::LowLatency)
-        .setSharingMode(oboe::SharingMode::Exclusive)
-        .setFormat(oboe::AudioFormat::Float)
-        .setChannelCount(oboe::ChannelCount::Mono)
-        .setSampleRate(sample_rate_)
-        .setFramesPerDataCallback(buffer_size_)
-        .setDataCallback(backend_->captureCallback.get());
+    captureBuilder.setDirection(oboe::Direction::Input);
+    captureBuilder.setPerformanceMode(oboe::PerformanceMode::LowLatency);
+    captureBuilder.setSharingMode(oboe::SharingMode::Exclusive);
+    captureBuilder.setFormat(oboe::AudioFormat::Float);
+    captureBuilder.setChannelCount(oboe::ChannelCount::Mono);
+    captureBuilder.setSampleRate(sample_rate_);
+    captureBuilder.setFramesPerDataCallback(buffer_size_);
+    captureBuilder.setDataCallback(backend_->captureCallback.get());
 
     if (backend_->usb_device_id >= 0) {
         captureBuilder.setDeviceId(backend_->usb_device_id);
