@@ -13,9 +13,16 @@ void GuiRecording::render_controls() {
     bool is_paused = rec.is_paused();
     bool has_unsaved = rec.has_unsaved();
 
-    float panel_height = is_recording ? 120.0f : 46.0f;
+    // Robustly calculate baseline heights using actual ImGui metrics
+    // to prevent clipping when padding or font sizes change independently.
+    float base_h = ImGui::GetFrameHeight() + ImGui::GetStyle().WindowPadding.y * 2.0f + ImGui::GetStyle().WindowBorderSize * 2.0f;
+    float panel_height = is_recording ? (base_h + 80.0f) : base_h;
+    
+    // Kept font_scale for waveform scaling
+    float font_scale = ImGui::GetFontSize() / 14.0f;
+    // FIX: Enforce fixed-height layout properties with strict scrollbars suppression flags
     ImGui::BeginChild("RecordingPanel", ImVec2(0, panel_height), true,
-                       ImGuiWindowFlags_NoScrollbar);
+                       ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
     if (is_recording) {
         // === RECORDING ACTIVE ===
@@ -24,14 +31,14 @@ void GuiRecording::render_controls() {
         if (is_paused) {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.5f, 0.2f, 1.0f));
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
-            if (ImGui::Button("RESUME", ImVec2(80, 28))) {
+            if (ImGui::Button("RESUME", ImVec2(80 * font_scale, 0))) {
                 rec.resume();
             }
             ImGui::PopStyleColor(2);
         } else {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.5f, 0.1f, 1.0f));
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.8f, 0.7f, 0.2f, 1.0f));
-            if (ImGui::Button("PAUSE", ImVec2(80, 28))) {
+            if (ImGui::Button("PAUSE", ImVec2(80 * font_scale, 0))) {
                 rec.pause();
             }
             ImGui::PopStyleColor(2);
@@ -42,7 +49,7 @@ void GuiRecording::render_controls() {
         // Stop button
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.2f, 0.2f, 1.0f));
-        if (ImGui::Button("STOP", ImVec2(80, 28))) {
+        if (ImGui::Button("STOP", ImVec2(80 * font_scale, 0))) {
             rec.stop();
             show_recording_save_ = true;
             recording_save_pending_ = true;
@@ -95,7 +102,7 @@ void GuiRecording::render_controls() {
 
         ImVec2 wave_pos = ImGui::GetCursorScreenPos();
         float wave_w = ImGui::GetContentRegionAvail().x;
-        float wave_h = 50.0f;
+        float wave_h = 50.0f * font_scale; 
 
         ImDrawList* draw = ImGui::GetWindowDrawList();
 
@@ -147,6 +154,18 @@ void GuiRecording::render_controls() {
             float offset = std::max(0.0f, (avail - row_h) * 0.5f);
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + offset);
         }
+
+        // FIX: Centrally align the saved recording context blocks
+        {
+            float content_w = ImGui::CalcTextSize("Recording complete").x;
+            content_w += ImGui::CalcTextSize("  999.9 s  |  ").x;
+            content_w += 100.0f + 80.0f; // Exact fixed size width budgets for the Save/Discard buttons
+            content_w += (ImGui::GetStyle().ItemSpacing.x * 3.0f);
+
+            float start_x = (ImGui::GetContentRegionAvail().x - content_w) * 0.5f;
+            if (start_x > 0.0f) ImGui::SetCursorPosX(start_x);
+        }
+
         ImGui::TextColored(Theme::Gold(), "Recording complete");
         ImGui::SameLine();
         ImGui::Text("  %.1f s  |  ", rec.get_duration());
@@ -154,7 +173,7 @@ void GuiRecording::render_controls() {
 
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.5f, 0.2f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
-        if (ImGui::Button("Save As...", ImVec2(100, 24))) {
+        if (ImGui::Button("Save As...", ImVec2(100 * font_scale, 0))) {
             show_recording_save_ = true;
             recording_save_pending_ = true;
         }
@@ -163,7 +182,7 @@ void GuiRecording::render_controls() {
         ImGui::SameLine();
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.1f, 0.1f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f, 0.15f, 0.15f, 1.0f));
-        if (ImGui::Button("Discard", ImVec2(80, 24))) {
+        if (ImGui::Button("Discard", ImVec2(80 * font_scale, 0))) {
             rec.discard();
             status_msg_ = "Recording discarded.";
         }
@@ -180,7 +199,7 @@ void GuiRecording::render_controls() {
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.5f, 0.05f, 0.05f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.9f, 0.15f, 0.15f, 1.0f));
-        if (ImGui::Button("REC", ImVec2(90, 28))) {
+        if (ImGui::Button("REC", ImVec2(90 * font_scale, 0))) {
             std::string filepath = Recorder::generate_filename();
             rec.start(filepath, engine_.get_sample_rate());
         }

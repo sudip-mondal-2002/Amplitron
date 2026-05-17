@@ -38,7 +38,7 @@ jobs:
       
       - name: Resolve PR number from head branch
         id: resolve-pr
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const headSha    = '${{ github.event.workflow_run.head_sha }}';
@@ -99,7 +99,7 @@ jobs:
 
       - name: Check pull request state
         id: pr-state
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const { owner, repo } = context.repo;
@@ -124,7 +124,7 @@ jobs:
 
       - name: Comment preview URL on PR
         if: steps.pr-state.outputs.state == 'open'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           PR_NUMBER: ${{ steps.preview-meta.outputs.pr_number }}
           PREVIEW_URL: ${{ steps.preview-meta.outputs.preview_url }}
@@ -207,7 +207,7 @@ jobs:
 
       - name: Comment cleanup on PR
         if: steps.pages-checkout.outcome == 'success'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const marker = '<!-- amplitron-pr-preview -->';

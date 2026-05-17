@@ -43,7 +43,11 @@ void GuiSnapshots::recall_slot(int slot) {
 }
 
 void GuiSnapshots::render() {
-    ImGui::BeginChild("SnapshotBar", ImVec2(0, 36), true);
+    // Scale the baseline bar size based on actual style metrics
+    float bar_height = ImGui::GetFrameHeight() + ImGui::GetStyle().WindowPadding.y * 2.0f + ImGui::GetStyle().WindowBorderSize * 2.0f;
+    
+    ImGui::BeginChild("SnapshotBar", ImVec2(0, bar_height), true,
+                       ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
     // Vertically center the button row
     {
@@ -94,7 +98,6 @@ void GuiSnapshots::render() {
             if (is_filled) {
                 recall_slot(i);
             }
-            // Empty slot left-click does nothing; use right-click to save
         }
 
         ImGui::PopStyleColor(3);
@@ -139,6 +142,7 @@ void GuiSnapshots::render() {
     }
 
     ImGui::SameLine();
+
     // Status message or hint text
     if (status_timer_ > 0.0f) {
         float alpha = std::min(status_timer_, 1.0f);
@@ -151,5 +155,4 @@ void GuiSnapshots::render() {
 
     ImGui::EndChild();
 }
-
 } // namespace Amplitron

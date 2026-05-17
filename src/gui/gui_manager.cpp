@@ -137,11 +137,11 @@ bool GuiManager::initialize(int width, int height) {
         if (!loaded_font)
             io.Fonts->AddFontDefault();
 
-        // Scale ImGui's internal UI element sizes and padding to match the loaded font resolution
+        // On desktop platforms (like macOS), SDL uses logical coordinates for ImGui, 
+        // so we shouldn't scale the style sizes (padding, margins, etc.) by dpi_scale.
+#ifdef __EMSCRIPTEN__
         ImGuiStyle& style = ImGui::GetStyle();
         style.ScaleAllSizes(dpi_scale);
-
-#ifdef __EMSCRIPTEN__
         // On web viewports, setting FontGlobalScale smaller shrinks text rendering. 
         // We set it to 1.0f here so that font rendering uses the high-res texture space fully.
         io.FontGlobalScale = 1.0f;
