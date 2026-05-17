@@ -333,6 +333,8 @@ TEST(json_can_load_existing_factory_presets) {
         "presets/03_Modern_Metal_Lead.json",
     };
 
+    int loaded_count = 0;
+
     for (const auto& path : factory_presets) {
         std::ifstream f(path);
         if (!f.is_open()) continue; // Skip if not found in test environment
@@ -346,5 +348,10 @@ TEST(json_can_load_existing_factory_presets) {
         ASSERT_TRUE(ok);
         ASSERT_FALSE(preset.name.empty());
         ASSERT_FALSE(preset.effects.empty());
+        ++loaded_count;
     }
+
+    // FIX: prevent vacuous pass — if all files are missing the loop skips
+    // everything and the test proves nothing (CodeRabbit issue #4).
+    ASSERT_GT(loaded_count, 0);
 }
