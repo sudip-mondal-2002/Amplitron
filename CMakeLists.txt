@@ -195,8 +195,12 @@ endif()
 
 # --- Platform-specific sources (selected at configure time) ---
 # Mobile (Android/iOS) and Web use SDL audio backend + stub file dialog
-if(EMSCRIPTEN OR ANDROID OR IOS)
+# Android 8+ uses Oboe (AAudio exclusive mode) for low-latency audio.
+if(EMSCRIPTEN OR IOS)
     set(BACKEND_SOURCES src/audio/audio_backend_sdl.cpp)
+    set(DIALOG_SOURCES  src/gui/file_dialog_web.cpp)
+elseif(ANDROID)
+    set(BACKEND_SOURCES src/audio/audio_backend_oboe.cpp)
     set(DIALOG_SOURCES  src/gui/file_dialog_web.cpp)
 else()
     set(BACKEND_SOURCES
@@ -219,6 +223,16 @@ endif()
 # Prefer a pre-installed SDL2 (e.g. from CI cache via -DSDL2_DIR=...).
 # Fall back to building from source via FetchContent for local/first-time builds.
 # =============================================================================
+if(ANDROID)
+    # Oboe: low-latency audio for Android 8+ (AAudio exclusive mode)
+    include(FetchContent)
+    FetchContent_Declare(oboe
+        GIT_REPOSITORY https://github.com/google/oboe.git
+        GIT_TAG        1.8.0
+    )
+    FetchContent_MakeAvailable(oboe)
+endif()
+
 if(ANDROID OR IOS)
     find_package(SDL2 QUIET CONFIG)
     if(NOT TARGET SDL2::SDL2-static)
@@ -314,10 +328,15 @@ elseif(ANDROID)
         IMGUI_IMPL_OPENGL_ES3
         AMPLITRON_VERSION="${AMPLITRON_VERSION}"
         AMPLITRON_NO_MIDI
+        AMPLITRON_ANDROID_OBOE   # signals that Oboe backend is in use
     )
 
+    # Include Oboe headers
+    target_include_directories(main PRIVATE ${oboe_SOURCE_DIR}/include)
+
     target_link_libraries(main PRIVATE
-        SDL2::SDL2-static
+        oboe                      # Google Oboe (AAudio/OpenSL ES low-latency)
+        SDL2::SDL2-static         # Still used for display / ImGui rendering
         android
         log
         EGL
