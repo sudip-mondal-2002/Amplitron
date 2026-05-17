@@ -1,37 +1,37 @@
 {
   "format_version": 1,
-  "name": "Sparkling Clean",
-  "description": "Lush, shimmering clean tone perfect for arpeggiated chords, indie pop, and 80s ballads. Uses the Clean American amp model.",
-  "saved_at": "2026-03-27T12:00:00",
+  "name": "01_Sparkling_Clean",
+  "description": "",
+  "saved_at": "2026-05-15T20:44:10",
   "input_gain": 0.8,
   "output_gain": 0.8,
   "effects": [
     {
       "type": "Noise Gate",
       "enabled": true,
-      "mix": 1.0,
+      "mix": 1,
       "params": {
-        "Threshold": -60.0,
+        "Threshold": -38.5807,
         "Attack": 0.5,
-        "Release": 50.0
+        "Release": 50
       }
     },
     {
       "type": "Compressor",
       "enabled": true,
-      "mix": 1.0,
+      "mix": 1,
       "params": {
-        "Threshold": -25.0,
-        "Ratio": 3.0,
-        "Attack": 10.0,
-        "Release": 150.0,
-        "Makeup": 2.0
+        "Threshold": -25,
+        "Ratio": 3,
+        "Attack": 10,
+        "Release": 150,
+        "Makeup": 2
       }
     },
     {
       "type": "Overdrive",
       "enabled": false,
-      "mix": 1.0,
+      "mix": 1,
       "params": {
         "Drive": 1.5,
         "Tone": 0.7,
@@ -41,9 +41,9 @@
     {
       "type": "Distortion",
       "enabled": false,
-      "mix": 1.0,
+      "mix": 1,
       "params": {
-        "Drive": 2.0,
+        "Drive": 2,
         "Tone": 0.6,
         "Level": 0.5
       }
@@ -51,32 +51,32 @@
     {
       "type": "Equalizer",
       "enabled": false,
-      "mix": 1.0,
+      "mix": 1,
       "params": {
-        "Bass": 0.0,
-        "Mid": 0.0,
-        "Treble": 0.0,
-        "Presence": 0.0
+        "Bass": 0,
+        "Mid": 0,
+        "Treble": 0,
+        "Presence": 0
       }
     },
     {
       "type": "Chorus",
       "enabled": true,
-      "mix": 1.0,
+      "mix": 1,
       "params": {
         "Rate": 1.2,
-        "Depth": 7.0,
+        "Depth": 7,
         "Level": 0.4
       }
     },
     {
       "type": "Phaser",
       "enabled": false,
-      "mix": 1.0,
+      "mix": 1,
       "params": {
         "Rate": 0.5,
         "Depth": 0.7,
-        "Stages": 0.0,
+        "Stages": 0,
         "Feedback": 0.5,
         "Mix": 0.5
       }
@@ -84,11 +84,11 @@
     {
       "type": "Flanger",
       "enabled": false,
-      "mix": 1.0,
+      "mix": 1,
       "params": {
         "Rate": 0.3,
-        "Depth": 2.0,
-        "Delay": 1.0,
+        "Depth": 2,
+        "Delay": 1,
         "Feedback": 0.7,
         "Mix": 0.5
       }
@@ -96,9 +96,9 @@
     {
       "type": "Delay",
       "enabled": true,
-      "mix": 1.0,
+      "mix": 1,
       "params": {
-        "Time": 400.0,
+        "Time": 400,
         "Feedback": 0.3,
         "Tone": 0.6,
         "Level": 0.25
@@ -107,7 +107,7 @@
     {
       "type": "Reverb",
       "enabled": true,
-      "mix": 1.0,
+      "mix": 1,
       "params": {
         "Decay": 0.75,
         "Damp": 0.3,
@@ -117,13 +117,13 @@
     {
       "type": "Amp Sim",
       "enabled": true,
-      "mix": 1.0,
+      "mix": 1,
       "params": {
-        "Model": 0.0,
+        "Model": 0,
         "Gain": 0.4,
-        "Bass": 1.0,
-        "Mid": -1.0,
-        "Treble": 2.0,
+        "Bass": 1,
+        "Mid": -1,
+        "Treble": 2,
         "Level": 0.75
       }
     }

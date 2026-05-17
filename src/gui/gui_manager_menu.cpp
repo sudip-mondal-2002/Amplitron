@@ -179,6 +179,13 @@ void GuiManager::render_menu_bar() {
         };
         std::vector<StatusItem> items;
 
+        // Preset status with dirty indicator
+        std::string preset_label = "Preset: " + gui_presets_.current_preset_name();
+        if (gui_presets_.is_dirty()) {
+            preset_label += " *";
+        }
+        items.push_back({preset_label, false});
+
         // Sample rate (rightmost)
         char sr_buf[16];
         snprintf(sr_buf, sizeof(sr_buf), "%dHz", engine_.get_sample_rate());

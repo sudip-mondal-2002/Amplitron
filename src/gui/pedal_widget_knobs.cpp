@@ -1,5 +1,6 @@
 #include "gui/pedal_widget.h"
 #include "gui/gui_midi.h"
+#include "midi/midi_manager.h"
 #include "audio/audio_engine.h"
 #include "gui/theme.h"
 
@@ -209,6 +210,20 @@ void PedalWidget::render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, boo
                                      Theme::KNOB_FACE;
         dl->AddCircleFilled(knob_center, knob_radius, Theme::KNOB_BG);
         dl->AddCircleFilled(knob_center, knob_radius - 1, knob_bg);
+
+        // Flash blue border if currently learning this parameter
+#ifndef AMPLITRON_NO_MIDI
+        if (gui_midi_ && gui_midi_->midi().is_learning() &&
+            gui_midi_->midi().learn_effect_name() == effect_->name() &&
+            gui_midi_->midi().learn_param_name() == params[pi].name) {
+            float time = static_cast<float>(ImGui::GetTime());
+            constexpr float LEARN_FLASH_HZ = 10.0f;
+            float alpha = (std::sin(time * 2.0f * 3.14159f * LEARN_FLASH_HZ) + 1.0f) * 0.5f;
+            ImU32 outline_col = ImGui::ColorConvertFloat4ToU32(
+                ImVec4(0.2f, 0.6f, 1.0f, 0.4f + alpha * 0.6f));
+            dl->AddCircle(knob_center, knob_radius + 4.0f, outline_col, 0, 3.0f);
+        }
+#endif
 
         float pointer_angle = ARC_START + normalized * ARC_RANGE;
         float ptr_inner = knob_radius * 0.25f;
