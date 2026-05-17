@@ -6,6 +6,10 @@
 #include "audio/spsc_queue.h"
 #include <chrono>
 
+#ifdef WITH_JACK
+#include <jack/jack.h>
+#endif
+
 // FORWARD DECLARATIONS
 namespace Amplitron
 {
