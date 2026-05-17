@@ -47,6 +47,8 @@ public:
      */
     bool render_learn_bypass_item(const std::string& effect_name);
 
+    const MidiManager& midi() const { return midi_; }
+
 private:
     MidiManager& midi_;
     std::vector<std::string> cached_ports_;

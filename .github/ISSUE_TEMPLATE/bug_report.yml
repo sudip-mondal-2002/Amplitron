@@ -1,11 +1,22 @@
-name: Bug Report
+name: "🐛 Bug Report"
 description: Report a bug or unexpected behavior in Amplitron
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to report a bug. Please fill in as much detail as possible.
+        Thanks for taking the time to report a bug. Please fill in as much detail as possible to help us reproduce and fix the issue efficiently!
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Prerequisites
+      description: Please confirm the following before submitting.
+      options:
+        - label: I have searched the existing issues and this is not a duplicate.
+          required: true
+        - label: I am using the latest version of Amplitron (if possible).
+          required: false
 
   - type: textarea
     id: description
@@ -20,7 +31,7 @@ body:
     id: steps
     attributes:
       label: Steps to Reproduce
-      description: Steps to reproduce the behavior.
+      description: How can we trigger this bug? Please walk us through it step-by-step.
       placeholder: |
         1. Launch Amplitron
         2. Add effect '...'
@@ -67,19 +78,47 @@ body:
     id: effect
     attributes:
       label: Effect Name (if applicable)
-      description: If the bug is in a specific effect, name it here (e.g. Reverb, WahPedal).
-      placeholder: e.g. Reverb
+      description: If the bug is in a specific effect, name it here.
+      placeholder: e.g. Reverb, WahPedal
 
-  - type: textarea
-    id: audio_setup
+  - type: markdown
     attributes:
-      label: Audio Setup
-      description: Describe your audio hardware and configuration.
-      placeholder: |
-        - Interface: Focusrite Scarlett 2i2
-        - Sample Rate: 48000 Hz
-        - Buffer Size: 128 samples
-        - OS: macOS 14.x / Linux Ubuntu 24.04 / Windows 11
+      value: |
+        ### 💻 Environment & Audio Setup
+        *Please provide your hardware and OS details. This is crucial for audio debugging.*
+
+  - type: input
+    id: amplitron_version
+    attributes:
+      label: Amplitron Version
+      description: Specify the version of Amplitron you are using.
+      placeholder: e.g. v1.0.2, main-branch-latest
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      placeholder: e.g. macOS 14.x, Windows 11, Ubuntu 24.04
+    validations:
+      required: true
+
+  - type: input
+    id: audio_interface
+    attributes:
+      label: Audio Interface
+      placeholder: e.g. Focusrite Scarlett 2i2, Universal Audio Apollo
+    validations:
+      required: true
+
+  - type: input
+    id: sample_rate
+    attributes:
+      label: Sample Rate & Buffer Size
+      placeholder: e.g. 48000 Hz, 128 samples
+    validations:
+      required: true
 
   - type: textarea
     id: logs

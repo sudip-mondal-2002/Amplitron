@@ -23,6 +23,7 @@ recordings/
 *.swp
 *.swo
 *~
+graphify-out/
 
 # OS
 .DS_Store

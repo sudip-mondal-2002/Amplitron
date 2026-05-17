@@ -210,6 +210,11 @@ bool GuiMidi::render_learn_menu_item(const std::string& effect_name,
         char label[64];
         snprintf(label, sizeof(label), "MIDI: CC %d", mapping_cc);
         ImGui::TextColored(ImVec4(0.5f, 0.8f, 0.5f, 1.0f), "%s", label);
+
+        if (ImGui::MenuItem("Remove MIDI Mapping")) {
+            midi_.remove_mapping_for_param(effect_name, param_name);
+            return true;
+        }
     }
 
     if (ImGui::MenuItem("MIDI Learn")) {

@@ -53,6 +53,16 @@ void GuiSettings::render(bool& show) {
 
     float latency_ms = 1000.0f * engine_.get_buffer_size() / engine_.get_sample_rate();
     ImGui::Text("Estimated latency: %.1f ms", latency_ms);
+#ifdef AMPLITRON_ANDROID_OBOE
+    // Fix: show the actual runtime-negotiated sharing mode, not a hardcoded string.
+    // oboe::SharingMode::Exclusive = AAudio direct path; Shared = mixed/OpenSL fallback.
+    const char* backendLabel = engine_.get_oboe_sharing_mode_label();
+    ImGui::TextColored(ImVec4(0.2f, 0.9f, 0.4f, 1.0f),
+                       "Audio backend: Oboe (%s)", backendLabel);
+    if (engine_.is_running()) {
+        ImGui::Text("Measured round-trip: see logcat for Oboe latency report");
+    }
+#endif
 
     // CPU load watchdog & auto-tuning
     float cpu_load = engine_.get_cpu_load();

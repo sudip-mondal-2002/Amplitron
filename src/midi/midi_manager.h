@@ -120,6 +120,8 @@ public:
 
     void add_mapping(const MidiMapping& mapping);
     void remove_mapping(int index);
+    void remove_mapping_for_param(const std::string& effect_name,
+                                  const std::string& param_name);
     void clear_mappings();
     const std::vector<MidiMapping>& mappings() const { return mappings_; }
 
@@ -142,6 +144,9 @@ public:
 
     /** @brief Human-readable status for the learn indicator, or empty. */
     std::string learn_status() const;
+
+    const std::string& learn_effect_name() const { return learn_effect_name_; }
+    const std::string& learn_param_name() const { return learn_param_name_; }
 
     // --- Poll (called from GUI thread each frame) ---
 

@@ -43,7 +43,8 @@ bool PresetManager::save_preset_data(const std::string& filepath,
 bool PresetManager::save_preset(const std::string& filepath,
                                 const std::string& preset_name,
                                 const std::string& description,
-                                AudioEngine& engine) {
+                                AudioEngine& engine,
+                                const std::vector<MidiMapping>& midi_mappings) {
     PresetData preset;
     preset.name = preset_name;
     preset.description = description;
@@ -69,11 +70,14 @@ bool PresetManager::save_preset(const std::string& filepath,
         preset.effects.push_back(fd);
     }
 
+    preset.midi_mappings = midi_mappings;
+
     return save_preset_data(filepath, preset);
 }
 
 bool PresetManager::load_preset(const std::string& filepath,
-                                AudioEngine& engine) {
+                                AudioEngine& engine,
+                                MidiManager* midi_manager) {
     std::ifstream file(filepath);
     if (!file.is_open()) {
         last_error_ = "Could not open file: " + filepath;
@@ -132,6 +136,13 @@ bool PresetManager::load_preset(const std::string& filepath,
         }
 
         engine.add_effect(fx);
+    }
+
+    if (midi_manager) {
+        midi_manager->clear_mappings();
+        for (const auto& mapping : preset.midi_mappings) {
+            midi_manager->add_mapping(mapping);
+        }
     }
 
     std::cout << "Preset loaded: " << preset.name << " (" << filepath << ")" << std::endl;

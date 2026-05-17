@@ -1,6 +1,5 @@
 #include "preset_manager.h"
 #include "preset_manager_impl.h"
-
 #include <iostream>
 #include <ctime>
 #include <sys/stat.h>
@@ -84,6 +83,48 @@ std::string get_user_presets_dir() {
     if (!home) return "";
     return std::string(home) + "/.config/amplitron/presets";
 #endif
+}
+
+// Clean, robust string migration implementation (No JSON header dependencies)
+std::string PresetManager::apply_migrations(const std::string& raw_json_string) {
+    // Find the absolute root opening of the JSON payload
+    size_t root_start = raw_json_string.find('{');
+    if (root_start == std::string::npos) {
+        return raw_json_string;
+    }
+
+    // Look for a "version" key strictly near the root area (e.g., within the first 100 characters)
+    // This stops nested effect parameters from accidentally triggering a false positive bypass.
+    size_t version_pos = raw_json_string.find("\"version\"");
+    bool is_root_version = (version_pos != std::string::npos && (version_pos - root_start) < 100);
+
+    if (!is_root_version) {
+        std::cout << "[Preset Migration] Upgrading legacy unversioned preset format to Version " 
+                  << CURRENT_PRESET_VERSION << std::endl;
+
+        std::string patched = raw_json_string;
+        size_t last_bracket = patched.find_last_of('}');
+        
+        if (last_bracket != std::string::npos && last_bracket > root_start) {
+            // Find out if there is any content between the root brackets to avoid trailing comma bugs
+            size_t content_check = patched.find_first_not_of(" \t\n\r", root_start + 1);
+            bool is_empty_json = (content_check == last_bracket);
+
+            // Construct the exact version upgrade block using our header constant dynamically
+            std::string migration_patch;
+            if (!is_empty_json) {
+                migration_patch += ",\n";
+            }
+            migration_patch += "  \"version\": " + std::to_string(CURRENT_PRESET_VERSION) + ",\n";
+            migration_patch += "  \"input_gain\": 0.7,\n";
+            migration_patch += "  \"output_gain\": 0.8\n";
+
+            patched.insert(last_bracket, migration_patch);
+            return patched;
+        }
+    }
+
+    return raw_json_string;
 }
 
 } // namespace Amplitron

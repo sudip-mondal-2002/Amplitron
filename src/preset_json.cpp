@@ -97,7 +97,24 @@ std::string to_json_ext(const PresetData& preset) {
         ss << "\n";
     }
 
+    ss << "  ],\n";
+
+    ss << "  \"midi_mappings\": [\n";
+    for (size_t m = 0; m < preset.midi_mappings.size(); ++m) {
+        const auto& mm = preset.midi_mappings[m];
+        ss << "    {\n";
+        ss << "      \"cc\": " << mm.cc_number << ",\n";
+        ss << "      \"channel\": " << mm.midi_channel << ",\n";
+        ss << "      \"target\": " << static_cast<int>(mm.target_type) << ",\n";
+        ss << "      \"mode\": " << static_cast<int>(mm.mode) << ",\n";
+        ss << "      \"effect\": \"" << escape_json_string_ext(mm.effect_name) << "\",\n";
+        ss << "      \"param\": \"" << escape_json_string_ext(mm.param_name) << "\"\n";
+        ss << "    }";
+        if (m + 1 < preset.midi_mappings.size()) ss << ",";
+        ss << "\n";
+    }
     ss << "  ]\n";
+
     ss << "}\n";
     return ss.str();
 }
@@ -128,6 +145,21 @@ static float extract_float_value(const std::string& json, const std::string& key
         return std::stof(json.substr(pos));
     } catch (...) {
         return 0.0f;
+    }
+}
+
+static int extract_int_value(const std::string& json, const std::string& key, int def = 0) {
+    std::string search = "\"" + key + "\"";
+    size_t pos = json.find(search);
+    if (pos == std::string::npos) return def;
+    pos = json.find(':', pos);
+    if (pos == std::string::npos) return def;
+    ++pos;
+    while (pos < json.size() && (json[pos] == ' ' || json[pos] == '\t')) ++pos;
+    try {
+        return std::stoi(json.substr(pos));
+    } catch (...) {
+        return def;
     }
 }
 
@@ -258,6 +290,43 @@ bool from_json_ext(const std::string& json, PresetData& preset) {
         }
 
         search_pos = obj_end;
+    }
+
+    // Parse midi_mappings array
+    size_t midi_pos = json.find("\"midi_mappings\"");
+    if (midi_pos != std::string::npos) {
+        size_t m_arr_start = json.find('[', midi_pos);
+        if (m_arr_start != std::string::npos) {
+            size_t m_search = m_arr_start;
+            while (true) {
+                size_t m_obj_start = json.find('{', m_search + 1);
+                if (m_obj_start == std::string::npos) break;
+
+                int depth = 0;
+                size_t m_obj_end = m_obj_start;
+                for (size_t i = m_obj_start; i < json.size(); ++i) {
+                    if (json[i] == '{') ++depth;
+                    if (json[i] == '}') {
+                        --depth;
+                        if (depth == 0) { m_obj_end = i; break; }
+                    }
+                }
+                if (m_obj_end <= m_obj_start) break;
+
+                std::string m_obj = json.substr(m_obj_start, m_obj_end - m_obj_start + 1);
+
+                MidiMapping m;
+                m.cc_number = extract_int_value(m_obj, "cc", 0);
+                m.midi_channel = extract_int_value(m_obj, "channel", -1);
+                m.target_type = static_cast<MidiTargetType>(extract_int_value(m_obj, "target", 0));
+                m.mode = static_cast<MidiMappingMode>(extract_int_value(m_obj, "mode", 0));
+                m.effect_name = unescape_json_string_ext(extract_string_value(m_obj, "effect"));
+                m.param_name = unescape_json_string_ext(extract_string_value(m_obj, "param"));
+                preset.midi_mappings.push_back(m);
+
+                m_search = m_obj_end;
+            }
+        }
     }
 
     return true;

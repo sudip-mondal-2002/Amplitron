@@ -2,11 +2,99 @@
 #include "gui/pedal_board.h"
 #include "gui/command.h"
 #include "gui/theme.h"
+#include "audio/effects/ir_cabinet.h"
+#include <cstring>
 #include <imgui.h>
 #include <cstdio>
 #include <algorithm>
 
 namespace Amplitron {
+
+/**
+ * @brief Capture the current engine state into a PresetData snapshot.
+ * @param engine The audio engine whose current setting should be captured.
+ * @return PresetData representing the live engine configuration.
+ */
+static PresetData capture_current_state(AudioEngine& engine) {
+    PresetData preset;
+    preset.input_gain = engine.get_input_gain();
+    preset.output_gain = engine.get_output_gain();
+
+    for (auto& fx : engine.effects()) {
+        PresetData::EffectData fd;
+        fd.type = fx->name();
+        fd.enabled = fx->is_enabled();
+        fd.mix = fx->get_mix();
+        for (auto& p : fx->params()) {
+            fd.params.push_back({p.name, p.value});
+        }
+
+        if (std::strcmp(fx->name(), "IR Cabinet") == 0) {
+            auto* ir_cab = dynamic_cast<IRCabinet*>(fx.get());
+            if (ir_cab && ir_cab->has_ir()) {
+                fd.metadata["ir_path"] = ir_cab->ir_path();
+            }
+        }
+
+        preset.effects.push_back(std::move(fd));
+    }
+
+    return preset;
+}
+
+/**
+ * @brief Compare two effect snapshots for exact equality.
+ * @param a First effect snapshot.
+ * @param b Second effect snapshot.
+ * @return true if the effect data are identical.
+ */
+static bool equal_effect_data(const PresetData::EffectData& a,
+                              const PresetData::EffectData& b) {
+    if (a.type != b.type || a.enabled != b.enabled || a.mix != b.mix) return false;
+    if (a.params.size() != b.params.size()) return false;
+    if (a.metadata != b.metadata) return false;
+    for (size_t i = 0; i < a.params.size(); ++i) {
+        if (a.params[i] != b.params[i]) return false;
+    }
+    return true;
+}
+
+/**
+ * @brief Compare two preset snapshots for exact equality.
+ * @param a First preset snapshot.
+ * @param b Second preset snapshot.
+ * @return true if the preset snapshots are identical.
+ */
+static bool equal_preset_data(const PresetData& a, const PresetData& b) {
+    if (a.input_gain != b.input_gain || a.output_gain != b.output_gain) return false;
+    if (a.effects.size() != b.effects.size()) return false;
+    for (size_t i = 0; i < a.effects.size(); ++i) {
+        if (!equal_effect_data(a.effects[i], b.effects[i])) return false;
+    }
+    return true;
+}
+
+GuiPresets::GuiPresets(AudioEngine& engine, CommandHistory& history)
+    : engine_(engine), history_(history) {
+    mark_clean();
+}
+
+bool GuiPresets::is_dirty() const {
+    if (!saved_state_valid_) return false;
+    return !equal_preset_data(saved_state_, capture_current_state(engine_));
+}
+
+std::string GuiPresets::current_preset_name() const {
+    if (preset_name_buf_[0] != '\0') {
+        return std::string(preset_name_buf_);
+    }
+    return "Untitled";
+}
+
+void GuiPresets::mark_clean() {
+    saved_state_ = capture_current_state(engine_);
+    saved_state_valid_ = true;
+}
 
 std::string GuiPresets::preset_name_from_path(const std::string& filepath) const {
     size_t slash = filepath.find_last_of("/\\");
@@ -72,7 +160,8 @@ bool GuiPresets::save_named_preset(const std::string& preset_name,
         return false;
     }
 
-    if (PresetManager::save_preset(path, preset_name, description, engine_)) {
+    if (PresetManager::save_preset(path, preset_name, description, engine_,
+                                   midi_manager_ ? midi_manager_->mappings() : std::vector<MidiMapping>())) {
         preset_status_msg_ = "Saved: " + preset_name;
         refresh_presets(true);
         for (int i = 0; i < static_cast<int>(preset_files_.size()); ++i) {
@@ -82,6 +171,7 @@ bool GuiPresets::save_named_preset(const std::string& preset_name,
             }
         }
         if (pedal_board_) pedal_board_->rebuild_widgets();
+        mark_clean();
         return true;
     }
 
@@ -108,7 +198,7 @@ bool GuiPresets::load_preset_by_index(int index) {
     float before_in = engine_.get_input_gain();
     float before_out = engine_.get_output_gain();
 
-    if (PresetManager::load_preset(path, engine_)) {
+    if (PresetManager::load_preset(path, engine_, midi_manager_)) {
         std::vector<LoadPresetCommand::EffectSnapshot> after_state;
         for (auto& fx : engine_.effects()) {
             LoadPresetCommand::EffectSnapshot snap;
@@ -132,6 +222,7 @@ bool GuiPresets::load_preset_by_index(int index) {
         std::snprintf(preset_name_buf_, sizeof(preset_name_buf_), "%s", display.c_str());
         preset_status_msg_ = "Loaded: " + display;
         if (pedal_board_) pedal_board_->rebuild_widgets();
+        mark_clean();
         return true;
     }
 
@@ -219,6 +310,7 @@ void GuiPresets::begin_new_preset() {
     preset_name_buf_[0] = '\0';
     preset_desc_buf_[0] = '\0';
     preset_dialog_is_new_ = true;
+    mark_clean();
 }
 
 void GuiPresets::begin_save_preset() {
