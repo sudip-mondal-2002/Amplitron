@@ -17,6 +17,7 @@
 #include <android/log.h>
 
 #include <atomic>
+#include <array>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -30,62 +31,102 @@ namespace Amplitron {
 
 // -----------------------------------------------------------------------------
 // OboeCallback — bridges Oboe's audio thread into AudioEngine::process_audio
+//
+// Ring buffer design (fix: coderabbit — wrap-around safety):
+//   capture_write_pos_ is owned exclusively by the capture (producer) thread.
+//   capture_read_pos_  is owned exclusively by the playback (consumer) thread.
+//   capture_filled_    is an atomic count shared between both threads.
+//   Both positions are always advanced modulo kRingSize and copies are split
+//   at the buffer boundary so no read/write ever crosses kRingSize.
 // -----------------------------------------------------------------------------
 
 class OboeCallback : public oboe::AudioStreamDataCallback {
 public:
     explicit OboeCallback(AudioEngine* engine) : engine_(engine) {}
 
+    // Pre-size the scratch buffer to avoid heap allocation on the audio thread.
+    // Called once after the stream is opened with the negotiated callback size.
+    // Fix: coderabbit — avoid allocating in onAudioReady()
+    void preallocate(int framesPerCallback) {
+        capture_buffer_.assign(static_cast<size_t>(framesPerCallback), 0.0f);
+    }
+
     oboe::DataCallbackResult onAudioReady(oboe::AudioStream* /*stream*/,
                                            void* audioData,
                                            int32_t numFrames) override {
         auto* output = static_cast<float*>(audioData);
 
-        // Pull captured mono input; zero if unavailable
-        const int captureSize = static_cast<int>(capture_buffer_.size());
-        if (captureSize < numFrames)
-            capture_buffer_.resize(static_cast<size_t>(numFrames), 0.0f);
+        // Scratch buffer is pre-sized; no heap allocation here.
+        const int bufSize = static_cast<int>(capture_buffer_.size());
+        if (bufSize < numFrames) {
+            // Safety fallback: should not happen if preallocate() was called.
+            std::memset(output, 0, static_cast<size_t>(numFrames) * 2 * sizeof(float));
+            return oboe::DataCallbackResult::Continue;
+        }
 
-        {
-            // Drain from capture ring; if starved, pass silence
-            int available = capture_filled_.load(std::memory_order_acquire);
-            int toCopy = (available >= numFrames) ? numFrames : 0;
-            if (toCopy > 0) {
-                std::memcpy(capture_buffer_.data(),
-                            capture_ring_.data() + capture_read_pos_,
-                            static_cast<size_t>(toCopy) * sizeof(float));
-                capture_read_pos_ = (capture_read_pos_ + toCopy) % kRingSize;
-                capture_filled_.fetch_sub(toCopy, std::memory_order_release);
-            } else {
-                std::memset(capture_buffer_.data(), 0,
-                            static_cast<size_t>(numFrames) * sizeof(float));
+        // Drain from ring buffer; pass silence if starved.
+        int available = capture_filled_.load(std::memory_order_acquire);
+        if (available >= numFrames) {
+            // Fix: coderabbit — split copy at wrap-around boundary
+            int firstChunk = std::min(numFrames, kRingSize - capture_read_pos_);
+            std::memcpy(capture_buffer_.data(),
+                        capture_ring_.data() + capture_read_pos_,
+                        static_cast<size_t>(firstChunk) * sizeof(float));
+            if (firstChunk < numFrames) {
+                int secondChunk = numFrames - firstChunk;
+                std::memcpy(capture_buffer_.data() + firstChunk,
+                            capture_ring_.data(),
+                            static_cast<size_t>(secondChunk) * sizeof(float));
             }
+            capture_read_pos_ = (capture_read_pos_ + numFrames) % kRingSize;
+            capture_filled_.fetch_sub(numFrames, std::memory_order_release);
+        } else {
+            std::memset(capture_buffer_.data(), 0,
+                        static_cast<size_t>(numFrames) * sizeof(float));
         }
 
         engine_->process_audio(capture_buffer_.data(), output, numFrames);
         return oboe::DataCallbackResult::Continue;
     }
 
-    // Called by the input (capture) stream callback to deposit samples
+    // Called by the capture stream callback (producer thread) to deposit samples.
+    // Fix: coderabbit — separate write position owned by producer; split copy at wrap-around
     void feedCaptureData(const float* data, int numFrames) {
         int space = kRingSize - capture_filled_.load(std::memory_order_acquire);
-        int toCopy = (numFrames < space) ? numFrames : space;
+        int toCopy = std::min(numFrames, space);
         if (toCopy <= 0) return;
-        int writePos = (capture_read_pos_ +
-                        capture_filled_.load(std::memory_order_relaxed)) % kRingSize;
-        std::memcpy(capture_ring_.data() + writePos, data,
-                    static_cast<size_t>(toCopy) * sizeof(float));
+
+        // Split copy at wrap-around boundary
+        int firstChunk = std::min(toCopy, kRingSize - capture_write_pos_);
+        std::memcpy(capture_ring_.data() + capture_write_pos_,
+                    data,
+                    static_cast<size_t>(firstChunk) * sizeof(float));
+        if (firstChunk < toCopy) {
+            int secondChunk = toCopy - firstChunk;
+            std::memcpy(capture_ring_.data(),
+                        data + firstChunk,
+                        static_cast<size_t>(secondChunk) * sizeof(float));
+        }
+        capture_write_pos_ = (capture_write_pos_ + toCopy) % kRingSize;
         capture_filled_.fetch_add(toCopy, std::memory_order_release);
     }
 
+    // Returns the actual sharing mode Oboe negotiated (AAudio exclusive or shared/OpenSL).
+    // Fix: coderabbit — expose runtime negotiated mode so UI is not hardcoded
+    oboe::SharingMode get_sharing_mode() const { return negotiated_sharing_mode_; }
+    void set_sharing_mode(oboe::SharingMode m) { negotiated_sharing_mode_ = m; }
+
 private:
     AudioEngine* engine_;
-    std::vector<float> capture_buffer_;
+    std::vector<float> capture_buffer_;  // pre-sized scratch; no alloc on audio thread
 
     static constexpr int kRingSize = 16384;
     std::array<float, kRingSize> capture_ring_{};
-    int capture_read_pos_ = 0;
+    int capture_read_pos_  = 0;   // consumer (playback callback) only
+    int capture_write_pos_ = 0;   // producer (capture callback) only
     std::atomic<int> capture_filled_{0};
+
+    oboe::SharingMode negotiated_sharing_mode_ = oboe::SharingMode::Shared;
 };
 
 // Separate callback for the capture (input) stream
@@ -115,11 +156,11 @@ struct AudioBackendState {
     std::unique_ptr<OboeCallback>        playbackCallback;
     std::unique_ptr<OboeCaptureCallback> captureCallback;
 
-    // Measured latency (updated after stream opens)
     double measured_latency_ms = -1.0;
 
-    // USB audio device ID hint (set from Android settings screen, -1 = default)
-    int usb_device_id = -1;
+    // Fix: coderabbit — separate input and output device IDs
+    int usb_input_device_id  = -1;
+    int usb_output_device_id = -1;
 
     std::string input_device_name  = "Android Microphone";
     std::string output_device_name = "Android Speaker";
@@ -144,13 +185,21 @@ static double compute_latency_ms(const std::shared_ptr<oboe::AudioStream>& strea
     return -1.0;
 }
 
+static void close_stream(std::shared_ptr<oboe::AudioStream>& stream) {
+    if (stream) {
+        stream->requestStop();
+        stream->close();
+        stream.reset();
+    }
+}
+
 // -----------------------------------------------------------------------------
 // AudioEngine member functions — Oboe / Android implementations
 // -----------------------------------------------------------------------------
 
 bool AudioEngine::initialize() {
     initialized_ = true;
-    LOGI("Oboe audio backend initialised (AAudio exclusive mode on Android 8+).");
+    LOGI("Oboe audio backend initialised (AAudio exclusive mode preferred on Android 8+).");
     return true;
 }
 
@@ -167,21 +216,22 @@ bool AudioEngine::start() {
                                       backend_->playbackCallback.get());
 
     // -------------------------------------------------------------------------
-    // 1. Open playback stream (stereo float, AAudio exclusive mode preferred)
+    // 1. Open playback stream
     // -------------------------------------------------------------------------
     oboe::AudioStreamBuilder playbackBuilder;
     playbackBuilder.setDirection(oboe::Direction::Output);
     playbackBuilder.setPerformanceMode(oboe::PerformanceMode::LowLatency);
-    playbackBuilder.setSharingMode(oboe::SharingMode::Exclusive); // AAudio exclusive — lowest latency
+    playbackBuilder.setSharingMode(oboe::SharingMode::Exclusive);
     playbackBuilder.setFormat(oboe::AudioFormat::Float);
     playbackBuilder.setChannelCount(oboe::ChannelCount::Stereo);
     playbackBuilder.setSampleRate(sample_rate_);
     playbackBuilder.setFramesPerDataCallback(buffer_size_);
     playbackBuilder.setDataCallback(backend_->playbackCallback.get());
 
-    if (backend_->usb_device_id >= 0) {
-        playbackBuilder.setDeviceId(backend_->usb_device_id);
-        LOGI("Playback: routing to USB device ID %d", backend_->usb_device_id);
+    // Fix: coderabbit — use dedicated output device ID
+    if (backend_->usb_output_device_id >= 0) {
+        playbackBuilder.setDeviceId(backend_->usb_output_device_id);
+        LOGI("Playback: routing to USB output device ID %d", backend_->usb_output_device_id);
     }
 
     oboe::Result result = playbackBuilder.openStream(backend_->playbackStream);
@@ -191,11 +241,16 @@ bool AudioEngine::start() {
         return false;
     }
 
-    // Adopt actual sample rate / buffer size the stream negotiated
-    sample_rate_  = backend_->playbackStream->getSampleRate();
-    buffer_size_  = backend_->playbackStream->getFramesPerDataCallback();
+    // Store negotiated sharing mode for accurate UI display
+    oboe::SharingMode actualMode = backend_->playbackStream->getSharingMode();
+    backend_->playbackCallback->set_sharing_mode(actualMode);
 
-    // Update effect chain with negotiated rate
+    sample_rate_ = backend_->playbackStream->getSampleRate();
+    buffer_size_ = backend_->playbackStream->getFramesPerDataCallback();
+
+    // Fix: coderabbit — pre-size capture scratch buffer before requestStart()
+    backend_->playbackCallback->preallocate(buffer_size_);
+
     {
         std::lock_guard<std::mutex> lock(effect_mutex_);
         for (auto& fx : effects_)
@@ -204,10 +259,10 @@ bool AudioEngine::start() {
 
     LOGI("Playback stream opened: %d Hz, %d frames/callback, sharing=%s",
          sample_rate_, buffer_size_,
-         oboe::convertToText(backend_->playbackStream->getSharingMode()));
+         oboe::convertToText(actualMode));
 
     // -------------------------------------------------------------------------
-    // 2. Open capture stream (mono float, low-latency)
+    // 2. Open capture stream
     // -------------------------------------------------------------------------
     oboe::AudioStreamBuilder captureBuilder;
     captureBuilder.setDirection(oboe::Direction::Input);
@@ -219,15 +274,15 @@ bool AudioEngine::start() {
     captureBuilder.setFramesPerDataCallback(buffer_size_);
     captureBuilder.setDataCallback(backend_->captureCallback.get());
 
-    if (backend_->usb_device_id >= 0) {
-        captureBuilder.setDeviceId(backend_->usb_device_id);
-        LOGI("Capture: routing to USB device ID %d", backend_->usb_device_id);
+    // Fix: coderabbit — use dedicated input device ID
+    if (backend_->usb_input_device_id >= 0) {
+        captureBuilder.setDeviceId(backend_->usb_input_device_id);
+        LOGI("Capture: routing to USB input device ID %d", backend_->usb_input_device_id);
         backend_->input_device_name = "USB Guitar Cable";
     }
 
     result = captureBuilder.openStream(backend_->captureStream);
     if (result != oboe::Result::OK) {
-        // Non-fatal: continue without input (silent processing)
         LOGW("Failed to open capture stream: %s — continuing without input",
              oboe::convertToText(result));
         backend_->captureStream.reset();
@@ -242,8 +297,9 @@ bool AudioEngine::start() {
     if (result != oboe::Result::OK) {
         LOGE("Failed to start playback stream: %s", oboe::convertToText(result));
         last_error_ = std::string("Oboe playback start failed: ") + oboe::convertToText(result);
-        backend_->playbackStream->close();
-        backend_->playbackStream.reset();
+        // Fix: coderabbit — close capture stream too on playback-start failure
+        close_stream(backend_->captureStream);
+        close_stream(backend_->playbackStream);
         return false;
     }
 
@@ -251,14 +307,11 @@ bool AudioEngine::start() {
         result = backend_->captureStream->requestStart();
         if (result != oboe::Result::OK) {
             LOGW("Failed to start capture stream: %s", oboe::convertToText(result));
-            backend_->captureStream->close();
-            backend_->captureStream.reset();
+            close_stream(backend_->captureStream);
         }
     }
 
     running_ = true;
-
-    // Measure and log achieved latency
     backend_->measured_latency_ms = compute_latency_ms(backend_->playbackStream);
     LOGI("Audio started — estimated latency: %.1f ms", backend_->measured_latency_ms);
 
@@ -268,17 +321,8 @@ bool AudioEngine::start() {
 void AudioEngine::stop() {
     if (!running_) return;
     running_ = false;
-
-    if (backend_->captureStream) {
-        backend_->captureStream->requestStop();
-        backend_->captureStream->close();
-        backend_->captureStream.reset();
-    }
-    if (backend_->playbackStream) {
-        backend_->playbackStream->requestStop();
-        backend_->playbackStream->close();
-        backend_->playbackStream.reset();
-    }
+    close_stream(backend_->captureStream);
+    close_stream(backend_->playbackStream);
     LOGI("Audio stopped.");
 }
 
@@ -305,15 +349,10 @@ std::string AudioEngine::get_output_device_name() const {
 }
 
 std::vector<AudioDeviceInfo> AudioEngine::get_input_devices() const {
-    // Enumerate via Oboe / AAudio device list
     std::vector<AudioDeviceInfo> devices;
-
-    // Always offer the default (built-in mic / USB if connected)
     devices.push_back({0, "Default (Auto-select)", 1, 0, static_cast<double>(sample_rate_), false});
-
-    // If a USB device was detected externally and its ID stored, expose it
-    if (backend_->usb_device_id >= 0) {
-        devices.push_back({backend_->usb_device_id,
+    if (backend_->usb_input_device_id >= 0) {
+        devices.push_back({backend_->usb_input_device_id,
                            "USB Guitar Cable",
                            1, 0,
                            static_cast<double>(sample_rate_),
@@ -325,8 +364,9 @@ std::vector<AudioDeviceInfo> AudioEngine::get_input_devices() const {
 std::vector<AudioDeviceInfo> AudioEngine::get_output_devices() const {
     std::vector<AudioDeviceInfo> devices;
     devices.push_back({0, "Default (Auto-select)", 0, 2, static_cast<double>(sample_rate_), false});
-    if (backend_->usb_device_id >= 0) {
-        devices.push_back({backend_->usb_device_id,
+    // Fix: coderabbit — output devices use their own ID
+    if (backend_->usb_output_device_id >= 0) {
+        devices.push_back({backend_->usb_output_device_id,
                            "USB Guitar Cable (output)",
                            0, 2,
                            static_cast<double>(sample_rate_),
@@ -336,20 +376,28 @@ std::vector<AudioDeviceInfo> AudioEngine::get_output_devices() const {
 }
 
 bool AudioEngine::set_input_device(int device_index) {
-    if (device_index == backend_->usb_device_id || device_index == 0) {
-        input_device_ = device_index;
-        backend_->usb_device_id = (device_index > 0) ? device_index : -1;
-        backend_->input_device_name = (device_index > 0) ? "USB Guitar Cable" : "Android Microphone";
-        if (running_) restart();
-        return true;
-    }
-    return false;
+    input_device_ = device_index;
+    backend_->usb_input_device_id = (device_index > 0) ? device_index : -1;
+    backend_->input_device_name   = (device_index > 0) ? "USB Guitar Cable" : "Android Microphone";
+    if (running_) restart();
+    return true;
 }
 
 bool AudioEngine::set_output_device(int device_index) {
     output_device_ = device_index;
+    // Fix: coderabbit — wire output device ID into playback routing
+    backend_->usb_output_device_id = (device_index > 0) ? device_index : -1;
+    backend_->output_device_name   = (device_index > 0) ? "USB Guitar Cable (output)" : "Android Speaker";
     if (running_) restart();
     return true;
 }
 
 } // namespace Amplitron
+
+// Fix: coderabbit — expose runtime sharing mode to UI
+const char* AudioEngine::get_oboe_sharing_mode_label() const {
+    if (!backend_ || !backend_->playbackCallback) return "Oboe";
+    return (backend_->playbackCallback->get_sharing_mode() == oboe::SharingMode::Exclusive)
+           ? "AAudio exclusive mode"
+           : "OpenSL ES (shared mode)";
+}

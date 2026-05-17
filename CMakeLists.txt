@@ -225,12 +225,19 @@ endif()
 # =============================================================================
 if(ANDROID)
     # Oboe: low-latency audio for Android 8+ (AAudio exclusive mode)
-    include(FetchContent)
-    FetchContent_Declare(oboe
-        GIT_REPOSITORY https://github.com/google/oboe.git
-        GIT_TAG        1.8.0
-    )
-    FetchContent_MakeAvailable(oboe)
+    # Follow the repo's external-library pattern: allow CI to inject pre-built
+    # paths via -DOBOE_INCLUDE_DIRS=... / -DOBOE_LIBRARIES=... flags.
+    # Fall back to FetchContent when those overrides are absent.
+    if(NOT OBOE_LIBRARIES)
+        include(FetchContent)
+        FetchContent_Declare(oboe
+            GIT_REPOSITORY https://github.com/google/oboe.git
+            GIT_TAG        1.8.0
+        )
+        FetchContent_MakeAvailable(oboe)
+        set(OBOE_INCLUDE_DIRS ${oboe_SOURCE_DIR}/include)
+        set(OBOE_LIBRARIES    oboe)
+    endif()
 endif()
 
 if(ANDROID OR IOS)
@@ -331,11 +338,10 @@ elseif(ANDROID)
         AMPLITRON_ANDROID_OBOE   # signals that Oboe backend is in use
     )
 
-    # Include Oboe headers
-    target_include_directories(main PRIVATE ${oboe_SOURCE_DIR}/include)
+    target_include_directories(main PRIVATE ${OBOE_INCLUDE_DIRS})
 
     target_link_libraries(main PRIVATE
-        oboe                      # Google Oboe (AAudio/OpenSL ES low-latency)
+        ${OBOE_LIBRARIES}         # Google Oboe (AAudio/OpenSL ES low-latency)
         SDL2::SDL2-static         # Still used for display / ImGui rendering
         android
         log
@@ -450,6 +456,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
     set(TEST_SOURCES
         tests/test_main.cpp
         tests/test_common.cpp
+        tests/test_oboe_ring_buffer.cpp
         tests/test_effects.cpp
         tests/test_preset_manager.cpp
         tests/test_recorder.cpp
