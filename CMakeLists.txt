@@ -69,6 +69,16 @@ if(NOT PORTAUDIO_FOUND)
               "${CMAKE_SOURCE_DIR}/external/portaudio/lib")
 endif()
 
+# Ensure PORTAUDIO_LIBRARIES is a full path when possible (helps macOS Homebrew installs)
+if(PORTAUDIO_LIBRARIES)
+    if(NOT IS_ABSOLUTE "${PORTAUDIO_LIBRARIES}")
+        find_library(PORTAUDIO_LIB_FULL NAMES portaudio PATHS /opt/homebrew/lib /usr/local/lib /usr/lib)
+        if(PORTAUDIO_LIB_FULL)
+            set(PORTAUDIO_LIBRARIES ${PORTAUDIO_LIB_FULL} CACHE STRING "PortAudio library full path" FORCE)
+        endif()
+    endif()
+endif()
+
 # SDL2
 if(PkgConfig_FOUND)
     pkg_check_modules(SDL2 sdl2)
@@ -91,6 +101,21 @@ if(NOT SDL2_FOUND)
     endif()
 endif()
 
+# pkg_check_modules can yield a bare library name (e.g. "SDL2") and a separate
+# library directory. Add that directory explicitly on Homebrew/macOS builds and
+# prefer a full path when available so the linker does not need to guess.
+if(SDL2_LIBRARY_DIRS)
+    link_directories(${SDL2_LIBRARY_DIRS})
+endif()
+if(SDL2_LIBRARIES)
+    if(NOT IS_ABSOLUTE "${SDL2_LIBRARIES}")
+        find_library(SDL2_LIB_FULL NAMES SDL2 PATHS /opt/homebrew/lib /usr/local/lib /usr/lib)
+        if(SDL2_LIB_FULL)
+            set(SDL2_LIBRARIES ${SDL2_LIB_FULL} CACHE STRING "SDL2 library full path" FORCE)
+        endif()
+    endif()
+endif()
+
 # RtMidi (MIDI input)
 # Skip auto-detection when paths are provided explicitly (e.g. CI -D flags).
 if(NOT RTMIDI_LIBRARIES)
@@ -106,6 +131,17 @@ if(NOT RTMIDI_LIBRARIES)
             PATHS /usr/lib /usr/local/lib /opt/homebrew/lib
                   "C:/Program Files/rtmidi/lib"
                   "${CMAKE_SOURCE_DIR}/external/rtmidi")
+    endif()
+endif()
+if(RTMIDI_LIBRARY_DIRS)
+    link_directories(${RTMIDI_LIBRARY_DIRS})
+endif()
+if(RTMIDI_LIBRARIES)
+    if(NOT IS_ABSOLUTE "${RTMIDI_LIBRARIES}")
+        find_library(RTMIDI_LIB_FULL NAMES rtmidi PATHS /opt/homebrew/lib /usr/local/lib /usr/lib)
+        if(RTMIDI_LIB_FULL)
+            set(RTMIDI_LIBRARIES ${RTMIDI_LIB_FULL} CACHE STRING "RtMidi library full path" FORCE)
+        endif()
     endif()
 endif()
 # pkg_check_modules sets RTMIDI_LIBRARIES to just the name ("rtmidi") and
@@ -212,6 +248,13 @@ endif()
 # --- Platform-specific sources (selected at configure time) ---
 # Mobile (Android/iOS) and Web use SDL audio backend + stub file dialog
 # Android 8+ uses Oboe (AAudio exclusive mode) for low-latency audio.
+if(UNIX AND NOT APPLE)
+    set(DEFAULT_WITH_JACK ON)
+else()
+    set(DEFAULT_WITH_JACK OFF)
+endif()
+option(WITH_JACK "Build with JACK audio backend support" ${DEFAULT_WITH_JACK})
+
 if(EMSCRIPTEN OR IOS)
     set(BACKEND_SOURCES src/audio/audio_backend_sdl.cpp)
     set(DIALOG_SOURCES  src/gui/file_dialog_web.cpp)
@@ -219,11 +262,20 @@ elseif(ANDROID)
     set(BACKEND_SOURCES src/audio/audio_backend_oboe.cpp)
     set(DIALOG_SOURCES  src/gui/file_dialog_web.cpp)
 else()
-    set(BACKEND_SOURCES
-        src/audio/audio_backend_portaudio.cpp
-        src/audio/audio_backend_portaudio_lifecycle.cpp
-        src/audio/audio_backend_portaudio_devices.cpp
-    )
+    if(WITH_JACK)
+        find_path(JACK_INCLUDE_DIRS jack/jack.h)
+        find_library(JACK_LIBRARIES NAMES jack)
+        set(BACKEND_SOURCES
+            src/audio/audio_backend_jack.cpp
+            src/audio/audio_backend_jack_lifecycle.cpp
+        )
+    else()
+        set(BACKEND_SOURCES
+            src/audio/audio_backend_portaudio.cpp
+            src/audio/audio_backend_portaudio_lifecycle.cpp
+            src/audio/audio_backend_portaudio_devices.cpp
+        )
+    endif()
     set(DIALOG_SOURCES
         src/gui/file_dialog_native.cpp
         src/gui/file_dialog_native_open.cpp
@@ -445,6 +497,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${IMGUI_DIR}
         ${IMGUI_DIR}/backends
         ${PORTAUDIO_INCLUDE_DIRS}
+        $<$<BOOL:${WITH_JACK}>:${JACK_INCLUDE_DIRS}>
         ${SDL2_INCLUDE_DIRS}
         ${OPENGL_INCLUDE_DIR}
         ${RTMIDI_INCLUDE_DIRS}
@@ -456,11 +509,13 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
     target_compile_definitions(Amplitron PRIVATE 
         AMPLITRON_VERSION="${AMPLITRON_VERSION}"
         AMPLITRON_HAS_MIDI
+        $<$<BOOL:${WITH_JACK}>:WITH_JACK>
     )
 
     target_link_libraries(Amplitron PRIVATE
         nlohmann_json::nlohmann_json
         ${PORTAUDIO_LIBRARIES}
+        $<$<BOOL:${WITH_JACK}>:${JACK_LIBRARIES}>
         ${SDL2_LIBRARIES}
         ${OPENGL_LIBRARIES}
         ${RTMIDI_LIBRARIES}
@@ -496,6 +551,10 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/test_unsaved_preset.cpp
     )
 
+    if(WITH_JACK)
+        list(APPEND TEST_SOURCES tests/test_jack_backend.cpp)
+    endif()
+
     # Effect + core sources needed by tests (no GUI, no main)
     set(CORE_SOURCES
         src/preset_manager.cpp
@@ -506,10 +565,21 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         src/audio/audio_engine_chain.cpp
         src/audio/audio_engine_process.cpp
         src/audio/audio_engine_api.cpp
-        src/audio/audio_backend_portaudio.cpp
-        src/audio/audio_backend_portaudio_lifecycle.cpp
-        src/audio/audio_backend_portaudio_devices.cpp
-        src/audio/recorder.cpp
+    )
+
+    if(WITH_JACK)
+        list(APPEND CORE_SOURCES
+            src/audio/audio_backend_jack.cpp
+            src/audio/audio_backend_jack_lifecycle.cpp
+        )
+    else()
+        list(APPEND CORE_SOURCES
+            src/audio/audio_backend_portaudio.cpp
+            src/audio/audio_backend_portaudio_lifecycle.cpp
+            src/audio/audio_backend_portaudio_devices.cpp
+        )
+    endif()
+        list(APPEND CORE_SOURCES src/audio/recorder.cpp
         src/audio/recorder_session.cpp
         src/audio/recorder_io.cpp
         src/audio/recorder_wav.cpp
@@ -561,10 +631,14 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
     # DEFINE AMPLITRON_HAS_MIDI FOR TEST BUILDS
     # ============================================================
     target_compile_definitions(amplitron-tests PRIVATE AMPLITRON_HAS_MIDI)
+    if(WITH_JACK)
+        target_compile_definitions(amplitron-tests PRIVATE WITH_JACK=1)
+    endif()
 
     target_link_libraries(amplitron-tests PRIVATE
         nlohmann_json::nlohmann_json
         ${PORTAUDIO_LIBRARIES}
+        $<$<BOOL:${WITH_JACK}>:${JACK_LIBRARIES}>
         ${SDL2_LIBRARIES}
         ${OPENGL_LIBRARIES}
         ${RTMIDI_LIBRARIES}

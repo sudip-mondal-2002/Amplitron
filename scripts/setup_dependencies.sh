@@ -75,7 +75,8 @@ install_deps() {
             build-essential cmake pkg-config \
             libportaudio2 portaudio19-dev \
             libsdl2-dev \
-            libgl1-mesa-dev
+            libgl1-mesa-dev \
+            libjack-jackd2-dev
     elif command -v dnf &> /dev/null; then
         echo "Detected Fedora/RHEL. Installing dependencies..."
         sudo dnf install -y \
@@ -92,7 +93,8 @@ install_deps() {
             mesa
     elif command -v brew &> /dev/null; then
         echo "Detected macOS with Homebrew. Installing dependencies..."
-        brew install cmake portaudio sdl2
+        brew update
+        brew install cmake portaudio rtmidi sdl2 pkg-config
     else
         echo "WARNING: Could not detect package manager."
         echo "Please install manually: cmake, portaudio, sdl2, opengl dev headers"
