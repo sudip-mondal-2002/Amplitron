@@ -1,3 +1,0 @@
-D:/GSSoC/Amplitron/Amplitron/build_web/CMakeFiles/Amplitron.dir
-D:/GSSoC/Amplitron/Amplitron/build_web/CMakeFiles/edit_cache.dir
-D:/GSSoC/Amplitron/Amplitron/build_web/CMakeFiles/rebuild_cache.dir
