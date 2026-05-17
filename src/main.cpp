@@ -198,6 +198,9 @@ int main(int argc, char* argv[]) {
 
     // Cleanup
     std::cout << "Shutting down..." << std::endl;
+#ifdef __EMSCRIPTEN__
+    g_gui = nullptr;
+#endif
     gui.shutdown();
     engine.shutdown();
 

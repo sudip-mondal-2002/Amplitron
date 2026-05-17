@@ -195,8 +195,10 @@
     // Iterate through all available MIDI input ports
     const inputs = midiAccess.inputs.values();
     let inputCount = 0;
+    let firstInputName = "";
     
     for (let input of inputs) {
+      if (inputCount === 0) firstInputName = input.name;
       inputCount++;
       console.log(`[MIDI] Input ${inputCount}: ${input.name}`);
       
@@ -215,7 +217,7 @@
     }
     
     if (inputCount > 0) {
-      updateMIDIStatus(`✓ ${inputCount} MIDI device(s) connected`);
+      updateMIDIStatus(`Mock MIDI (${firstInputName})`);
       console.log(`[MIDI] Listening on ${inputCount} input port(s)`);
     } else {
       updateMIDIStatus('📭 No MIDI devices detected (connect a controller)');
@@ -227,7 +229,7 @@
   
   function onMIDIFailure(error) {
     console.error('[MIDI] Permission denied or error:', error);
-    updateMIDIStatus('❌ MIDI permission denied');
+    updateMIDIStatus('MIDI not supported');
   }
   
   function handleMIDIMessage(event) {

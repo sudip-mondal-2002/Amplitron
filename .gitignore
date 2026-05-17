@@ -1,5 +1,6 @@
 # Build
 build/
+build_web/
 build-*/
 out/
 cmake-build-*/
@@ -33,7 +34,8 @@ desktop.ini
 # Dependencies (fetched by setup script)
 external/
 node_modules/
-
+package-lock.json
+test-results/
 
 # Compiled
 *.o

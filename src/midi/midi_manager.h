@@ -38,8 +38,10 @@ struct MidiMapping {
     int midi_channel = -1; // 0-15, or -1 for "any channel"
     MidiTargetType target_type = MidiTargetType::EffectParam;
     MidiMappingMode mode = MidiMappingMode::Continuous;
-    std::string effect_name; // For EffectParam/EffectBypass targets
-    std::string param_name;  // For EffectParam targets only
+
+    std::string effect_name;        // For EffectParam/EffectBypass targets
+    std::string param_name;         // For EffectParam targets only
+    mutable bool last_state = false; // Tracks pedal state for Toggle mode
 };
 
 #ifdef AMPLITRON_NO_MIDI
