@@ -121,18 +121,16 @@ int main(int /*argc*/, char* /*argv*/[]) {
         Amplitron::PresetManager::set_presets_dir("presets");
     }
 
-    // Start audio
-    if (!engine.start()) {
-        std::cerr << "Warning: Could not start audio stream. "
-                  << "Check your audio device settings." << std::endl;
-    }
-
-    // Initialize GUI
+     // Initialize GUI first — audio stream only starts if GUI succeeds
     Amplitron::GuiManager gui(engine);
     if (!gui.initialize(1280, 720)) {
         std::cerr << "Failed to initialize GUI!" << std::endl;
         engine.shutdown();
         return 1;
+    }
+    
+    if (!engine.start()) {
+        std::cerr << "Warning: Could not start audio stream." << std::endl;
     }
 
     std::cout << "Amplitron is ready. Let's play!" << std::endl;
