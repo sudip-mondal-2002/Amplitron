@@ -309,11 +309,7 @@ void PedalWidget::render_looper_display(ImVec2 p0, float pedal_width) {
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 15, display_y));
     ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.12f, 0.11f, 0.10f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_PlotHistogram, state_col);
-<<<<<<< HEAD
     ImGui::ProgressBar(progress, ImVec2(bar_w, 8), "");
-=======
-    ImGui::ProgressBar(progress, ImVec2(bar_w, 8), nullptr);
->>>>>>> 43a1b4e (feat: add looper effect with UI integration)
     ImGui::PopStyleColor(2);
 
     display_y += 16;
@@ -381,10 +377,7 @@ void PedalWidget::render_looper_display(ImVec2 p0, float pedal_width) {
     if (!effect_->params().empty()) {
         float& level = effect_->params()[0].value;
         ImGui::SetCursorScreenPos(ImVec2(p0.x + 15, display_y));
-<<<<<<< HEAD
         ImGui::SetNextItemWidth(bar_w);
-=======
->>>>>>> 43a1b4e (feat: add looper effect with UI integration)
         char slider_id[64];
         std::snprintf(slider_id, sizeof(slider_id), "##looper_level_%d", index_);
         float old_val = level;
