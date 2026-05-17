@@ -32,6 +32,22 @@ else()
     endif()
 endif()
 
+# --- nlohmann/json (header-only, fetched at configure time) ----------------
+# Single-header C++17 JSON library used for preset serialization /
+# deserialization.  We disable nlohmann's own tests and install rules so
+# they don't pollute the Amplitron build.
+include(FetchContent)
+FetchContent_Declare(
+    nlohmann_json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG        v3.11.3
+    GIT_SHALLOW    TRUE
+)
+set(JSON_BuildTests OFF CACHE INTERNAL "Disable nlohmann/json tests")
+set(JSON_Install    OFF CACHE INTERNAL "Disable nlohmann/json install")
+FetchContent_MakeAvailable(nlohmann_json)
+# ---------------------------------------------------------------------------
+
 # --- Dependencies ---
 # Emscripten provides SDL2, OpenGL ES, and audio via built-in ports.
 # Native builds find PortAudio, SDL2, and OpenGL from the system.
@@ -274,6 +290,8 @@ if(EMSCRIPTEN)
     # OpenGL ES 3 for ImGui's OpenGL3 backend on WebGL 2
     target_compile_definitions(Amplitron PRIVATE IMGUI_IMPL_OPENGL_ES3 AMPLITRON_VERSION="${AMPLITRON_VERSION}" AMPLITRON_NO_MIDI)
 
+    target_link_libraries(Amplitron PRIVATE nlohmann_json::nlohmann_json)
+
     # Emscripten linker flags for Web Audio + AudioWorklet + SharedArrayBuffer
     target_link_options(Amplitron PRIVATE
         "-sWASM=1"
@@ -341,8 +359,9 @@ elseif(ANDROID)
     target_include_directories(main PRIVATE ${OBOE_INCLUDE_DIRS})
 
     target_link_libraries(main PRIVATE
-        ${OBOE_LIBRARIES}         # Google Oboe (AAudio/OpenSL ES low-latency)
-        SDL2::SDL2-static         # Still used for display / ImGui rendering
+        nlohmann_json::nlohmann_json
+        ${OBOE_LIBRARIES}
+        SDL2::SDL2-static
         android
         log
         EGL
@@ -380,6 +399,7 @@ elseif(IOS)
     )
 
     target_link_libraries(Amplitron PRIVATE
+        nlohmann_json::nlohmann_json
         SDL2::SDL2main
         SDL2::SDL2-static
         "-framework UIKit"
@@ -433,6 +453,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
     target_compile_definitions(Amplitron PRIVATE AMPLITRON_VERSION="${AMPLITRON_VERSION}")
 
     target_link_libraries(Amplitron PRIVATE
+        nlohmann_json::nlohmann_json
         ${PORTAUDIO_LIBRARIES}
         ${SDL2_LIBRARIES}
         ${OPENGL_LIBRARIES}
@@ -459,6 +480,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/test_oboe_ring_buffer.cpp
         tests/test_effects.cpp
         tests/test_preset_manager.cpp
+        tests/test_json_serialization.cpp
         tests/test_recorder.cpp
         tests/test_theme.cpp
         tests/test_command_history.cpp
@@ -530,6 +552,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
     )
 
     target_link_libraries(amplitron-tests PRIVATE
+        nlohmann_json::nlohmann_json
         ${PORTAUDIO_LIBRARIES}
         ${SDL2_LIBRARIES}
         ${OPENGL_LIBRARIES}

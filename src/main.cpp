@@ -147,6 +147,10 @@ int main(int argc, char* argv[]) {
         engine.shutdown();
         return 1;
     }
+    
+    if (!engine.start()) {
+        std::cerr << "Warning: Could not start audio stream." << std::endl;
+    }
 
     if (!engine.start()) {
         std::cerr << "Warning: Could not start audio stream." << std::endl;

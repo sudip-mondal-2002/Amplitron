@@ -1,24 +1,12 @@
 #include "audio/recorder.h"
 #include "audio/audio_engine.h"
+#include <nlohmann/json.hpp>
 #include <iostream>
 #include <fstream>
 #include <ctime>
 #include <cstring>
 
 namespace Amplitron {
-
-static void escape_json_string(std::ostream& os, const std::string& s) {
-    for (char c : s) {
-        switch (c) {
-            case '\\': os << "\\\\"; break;
-            case '"': os << "\\\""; break;
-            case '\n': os << "\\n"; break;
-            case '\r': os << "\\r"; break;
-            case '\t': os << "\\t"; break;
-            default: os << c; break;
-        }
-    }
-}
 
 void Recorder::write_wav_header() {
     // Write a placeholder WAV header (44 bytes)
@@ -106,58 +94,53 @@ void Recorder::write_metadata(const std::string& wav_path, AudioEngine& engine) 
 
     float duration = get_duration();
 
-    meta << "{\n";
-    meta << "  \"recording\": {\n";
-    meta << "    \"filename\": \"";
-    escape_json_string(meta, wav_path);
-    meta << "\",\n";
-    meta << "    \"recorded_at\": \"" << timebuf << "\",\n";
-    meta << "    \"duration_seconds\": " << duration << ",\n";
-    meta << "    \"total_samples\": " << samples_written_.load() << ",\n";
-    meta << "    \"format\": \"WAV PCM 16-bit\",\n";
-    meta << "    \"sample_rate\": " << sample_rate_ << ",\n";
-    meta << "    \"channels\": " << channels_ << ",\n";
-    meta << "    \"bit_depth\": 16\n";
-    meta << "  },\n";
+    // Build the recording metadata object
+    nlohmann::ordered_json recording = nlohmann::ordered_json::object();
+    recording["filename"]         = wav_path;
+    recording["recorded_at"]      = timebuf;
+    recording["duration_seconds"] = duration;
+    recording["total_samples"]    = samples_written_.load();
+    recording["format"]           = "WAV PCM 16-bit";
+    recording["sample_rate"]      = sample_rate_;
+    recording["channels"]         = channels_;
+    recording["bit_depth"]        = 16;
 
-    meta << "  \"audio_settings\": {\n";
-    meta << "    \"input_device\": \"";
-    escape_json_string(meta, engine.get_input_device_name());
-    meta << "\",\n";
-    meta << "    \"output_device\": \"";
-    escape_json_string(meta, engine.get_output_device_name());
-    meta << "\",\n";
-    meta << "    \"engine_sample_rate\": " << engine.get_sample_rate() << ",\n";
-    meta << "    \"buffer_size\": " << engine.get_buffer_size() << ",\n";
-    meta << "    \"input_gain\": " << engine.get_input_gain() << ",\n";
-    meta << "    \"output_gain\": " << engine.get_output_gain() << "\n";
-    meta << "  },\n";
+    // Build the audio settings object
+    nlohmann::ordered_json audio_settings = nlohmann::ordered_json::object();
+    audio_settings["input_device"]       = engine.get_input_device_name();
+    audio_settings["output_device"]      = engine.get_output_device_name();
+    audio_settings["engine_sample_rate"] = engine.get_sample_rate();
+    audio_settings["buffer_size"]        = engine.get_buffer_size();
+    audio_settings["input_gain"]         = engine.get_input_gain();
+    audio_settings["output_gain"]        = engine.get_output_gain();
 
-    meta << "  \"signal_chain\": [\n";
-    auto& effects = engine.effects();
-    for (size_t i = 0; i < effects.size(); ++i) {
-        auto& fx = effects[i];
-        meta << "    {\n";
-        meta << "      \"name\": \"" << fx->name() << "\",\n";
-        meta << "      \"enabled\": " << (fx->is_enabled() ? "true" : "false") << ",\n";
-        meta << "      \"mix\": " << fx->get_mix() << ",\n";
-        meta << "      \"parameters\": {\n";
-        auto& params = fx->params();
-        for (size_t p = 0; p < params.size(); ++p) {
-            meta << "        \"" << params[p].name << "\": " << params[p].value;
-            if (p + 1 < params.size()) meta << ",";
-            meta << "\n";
+    // Build the signal chain array
+    nlohmann::ordered_json signal_chain = nlohmann::ordered_json::array();
+    for (auto& fx : engine.effects()) {
+        nlohmann::ordered_json jfx = nlohmann::ordered_json::object();
+        jfx["name"]    = fx->name();
+        jfx["enabled"] = fx->is_enabled();
+        jfx["mix"]     = fx->get_mix();
+
+        nlohmann::ordered_json params_obj = nlohmann::ordered_json::object();
+        for (auto& p : fx->params()) {
+            params_obj[p.name] = p.value;
         }
-        meta << "      }\n";
-        meta << "    }";
-        if (i + 1 < effects.size()) meta << ",";
-        meta << "\n";
-    }
-    meta << "  ]\n";
-    meta << "}\n";
+        jfx["parameters"] = std::move(params_obj);
 
+        signal_chain.push_back(std::move(jfx));
+    }
+
+    // Assemble root object
+    nlohmann::ordered_json root = nlohmann::ordered_json::object();
+    root["recording"]      = std::move(recording);
+    root["audio_settings"] = std::move(audio_settings);
+    root["signal_chain"]   = std::move(signal_chain);
+
+    meta << root.dump(2) << "\n";
     meta.close();
     std::cout << "Metadata written: " << meta_path << std::endl;
 }
 
 } // namespace Amplitron
+
