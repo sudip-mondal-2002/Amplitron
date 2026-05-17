@@ -202,6 +202,10 @@ TEST(json_roundtrip_via_file) {
     PresetData original = make_test_preset();
     original.name = "FileRoundtripTest";
 
+    // Keep this PresetManager load test deterministic. IR Cabinet metadata
+    // serialization is already covered in json_preset_roundtrip_via_string.
+    original.effects.resize(2);
+
     std::string path = "presets/test_nlohmann_roundtrip.json";
     std::filesystem::create_directories("presets");
 

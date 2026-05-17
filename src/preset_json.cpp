@@ -28,6 +28,146 @@
 
 namespace Amplitron {
 
+namespace {
+
+using OrderedJson = nlohmann::ordered_json;
+
+// These ordered helpers are used by to_json_ext/from_json_ext so that the
+// preset string/file round-trip preserves effect parameter insertion order.
+// nlohmann::json stores object keys in sorted order by default, which breaks
+// tests and callers that rely on the original fx.params sequence.
+void to_ordered_json(OrderedJson& j, const PresetData::EffectData& fx) {
+    OrderedJson params_obj = OrderedJson::object();
+    for (const auto& [name, value] : fx.params) {
+        params_obj[name] = value;
+    }
+
+    j = OrderedJson::object();
+    j["type"] = fx.type;
+    j["enabled"] = fx.enabled;
+    j["mix"] = fx.mix;
+    j["params"] = std::move(params_obj);
+
+    if (!fx.metadata.empty()) {
+        OrderedJson metadata_obj = OrderedJson::object();
+        for (const auto& [key, value] : fx.metadata) {
+            metadata_obj[key] = value;
+        }
+        j["metadata"] = std::move(metadata_obj);
+    }
+}
+
+void from_ordered_json(const OrderedJson& j, PresetData::EffectData& fx) {
+    fx.type    = j.value("type",    std::string{});
+    fx.enabled = j.value("enabled", false);
+    fx.mix     = j.value("mix",     1.0f);
+
+    fx.params.clear();
+    fx.metadata.clear();
+
+    if (j.contains("params") && j["params"].is_object()) {
+        for (auto it = j["params"].begin(); it != j["params"].end(); ++it) {
+            if (it.value().is_number()) {
+                fx.params.emplace_back(it.key(), it.value().get<float>());
+            }
+        }
+    }
+
+    if (j.contains("metadata") && j["metadata"].is_object()) {
+        for (auto it = j["metadata"].begin(); it != j["metadata"].end(); ++it) {
+            if (it.value().is_string()) {
+                fx.metadata[it.key()] = it.value().get<std::string>();
+            }
+        }
+    }
+}
+
+void to_ordered_json_midi(OrderedJson& j, const MidiMapping& m) {
+    j = OrderedJson::object();
+    j["cc"]      = m.cc_number;
+    j["channel"] = m.midi_channel;
+    j["target"]  = static_cast<int>(m.target_type);
+    j["mode"]    = static_cast<int>(m.mode);
+    j["effect"]  = m.effect_name;
+    j["param"]   = m.param_name;
+}
+
+void from_ordered_json_midi(const OrderedJson& j, MidiMapping& m) {
+    m.cc_number    = j.value("cc",      0);
+    m.midi_channel = j.value("channel", -1);
+    m.target_type  = static_cast<MidiTargetType>(j.value("target", 0));
+    m.mode         = static_cast<MidiMappingMode>(j.value("mode",   0));
+    m.effect_name  = j.value("effect",  std::string{});
+    m.param_name   = j.value("param",   std::string{});
+}
+
+void to_ordered_json(OrderedJson& j, const PresetData& preset) {
+    // Generate an ISO-8601 timestamp
+    std::time_t now = std::time(nullptr);
+    char timebuf[64] = {};
+    std::tm tm_info{};
+#ifdef _WIN32
+    localtime_s(&tm_info, &now);
+#else
+    localtime_r(&now, &tm_info);
+#endif
+    std::strftime(timebuf, sizeof(timebuf), "%Y-%m-%dT%H:%M:%S", &tm_info);
+
+    OrderedJson effects_arr = OrderedJson::array();
+    for (const auto& fx : preset.effects) {
+        OrderedJson jfx;
+        to_ordered_json(jfx, fx);
+        effects_arr.push_back(std::move(jfx));
+    }
+
+    OrderedJson midi_arr = OrderedJson::array();
+    for (const auto& m : preset.midi_mappings) {
+        OrderedJson jm;
+        to_ordered_json_midi(jm, m);
+        midi_arr.push_back(std::move(jm));
+    }
+
+    j = OrderedJson::object();
+    j["format_version"] = 1;
+    j["name"] = preset.name;
+    j["description"] = preset.description;
+    j["saved_at"] = timebuf;
+    j["input_gain"] = preset.input_gain;
+    j["output_gain"] = preset.output_gain;
+    j["effects"] = std::move(effects_arr);
+    j["midi_mappings"] = std::move(midi_arr);
+}
+
+void from_ordered_json(const OrderedJson& j, PresetData& preset) {
+    preset.name         = j.value("name",         std::string{});
+    preset.description  = j.value("description",  std::string{});
+    preset.input_gain   = j.value("input_gain",   0.7f);
+    preset.output_gain  = j.value("output_gain",  0.8f);
+
+    preset.effects.clear();
+    preset.midi_mappings.clear();
+
+    if (j.contains("effects") && j["effects"].is_array()) {
+        for (const auto& jfx : j["effects"]) {
+            PresetData::EffectData fx;
+            from_ordered_json(jfx, fx);
+            if (!fx.type.empty()) {
+                preset.effects.push_back(std::move(fx));
+            }
+        }
+    }
+
+    if (j.contains("midi_mappings") && j["midi_mappings"].is_array()) {
+        for (const auto& jm : j["midi_mappings"]) {
+            MidiMapping m;
+            from_ordered_json_midi(jm, m);
+            preset.midi_mappings.push_back(m);
+        }
+    }
+}
+
+} // namespace
+
 // ============================================================
 // ADL hook: EffectData  ←→  nlohmann::json
 // ============================================================
@@ -57,8 +197,7 @@ void from_json(const nlohmann::json& j, PresetData::EffectData& fx) {
     fx.enabled = j.value("enabled", false);
     fx.mix     = j.value("mix",     1.0f);
 
-    // FIX: clear before repopulating so reusing an object never carries
-    // stale data forward (CodeRabbit issue #1).
+    // Clear before repopulating so reusing an object never carries stale data.
     fx.params.clear();
     fx.metadata.clear();
 
@@ -153,8 +292,8 @@ void from_json(const nlohmann::json& j, PresetData& preset) {
     preset.input_gain   = j.value("input_gain",   0.7f);
     preset.output_gain  = j.value("output_gain",  0.8f);
 
-    // FIX: clear before repopulating so parsing into a non-empty PresetData
-    // never duplicates/retains old entries (CodeRabbit issue #2).
+    // Clear before repopulating so parsing into a non-empty PresetData never
+    // duplicates/retains old entries.
     preset.effects.clear();
     preset.midi_mappings.clear();
 
@@ -182,18 +321,18 @@ void from_json(const nlohmann::json& j, PresetData& preset) {
 // ============================================================
 
 std::string to_json_ext(const PresetData& preset) {
-    nlohmann::json j;
-    to_json(j, preset);
+    OrderedJson j;
+    to_ordered_json(j, preset);
     return j.dump(4) + "\n";
 }
 
 bool from_json_ext(const std::string& json_str, PresetData& preset) {
-    // FIX: deserialize into a temporary so that a mid-way exception never
-    // leaves `preset` in a partially-mutated state (CodeRabbit issue #3).
+    // Deserialize into a temporary so that a mid-way exception never leaves
+    // `preset` in a partially-mutated state.
     try {
-        nlohmann::json j = nlohmann::json::parse(json_str);
+        OrderedJson j = OrderedJson::parse(json_str);
         PresetData tmp;
-        from_json(j, tmp);
+        from_ordered_json(j, tmp);
         preset = std::move(tmp);
         return true;
     } catch (const nlohmann::json::exception& e) {

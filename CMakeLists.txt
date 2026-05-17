@@ -359,6 +359,8 @@ elseif(ANDROID)
     target_include_directories(main PRIVATE ${OBOE_INCLUDE_DIRS})
 
     target_link_libraries(main PRIVATE
+        nlohmann_json::nlohmann_json
+        ${OBOE_LIBRARIES}
         SDL2::SDL2-static
         android
         log
