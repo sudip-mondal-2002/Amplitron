@@ -285,8 +285,12 @@ Amplitron/
 │   ├── index.html                 # Download page (GitHub Pages)
 │   ├── PRESETS.md                 # Preset guide
 │   └── demo/                      # Web demo (deployed)
-├── external/
-│   └── imgui/                     # Dear ImGui v1.90.1 (fetched by setup)
+├── external/                      # Vendored deps (fetched by setup script)
+│   ├── imgui/                     # Dear ImGui v1.90.1
+│   ├── kiss_fft/                  # kiss_fft (BSD-3-Clause, FFT library)
+│   ├── dr_wav.h                   # dr_wav (single-header WAV library)
+│   ├── nanosvg.h                  # nanosvg (SVG parser)
+│   └── nanosvgrast.h              # nanosvg rasterizer
 ├── presets/                       # Example presets (JSON)
 │   ├── 01_Sparkling_Clean.json
 │   ├── 02_Classic_Rock_Crunch.json
@@ -426,10 +430,18 @@ Effects use `try_lock` on the mutex to avoid blocking the audio thread if the GU
 - Check CPU usage — disable effects you aren't using
 - On laptops, ensure power mode is set to **High Performance**
 
-### Build errors
-- Make sure all dependencies are installed (run the setup script)
+### Build errors / missing `external/` directory
+- The `external/` directory is **not checked into Git** — it is fetched by the setup script
+- On a fresh clone, you **must** run the setup script before building:
+  ```bash
+  # Linux / macOS
+  ./scripts/setup_dependencies.sh
+  # Windows
+  .\scripts\setup_dependencies.ps1
+  ```
+- This fetches: Dear ImGui, kiss_fft, dr_wav, and nanosvg into `external/`
+- `git submodule update` will **not** work — these are not Git submodules
 - On Windows with vcpkg, ensure `VCPKG_ROOT` is set and you pass the toolchain file to CMake
-- Dear ImGui must be present in `external/imgui/` — run the setup script if missing
 
 ---
 

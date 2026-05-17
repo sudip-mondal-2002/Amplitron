@@ -1,0 +1,240 @@
+name: Deploy Preview
+
+on:
+  workflow_run:
+    workflows:
+      - CI - Build and Test
+    types:
+      - completed
+  pull_request_target:
+    types:
+      - closed
+
+permissions:
+  actions: read
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: deploy-preview-${{ github.event.workflow_run.id || github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  deploy-preview:
+    name: Deploy PR Preview
+    if: >
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download CI web build artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: web-build
+          path: web-build
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Resolve PR number from head branch
+        id: resolve-pr
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const headSha    = '${{ github.event.workflow_run.head_sha }}';
+            const headBranch = '${{ github.event.workflow_run.head_branch }}';
+            const headOwner  = '${{ github.event.workflow_run.head_repository.owner.login }}';
+
+            // Works for same-repo and fork PRs
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              state: 'open',
+              head:  `${headOwner}:${headBranch}`,
+            });
+
+            if (!prs.length) {
+              core.setFailed(`No open PR found for branch ${headOwner}:${headBranch}`);
+              return;
+            }
+
+            const pr = prs[0];
+            core.setOutput('pr_number', pr.number);
+            core.setOutput('head_sha',  headSha);
+            core.setOutput('short_sha', headSha.slice(0, 7));
+            
+      - name: Stage preview artifact
+        id: preview-meta
+        run: |
+          pr_number="${{ steps.resolve-pr.outputs.pr_number }}"
+          head_sha="${{ steps.resolve-pr.outputs.head_sha }}"
+
+          mkdir -p preview
+
+          for file in \
+            web-build/index.html \
+            web-build/index.js \
+            web-build/index.wasm \
+            web-build/index.data \
+            web-build/*.worker.js \
+            web-build/coi-serviceworker.js
+          do
+            [ -e "$file" ] && cp "$file" preview/
+          done
+
+          test -f preview/index.html
+          test -f preview/index.js
+          test -f preview/index.wasm
+          touch preview/.nojekyll
+
+          preview_path="pr-previews/pr-${pr_number}"
+          preview_url="https://amplitron.sudipmondal.co.in/${preview_path}/"
+
+          echo "pr_number=$pr_number"             >> "$GITHUB_OUTPUT"
+          echo "head_sha=$head_sha"               >> "$GITHUB_OUTPUT"
+          echo "preview_path=$preview_path"       >> "$GITHUB_OUTPUT"
+          echo "preview_url=$preview_url"         >> "$GITHUB_OUTPUT"
+          echo "short_sha=${{ steps.resolve-pr.outputs.short_sha }}" >> "$GITHUB_OUTPUT"
+
+
+      - name: Check pull request state
+        id: pr-state
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pull_number = Number('${{ steps.preview-meta.outputs.pr_number }}');
+            const { data: pull } = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number,
+            });
+            core.setOutput('state', pull.state);
+
+      - name: Publish preview to GitHub Pages
+        if: steps.pr-state.outputs.state == 'open'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./preview
+          publish_branch: gh-pages
+          destination_dir: ${{ steps.preview-meta.outputs.preview_path }}
+          keep_files: true
+          enable_jekyll: false
+
+      - name: Comment preview URL on PR
+        if: steps.pr-state.outputs.state == 'open'
+        uses: actions/github-script@v8
+        env:
+          PR_NUMBER: ${{ steps.preview-meta.outputs.pr_number }}
+          PREVIEW_URL: ${{ steps.preview-meta.outputs.preview_url }}
+          PREVIEW_PATH: ${{ steps.preview-meta.outputs.preview_path }}
+          SHORT_SHA: ${{ steps.preview-meta.outputs.short_sha }}
+        with:
+          script: |
+            const marker = '<!-- amplitron-pr-preview -->';
+            const { owner, repo } = context.repo;
+            const issue_number = Number(process.env.PR_NUMBER);
+            const body = [
+              marker,
+              '### PR Preview Ready',
+              '',
+              `Preview URL: ${process.env.PREVIEW_URL}`,
+              '',
+              `Built from commit \`${process.env.SHORT_SHA}\` and deployed to \`${process.env.PREVIEW_PATH}\`.`,
+              'This preview updates automatically when the PR branch changes and is removed when the PR closes.',
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number,
+              per_page: 100,
+            });
+            const previous = comments.find((comment) =>
+              comment.user?.type === 'Bot' && comment.body?.includes(marker)
+            );
+
+            if (previous) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: previous.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body,
+              });
+            }
+
+  cleanup-preview:
+    name: Remove Closed PR Preview
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout GitHub Pages branch
+        id: pages-checkout
+        uses: actions/checkout@v6
+        continue-on-error: true
+        with:
+          ref: gh-pages
+          path: pages
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Remove preview directory
+        if: steps.pages-checkout.outcome == 'success'
+        working-directory: pages
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          target="pr-previews/pr-${PR_NUMBER}"
+
+          if [ ! -d "$target" ]; then
+            echo "No preview directory found at $target"
+            exit 0
+          fi
+
+          rm -rf "$target"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A "$target"
+          git commit -m "Remove preview for PR #${PR_NUMBER}"
+          git push
+
+      - name: Comment cleanup on PR
+        if: steps.pages-checkout.outcome == 'success'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const marker = '<!-- amplitron-pr-preview -->';
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const body = [
+              marker,
+              '### PR Preview Removed',
+              '',
+              'The GitHub Pages preview for this PR has been removed because the PR was closed.',
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number,
+              per_page: 100,
+            });
+            const previous = comments.find((comment) =>
+              comment.user?.type === 'Bot' && comment.body?.includes(marker)
+            );
+
+            if (previous) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: previous.id,
+                body,
+              });
+            }

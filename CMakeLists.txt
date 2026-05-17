@@ -195,8 +195,12 @@ endif()
 
 # --- Platform-specific sources (selected at configure time) ---
 # Mobile (Android/iOS) and Web use SDL audio backend + stub file dialog
-if(EMSCRIPTEN OR ANDROID OR IOS)
+# Android 8+ uses Oboe (AAudio exclusive mode) for low-latency audio.
+if(EMSCRIPTEN OR IOS)
     set(BACKEND_SOURCES src/audio/audio_backend_sdl.cpp)
+    set(DIALOG_SOURCES  src/gui/file_dialog_web.cpp)
+elseif(ANDROID)
+    set(BACKEND_SOURCES src/audio/audio_backend_oboe.cpp)
     set(DIALOG_SOURCES  src/gui/file_dialog_web.cpp)
 else()
     set(BACKEND_SOURCES
@@ -219,6 +223,23 @@ endif()
 # Prefer a pre-installed SDL2 (e.g. from CI cache via -DSDL2_DIR=...).
 # Fall back to building from source via FetchContent for local/first-time builds.
 # =============================================================================
+if(ANDROID)
+    # Oboe: low-latency audio for Android 8+ (AAudio exclusive mode)
+    # Follow the repo's external-library pattern: allow CI to inject pre-built
+    # paths via -DOBOE_INCLUDE_DIRS=... / -DOBOE_LIBRARIES=... flags.
+    # Fall back to FetchContent when those overrides are absent.
+    if(NOT OBOE_LIBRARIES)
+        include(FetchContent)
+        FetchContent_Declare(oboe
+            GIT_REPOSITORY https://github.com/google/oboe.git
+            GIT_TAG        1.8.0
+        )
+        FetchContent_MakeAvailable(oboe)
+        set(OBOE_INCLUDE_DIRS ${oboe_SOURCE_DIR}/include)
+        set(OBOE_LIBRARIES    oboe)
+    endif()
+endif()
+
 if(ANDROID OR IOS)
     find_package(SDL2 QUIET CONFIG)
     if(NOT TARGET SDL2::SDL2-static)
@@ -314,10 +335,14 @@ elseif(ANDROID)
         IMGUI_IMPL_OPENGL_ES3
         AMPLITRON_VERSION="${AMPLITRON_VERSION}"
         AMPLITRON_NO_MIDI
+        AMPLITRON_ANDROID_OBOE   # signals that Oboe backend is in use
     )
 
+    target_include_directories(main PRIVATE ${OBOE_INCLUDE_DIRS})
+
     target_link_libraries(main PRIVATE
-        SDL2::SDL2-static
+        ${OBOE_LIBRARIES}         # Google Oboe (AAudio/OpenSL ES low-latency)
+        SDL2::SDL2-static         # Still used for display / ImGui rendering
         android
         log
         EGL
@@ -431,6 +456,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
     set(TEST_SOURCES
         tests/test_main.cpp
         tests/test_common.cpp
+        tests/test_oboe_ring_buffer.cpp
         tests/test_effects.cpp
         tests/test_preset_manager.cpp
         tests/test_recorder.cpp
@@ -439,6 +465,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/test_snapshot_manager.cpp
         tests/test_ir_cabinet.cpp
         tests/test_midi_manager.cpp
+        tests/test_unsaved_preset.cpp
     )
 
     # Effect + core sources needed by tests (no GUI, no main)

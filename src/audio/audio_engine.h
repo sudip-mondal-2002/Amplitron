@@ -58,6 +58,15 @@ public:
     /** @brief Clear the stored error message. */
     void clear_error() { last_error_.clear(); }
 
+#ifdef AMPLITRON_ANDROID_OBOE
+    /**
+     * @brief Return a human-readable label for the Oboe sharing mode negotiated at runtime.
+     * "AAudio exclusive mode" when AAudio exclusive path is active; "OpenSL ES (shared)" otherwise.
+     * Used by the Android settings UI to display the actual backend, not a hardcoded string.
+     */
+    const char* get_oboe_sharing_mode_label() const;
+#endif
+
     /** @brief Enumerate available audio input devices. */
     std::vector<AudioDeviceInfo> get_input_devices() const;
 

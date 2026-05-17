@@ -177,6 +177,7 @@ bool GuiManager::initialize(int width, int height) {
 
     pedal_board_ = std::make_unique<PedalBoard>(engine_, command_history_, &gui_midi_);
     gui_presets_.set_pedal_board(pedal_board_.get());
+    gui_presets_.set_midi_manager(&midi_manager_);
     gui_snapshots_.set_pedal_board(pedal_board_.get());
 
     PresetManager::load_config();
