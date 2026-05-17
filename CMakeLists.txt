@@ -184,7 +184,7 @@ set(APP_SOURCES
 
 # --- MIDI Support (desktop only) ---
 set(MIDI_SOURCES)
-if(NOT EMSCRIPTEN AND NOT ANDROID AND NOT IOS)
+if(NOT ANDROID AND NOT IOS)
     list(APPEND MIDI_SOURCES
         src/midi/midi_manager.cpp
         src/midi/midi_manager_mapping.cpp
@@ -272,7 +272,7 @@ if(EMSCRIPTEN)
     )
 
     # OpenGL ES 3 for ImGui's OpenGL3 backend on WebGL 2
-    target_compile_definitions(Amplitron PRIVATE IMGUI_IMPL_OPENGL_ES3 AMPLITRON_VERSION="${AMPLITRON_VERSION}" AMPLITRON_NO_MIDI)
+    target_compile_definitions(Amplitron PRIVATE IMGUI_IMPL_OPENGL_ES3 AMPLITRON_VERSION="${AMPLITRON_VERSION}")
 
     # Emscripten linker flags for Web Audio + AudioWorklet + SharedArrayBuffer
     target_link_options(Amplitron PRIVATE

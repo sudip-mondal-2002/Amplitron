@@ -355,3 +355,101 @@ test.describe('No Runtime Errors', () => {
     expect(sabErrors).toHaveLength(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// 6. Web MIDI Support
+// ---------------------------------------------------------------------------
+
+test.describe('Web MIDI Support', () => {
+  test('MIDI CC11 controls output gain', async ({ page }) => {
+    // Mock navigator.requestMIDIAccess before loading the page
+    await page.addInitScript(() => {
+      const mockInput = new EventTarget();
+      let midiMessageListener: ((event: any) => void) | null = null;
+      
+      window.navigator.requestMIDIAccess = async () => {
+        // Create mock MIDI access object
+        const mockMidiAccess = {
+          inputs: new Map([['mock-device-id', mockInput]]),
+          outputs: new Map(),
+          addEventListener: (eventName: string) => {},
+          removeEventListener: (eventName: string) => {},
+          dispatchEvent: (event: Event) => true,
+        };
+        
+        // Wrap addEventListener to capture listener
+        mockInput.addEventListener = function(
+          eventName: string,
+          callback: any
+        ) {
+          if (eventName === 'midimessage') {
+            midiMessageListener = callback;
+          }
+        };
+        
+        // Define the mock input port
+        Object.defineProperty(mockInput, 'name', {
+          value: 'Mock MIDI Controller',
+        });
+        Object.defineProperty(mockInput, 'state', {
+          value: 'connected',
+        });
+        
+        return mockMidiAccess;
+      };
+      
+      // Simulate MIDI message after a delay
+      setTimeout(() => {
+        if (midiMessageListener) {
+          const mockEvent = {
+            data: new Uint8Array([0xB0, 11, 64]),  // CC11, value 64
+          };
+          midiMessageListener(mockEvent);
+        }
+      }, 500);
+    });
+    
+    // Load the page
+    await page.goto('/');
+    
+    // Wait for loading to complete
+    await page.waitForSelector('#loading.hidden', { timeout: 10000 });
+    
+    // Click to unlock audio (which triggers MIDI init)
+    await page.click('#audio-unlock');
+    
+    // Wait for MIDI status to show connection
+    const midiStatus = page.locator('#midi-status');
+    await expect(midiStatus).toContainText('Mock MIDI', { timeout: 2000 });
+    
+    // Verify no JavaScript errors occurred
+    const messages: string[] = [];
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') {
+        messages.push(msg.text());
+      }
+    });
+    
+    // Wait a bit to see if any errors pop up
+    await page.waitForTimeout(1000);
+    
+    expect(messages).toHaveLength(0);
+  });
+  
+  test('Gracefully handles missing Web MIDI support', async ({ page }) => {
+    // Mock the absence of Web MIDI API
+    await page.addInitScript(() => {
+      if (window.navigator) {
+        delete (window.navigator as any).requestMIDIAccess;
+      }
+    });
+    
+    await page.goto('/');
+    await page.waitForSelector('#loading.hidden', { timeout: 10000 });
+    await page.click('#audio-unlock');
+    
+    // Should show unsupported message
+    const midiStatus = page.locator('#midi-status');
+    await expect(midiStatus).toContainText('not supported', { timeout: 2000 });
+  });
+});

@@ -72,6 +72,37 @@ void MidiManager::install_default_mappings() {
     cc74.effect_name = "WahPedal";
     cc74.param_name = "Sweep";
     add_mapping(cc74);
+
+#ifdef __EMSCRIPTEN__
+    // Web-specific MIDI defaults
+    
+    // CC11 (Expression pedal) → Output Gain
+    MidiMapping cc11_output;
+    cc11_output.cc_number = 11;
+    cc11_output.midi_channel = -1;  // Respond on any channel
+    cc11_output.target_type = MidiTargetType::OutputGain;
+    cc11_output.mode = MidiMappingMode::Continuous;
+    add_mapping(cc11_output);
+    
+    // CC7 (Volume) → Also Output Gain (alternative)
+    MidiMapping cc7_output;
+    cc7_output.cc_number = 7;
+    cc7_output.midi_channel = -1;
+    cc7_output.target_type = MidiTargetType::OutputGain;
+    cc7_output.mode = MidiMappingMode::Continuous;
+    add_mapping(cc7_output);
+    
+    // CC64 (Sustain/Damper pedal) → Bypass toggle
+    // (Already implemented as EffectBypass for AmpSimulator above, 
+    // but redefined here explicitly for Web defaults)
+    MidiMapping cc64_bypass;
+    cc64_bypass.cc_number = 64;
+    cc64_bypass.midi_channel = -1;
+    cc64_bypass.target_type = MidiTargetType::EffectBypass;
+    cc64_bypass.mode = MidiMappingMode::Toggle;
+    cc64_bypass.effect_name = "AmpSimulator";
+    add_mapping(cc64_bypass);
+#endif
 }
 
 // ---------------------------------------------------------------------------
