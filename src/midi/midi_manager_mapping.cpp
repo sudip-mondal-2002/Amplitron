@@ -95,10 +95,14 @@ void MidiManager::install_default_mappings() {
     // CC64 (Sustain/Damper pedal) → Bypass toggle
     // (Already implemented as EffectBypass for AmpSimulator above, 
     // but redefined here explicitly for Web defaults)
+
+    // CC64 (Sustain) → acts as bypass via OutputGain toggle (web fallback)
+    
     MidiMapping cc64_bypass;
     cc64_bypass.cc_number = 64;
     cc64_bypass.midi_channel = -1;
-    cc64_bypass.target_type = MidiTargetType::EffectBypass;
+    // cc64_bypass.target_type = MidiTargetType::EffectBypass;
+    cc64_bypass.target_type = MidiTargetType::OutputGain;
     cc64_bypass.mode = MidiMappingMode::Toggle;
     cc64_bypass.effect_name = "AmpSimulator";
     add_mapping(cc64_bypass);
