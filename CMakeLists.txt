@@ -359,9 +359,7 @@ elseif(ANDROID)
     target_include_directories(main PRIVATE ${OBOE_INCLUDE_DIRS})
 
     target_link_libraries(main PRIVATE
-        nlohmann_json::nlohmann_json
-        ${OBOE_LIBRARIES}         # Google Oboe (AAudio/OpenSL ES low-latency)
-        SDL2::SDL2-static         # Still used for display / ImGui rendering
+        SDL2::SDL2-static
         android
         log
         EGL

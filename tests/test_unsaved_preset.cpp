@@ -56,18 +56,14 @@ TEST(presets_dirty_flag_input_gain) {
     AudioEngine engine;
     engine.initialize();
 
-    // 1. Establish the "clean" state baseline snapshot
     PresetData saved_state = capture_current_state(engine);
-    ASSERT_TRUE(equal_preset_data(saved_state, capture_current_state(engine))); // Should match baseline
+    ASSERT_TRUE(equal_preset_data(saved_state, capture_current_state(engine)));
 
-    // 2. Modify input gain to simulate an unsaved adjustment
     engine.set_input_gain(engine.get_input_gain() + 0.123f);
     
-    // Check "is_dirty" evaluation logic explicitly
     bool is_dirty = !equal_preset_data(saved_state, capture_current_state(engine));
     ASSERT_TRUE(is_dirty);
 
-    // 3. Reset the baseline to simulate a "mark_clean" event (Save/Load flow)
     saved_state = capture_current_state(engine);
     is_dirty = !equal_preset_data(saved_state, capture_current_state(engine));
     ASSERT_FALSE(is_dirty);
@@ -79,22 +75,39 @@ TEST(presets_dirty_on_add_effect) {
     AudioEngine engine;
     engine.initialize();
 
-    // 1. Establish the "clean" state baseline snapshot
     PresetData saved_state = capture_current_state(engine);
     ASSERT_TRUE(equal_preset_data(saved_state, capture_current_state(engine)));
 
-    // 2. Add an effect component to simulate an unsaved chain alteration
     auto od = std::make_shared<Overdrive>();
     engine.add_effect(od);
     
-    // Check "is_dirty" evaluation logic explicitly
     bool is_dirty = !equal_preset_data(saved_state, capture_current_state(engine));
     ASSERT_TRUE(is_dirty);
 
-    // 3. Reset the baseline to simulate a "mark_clean" event
     saved_state = capture_current_state(engine);
     is_dirty = !equal_preset_data(saved_state, capture_current_state(engine));
     ASSERT_FALSE(is_dirty);
 
     engine.shutdown();
+}
+
+TEST(preset_migration_load_v1) {
+    std::string legacy_v1_payload = "{\n  \"name\": \"Old School Drive\"\n}";
+
+    // Trigger the migration pipeline manually using standard strings
+    std::string upgraded_payload = PresetManager::apply_migrations(legacy_v1_payload);
+
+    // Verify the version string and fallback properties were safely injected
+    ASSERT_TRUE(upgraded_payload.find("\"version\": 2") != std::string::npos);
+    ASSERT_TRUE(upgraded_payload.find("\"input_gain\": 0.7") != std::string::npos);
+}
+
+// SATISFY: "Unit tests cover: load v2 preset"
+TEST(preset_migration_load_v2) {
+    std::string modern_v2_payload = "{\n  \"version\": 2,\n  \"name\": \"Modern Tone\"\n}";
+
+    std::string processed_payload = PresetManager::apply_migrations(modern_v2_payload);
+
+    // It shouldn't touch or double-modify a file that is already at version 2
+    ASSERT_TRUE(processed_payload == modern_v2_payload);
 }
