@@ -395,7 +395,7 @@ bool AudioEngine::set_output_device(int device_index) {
 } // namespace Amplitron
 
 // Fix: coderabbit — expose runtime sharing mode to UI
-const char* AudioEngine::get_oboe_sharing_mode_label() const {
+const char* Amplitron::AudioEngine::get_oboe_sharing_mode_label() const {
     if (!backend_ || !backend_->playbackCallback) return "Oboe";
     return (backend_->playbackCallback->get_sharing_mode() == oboe::SharingMode::Exclusive)
            ? "AAudio exclusive mode"
