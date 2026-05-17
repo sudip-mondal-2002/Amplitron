@@ -22,16 +22,13 @@ TEST(JackBackend, InitializeAndStart)
     engine.shutdown();
 }
 
-TEST(JackBackend, ProcessCallbackInvoked)
+TEST(JackBackend, StartStopSmoke)
 {
     AudioEngine engine;
     if (!engine.initialize())
     {
         GTEST_SKIP() << "jackd not running; skipping integration test";
     }
-
-    std::atomic<bool> invoked{false};
-    // Wrap engine->process_audio by installing a temporary effect? Simpler: spawn thread and rely on start()
     EXPECT_TRUE(engine.start());
     // wait briefly
     std::this_thread::sleep_for(std::chrono::milliseconds(200));

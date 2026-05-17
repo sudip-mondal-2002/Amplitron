@@ -1,5 +1,6 @@
 #pragma once
 
+#ifdef WITH_JACK
 #include <jack/jack.h>
 
 namespace Amplitron
@@ -14,3 +15,4 @@ namespace Amplitron
     };
 
 } // namespace Amplitron
+#endif // WITH_JACK

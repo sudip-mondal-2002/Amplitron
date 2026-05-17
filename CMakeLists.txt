@@ -263,8 +263,25 @@ elseif(ANDROID)
     set(DIALOG_SOURCES  src/gui/file_dialog_web.cpp)
 else()
     if(WITH_JACK)
-        find_path(JACK_INCLUDE_DIRS jack/jack.h)
-        find_library(JACK_LIBRARIES NAMES jack)
+        if(NOT JACK_INCLUDE_DIRS OR NOT JACK_LIBRARIES)
+            find_package(PkgConfig QUIET)
+            if(PkgConfig_FOUND)
+                pkg_check_modules(JACK QUIET jack)
+            endif()
+            if(NOT JACK_FOUND)
+                find_path(JACK_INCLUDE_DIRS jack/jack.h
+                    PATHS /usr/include /usr/local/include /opt/homebrew/include
+                          "C:/Program Files/JACK/include"
+                          "${CMAKE_SOURCE_DIR}/external/jack")
+                find_library(JACK_LIBRARIES NAMES jack
+                    PATHS /usr/lib /usr/local/lib /opt/homebrew/lib
+                          "C:/Program Files/JACK/lib"
+                          "${CMAKE_SOURCE_DIR}/external/jack")
+            endif()
+        endif()
+        if(JACK_LIBRARY_DIRS)
+            link_directories(${JACK_LIBRARY_DIRS})
+        endif()
         set(BACKEND_SOURCES
             src/audio/audio_backend_jack.cpp
             src/audio/audio_backend_jack_lifecycle.cpp
@@ -622,6 +639,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${IMGUI_DIR}
         ${IMGUI_DIR}/backends
         ${PORTAUDIO_INCLUDE_DIRS}
+        $<$<BOOL:${WITH_JACK}>:${JACK_INCLUDE_DIRS}>
         ${SDL2_INCLUDE_DIRS}
         ${OPENGL_INCLUDE_DIR}
         ${RTMIDI_INCLUDE_DIRS}

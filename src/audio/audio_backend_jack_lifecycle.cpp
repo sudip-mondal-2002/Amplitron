@@ -1,4 +1,5 @@
 // JACK backend — lifecycle and process callback
+#include "audio/audio_backend.h"
 #include "audio/audio_engine.h"
 #include "audio/audio_backend_jack_internal.h"
 #include <jack/jack.h>
@@ -22,7 +23,7 @@ namespace Amplitron
         if (!in || !out)
         {
             if (out)
-                std::memset(out, 0, nframes * 2 * sizeof(float));
+                std::memset(out, 0, nframes * sizeof(float));
             return 0;
         }
 
@@ -135,7 +136,7 @@ namespace Amplitron
 
     std::vector<AudioDeviceInfo> AudioEngine::get_input_devices() const { return {{0, "JACK Input", 1, 0, (double)sample_rate_, false}}; }
 
-    std::vector<AudioDeviceInfo> AudioEngine::get_output_devices() const { return {{0, "JACK Output", 0, 2, (double)sample_rate_, false}}; }
+    std::vector<AudioDeviceInfo> AudioEngine::get_output_devices() const { return {{0, "JACK Output", 0, 1, (double)sample_rate_, false}}; }
 
     bool AudioEngine::set_input_device(int) { return true; }
     bool AudioEngine::set_output_device(int) { return true; }
