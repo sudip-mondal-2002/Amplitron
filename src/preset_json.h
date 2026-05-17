@@ -22,8 +22,8 @@ std::string to_json_ext(const PresetData& preset);
 /**
  * @brief Deserialise a JSON string into a PresetData.
  *
- * Returns true on success.  On failure the function sets
- * PresetManager::last_error() and returns false.
+ * Returns true on success.  On failure the function logs to std::cerr and
+ * returns false without mutating the output parameter.
  */
 bool from_json_ext(const std::string& json_str, PresetData& preset);
 

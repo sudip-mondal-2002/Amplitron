@@ -13,7 +13,8 @@
  *    make PresetData and EffectData first-class nlohmann types, so callers
  *    can write `nlohmann::json j = preset;` directly.
  * 3. **Robust error handling** – every parse operation is wrapped in
- *    try/catch; failures propagate through PresetManager::last_error().
+ *    try/catch; on failure from_json_ext logs to std::cerr and returns false
+ *    without mutating the output parameter.
  * 4. **Preserves midi_mappings and metadata** – nothing that the old parser
  *    supported is dropped.
  */
@@ -55,6 +56,11 @@ void from_json(const nlohmann::json& j, PresetData::EffectData& fx) {
     fx.type    = j.value("type",    std::string{});
     fx.enabled = j.value("enabled", false);
     fx.mix     = j.value("mix",     1.0f);
+
+    // FIX: clear before repopulating so reusing an object never carries
+    // stale data forward (CodeRabbit issue #1).
+    fx.params.clear();
+    fx.metadata.clear();
 
     if (j.contains("params") && j["params"].is_object()) {
         for (const auto& [key, val] : j["params"].items()) {
@@ -117,7 +123,7 @@ void to_json(nlohmann::json& j, const PresetData& preset) {
     nlohmann::json effects_arr = nlohmann::json::array();
     for (const auto& fx : preset.effects) {
         nlohmann::json jfx;
-        to_json(jfx, fx);          // explicit call since we're not in ADL context
+        to_json(jfx, fx);
         effects_arr.push_back(std::move(jfx));
     }
 
@@ -147,6 +153,11 @@ void from_json(const nlohmann::json& j, PresetData& preset) {
     preset.input_gain   = j.value("input_gain",   0.7f);
     preset.output_gain  = j.value("output_gain",  0.8f);
 
+    // FIX: clear before repopulating so parsing into a non-empty PresetData
+    // never duplicates/retains old entries (CodeRabbit issue #2).
+    preset.effects.clear();
+    preset.midi_mappings.clear();
+
     if (j.contains("effects") && j["effects"].is_array()) {
         for (const auto& jfx : j["effects"]) {
             PresetData::EffectData fx;
@@ -173,14 +184,17 @@ void from_json(const nlohmann::json& j, PresetData& preset) {
 std::string to_json_ext(const PresetData& preset) {
     nlohmann::json j;
     to_json(j, preset);
-    // dump(4) produces the same indented, human-readable format as before
     return j.dump(4) + "\n";
 }
 
 bool from_json_ext(const std::string& json_str, PresetData& preset) {
+    // FIX: deserialize into a temporary so that a mid-way exception never
+    // leaves `preset` in a partially-mutated state (CodeRabbit issue #3).
     try {
         nlohmann::json j = nlohmann::json::parse(json_str);
-        from_json(j, preset);
+        PresetData tmp;
+        from_json(j, tmp);
+        preset = std::move(tmp);
         return true;
     } catch (const nlohmann::json::exception& e) {
         std::cerr << "[preset_json] JSON parse error: " << e.what() << std::endl;
