@@ -33,7 +33,9 @@ void PedalBoard::render_signal_chain() {
     ImVec2 origin = ImGui::GetCursorScreenPos();
 
     float line_y = origin.y + 160;
-    float total_width = visible.size() * 195.0f + 40;
+    // Compute the actual content width of the chain. Keeping this tight prevents
+    // the horizontal scrollbar from appearing due to a few extra pixels of padding.
+    float total_width = 20.0f + static_cast<float>(visible.size()) * 195.0f;
     dl->AddLine(
         ImVec2(origin.x, line_y),
         ImVec2(origin.x + total_width, line_y),
@@ -102,7 +104,10 @@ void PedalBoard::render_signal_chain() {
         rebuild_widgets();
     }
 
-    ImGui::Dummy(ImVec2(total_width + 20, 340));
+    // Reserve space so the child window's content size matches the drawn chain.
+    // Add only a small tail so the end jack isn't flush against the edge.
+    ImGui::SetCursorPos(ImVec2(0, 0));
+    ImGui::Dummy(ImVec2(total_width + 8.0f, 340));
 }
 
 } // namespace Amplitron
