@@ -203,6 +203,7 @@ set(APP_SOURCES
     src/audio/effects/equalizer.cpp
     src/audio/effects/noise_gate.cpp
     src/audio/effects/compressor.cpp
+    src/audio/effects/looper.cpp
     src/audio/effects/cabinet_sim.cpp
     src/audio/effects/ir_cabinet.cpp
     src/audio/effects/amp_simulator.cpp
@@ -560,6 +561,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/test_common.cpp
         tests/test_oboe_ring_buffer.cpp
         tests/test_effects.cpp
+        tests/test_looper.cpp
         tests/test_preset_manager.cpp
         tests/test_json_serialization.cpp
         tests/test_recorder.cpp
@@ -614,6 +616,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         src/audio/effects/equalizer.cpp
         src/audio/effects/noise_gate.cpp
         src/audio/effects/compressor.cpp
+        src/audio/effects/looper.cpp
         src/audio/effects/cabinet_sim.cpp
         src/audio/effects/ir_cabinet.cpp
         src/audio/effects/amp_simulator.cpp
