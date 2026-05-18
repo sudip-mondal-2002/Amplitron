@@ -26,15 +26,20 @@
             --text-primary: #e8e6e3;
             --text-dim: #a8a6a3;
             --green-live: #7fff7f;
+            --text-hero: clamp(4rem, 9vw, 8rem);
+            --text-h2: clamp(1.8rem, 3.5vw, 2.8rem);
+            --text-body: 1.0625rem;
+            --text-small: 0.875rem;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: var(--text-body);
+            line-height: 1.75;
             background: linear-gradient(135deg, var(--brown-dark) 0%, var(--brown-mid) 100%);
             color: var(--text-primary);
-            line-height: 1.6;
             min-height: 100vh;
-            padding-top: 80px; /* Add padding to prevent content from overlapping with the navbar */
+            padding-top: 80px;
         }
 
         .container {
@@ -62,18 +67,21 @@
         }
 
         .logo {
-            font-size: 4rem;
-            font-weight: 900;
+            font-size: var(--text-hero);
+            font-family: 'Cinzel', serif;
+            font-weight: 500;
+            letter-spacing: 0.18em;
             background: linear-gradient(135deg, var(--gold) 0%, var(--gold-hot) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
             margin-bottom: 10px;
-            letter-spacing: -2px;
         }
 
         .tagline {
             font-size: 1.5rem;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 400;
             color: var(--text-dim);
             margin-bottom: 30px;
         }
@@ -88,7 +96,9 @@
 
         .hero h2 {
             color: var(--gold);
-            font-size: 2rem;
+            font-size: var(--text-h2);
+            font-family: 'Cinzel', serif;
+            font-weight: 500;
             margin-bottom: 20px;
         }
 
@@ -114,6 +124,8 @@
 
         .feature-card h3 {
             color: var(--gold);
+            font-family: 'Cinzel', serif;
+            font-weight: 500;
             margin-bottom: 12px;
             font-size: 1.3rem;
         }
@@ -129,7 +141,9 @@
 
         .downloads h2 {
             text-align: center;
-            font-size: 2.5rem;
+            font-size: var(--text-h2);
+            font-family: 'Cinzel', serif;
+            font-weight: 500;
             margin-bottom: 40px;
             color: var(--gold);
         }
@@ -162,6 +176,8 @@
 
         .download-card h3 {
             color: var(--text-primary);
+            font-family: 'Cinzel', serif;
+            font-weight: 500;
             font-size: 1.8rem;
             margin-bottom: 10px;
         }
@@ -176,11 +192,12 @@
             display: inline-block;
             background: linear-gradient(135deg, var(--gold) 0%, var(--gold-hot) 100%);
             color: var(--brown-dark);
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 600;
+            font-size: 1.1rem;
             padding: 16px 40px;
             border-radius: 8px;
             text-decoration: none;
-            font-weight: 700;
-            font-size: 1.1rem;
             transition: transform 0.2s, box-shadow 0.2s;
             margin-top: 10px;
         }
@@ -200,6 +217,8 @@
 
         .requirements h3 {
             color: var(--gold);
+            font-family: 'Cinzel', serif;
+            font-weight: 500;
             margin-bottom: 15px;
         }
 
@@ -228,7 +247,9 @@
 
         .installation h2 {
             color: var(--gold);
-            font-size: 2rem;
+            font-family: 'Cinzel', serif;
+            font-weight: 500;
+            font-size: var(--text-h2);
             margin-bottom: 30px;
         }
 
@@ -241,6 +262,8 @@
 
         .install-steps h4 {
             color: var(--gold-hot);
+            font-family: 'Cinzel', serif;
+            font-weight: 500;
             margin-bottom: 15px;
             font-size: 1.3rem;
         }
@@ -464,7 +487,7 @@
             <a href="https://youtu.be/OLGx1zYj0W4" target="_blank" rel="noopener noreferrer"
                style="display: inline-block; background: linear-gradient(135deg, #c8a84a 0%, #e6c76a 100%);
                       color: #1c1a18; padding: 16px 40px; border-radius: 8px; text-decoration: none;
-                      font-weight: 700; font-size: 1.1rem; transition: transform 0.2s, box-shadow 0.2s;">
+                      font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 1.1rem; transition: transform 0.2s, box-shadow 0.2s;">
                 ▶ Watch on YouTube
             </a>
         </div>
