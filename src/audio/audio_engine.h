@@ -5,6 +5,7 @@
 #include "audio/recorder.h"
 #include "audio/spsc_queue.h"
 #include <chrono>
+#include <array>
 
 // FORWARD DECLARATIONS
 namespace Amplitron {
@@ -243,6 +244,12 @@ public:
     /** @brief Return the current CPU load fraction (0.0–1.0, atomic). */
     float get_cpu_load() const { return cpu_load_.load(std::memory_order_relaxed); }
 
+    /** @brief Return the total callback duration in microseconds. */
+    float get_total_callback_us() const { return callback_duration_us_.load(std::memory_order_relaxed); }
+
+    /** @brief Return the processing time (in microseconds) for a specific effect index. */
+    float get_effect_process_time_us(int index) const;
+
     /** @brief Suggest a new buffer size based on current CPU load. */
     int get_suggested_buffer_size() const;
 
@@ -329,6 +336,10 @@ private:
     std::atomic<float> callback_duration_us_{0.0f};
     bool auto_buffer_enabled_ = false;
 
+    // --- NEW: Per-Pedal DSP Profiling ---
+    static constexpr int MAX_PROFILED_EFFECTS = 32;
+    std::array<std::atomic<float>, MAX_PROFILED_EFFECTS> effect_process_times_us_{};
+
     // Audio-thread capture for GUI analyzer snapshots.
     static constexpr int ANALYZER_HOP_SIZE = 1024;
     std::array<float, ANALYZER_FFT_SIZE> analyzer_capture_input_{};
@@ -344,5 +355,12 @@ private:
 
     // (MIDI instance removed - use MidiManager)
 };
+
+inline float AudioEngine::get_effect_process_time_us(int index) const {
+    if (index >= 0 && index < MAX_PROFILED_EFFECTS) {
+        return effect_process_times_us_[index].load(std::memory_order_relaxed);
+    }
+    return 0.0f;
+}
 
 } // namespace Amplitron

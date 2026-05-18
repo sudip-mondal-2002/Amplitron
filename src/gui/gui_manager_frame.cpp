@@ -120,6 +120,10 @@ bool GuiManager::run_frame() {
     if (show_midi_) {
         gui_midi_.render(show_midi_);
     }
+    // --- NEW: Render the Profiler Window ---
+    if (show_profiler_) {
+        render_profiler();
+    }
 
     // Rendering
     ImGui::Render();
@@ -164,7 +168,7 @@ void GuiManager::render_master_controls() {
     float fill = std::min(smoothed_input_level_, 1.0f) * meter_w;
     ImU32 meter_color = (smoothed_input_level_ > 0.9f) ? Theme::METER_RED :
                         (smoothed_input_level_ > 0.6f) ? Theme::METER_YELLOW :
-                                                          Theme::METER_GREEN;
+                                                         Theme::METER_GREEN;
     dl->AddRectFilled(meter_pos, ImVec2(meter_pos.x + fill, meter_pos.y + 20),
                       meter_color, Theme::ROUNDING_SM);
     ImGui::Dummy(ImVec2(meter_w, 20));
@@ -180,7 +184,7 @@ void GuiManager::render_master_controls() {
     fill = std::min(smoothed_output_level_, 1.0f) * meter_w;
     meter_color = (smoothed_output_level_ > 0.9f) ? Theme::METER_RED :
                   (smoothed_output_level_ > 0.6f) ? Theme::METER_YELLOW :
-                                                     Theme::METER_GREEN;
+                                                    Theme::METER_GREEN;
     dl->AddRectFilled(meter_pos, ImVec2(meter_pos.x + fill, meter_pos.y + 20),
                       meter_color, Theme::ROUNDING_SM);
     ImGui::Dummy(ImVec2(meter_w, 20));
@@ -196,6 +200,77 @@ void GuiManager::render_master_controls() {
 
     ImGui::Columns(1);
     ImGui::EndChild();
+}
+
+// --- NEW: The GUI implementation of the DSP Profiler ---
+void GuiManager::render_profiler() {
+    ImGui::SetNextWindowSize(ImVec2(450, 400), ImGuiCond_FirstUseEver);
+    if (!ImGui::Begin("DSP Performance Profiler", &show_profiler_)) {
+        ImGui::End();
+        return;
+    }
+
+    int sr = engine_.get_sample_rate();
+    int bs = engine_.get_buffer_size();
+    if (sr == 0) sr = 44100; // Safety fallback
+    
+    float block_duration_ms = (static_cast<float>(bs) / sr) * 1000.0f;
+    float block_budget_us = block_duration_ms * 1000.0f;
+    float total_cpu = engine_.get_cpu_load() * 100.0f;
+
+    ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "Global Audio Engine Stability");
+    ImGui::Separator();
+    ImGui::Text("Sample Rate: %d Hz", sr);
+    ImGui::Text("Buffer Size: %d samples", bs);
+    ImGui::Text("Block Duration: %.2f ms (%.0f us)", block_duration_ms, block_budget_us);
+    
+    float total_us = engine_.get_total_callback_us();
+    ImGui::Text("Total Process Time: %.1f us", total_us);
+
+    ImGui::Spacing();
+    ImGui::Text("Audio Thread CPU Load:");
+    ImVec4 load_color = (total_cpu > 80.0f) ? ImVec4(1.0f, 0.2f, 0.2f, 1.0f) :
+                        (total_cpu > 50.0f) ? ImVec4(1.0f, 0.8f, 0.2f, 1.0f) :
+                                              ImVec4(0.2f, 1.0f, 0.2f, 1.0f);
+    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, load_color);
+    char total_buf[32];
+    snprintf(total_buf, sizeof(total_buf), "%.1f%%", total_cpu);
+    ImGui::ProgressBar(engine_.get_cpu_load(), ImVec2(-1.0f, 0.0f), total_buf);
+    ImGui::PopStyleColor();
+
+    if (total_cpu > 80.0f) {
+        ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "WARNING: High risk of buffer underruns!");
+    }
+
+    ImGui::Spacing();
+    ImGui::Spacing();
+    ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "Per-Pedal DSP Processing Time");
+    ImGui::Separator();
+
+    auto& effects = engine_.effects();
+    if (effects.empty()) {
+        ImGui::TextDisabled("No pedals in the current chain.");
+    } else {
+        for (size_t i = 0; i < effects.size(); ++i) {
+            float us = engine_.get_effect_process_time_us(static_cast<int>(i));
+            float fraction = (block_budget_us > 0.0f) ? (us / block_budget_us) : 0.0f;
+
+            ImGui::Text("Pedal Slot %zu", i + 1);
+            ImGui::SameLine(ImGui::GetWindowWidth() - 100);
+            ImGui::Text("%.1f us", us);
+
+            ImVec4 bar_color = (fraction > 0.4f) ? ImVec4(1.0f, 0.2f, 0.2f, 1.0f) :
+                               (fraction > 0.2f) ? ImVec4(1.0f, 0.8f, 0.2f, 1.0f) :
+                                                   ImVec4(0.2f, 0.6f, 1.0f, 1.0f); 
+            ImGui::PushStyleColor(ImGuiCol_PlotHistogram, bar_color);
+            char buf[32];
+            snprintf(buf, sizeof(buf), "%.1f%%", fraction * 100.0f);
+            ImGui::ProgressBar(fraction, ImVec2(-1.0f, 8.0f), buf); 
+            ImGui::PopStyleColor();
+            ImGui::Spacing();
+        }
+    }
+    ImGui::End();
 }
 
 } // namespace Amplitron

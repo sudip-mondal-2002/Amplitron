@@ -193,6 +193,10 @@ void GuiManager::render_menu_bar() {
             if (ImGui::MenuItem("MIDI Settings", nullptr, show_midi_)) {
                 show_midi_ = !show_midi_;
             }
+            // --- NEW: Toggle the DSP Profiler Window ---
+            if (ImGui::MenuItem("DSP Performance Profiler", nullptr, show_profiler_)) {
+                show_profiler_ = !show_profiler_;
+            }
             ImGui::EndMenu();
         }
 

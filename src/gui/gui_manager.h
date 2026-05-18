@@ -48,6 +48,7 @@ public:
 private:
     void render_menu_bar();
     void render_master_controls();
+    void render_profiler(); // --- NEW: DSP Profiler rendering method ---
 
     AudioEngine& engine_;
     CommandHistory command_history_;
@@ -60,6 +61,7 @@ private:
     bool show_save_preset_ = false;
     bool show_load_preset_ = false;
     bool show_tuner_ = false;
+    bool show_profiler_ = false; // --- NEW: Toggle for the DSP Profiler window ---
     int window_width_ = 1280;
     int window_height_ = 720;
 

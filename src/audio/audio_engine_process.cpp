@@ -61,11 +61,28 @@ void AudioEngine::process_audio(const float* input, float* output, int frame_cou
         std::memcpy(process_buffer_right_.data(), process_buffer_.data(),
                     static_cast<size_t>(frame_count) * sizeof(float));
     }
+
+    // --- NEW: Per-Pedal DSP Profiling Loop ---
+    int fx_index = 0;
     for (auto& fx : audio_shadow_effects_) {
         if (fx->is_enabled()) {
+            auto fx_start = std::chrono::steady_clock::now();
+
             fx->process_stereo(process_buffer_.data(),
                                process_buffer_right_.data(), frame_count);
+
+            auto fx_end = std::chrono::steady_clock::now();
+            float fx_duration_us = std::chrono::duration<float, std::micro>(fx_end - fx_start).count();
+
+            if (fx_index < MAX_PROFILED_EFFECTS) {
+                effect_process_times_us_[fx_index].store(fx_duration_us, std::memory_order_relaxed);
+            }
+        } else {
+            if (fx_index < MAX_PROFILED_EFFECTS) {
+                effect_process_times_us_[fx_index].store(0.0f, std::memory_order_relaxed);
+            }
         }
+        fx_index++;
     }
 
     float out_gain = output_gain_.load(std::memory_order_relaxed);
