@@ -420,7 +420,7 @@ test.describe('Web MIDI Support', () => {
     
     // Wait for MIDI status to show connection
     const midiStatus = page.locator('#midi-status');
-    await expect(midiStatus).toContainText('Mock MIDI', { timeout: 2000 });
+    await expect(midiStatus).toContainText('1 MIDI device(s) connected', { timeout: 2000 });
     
     // Verify no JavaScript errors occurred
     const messages: string[] = [];
@@ -448,8 +448,8 @@ test.describe('Web MIDI Support', () => {
     await page.waitForSelector('#loading.hidden', { timeout: 10000 });
     await page.click('#audio-unlock');
     
-    // Should show unsupported message
+    // Should show permission denied message when Web MIDI is unavailable
     const midiStatus = page.locator('#midi-status');
-    await expect(midiStatus).toContainText('not supported', { timeout: 2000 });
+    await expect(midiStatus).toContainText('MIDI permission denied', { timeout: 2000 });
   });
 });
