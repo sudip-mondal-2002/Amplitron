@@ -8,6 +8,7 @@
   <script src="coi-serviceworker.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body {
       background: #141210;
       color: #e0dcd4;
@@ -25,6 +26,119 @@
       width: 100vw;
       height: 100vh;
       display: block;
+    }
+    /* Sticky navbar */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 40px;
+      z-index: 300;
+      transition: background 0.3s ease, backdrop-filter 0.3s ease;
+      backdrop-filter: none;
+    }
+    nav.scrolled {
+      background: rgba(20, 18, 16, 0.85);
+      backdrop-filter: blur(12px);
+    }
+    .nav-logo {
+      font-size: 24px;
+      font-weight: 300;
+      letter-spacing: 0.15em;
+      color: #f0a030;
+      white-space: nowrap;
+    }
+    .nav-links {
+      display: flex;
+      gap: 48px;
+      align-items: center;
+    }
+    .nav-links a {
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #e0dcd4;
+      text-decoration: none;
+      transition: color 0.2s ease;
+      cursor: pointer;
+    }
+    .nav-links a:hover {
+      color: #f0a030;
+    }
+    /* Hamburger menu */
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      cursor: pointer;
+      z-index: 301;
+    }
+    .hamburger span {
+      width: 28px;
+      height: 2px;
+      background: #e0dcd4;
+      transition: all 0.3s ease;
+      border-radius: 1px;
+    }
+    .hamburger.active span:nth-child(1) {
+      transform: rotate(45deg) translate(8px, 8px);
+    }
+    .hamburger.active span:nth-child(2) {
+      opacity: 0;
+    }
+    .hamburger.active span:nth-child(3) {
+      transform: rotate(-45deg) translate(8px, -8px);
+    }
+    /* Mobile overlay menu */
+    .mobile-menu {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(20, 18, 16, 0.98);
+      backdrop-filter: blur(12px);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 299;
+    }
+    .mobile-menu.active {
+      display: flex;
+    }
+    .mobile-menu a {
+      font-size: 32px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #e0dcd4;
+      text-decoration: none;
+      margin: 24px 0;
+      transition: color 0.2s ease;
+    }
+    .mobile-menu a:hover {
+      color: #f0a030;
+    }
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+      nav {
+        padding: 0 24px;
+        height: 70px;
+      }
+      .nav-logo {
+        font-size: 20px;
+      }
+      .nav-links {
+        display: none;
+      }
+      .hamburger {
+        display: flex;
+      }
     }
     /* Loading overlay */
     #loading {
@@ -118,6 +232,30 @@
     </p>
   </div>
 
+  <!-- Sticky navbar -->
+  <nav id="navbar">
+    <div class="nav-logo">AMPLITRON</div>
+    <div class="nav-links">
+      <a href="#sound">Sound</a>
+      <a href="#effects">Effects</a>
+      <a href="#download">Download</a>
+      <a href="#docs">Docs</a>
+    </div>
+    <div class="hamburger" id="hamburger">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  </nav>
+
+  <!-- Mobile overlay menu -->
+  <div class="mobile-menu" id="mobile-menu">
+    <a href="#sound">Sound</a>
+    <a href="#effects">Effects</a>
+    <a href="#download">Download</a>
+    <a href="#docs">Docs</a>
+  </div>
+
   <!-- Emscripten canvas -->
   <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
 
@@ -150,6 +288,37 @@
         console.log('[Amplitron] WASM runtime ready.');
       }
     };
+
+    // Navbar scroll detection and mobile menu functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      var navbar = document.getElementById('navbar');
+      var hamburger = document.getElementById('hamburger');
+      var mobileMenu = document.getElementById('mobile-menu');
+      var navLinks = document.querySelectorAll('.nav-links a, .mobile-menu a');
+
+      // Scroll detection for navbar blur effect
+      window.addEventListener('scroll', function() {
+        if (window.scrollY > 60) {
+          navbar.classList.add('scrolled');
+        } else {
+          navbar.classList.remove('scrolled');
+        }
+      });
+
+      // Hamburger menu toggle
+      hamburger.addEventListener('click', function() {
+        hamburger.classList.toggle('active');
+        mobileMenu.classList.toggle('active');
+      });
+
+      // Close mobile menu when a link is clicked
+      navLinks.forEach(function(link) {
+        link.addEventListener('click', function() {
+          hamburger.classList.remove('active');
+          mobileMenu.classList.remove('active');
+        });
+      });
+    });
   </script>
   {{{ SCRIPT }}}
 </body>
