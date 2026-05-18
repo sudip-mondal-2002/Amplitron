@@ -6,26 +6,12 @@
   <title>Amplitron - Guitar Amp Simulator</title>
   <!-- coi-serviceworker: enables SharedArrayBuffer on GitHub Pages (no COOP/COEP headers needed) -->
   <script src="coi-serviceworker.js"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    /* Typography system */
-    :root {
-      --text-hero: clamp(4rem, 9vw, 8rem);
-      --text-h2: clamp(1.8rem, 3.5vw, 2.8rem);
-      --text-body: 1.0625rem;
-      --text-small: 0.875rem;
-    }
-
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
     body {
       background: #141210;
       color: #e0dcd4;
-      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      font-size: var(--text-body);
-      line-height: 1.75;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -39,124 +25,6 @@
       width: 100vw;
       height: 100vh;
       display: block;
-    }
-    /* Sticky navbar */
-    nav {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 80px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 40px;
-      z-index: 300;
-      transition: background 0.3s ease, backdrop-filter 0.3s ease;
-      backdrop-filter: none;
-    }
-    nav.scrolled {
-      background: rgba(20, 18, 16, 0.85);
-      backdrop-filter: blur(12px);
-    }
-    .nav-logo {
-      font-size: 24px;
-      font-family: 'Cinzel', serif;
-      font-weight: 500;
-      letter-spacing: 0.18em;
-      color: #f0a030;
-      white-space: nowrap;
-    }
-    .nav-links {
-      display: flex;
-      gap: 48px;
-      align-items: center;
-    }
-    .nav-links a {
-      font-size: 13px;
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 500;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: #e0dcd4;
-      text-decoration: none;
-      transition: color 0.2s ease;
-      cursor: pointer;
-    }
-    .nav-links a:hover {
-      color: #f0a030;
-    }
-    /* Hamburger menu */
-    .hamburger {
-      display: none;
-      flex-direction: column;
-      gap: 6px;
-      cursor: pointer;
-      z-index: 301;
-    }
-    .hamburger span {
-      width: 28px;
-      height: 2px;
-      background: #e0dcd4;
-      transition: all 0.3s ease;
-      border-radius: 1px;
-    }
-    .hamburger.active span:nth-child(1) {
-      transform: rotate(45deg) translate(8px, 8px);
-    }
-    .hamburger.active span:nth-child(2) {
-      opacity: 0;
-    }
-    .hamburger.active span:nth-child(3) {
-      transform: rotate(-45deg) translate(8px, -8px);
-    }
-    /* Mobile overlay menu */
-    .mobile-menu {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(20, 18, 16, 0.98);
-      backdrop-filter: blur(12px);
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 299;
-    }
-    .mobile-menu.active {
-      display: flex;
-    }
-    .mobile-menu a {
-      font-size: 32px;
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 500;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: #e0dcd4;
-      text-decoration: none;
-      margin: 24px 0;
-      transition: color 0.2s ease;
-    }
-    .mobile-menu a:hover {
-      color: #f0a030;
-    }
-    /* Mobile responsive */
-    @media (max-width: 768px) {
-      nav {
-        padding: 0 24px;
-        height: 70px;
-      }
-      .nav-logo {
-        font-size: 20px;
-      }
-      .nav-links {
-        display: none;
-      }
-      .hamburger {
-        display: flex;
-      }
     }
     /* Loading overlay */
     #loading {
@@ -173,16 +41,11 @@
     #loading.hidden { opacity: 0; pointer-events: none; }
     #loading h1 {
       font-size: 2rem;
-      font-family: 'Cinzel', serif;
-      font-weight: 500;
-      letter-spacing: 0.18em;
       margin-bottom: 1rem;
       color: #f0a030;
     }
     #loading .subtitle {
       font-size: 0.9rem;
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 400;
       color: #888;
       margin-bottom: 2rem;
     }
@@ -218,14 +81,10 @@
     }
     #audio-unlock h2 {
       font-size: 1.5rem;
-      font-family: 'Cinzel', serif;
-      font-weight: 500;
       color: #f0a030;
       margin-bottom: 1rem;
     }
     #audio-unlock p {
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 400;
       color: #aaa;
       font-size: 0.9rem;
     }
@@ -257,30 +116,6 @@
       <a href="../" style="color: #f0a030; text-decoration: underline;">native desktop builds</a>.
       For the best experience, download the native version for your platform.
     </p>
-  </div>
-
-  <!-- Sticky navbar -->
-  <nav id="navbar">
-    <div class="nav-logo">AMPLITRON</div>
-    <div class="nav-links">
-      <a href="#sound">Sound</a>
-      <a href="#effects">Effects</a>
-      <a href="#download">Download</a>
-      <a href="#docs">Docs</a>
-    </div>
-    <div class="hamburger" id="hamburger">
-      <span></span>
-      <span></span>
-      <span></span>
-    </div>
-  </nav>
-
-  <!-- Mobile overlay menu -->
-  <div class="mobile-menu" id="mobile-menu">
-    <a href="#sound">Sound</a>
-    <a href="#effects">Effects</a>
-    <a href="#download">Download</a>
-    <a href="#docs">Docs</a>
   </div>
 
   <!-- Emscripten canvas -->
@@ -315,37 +150,6 @@
         console.log('[Amplitron] WASM runtime ready.');
       }
     };
-
-    // Navbar scroll detection and mobile menu functionality
-    document.addEventListener('DOMContentLoaded', function() {
-      var navbar = document.getElementById('navbar');
-      var hamburger = document.getElementById('hamburger');
-      var mobileMenu = document.getElementById('mobile-menu');
-      var navLinks = document.querySelectorAll('.nav-links a, .mobile-menu a');
-
-      // Scroll detection for navbar blur effect
-      window.addEventListener('scroll', function() {
-        if (window.scrollY > 60) {
-          navbar.classList.add('scrolled');
-        } else {
-          navbar.classList.remove('scrolled');
-        }
-      });
-
-      // Hamburger menu toggle
-      hamburger.addEventListener('click', function() {
-        hamburger.classList.toggle('active');
-        mobileMenu.classList.toggle('active');
-      });
-
-      // Close mobile menu when a link is clicked
-      navLinks.forEach(function(link) {
-        link.addEventListener('click', function() {
-          hamburger.classList.remove('active');
-          mobileMenu.classList.remove('active');
-        });
-      });
-    });
   </script>
   {{{ SCRIPT }}}
 </body>
