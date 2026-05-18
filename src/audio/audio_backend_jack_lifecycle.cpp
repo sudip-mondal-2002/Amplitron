@@ -9,8 +9,8 @@
 namespace Amplitron
 {
 
-    // Static process callback
-    static int jack_process(jack_nframes_t nframes, void *arg)
+    // JACK process callback
+    int jack_process(jack_nframes_t nframes, void *arg)
     {
         AudioEngine *engine = static_cast<AudioEngine *>(arg);
         AudioBackendState *be = engine->backend_;
