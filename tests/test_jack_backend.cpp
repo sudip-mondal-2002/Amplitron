@@ -1,36 +1,31 @@
 #ifdef WITH_JACK
+#include "test_framework.h"
 #include "audio/audio_backend_jack_internal.h"
 #include "audio/audio_engine.h"
-#include <gtest/gtest.h>
-#include <atomic>
 #include <thread>
 
 using namespace Amplitron;
 
-TEST(JackBackend, InitializeAndStart)
-{
-    AudioEngine engine;
-    // initialization requires jackd running; this test is guarded by WITH_JACK
-    bool ok = engine.initialize();
-    if (!ok)
-    {
-        GTEST_SKIP() << "jackd not running; skipping integration test";
-    }
-    EXPECT_TRUE(ok);
-    EXPECT_TRUE(engine.start());
-    engine.stop();
-    engine.shutdown();
-}
-
-TEST(JackBackend, StartStopSmoke)
+TEST(JackBackend_InitializeAndStart)
 {
     AudioEngine engine;
     if (!engine.initialize())
     {
-        GTEST_SKIP() << "jackd not running; skipping integration test";
+        return;
     }
-    EXPECT_TRUE(engine.start());
-    // wait briefly
+    ASSERT_TRUE(engine.start());
+    engine.stop();
+    engine.shutdown();
+}
+
+TEST(JackBackend_StartStopSmoke)
+{
+    AudioEngine engine;
+    if (!engine.initialize())
+    {
+        return;
+    }
+    ASSERT_TRUE(engine.start());
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     engine.stop();
     engine.shutdown();

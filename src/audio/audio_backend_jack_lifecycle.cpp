@@ -130,6 +130,22 @@ namespace Amplitron
         }
     }
 
+    bool AudioEngine::restart()
+    {
+        stop();
+        bool ok = start();
+        if (!ok)
+        {
+            last_error_ = "Failed to restart audio stream. Check JACK server and device settings.";
+            std::cerr << "[Amplitron] " << last_error_ << std::endl;
+        }
+        else
+        {
+            last_error_.clear();
+        }
+        return ok;
+    }
+
     // Device name stubs
     std::string AudioEngine::get_input_device_name() const { return "JACK Input"; }
     std::string AudioEngine::get_output_device_name() const { return "JACK Output"; }
