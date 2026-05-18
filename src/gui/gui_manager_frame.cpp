@@ -27,39 +27,50 @@ bool GuiManager::run_frame() {
     ImGui::NewFrame();
 
     // Keyboard shortcuts for undo/redo and snapshot save
-    {
-        ImGuiIO& io = ImGui::GetIO();
-        if (!io.WantTextInput) {
-            bool mod = io.KeySuper || io.KeyCtrl;
-            if (mod && !io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_Z)) {
-                if (command_history_.undo() && pedal_board_) {
+{
+    ImGuiIO& io = ImGui::GetIO();
+
+    bool mod = io.KeySuper || io.KeyCtrl;
+
+    if (mod && !io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_Z)) {
+        if (command_history_.undo() && pedal_board_) {
+            pedal_board_->rebuild_widgets();
+        }
+    }
+
+    
+
+    if (mod && io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_Z)) {
+        if (command_history_.redo() && pedal_board_) {
+            pedal_board_->rebuild_widgets();
+        }
+    }
+
+    if (mod && !io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_Y)) {
+        if (command_history_.redo() && pedal_board_) {
+            pedal_board_->rebuild_widgets();
+        }
+    }
+
+    // Ctrl/Cmd+1–4: recall snapshot slot A–D
+    static const ImGuiKey digit_keys[4] = {
+        ImGuiKey_1, ImGuiKey_2, ImGuiKey_3, ImGuiKey_4
+    };
+
+    for (int i = 0; i < 4; ++i) {
+        if (mod && !io.KeyShift &&
+            ImGui::IsKeyPressed(digit_keys[i])) {
+
+            if (gui_snapshots_.manager().has_slot(i)) {
+                gui_snapshots_.recall_slot(i);
+
+                if (pedal_board_) {
                     pedal_board_->rebuild_widgets();
-                }
-            }
-            if (mod && io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_Z)) {
-                if (command_history_.redo() && pedal_board_) {
-                    pedal_board_->rebuild_widgets();
-                }
-            }
-            if (mod && !io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_Y)) {
-                if (command_history_.redo() && pedal_board_) {
-                    pedal_board_->rebuild_widgets();
-                }
-            }
-            // Ctrl/Cmd+1–4: recall snapshot slot A–D
-            static const ImGuiKey digit_keys[4] = {
-                ImGuiKey_1, ImGuiKey_2, ImGuiKey_3, ImGuiKey_4
-            };
-            for (int i = 0; i < 4; ++i) {
-                if (mod && !io.KeyShift && ImGui::IsKeyPressed(digit_keys[i])) {
-                    if (gui_snapshots_.manager().has_slot(i)) {
-                        gui_snapshots_.recall_slot(i);
-                        if (pedal_board_) pedal_board_->rebuild_widgets();
-                    }
                 }
             }
         }
     }
+}
 
     // Main menu bar
     render_menu_bar();
@@ -120,7 +131,20 @@ bool GuiManager::run_frame() {
     if (show_midi_) {
         gui_midi_.render(show_midi_);
     }
+    // M shortcut after widgets are rendered
+    if (!ImGui::GetIO().WantTextInput &&
+        !ImGui::IsAnyItemActive() &&
+        ImGui::IsKeyPressed(ImGuiKey_M)) {
 
+            audio_muted_ = !audio_muted_;
+
+        if (audio_muted_) {
+            engine_.stop();
+        } 
+        else {
+            engine_.start();
+        }
+    }
     // Rendering
     ImGui::Render();
     int display_w, display_h;
@@ -189,6 +213,10 @@ void GuiManager::render_master_controls() {
 
     // Output gain
     ImGui::Text("OUTPUT");
+    if (audio_muted_) {
+    ImGui::SameLine();
+    ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "MUTED");
+}
     float output_gain = engine_.get_output_gain();
     if (ImGui::SliderFloat("##OutputGain", &output_gain, 0.0f, 2.0f, "%.2f")) {
         engine_.set_output_gain(output_gain);

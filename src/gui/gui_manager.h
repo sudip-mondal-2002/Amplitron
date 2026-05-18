@@ -62,6 +62,7 @@ private:
     bool show_tuner_ = false;
     int window_width_ = 1280;
     int window_height_ = 720;
+    bool audio_muted_ = false;
 
     // Smoothed meter values for master controls
     float smoothed_input_level_ = 0.0f;
