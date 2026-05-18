@@ -6,9 +6,19 @@
 #include <imgui_impl_opengl3.h>
 #include <imgui_impl_sdl2.h>
 #include <SDL2/SDL.h>
+#include <algorithm>
 
 namespace Amplitron {
 
+/**
+ * @brief Drives the application's core rendering and event frame dispatch loop.
+ *
+ * Polls OS events from SDL, processes active MIDI states, hooks global hotkeys for 
+ * history control stacks, renders the main viewport panel areas, and overlays 
+ * sub-module diagnostic popups, including the active real-time DSP performance tracker.
+ *
+ * @return true if the execution context should continue processing; false if a exit signal is caught.
+ */
 bool GuiManager::run_frame() {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
@@ -120,7 +130,8 @@ bool GuiManager::run_frame() {
     if (show_midi_) {
         gui_midi_.render(show_midi_);
     }
-    // --- NEW: Render the Profiler Window ---
+    
+    // Render the Profiler Window if triggered from Utilities
     if (show_profiler_) {
         render_profiler();
     }
@@ -138,6 +149,12 @@ bool GuiManager::run_frame() {
     return true;
 }
 
+/**
+ * @brief Renders the master audio control bar containing input/output sliders and DB gain meters.
+ *
+ * Utilizes exponential smoothing parameters to balance responsive metering visualization data 
+ * maps on top of ImGui DrawLists without generating layout blocks or processing overheads.
+ */
 void GuiManager::render_master_controls() {
     // Smooth metering
     float input_lvl = engine_.get_input_level();
@@ -202,13 +219,25 @@ void GuiManager::render_master_controls() {
     ImGui::EndChild();
 }
 
-// --- NEW: The GUI implementation of the DSP Profiler ---
+/**
+ * @brief Renders the real-time DSP Performance Profiler window interface.
+ * 
+ * Queries global system latency metrics, calculates processing budgets based on 
+ * buffer sizes, and paints reactive, color-coded visual progress indicators for 
+ * individual pedal slots up to a capped architectural limitation boundary.
+ */
 void GuiManager::render_profiler() {
     ImGui::SetNextWindowSize(ImVec2(450, 400), ImGuiCond_FirstUseEver);
     if (!ImGui::Begin("DSP Performance Profiler", &show_profiler_)) {
         ImGui::End();
         return;
     }
+
+    // Threshold boundaries to eliminate magic number warnings
+    constexpr float CPU_CRITICAL_THRESHOLD = 80.0f;
+    constexpr float CPU_WARNING_THRESHOLD  = 50.0f;
+    constexpr float PEDAL_HIGH_LOAD         = 0.4f;
+    constexpr float PEDAL_MED_LOAD          = 0.2f;
 
     int sr = engine_.get_sample_rate();
     int bs = engine_.get_buffer_size();
@@ -229,16 +258,18 @@ void GuiManager::render_profiler() {
 
     ImGui::Spacing();
     ImGui::Text("Audio Thread CPU Load:");
-    ImVec4 load_color = (total_cpu > 80.0f) ? ImVec4(1.0f, 0.2f, 0.2f, 1.0f) :
-                        (total_cpu > 50.0f) ? ImVec4(1.0f, 0.8f, 0.2f, 1.0f) :
-                                              ImVec4(0.2f, 1.0f, 0.2f, 1.0f);
+    
+    // Choose dynamic meter bar coloring based on static threshold mappings
+    ImVec4 load_color = (total_cpu > CPU_CRITICAL_THRESHOLD) ? ImVec4(1.0f, 0.2f, 0.2f, 1.0f) :
+                        (total_cpu > CPU_WARNING_THRESHOLD)  ? ImVec4(1.0f, 0.8f, 0.2f, 1.0f) :
+                                                               ImVec4(0.2f, 1.0f, 0.2f, 1.0f);
     ImGui::PushStyleColor(ImGuiCol_PlotHistogram, load_color);
     char total_buf[32];
     snprintf(total_buf, sizeof(total_buf), "%.1f%%", total_cpu);
     ImGui::ProgressBar(engine_.get_cpu_load(), ImVec2(-1.0f, 0.0f), total_buf);
     ImGui::PopStyleColor();
 
-    if (total_cpu > 80.0f) {
+    if (total_cpu > CPU_CRITICAL_THRESHOLD) {
         ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "WARNING: High risk of buffer underruns!");
     }
 
@@ -251,7 +282,11 @@ void GuiManager::render_profiler() {
     if (effects.empty()) {
         ImGui::TextDisabled("No pedals in the current chain.");
     } else {
-        for (size_t i = 0; i < effects.size(); ++i) {
+        // Cap displayed rows to the maximum profiled range defined in the engine
+        constexpr size_t kMaxProfiledEffects = 32;
+        const size_t profiled_count = std::min(effects.size(), kMaxProfiledEffects);
+
+        for (size_t i = 0; i < profiled_count; ++i) {
             float us = engine_.get_effect_process_time_us(static_cast<int>(i));
             float fraction = (block_budget_us > 0.0f) ? (us / block_budget_us) : 0.0f;
 
@@ -259,15 +294,22 @@ void GuiManager::render_profiler() {
             ImGui::SameLine(ImGui::GetWindowWidth() - 100);
             ImGui::Text("%.1f us", us);
 
-            ImVec4 bar_color = (fraction > 0.4f) ? ImVec4(1.0f, 0.2f, 0.2f, 1.0f) :
-                               (fraction > 0.2f) ? ImVec4(1.0f, 0.8f, 0.2f, 1.0f) :
-                                                   ImVec4(0.2f, 0.6f, 1.0f, 1.0f); 
+            // Per-pedal processing budget coloring
+            ImVec4 bar_color = (fraction > PEDAL_HIGH_LOAD) ? ImVec4(1.0f, 0.2f, 0.2f, 1.0f) :
+                               (fraction > PEDAL_MED_LOAD)  ? ImVec4(1.0f, 0.8f, 0.2f, 1.0f) :
+                                                              ImVec4(0.2f, 0.6f, 1.0f, 1.0f); 
             ImGui::PushStyleColor(ImGuiCol_PlotHistogram, bar_color);
             char buf[32];
             snprintf(buf, sizeof(buf), "%.1f%%", fraction * 100.0f);
             ImGui::ProgressBar(fraction, ImVec2(-1.0f, 8.0f), buf); 
             ImGui::PopStyleColor();
             ImGui::Spacing();
+        }
+
+        // Inform the user if there are more active pedals than the profiling matrix handles
+        if (effects.size() > profiled_count) {
+            ImGui::Spacing();
+            ImGui::TextDisabled("Only the first %zu pedal slots are currently profiled.", profiled_count);
         }
     }
     ImGui::End();
