@@ -180,13 +180,15 @@
     // Check browser support
     if (!navigator.requestMIDIAccess) {
       console.warn('[MIDI] Web MIDI API not supported in this browser');
-      updateMIDIStatus('⚠️ MIDI not supported (try Chrome/Edge)');
+      updateMIDIStatus('MIDI not supported');
       return;
     }
     
     navigator.requestMIDIAccess()
       .then(onMIDISuccess)
-      .catch(onMIDIFailure);
+      .catch(() => {
+        updateMIDIStatus('MIDI not supported');
+      });
   }
   
   function onMIDISuccess(midiAccess) {
@@ -217,7 +219,7 @@
     }
     
     if (inputCount > 0) {
-      updateMIDIStatus(`Mock MIDI (${firstInputName})`);
+      updateMIDIStatus(`MIDI Active: ${firstInputName}`);
       console.log(`[MIDI] Listening on ${inputCount} input port(s)`);
     } else {
       updateMIDIStatus('📭 No MIDI devices detected (connect a controller)');

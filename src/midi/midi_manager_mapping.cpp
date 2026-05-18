@@ -220,20 +220,16 @@ void MidiManager::apply_mapping(const MidiMapping& mapping, int cc_value,
                 if (effects[i]->name() == mapping.effect_name) {
                     bool is_pressed = (cc_value >= 64);
 
-                    // ONLY trigger on press edge
-                    if (is_pressed && !mapping.last_state) {
+                    // Toggle on either edge: press (false→true) or release (true→false)
+                    if (is_pressed != mapping.last_state) {
                         effects[i]->set_enabled(!effects[i]->is_enabled());
                         engine.push_effect_enabled(i, effects[i]->is_enabled() ? 1.0f : 0.0f);
-
-                        mapping.last_state = true;
 
                         printf("[DEBUG] AmpSimulator BYPASS TOGGLED\n");
                     }
 
-                    // Reset state on release (no toggle here)
-                    if (!is_pressed) {
-                        mapping.last_state = false;
-                    }
+                    // Update state for next event
+                    mapping.last_state = is_pressed;
                     break;
                 }
             }
