@@ -1,5 +1,10 @@
 #pragma once
 
+// Impulse-response based cabinet simulation for recorded speaker tones.
+// Implements convolution y[n] = sum_k h[k] * x[n-k], where h[k] is the loaded
+// speaker/cabinet impulse response; wet/dry mix blends the convolved cabinet
+// tone with the direct signal.
+
 #include "audio/effect.h"
 #include "audio/dsp/convolution_engine.h"
 #include <atomic>

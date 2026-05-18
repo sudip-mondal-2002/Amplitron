@@ -1,5 +1,10 @@
 #pragma once
 
+// Wah filter with manual and envelope-following sweep modes.
+// A resonant state-variable band-pass filter sweeps center frequency f_c; in
+// auto mode f_c follows an envelope e[n], while manual mode maps pedal position
+// directly. Resonance/Q controls bandwidth around f_c.
+
 #include "audio/effect.h"
 #include "audio/dsp/envelope_follower.h"
 

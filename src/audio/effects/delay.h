@@ -1,5 +1,10 @@
 #pragma once
 
+// Tempo-independent ring-buffer delay line with feedback and wet/dry control.
+// The circular buffer reads d samples behind the write head and writes
+// x[n] + feedback*y_delay[n]; output is y[n]=(1-mix)*x[n]+mix*y_delay[n], with
+// a one-pole tone filter shaping repeated echoes.
+
 #include "audio/effect.h"
 #include "audio/dsp/biquad.h"
 

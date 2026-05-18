@@ -15,7 +15,7 @@ mkdir -p "$EXTERNAL_DIR"
 
 # --- Dear ImGui ---
 IMGUI_DIR="$EXTERNAL_DIR/imgui"
-IMGUI_VERSION="v1.90.4"
+IMGUI_VERSION="v1.90.1"
 
 if [ ! -d "$IMGUI_DIR" ]; then
     echo ""
@@ -24,6 +24,43 @@ if [ ! -d "$IMGUI_DIR" ]; then
     echo "Dear ImGui fetched successfully."
 else
     echo "Dear ImGui already present, skipping."
+fi
+
+# --- kiss_fft (BSD-3-Clause) ---
+KISS_FFT_DIR="$EXTERNAL_DIR/kiss_fft"
+
+if [ ! -f "$KISS_FFT_DIR/kiss_fft.c" ]; then
+    echo ""
+    echo "Fetching kiss_fft..."
+    mkdir -p "$KISS_FFT_DIR"
+    curl -fsSL -o "$KISS_FFT_DIR/kiss_fft.h"       https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.h
+    curl -fsSL -o "$KISS_FFT_DIR/kiss_fft.c"       https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.c
+    curl -fsSL -o "$KISS_FFT_DIR/_kiss_fft_guts.h"  https://raw.githubusercontent.com/mborgerding/kissfft/master/_kiss_fft_guts.h
+    curl -fsSL -o "$KISS_FFT_DIR/kiss_fft_log.h"    https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft_log.h
+    echo "kiss_fft fetched successfully."
+else
+    echo "kiss_fft already present, skipping."
+fi
+
+# --- dr_wav (single-header WAV library) ---
+if [ ! -f "$EXTERNAL_DIR/dr_wav.h" ]; then
+    echo ""
+    echo "Fetching dr_wav.h..."
+    curl -fsSL -o "$EXTERNAL_DIR/dr_wav.h" https://raw.githubusercontent.com/mackron/dr_libs/master/dr_wav.h
+    echo "dr_wav.h fetched successfully."
+else
+    echo "dr_wav.h already present, skipping."
+fi
+
+# --- nanosvg (single-header SVG rasterizer) ---
+if [ ! -f "$EXTERNAL_DIR/nanosvg.h" ]; then
+    echo ""
+    echo "Fetching nanosvg..."
+    curl -fsSL -o "$EXTERNAL_DIR/nanosvg.h"     https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h
+    curl -fsSL -o "$EXTERNAL_DIR/nanosvgrast.h" https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h
+    echo "nanosvg fetched successfully."
+else
+    echo "nanosvg already present, skipping."
 fi
 
 # --- Install system dependencies ---

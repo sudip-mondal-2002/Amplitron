@@ -1,5 +1,10 @@
 #pragma once
 
+// Lightweight speaker cabinet filtering for guitar amp output shaping.
+// Approximates speaker response as H(z)=H_hp(z) * H_peak(z) * H_lp(z): a low
+// cut removes rumble, a resonant biquad models cabinet/body emphasis, and a
+// low-pass rolloff attenuates harsh high-frequency content.
+
 #include "audio/effect.h"
 #include "audio/dsp/biquad.h"
 

@@ -310,15 +310,7 @@ TEST(midi_json_roundtrip) {
     m3.effect_name = "Distortion";
     midi.add_mapping(m3);
 
-    // Save to temp file and reload
-    std::string path = "/tmp/amplitron_midi_test.json";
-    {
-        std::ofstream f(path);
-        // We need to access mappings_to_json — it's private, so test via save/load
-    }
-
-    // Use save_config / load_config indirectly by testing the mapping count
-    // Instead, test add/remove/clear
+    // save/load config uses internal paths — test mapping management instead
     ASSERT_EQ(static_cast<int>(midi.mappings().size()), 3);
 
     // Verify mapping contents

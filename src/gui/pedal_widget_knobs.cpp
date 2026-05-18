@@ -1,5 +1,6 @@
 #include "gui/pedal_widget.h"
 #include "gui/gui_midi.h"
+#include "midi/midi_manager.h"
 #include "audio/audio_engine.h"
 #include "gui/theme.h"
 
@@ -139,10 +140,14 @@ void PedalWidget::render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, boo
             }
         }
 
+        // ============================================================
+        // RIGHT-CLICK POPUP — ENHANCED WITH MIDI LEARN
+        // ============================================================
         if (is_hovered && ImGui::IsMouseClicked(1)) {
             ImGui::OpenPopup(label);
         }
         if (ImGui::BeginPopup(label)) {
+            // --- Parameter name and value editor ---
             ImGui::Text("%s", params[pi].name.c_str());
             ImGui::SetNextItemWidth(120);
             float slider_val = params[pi].value;
@@ -173,11 +178,39 @@ void PedalWidget::render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, boo
                 }
                 ImGui::CloseCurrentPopup();
             }
+
+            // ============================================================
+            // MIDI CONTROL SECTION
+            // ============================================================
             ImGui::Separator();
-            if (gui_midi_ && gui_midi_->render_learn_menu_item(
-                    effect_->name(), params[pi].name)) {
-                ImGui::CloseCurrentPopup();
+            ImGui::TextColored(Theme::Gold(), "MIDI Control");
+            
+            if (gui_midi_) {
+                // Parameter Range mapping
+                if (gui_midi_->render_remove_mapping_item(effect_->name(), params[pi].name)) {
+                    ImGui::CloseCurrentPopup();
+                }
+                if (gui_midi_->render_learn_menu_item(effect_->name(), params[pi].name)) {
+                    ImGui::CloseCurrentPopup();
+                }
+
+                ImGui::Spacing();
+
+                // Bypass Toggle mapping
+                if (gui_midi_->render_remove_bypass_item(effect_->name())) {
+                    ImGui::CloseCurrentPopup();
+                }
+                if (gui_midi_->render_learn_bypass_item(effect_->name())) {
+                    ImGui::CloseCurrentPopup();
+                }
+            } else {
+                ImGui::TextDisabled("MIDI manager not available");
             }
+
+            // ============================================================
+            // END MIDI SECTION
+            // ============================================================
+
             ImGui::EndPopup();
         }
 
@@ -210,6 +243,20 @@ void PedalWidget::render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, boo
         dl->AddCircleFilled(knob_center, knob_radius, Theme::KNOB_BG);
         dl->AddCircleFilled(knob_center, knob_radius - 1, knob_bg);
 
+        // Flash blue border if currently learning this parameter
+#ifndef AMPLITRON_NO_MIDI
+        if (gui_midi_ && gui_midi_->midi().is_learning() &&
+            gui_midi_->midi().learn_effect_name() == effect_->name() &&
+            gui_midi_->midi().learn_param_name() == params[pi].name) {
+            float time = static_cast<float>(ImGui::GetTime());
+            constexpr float LEARN_FLASH_HZ = 10.0f;
+            float alpha = (std::sin(time * 2.0f * 3.14159f * LEARN_FLASH_HZ) + 1.0f) * 0.5f;
+            ImU32 outline_col = ImGui::ColorConvertFloat4ToU32(
+                ImVec4(0.2f, 0.6f, 1.0f, 0.4f + alpha * 0.6f));
+            dl->AddCircle(knob_center, knob_radius + 4.0f, outline_col, 0, 3.0f);
+        }
+#endif
+
         float pointer_angle = ARC_START + normalized * ARC_RANGE;
         float ptr_inner = knob_radius * 0.25f;
         float ptr_outer = knob_radius - 3.0f;
@@ -226,17 +273,26 @@ void PedalWidget::render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, boo
         dl->AddLine(ptr_from, ptr_to, ptr_color, 2.5f);
         dl->AddCircleFilled(ptr_to, 3.0f, ptr_color);
 
+        // Enhanced tooltip with MIDI info
         if (is_hovered || is_active) {
             std::string val_str  = Theme::formatParameterValue(params[pi].value, params[pi].unit);
             std::string min_str  = Theme::formatParameterValue(params[pi].min_val, params[pi].unit);
             std::string max_str  = Theme::formatParameterValue(params[pi].max_val, params[pi].unit);
+            
+            // Check for MIDI mapping to show in tooltip
+            std::string midi_info = "";
+            if (gui_midi_) {
+                midi_info = gui_midi_->get_mapping_info(effect_->name(), params[pi].name);
+            }
+            
             if (params[pi].tooltip.empty()) {
-                ImGui::SetTooltip("%s: %s\nRange: [%s, %s]\n\nRotate or drag to adjust\nScroll wheel also works\nShift=fine  Ctrl=coarse\nDbl-click=reset  Right-click=edit",
-                    params[pi].name.c_str(), val_str.c_str(), min_str.c_str(), max_str.c_str());
-            } else {
-                ImGui::SetTooltip("%s: %s\nRange: [%s, %s]\n\n%s\n\nRotate or drag to adjust\nScroll wheel also works\nShift=fine  Ctrl=coarse\nDbl-click=reset  Right-click=edit",
+                ImGui::SetTooltip("%s: %s\nRange: [%s, %s]%s\n\nRotate or drag to adjust\nScroll wheel also works\nShift=fine  Ctrl=coarse\nDbl-click=reset  Right-click=edit/MIDI",
                     params[pi].name.c_str(), val_str.c_str(), min_str.c_str(), max_str.c_str(),
-                    params[pi].tooltip.c_str());
+                    midi_info.c_str());
+            } else {
+                ImGui::SetTooltip("%s: %s\nRange: [%s, %s]\n\n%s%s\n\nRotate or drag to adjust\nScroll wheel also works\nShift=fine  Ctrl=coarse\nDbl-click=reset  Right-click=edit/MIDI",
+                    params[pi].name.c_str(), val_str.c_str(), min_str.c_str(), max_str.c_str(),
+                    params[pi].tooltip.c_str(), midi_info.c_str());
             }
         }
 

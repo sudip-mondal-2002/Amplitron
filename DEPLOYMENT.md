@@ -39,6 +39,27 @@ This document explains the CI/CD pipeline and how to create releases.
 4. Uploads installers to the release
 5. Deploys web demo and download page to GitHub Pages
 
+### 3. PR Preview Workflow (`.github/workflows/deploy-preview.yml`)
+
+**Triggers**: Completed CI runs for Pull Requests to `main` or `develop`, and closed Pull Requests
+
+**What they do**:
+1. Reuse the `web-build` artifact from the existing CI workflow
+2. Stage only the static preview files (`index.html`, JavaScript, WebAssembly, data, worker, and service worker files)
+3. Deploy the preview to GitHub Pages under `pr-previews/pr-<number>/`
+4. Post or update a PR comment with the live preview URL
+5. Remove the preview directory automatically when the PR is closed
+
+Preview URLs follow this format:
+
+```text
+https://amplitron.sudipmondal.co.in/pr-previews/pr-<number>/
+```
+
+The preview deployment intentionally reuses the existing CI web build instead of compiling the Emscripten target a second time. Pull Request code is built with read-only CI permissions, while the deploy workflow only publishes the trusted CI artifact to GitHub Pages.
+
+Because GitHub only runs `workflow_run` workflows that already exist on the default branch, this preview workflow starts creating URLs after it is merged to `main`. The pull request that introduces the workflow cannot publish its own preview from the new workflow file.
+
 ## Creating a Release
 
 ### Step 1: Prepare the Release
@@ -97,7 +118,7 @@ To trigger a release manually, push to `main` and let CI complete. The release w
 3. Branch: `gh-pages` / `root`
 4. Click Save
 
-The website will be available at: https://sudip-mondal-2002.github.io/Amplitron/
+The website will be available at: https://amplitron.sudipmondal.co.in/
 
 ### Update the Download Page
 

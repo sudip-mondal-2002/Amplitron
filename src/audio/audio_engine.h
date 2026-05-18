@@ -6,6 +6,7 @@
 #include "audio/spsc_queue.h"
 #include <chrono>
 
+// FORWARD DECLARATIONS
 namespace Amplitron {
 
 struct AudioDeviceInfo {
@@ -57,6 +58,15 @@ public:
 
     /** @brief Clear the stored error message. */
     void clear_error() { last_error_.clear(); }
+
+#ifdef AMPLITRON_ANDROID_OBOE
+    /**
+     * @brief Return a human-readable label for the Oboe sharing mode negotiated at runtime.
+     * "AAudio exclusive mode" when AAudio exclusive path is active; "OpenSL ES (shared)" otherwise.
+     * Used by the Android settings UI to display the actual backend, not a hardcoded string.
+     */
+    const char* get_oboe_sharing_mode_label() const;
+#endif
 
     /** @brief Enumerate available audio input devices. */
     std::vector<AudioDeviceInfo> get_input_devices() const;
@@ -268,6 +278,8 @@ public:
      */
     void process_audio(const float* input, float* output, int frame_count);
 
+    // MIDI instance is managed by the GUI thread's MidiManager.
+
 private:
     // Platform backend state (defined in the backend .cpp that is compiled)
     AudioBackendState* backend_ = nullptr;
@@ -329,6 +341,8 @@ private:
     std::array<float, ANALYZER_FFT_SIZE> analyzer_snapshot_input_{};
     std::array<float, ANALYZER_FFT_SIZE> analyzer_snapshot_output_{};
     std::atomic<uint64_t> analyzer_sequence_{0};
+
+    // (MIDI instance removed - use MidiManager)
 };
 
 } // namespace Amplitron

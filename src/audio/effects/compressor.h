@@ -1,5 +1,10 @@
 #pragma once
 
+// Dynamic range compressor for smoothing guitar input levels.
+// An envelope follower estimates level e[n]; above threshold T, gain follows
+// g_db = T + (level_db - T)/ratio - level_db, with attack/release smoothing
+// applied before multiplying y[n] = x[n] * 10^(g_db/20).
+
 #include "audio/effect.h"
 #include "audio/dsp/envelope_follower.h"
 

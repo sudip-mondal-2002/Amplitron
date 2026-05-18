@@ -1,5 +1,13 @@
 #pragma once
 
+// Preamp and tone-stack models for classic guitar amplifier voicings.
+// Signal model: y = L * sat(G * H_tone{x}, mix, asymmetry), where H_tone is
+// a low-shelf + peaking-mid + high-shelf biquad cascade. The factory models
+// cover Clean American / Fender Twin, British Crunch / Marshall JCM800,
+// High Gain Modern / Mesa Rectifier, and Jazz Warm / Roland JC-120. Dynamic
+// sag follows an envelope e[n] = a*x_abs[n] + (1-a)*e[n-1] and reduces gain
+// as the simulated supply is loaded.
+
 #include "audio/effect.h"
 #include "audio/dsp/biquad.h"
 
