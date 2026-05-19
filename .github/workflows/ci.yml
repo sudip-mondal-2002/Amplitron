@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [develop, main]
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  
 jobs:
   test-linux:
     name: Test on Linux
@@ -72,6 +77,93 @@ jobs:
           name: linux-build
           path: build/Amplitron
           retention-days: 1
+
+
+          coverage-linux:
+    name: Coverage Report on Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake lcov \
+            libportaudio2 portaudio19-dev \
+            libsdl2-dev libgl1-mesa-dev libglu1-mesa-dev \
+            librtmidi-dev
+
+      - name: Setup External Dependencies
+        run: |
+          mkdir -p external external/kiss_fft
+          git clone --depth 1 --branch v1.90.1 https://github.com/ocornut/imgui.git external/imgui &
+          curl -fsSL -o external/nanosvg.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h &
+          curl -fsSL -o external/nanosvgrast.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h &
+          curl -fsSL -o external/dr_wav.h https://raw.githubusercontent.com/mackron/dr_libs/master/dr_wav.h &
+          curl -fsSL -o external/kiss_fft/kiss_fft.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.h &
+          curl -fsSL -o external/kiss_fft/kiss_fft.c https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.c &
+          curl -fsSL -o external/kiss_fft/_kiss_fft_guts.h https://raw.githubusercontent.com/mborgerding/kissfft/master/_kiss_fft_guts.h &
+          curl -fsSL -o external/kiss_fft/kiss_fft_log.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft_log.h &
+          wait
+
+      - name: Generate Version
+        id: version
+        run: |
+          COUNT=$(git rev-list --count HEAD)
+          echo "version=0.1.${COUNT}" >> $GITHUB_OUTPUT
+
+      - name: Build with Coverage Flags
+        run: |
+          mkdir -p build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Debug \
+            -DAMPLITRON_VERSION="${{ steps.version.outputs.version }}" \
+            -DCMAKE_C_FLAGS="--coverage -O0 -g" \
+            -DCMAKE_CXX_FLAGS="--coverage -O0 -g" \
+            -DCMAKE_EXE_LINKER_FLAGS="--coverage" \
+            ..
+          make -j$(nproc)
+
+      - name: Run Tests
+        run: cd build && ./amplitron-tests
+
+      - name: Generate Coverage Report
+        run: |
+          lcov --capture --directory build --output-file coverage.info --ignore-errors mismatch,gcov
+          lcov --remove coverage.info \
+            '/usr/*' \
+            '*/external/*' \
+            '*/tests/*' \
+            '*/build/*' \
+            --output-file coverage.filtered.info \
+            --ignore-errors unused
+          genhtml coverage.filtered.info --output-directory coverage-report
+          lcov --summary coverage.filtered.info | tee coverage-summary.txt
+
+      - name: Enforce Coverage Threshold
+        run: |
+          COVERAGE=$(lcov --summary coverage.filtered.info 2>&1 | awk '/lines......:/ {print $2}' | sed 's/%//')
+          echo "Line coverage: $COVERAGE%"
+          awk "BEGIN {exit !($COVERAGE >= 60)}"
+
+      - name: Upload Coverage HTML Report
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-report
+          path: coverage-report/
+          retention-days: 7
+
+      - name: Upload Coverage Summary
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-summary
+          path: |
+            coverage.filtered.info
+            coverage-summary.txt
+          retention-days: 7
+
 
   test-macos:
     name: Test on macOS
