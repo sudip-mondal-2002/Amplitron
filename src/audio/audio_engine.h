@@ -218,6 +218,24 @@ public:
     /** @brief Return the current output gain (atomic relaxed read). */
     float get_output_gain() const { return output_gain_.load(std::memory_order_relaxed); }
 
+    /** @brief Toggle the metronome on/off (atomic update). */
+    void toggle_metronome();
+
+    /** @brief Set the metronome BPM (atomic update). */
+    void set_metronome_bpm(int bpm);
+
+    /** @brief Set the metronome click volume (atomic update). */
+    void set_metronome_volume(float volume);
+
+    /** @brief Return the current metronome enabled state (atomic relaxed read). */
+    bool get_metronome_enabled() const { return metronome_enabled_state_.load(std::memory_order_relaxed); }
+
+    /** @brief Return the current metronome BPM (atomic relaxed read). */
+    int get_metronome_bpm() const { return metronome_bpm_state_.load(std::memory_order_relaxed); }
+
+    /** @brief Return the current metronome volume (atomic relaxed read). */
+    float get_metronome_volume() const { return metronome_volume_state_.load(std::memory_order_relaxed); }
+
     /**
      * @brief Enqueue a parameter value change from the GUI thread (lock-free).
      * @param effect_index Index of the effect in the chain.
@@ -294,6 +312,9 @@ private:
 
     std::atomic<float> input_gain_{1.0f};
     std::atomic<float> output_gain_{0.8f};
+    std::atomic<bool> metronome_enabled_state_{false};
+    std::atomic<int> metronome_bpm_state_{120};
+    std::atomic<float> metronome_volume_state_{0.5f};
 
     std::atomic<float> input_level_{0.0f};
     std::atomic<float> output_level_{0.0f};
@@ -323,6 +344,7 @@ private:
     SPSCQueue<AudioCommand, 256> command_queue_;
     void drain_commands();        // Must be called while holding effect_mutex_
     void drain_gain_commands();   // Safe to call without effect_mutex_
+    void update_metronome_timing();
 
     // CPU load watchdog for buffer auto-tuning
     std::atomic<float> cpu_load_{0.0f};
@@ -342,6 +364,25 @@ private:
     std::array<float, ANALYZER_FFT_SIZE> analyzer_snapshot_output_{};
     std::atomic<uint64_t> analyzer_sequence_{0};
 
+    // Metronome state (audio thread only)
+    bool metronome_enabled_ = false;
+    int metronome_bpm_ = 120;
+    float metronome_volume_ = 0.5f;
+
+    float metronome_volume_smoothed_ = 0.0f;
+    float metronome_volume_smooth_alpha_ = 0.05f;
+    float metronome_bpm_smoothed_ = 120.0f;
+    float metronome_bpm_smooth_alpha_ = 0.05f;
+
+    int metronome_sample_rate_ = 0;
+    double metronome_samples_per_beat_ = 0.0;
+    double metronome_sample_counter_ = 0.0;
+    int metronome_click_samples_total_ = 0;
+    int metronome_click_samples_remaining_ = 0;
+    float metronome_click_phase_ = 0.0f;
+    float metronome_click_phase_inc_ = 0.0f;
+    float metronome_click_env_ = 0.0f;
+    float metronome_click_decay_ = 0.0f;
     // (MIDI instance removed - use MidiManager)
 };
 

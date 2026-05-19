@@ -495,6 +495,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/test_cabinet_sim_ir.cpp
         tests/test_midi_manager.cpp
         tests/test_unsaved_preset.cpp
+        tests/test_metronome.cpp
         tests/test_gui_manager.cpp
     )
 
