@@ -1060,6 +1060,89 @@ TEST(octaver_params_have_valid_ranges) {
         ASSERT_FALSE(p.name.empty());
     }
 }
+// NEW TESTS HERE
+
+TEST(octaver_silence_passthrough) {
+    Octaver oct;
+    oct.set_sample_rate(48000);
+    oct.reset();
+
+    float buf[512];
+    std::memset(buf, 0, sizeof(buf));
+
+    oct.process(buf, 512);
+
+    ASSERT_TRUE(buffer_is_finite(buf, 512));
+
+    float out_rms = rms(buf, 512);
+
+    // Silence should remain silence
+    ASSERT_LT(out_rms, 1e-8f);
+}
+
+TEST(octaver_extreme_mix_values) {
+    Octaver oct;
+    oct.set_sample_rate(48000);
+
+    float ref[512];
+    fill_sine(ref, 512, 440.0f, 48000);
+    oct.reset();
+
+    float dry_buf[512];
+    for (int i = 0; i < 512; ++i) dry_buf[i] = ref[i];
+
+    oct.params()[0].value = 1.0f; // sub octave
+    oct.params()[1].value = 1.0f; // upper octave
+    oct.params()[2].value = 1.0f; // fully dry
+
+    oct.process(dry_buf, 512);
+
+    ASSERT_TRUE(buffer_is_finite(dry_buf, 512));
+
+    // Should preserve strong dry signal
+    ASSERT_GT(rms(dry_buf, 512), 0.1f);
+    oct.reset();
+
+    float wet_buf[512];
+    for (int i = 0; i < 512; ++i) wet_buf[i] = ref[i];
+
+    oct.params()[0].value = 1.0f;
+    oct.params()[1].value = 1.0f;
+    oct.params()[2].value = 0.0f; // no dry signal
+
+    oct.process(wet_buf, 512);
+
+    ASSERT_TRUE(buffer_is_finite(wet_buf, 512));
+
+    // Wet signal should still contain energy
+    ASSERT_GT(rms(wet_buf, 512), 0.01f);
+}
+
+TEST(octaver_parameter_combinations_stay_finite) {
+    Octaver oct;
+    oct.set_sample_rate(48000);
+
+    const float values[] = {0.0f, 0.5f, 1.0f};
+
+    for (float down : values) {
+        for (float up : values) {
+            for (float dry : values) {
+
+                oct.reset();
+                oct.params()[0].value = down;
+                oct.params()[1].value = up;
+                oct.params()[2].value = dry;
+
+                float buf[1024];
+                fill_sine(buf, 1024, 440.0f, 48000);
+
+                oct.process(buf, 1024);
+
+                ASSERT_TRUE(buffer_is_finite(buf, 1024));
+            }
+        }
+    }
+}
 
 // ============================================================
 // PitchShifter tests

@@ -7,6 +7,9 @@
     <meta name="description" content="Amplitron is a professional guitar amp simulator with real-time audio processing, 12 studio-quality effects, amp modeling, and ultra-low latency. Available for Windows, macOS, Linux, and Web.">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -23,14 +26,20 @@
             --text-primary: #e8e6e3;
             --text-dim: #a8a6a3;
             --green-live: #7fff7f;
+            --text-hero: clamp(4rem, 9vw, 8rem);
+            --text-h2: clamp(1.8rem, 3.5vw, 2.8rem);
+            --text-body: 1.0625rem;
+            --text-small: 0.875rem;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: var(--text-body);
+            line-height: 1.75;
             background: linear-gradient(135deg, var(--brown-dark) 0%, var(--brown-mid) 100%);
             color: var(--text-primary);
-            line-height: 1.6;
             min-height: 100vh;
+            padding-top: 80px;
         }
 
         .container {
@@ -58,18 +67,21 @@
         }
 
         .logo {
-            font-size: 4rem;
-            font-weight: 900;
+            font-size: var(--text-hero);
+            font-family: 'Cinzel', serif;
+            font-weight: 500;
+            letter-spacing: 0.18em;
             background: linear-gradient(135deg, var(--gold) 0%, var(--gold-hot) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
             margin-bottom: 10px;
-            letter-spacing: -2px;
         }
 
         .tagline {
             font-size: 1.5rem;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 400;
             color: var(--text-dim);
             margin-bottom: 30px;
         }
@@ -80,17 +92,21 @@
             padding: 40px;
             margin: 40px 0;
             border: 2px solid rgba(200, 168, 74, 0.2);
+            position: relative;
+            overflow: hidden;
         }
 
         .hero h2 {
             color: var(--gold);
-            font-size: 2rem;
+            font-size: var(--text-h2);
+            font-family: 'Cinzel', serif;
+            font-weight: 500;
             margin-bottom: 20px;
         }
 
         .features {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
             margin: 40px 0;
         }
@@ -110,6 +126,8 @@
 
         .feature-card h3 {
             color: var(--gold);
+            font-family: 'Cinzel', serif;
+            font-weight: 500;
             margin-bottom: 12px;
             font-size: 1.3rem;
         }
@@ -125,65 +143,114 @@
 
         .downloads h2 {
             text-align: center;
-            font-size: 2.5rem;
+            font-size: var(--text-h2);
+            font-family: 'Cinzel', serif;
+            font-weight: 500;
             margin-bottom: 40px;
             color: var(--gold);
         }
 
         .download-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-            margin-bottom: 40px;
+            display: flex;
+            justify-content: center;
+            margin: 0 auto 40px;
+            max-width: 760px;
         }
 
-        .download-card {
-            background: var(--brown-light);
-            padding: 40px;
-            border-radius: 16px;
+        .download-link {
+            flex: 1 1 0;
+            min-width: 0;
+            padding: 0 34px 16px;
             text-align: center;
-            border: 2px solid rgba(200, 168, 74, 0.2);
-            transition: all 0.3s;
+            color: inherit;
+            text-decoration: none;
+            position: relative;
         }
 
-        .download-card:hover {
-            border-color: var(--gold);
-            box-shadow: 0 8px 24px rgba(200, 168, 74, 0.2);
+        .download-link + .download-link {
+            border-left: 1px solid rgba(200, 168, 74, 0.35);
         }
 
-        .platform-icon {
-            font-size: 4rem;
-            margin-bottom: 20px;
+        .download-link::after {
+            content: '';
+            position: absolute;
+            left: 34px;
+            right: 34px;
+            bottom: 0;
+            height: 1px;
+            background: var(--gold);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s ease;
         }
 
-        .download-card h3 {
+        .download-link:hover::after,
+        .download-link:focus-visible::after {
+            transform: scaleX(1);
+        }
+
+        .download-platform {
+            display: block;
             color: var(--text-primary);
-            font-size: 1.8rem;
-            margin-bottom: 10px;
+            font-family: 'Cinzel', serif;
+            font-weight: 500;
+            font-size: 1rem;
+            line-height: 1.3;
+            margin-bottom: 6px;
         }
 
-        .download-card .version {
+        .download-detail {
+            display: block;
+            font-family: 'DM Sans', sans-serif;
             color: var(--text-dim);
-            font-size: 0.9rem;
-            margin-bottom: 20px;
+            font-size: 12px;
+            line-height: 1.45;
         }
 
         .download-btn {
             display: inline-block;
-            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-hot) 100%);
-            color: var(--brown-dark);
-            padding: 16px 40px;
-            border-radius: 8px;
+            font-family: 'Cinzel', serif;
+            font-size: 13px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--gold);
+            border: 1.5px solid var(--gold);
+            padding: 12px 36px;
             text-decoration: none;
-            font-weight: 700;
-            font-size: 1.1rem;
-            transition: transform 0.2s, box-shadow 0.2s;
-            margin-top: 10px;
+            position: relative;
+            overflow: hidden;
+            background: none;
+            transition: color 0.3s ease;
+        }
+
+        .download-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-hot) 100%);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s ease;
+            z-index: -1;
         }
 
         .download-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(200, 168, 74, 0.4);
+            color: var(--brown-dark);
+        }
+
+        .download-btn:hover::before {
+            transform: scaleX(1);
+        }
+
+        .download-caption {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            color: rgba(200, 154, 42, 0.55);
+            margin-top: 8px;
+            text-align: center;
         }
 
         .requirements {
@@ -196,6 +263,8 @@
 
         .requirements h3 {
             color: var(--gold);
+            font-family: 'Cinzel', serif;
+            font-weight: 500;
             margin-bottom: 15px;
         }
 
@@ -224,7 +293,9 @@
 
         .installation h2 {
             color: var(--gold);
-            font-size: 2rem;
+            font-family: 'Cinzel', serif;
+            font-weight: 500;
+            font-size: var(--text-h2);
             margin-bottom: 30px;
         }
 
@@ -237,6 +308,8 @@
 
         .install-steps h4 {
             color: var(--gold-hot);
+            font-family: 'Cinzel', serif;
+            font-weight: 500;
             margin-bottom: 15px;
             font-size: 1.3rem;
         }
@@ -305,7 +378,85 @@
             }
 
             .download-grid {
-                grid-template-columns: 1fr;
+                display: block;
+                max-width: 320px;
+            }
+
+            .download-link {
+                display: block;
+                padding: 18px 0 16px;
+            }
+
+            .download-link + .download-link {
+                border-left: 0;
+                border-top: 1px solid rgba(200, 168, 74, 0.35);
+            }
+
+            .download-link::after {
+                left: 0;
+                right: 0;
+            }
+        }
+    </style>
+    <style>
+        /* Sticky navbar */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            z-index: 300;
+            background: rgba(28, 26, 24, 0.95);
+            transition: background 0.3s ease, backdrop-filter 0.3s ease;
+            backdrop-filter: none;
+        }
+        nav.scrolled {
+            background: rgba(28, 26, 24, 0.95);
+            backdrop-filter: blur(12px);
+        }
+        .nav-logo {
+            font-size: 24px;
+            font-family: 'Cinzel', serif;
+            font-weight: 500;
+            letter-spacing: 0.18em;
+            color: var(--gold);
+            white-space: nowrap;
+        }
+        .nav-links {
+            display: flex;
+            gap: 48px;
+            align-items: center;
+        }
+        .nav-links a {
+            font-size: 13px;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: color 0.2s ease;
+            cursor: pointer;
+        }
+        .nav-links a:hover {
+            color: var(--gold);
+        }
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            nav {
+                padding: 0 24px;
+                height: 70px;
+            }
+            .nav-logo {
+                font-size: 20px;
+            }
+            .nav-links {
+                display: none;
             }
         }
     </style>
@@ -319,6 +470,17 @@
     </script>
 </head>
 <body>
+    <!-- Sticky navbar -->
+    <nav id="navbar">
+        <div class="nav-logo">AMPLITRON</div>
+        <div class="nav-links">
+            <a href="#features">Features</a>
+            <a href="#downloads">Downloads</a>
+            <a href="#requirements">Requirements</a>
+            <a href="#contact">Contact</a>
+        </div>
+    </nav>
+
     <div class="container">
         <header>
             <div class="header-icon">
@@ -329,21 +491,29 @@
             <p style="color: var(--text-dim); font-size: 1.1rem;">
                 Real-time audio processing • Ultra-low latency • Studio-quality effects
             </p>
-            <div style="margin-top: 30px;">
-                <a href="demo/" class="download-btn" style="font-size: 1.2rem; padding: 18px 48px; display: inline-block;">
-                    ▶ Try Demo in Browser
+            <div style="margin-top: 30px; text-align: center;">
+                <a href="demo/" class="download-btn">
+                    ▶ Play Demo
                 </a>
-                <p style="color: var(--text-dim); font-size: 0.85rem; margin-top: 12px;">
-                    No install required — runs directly in your browser
-                </p>
+                <p class="download-caption">runs in your browser — no install</p>
+                <!-- Guitar string visualization -->
+                <div class="guitar-strings-container">
+                    <div class="string string-E"></div>
+                    <div class="string string-A"></div>
+                    <div class="string string-D"></div>
+                    <div class="string string-G"></div>
+                    <div class="string string-B"></div>
+                    <div class="string string-e"></div>
+                </div>
                 <div style="margin-top: 18px;">
-                    <a href="https://www.producthunt.com/products/amplitron?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-amplitron" target="_blank" rel="noopener noreferrer"><img alt="Amplitron - Poor man's guitar amp | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1105240&amp;theme=light&amp;t=1774378395088"></a>
+                    <a href="https://www.producthunt.com/products/amplitron?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-amplitron" target="_blank" rel="noopener noreferrer">
+                        <img alt="Amplitron - Poor man's guitar amp | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1105240&amp;theme=light&amp;t=1774378395088">
+                    </a>
                 </div>
             </div>
         </header>
 
         <div class="hero">
-            <h2>Transform Your Guitar Sound</h2>
             <p style="font-size: 1.1rem; line-height: 1.8; color: var(--text-dim);">
                 Amplitron is a professional-grade guitar amplifier simulator designed for musicians, 
                 producers, and audio enthusiasts. Experience studio-quality tone shaping with 
@@ -351,30 +521,66 @@
             </p>
         </div>
 
-        <div class="features">
-            <div class="feature-card">
-                <h3>🎸 Real-Time Processing</h3>
-                <p>Ultra-low latency audio engine with configurable buffer sizes. Play through your computer with no noticeable delay.</p>
-            </div>
-            <div class="feature-card">
-                <h3>🎛️ 12 Studio Effects</h3>
-                <p>Noise Gate, Compressor, Overdrive, Distortion, EQ, Amp Simulator (4 models), Cabinet Sim, Chorus, Delay, Reverb, Wah (manual &amp; auto-wah), and Chromatic Tuner.</p>
-            </div>
-            <div class="feature-card">
-                <h3>💾 Preset System</h3>
-                <p>Save and load your favorite tones. Share presets with other musicians. Build your signature sound library.</p>
-            </div>
-            <div class="feature-card">
-                <h3>🎙️ WAV Recording</h3>
-                <p>Record your processed guitar output directly to WAV files. Capture your performances with the full effect chain applied.</p>
-            </div>
-            <div class="feature-card">
-                <h3>🎨 Beautiful Interface</h3>
-                <p>Intuitive pedal board UI with visual feedback. Drag-and-drop effect ordering. Real-time level metering.</p>
-            </div>
-            <div class="feature-card">
-                <h3>⚡ Cross-Platform</h3>
-                <p>Native builds for Windows, macOS, and Linux, plus a browser-based web demo via WebAssembly. Optimized for each platform.</p>
+        <div class="features" id="features" style="margin: 40px 0;">
+            <h2 style="font-family: 'Cinzel', serif; font-size: var(--text-h2); color: var(--gold); text-align: left; margin-bottom: 20px;">
+                Transform Your Guitar Sound
+            </h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                <div>
+                    <h3 style="font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--gold); border-left: 2px solid rgba(200, 168, 74, 0.5); padding-left: 10px;">
+                        Real-Time Processing
+                    </h3>
+                    <hr style="border: none; border-top: 1px solid rgba(255, 215, 0, 0.2); margin: 10px 0;">
+                    <p style="font-family: 'DM Sans', sans-serif; font-size: 1rem; color: var(--text-primary);">
+                        Ultra-low latency audio engine with configurable buffer sizes. Play through your computer with no noticeable delay.
+                    </p>
+                </div>
+                <div>
+                    <h3 style="font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--gold); border-left: 2px solid rgba(200, 168, 74, 0.5); padding-left: 10px;">
+                        12 Studio Effects
+                    </h3>
+                    <hr style="border: none; border-top: 1px solid rgba(255, 215, 0, 0.2); margin: 10px 0;">
+                    <p style="font-family: 'DM Sans', sans-serif; font-size: 1rem; color: var(--text-primary);">
+                        Noise Gate, Compressor, Overdrive, Distortion, EQ, Amp Simulator (4 models), Cabinet Sim, Chorus, Delay, Reverb, Wah (manual & auto-wah), and Chromatic Tuner.
+                    </p>
+                </div>
+                <div>
+                    <h3 style="font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--gold); border-left: 2px solid rgba(255, 215, 0, 0.5); padding-left: 10px;">
+                        Preset System
+                    </h3>
+                    <hr style="border: none; border-top: 1px solid rgba(255, 215, 0, 0.2); margin: 10px 0;">
+                    <p style="font-family: 'DM Sans', sans-serif; font-size: 1rem; color: var(--text-primary);">
+                        Save and load your favorite tones. Share presets with other musicians. Build your signature sound library.
+                    </p>
+                </div>
+                <div>
+                    <h3 style="font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--gold); border-left: 2px solid rgba(255, 215, 0, 0.5); padding-left: 10px;">
+                        WAV Recording
+                    </h3>
+                    <hr style="border: none; border-top: 1px solid rgba(255, 215, 0, 0.2); margin: 10px 0;">
+                    <p style="font-family: 'DM Sans', sans-serif; font-size: 1rem; color: var(--text-primary);">
+                        Record your processed guitar output directly to WAV files. Capture your performances with the full effect chain applied.
+                    </p>
+                </div>
+                <div>
+                    <h3 style="font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--gold); border-left: 2px solid rgba(255, 215, 0, 0.5); padding-left: 10px;">
+                        Beautiful Interface
+                    </h3>
+                    <hr style="border: none; border-top: 1px solid rgba(255, 215, 0, 0.2); margin: 10px 0;">
+                    <p style="font-family: 'DM Sans', sans-serif; font-size: 1rem; color: var(--text-primary);">
+                        Intuitive pedal board UI with visual feedback. Drag-and-drop effect ordering. Real-time level metering.
+                    </p>
+                </div>
+                <div>
+                    <h3 style="font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--gold); border-left: 2px solid rgba(255, 215, 0, 0.5); padding-left: 10px;">
+                        Cross-Platform
+                    </h3>
+                    <hr style="border: none; border-top: 1px solid rgba(255, 215, 0, 0.2); margin: 10px 0;">
+                    <p style="font-family: 'DM Sans', sans-serif; font-size: 1rem; color: var(--text-primary);">
+                        Native builds for Windows, macOS, and Linux, plus a browser-based web demo via WebAssembly. Optimized for each platform.
+                    </p>
+                </div>
+                <!-- Add remaining features here following the same structure -->
             </div>
         </div>
 
@@ -387,61 +593,39 @@
             <a href="https://youtu.be/OLGx1zYj0W4" target="_blank" rel="noopener noreferrer"
                style="display: inline-block; background: linear-gradient(135deg, #c8a84a 0%, #e6c76a 100%);
                       color: #1c1a18; padding: 16px 40px; border-radius: 8px; text-decoration: none;
-                      font-weight: 700; font-size: 1.1rem; transition: transform 0.2s, box-shadow 0.2s;">
+                      font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 1.1rem; transition: transform 0.2s, box-shadow 0.2s;">
                 ▶ Watch on YouTube
             </a>
         </div>
 
-        <div class="downloads">
+        <div class="downloads" id="downloads">
             <h2>Download Amplitron</h2>
             
             <div class="download-grid">
-                <div class="download-card">
-                    <div class="platform-icon">🪟</div>
-                    <h3>Windows</h3>
-                    <p class="version">Windows 10/11 (64-bit)</p>
-                    <a href="https://github.com/sudip-mondal-2002/Amplitron/releases/latest/download/Amplitron-Windows-Setup.exe" class="download-btn">
-                        Download Installer
-                    </a>
-                    <p style="margin-top: 15px; font-size: 0.85rem; color: var(--text-dim);">
-                        .exe installer &mdash; includes shortcuts &amp; uninstaller
-                    </p>
-                </div>
+                <a href="https://github.com/sudip-mondal-2002/Amplitron/releases/latest/download/Amplitron-Windows-Setup.exe"
+                   class="download-link"
+                   download>
+                    <span class="download-platform">Windows</span>
+                    <span class="download-detail">.exe installer, 64-bit</span>
+                </a>
 
-                <div class="download-card">
-                    <div class="platform-icon">🍎</div>
-                    <h3>macOS</h3>
-                    <p class="version">macOS 10.15 Catalina or later</p>
-                    <a href="https://github.com/sudip-mondal-2002/Amplitron/releases/latest/download/Amplitron-macOS.dmg" class="download-btn">
-                        Download DMG
-                    </a>
-                    <p style="margin-top: 15px; font-size: 0.85rem; color: var(--text-dim);">
-                        Disk image &mdash; drag to Applications
-                    </p>
-                </div>
+                <a href="https://github.com/sudip-mondal-2002/Amplitron/releases/latest/download/Amplitron-macOS.dmg"
+                   class="download-link"
+                   download>
+                    <span class="download-platform">macOS</span>
+                    <span class="download-detail">.dmg disk image, Universal</span>
+                </a>
 
-                <div class="download-card">
-                    <div class="platform-icon">🐧</div>
-                    <h3>Linux</h3>
-                    <p class="version">Ubuntu 20.04+ / Fedora 35+ / Arch</p>
-                    <a href="https://github.com/sudip-mondal-2002/Amplitron/releases/latest/download/Amplitron-Linux-x64.tar.gz" class="download-btn">
-                        Download Archive
-                    </a>
-                    <p style="margin-top: 15px; font-size: 0.85rem; color: var(--text-dim);">
-                        .tar.gz with launcher script
-                    </p>
-                </div>
-            </div>
-
-            <div style="text-align: center; margin-top: 30px;">
-                <a href="https://github.com/sudip-mondal-2002/Amplitron/releases" 
-                   style="color: var(--gold); text-decoration: none; font-size: 1.1rem;">
-                    View all releases →
+                <a href="https://github.com/sudip-mondal-2002/Amplitron/releases/latest/download/Amplitron-Linux-x64.tar.gz"
+                   class="download-link"
+                   download>
+                    <span class="download-platform">Linux</span>
+                    <span class="download-detail">.tar.gz archive, 64-bit</span>
                 </a>
             </div>
         </div>
 
-        <div class="requirements">
+        <div class="requirements" id="requirements">
             <h3>System Requirements</h3>
             <ul>
                 <li><strong>Audio Interface:</strong> Any PortAudio-compatible device (ASIO, WASAPI, CoreAudio, ALSA)</li>
@@ -512,7 +696,7 @@
             </a>
         </div>
 
-        <footer>
+        <footer id="contact">
             <p style="font-size: 1.2rem; margin-bottom: 20px;">
                 <strong>Amplitron</strong> - Professional Guitar Amp Simulator
             </p>
@@ -527,5 +711,116 @@
             </p>
         </footer>
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var navbar = document.getElementById('navbar');
+
+            // Scroll detection for navbar blur effect
+            window.addEventListener('scroll', function() {
+                if (window.scrollY > 60) {
+                    navbar.classList.add('scrolled');
+                } else {
+                    navbar.classList.remove('scrolled');
+                }
+            });
+        });
+    </script>
+
+    <style>
+        /* Guitar string visualization */
+        .guitar-strings-container {
+            position: relative;
+            width: 100%;
+            height: 150px;
+            z-index: 1;
+            pointer-events: none;
+            margin-top: 20px;
+        }
+
+        .string {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            background: rgba(200, 168, 74, 0.4);
+            box-shadow: 0 0 20px rgba(200, 168, 74, 0.3);
+        }
+
+        .string-E {
+            top: 10%;
+            height: 8px;
+            animation: vibrate-E 1.55s ease-in-out infinite;
+        }
+
+        .string-A {
+            top: 25%;
+            height: 6px;
+            animation: vibrate-a 0.93s ease-in-out infinite;
+            animation-delay: 0.1s;
+        }
+
+        .string-D {
+            top: 40%;
+            height: 5px;
+            animation: vibrate-d 0.70s ease-in-out infinite;
+            animation-delay: 0.2s;
+        }
+
+        .string-G {
+            top: 55%;
+            height: 4px;
+            animation: vibrate-g 0.53s ease-in-out infinite;
+            animation-delay: 0.3s;
+        }
+
+        .string-B {
+            top: 70%;
+            height: 3px;
+            animation: vibrate-b 0.42s ease-in-out infinite;
+            animation-delay: 0.4s;
+        }
+
+        .string-e {
+            top: 85%;
+            height: 2px;
+            animation: vibrate-e 0.32s ease-in-out infinite;
+            animation-delay: 0.5s;
+        }
+
+        @keyframes vibrate-e {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(1.08); }
+        }
+
+        @keyframes vibrate-b {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(1.12); }
+        }
+
+        @keyframes vibrate-g {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(1.15); }
+        }
+
+        @keyframes vibrate-d {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(1.18); }
+        }
+
+        @keyframes vibrate-a {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(1.20); }
+        }
+
+        @keyframes vibrate-E {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(1.22); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .string {
+                animation: none;
+            }
+        }
+    </style>
 </body>
 </html>

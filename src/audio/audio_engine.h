@@ -6,6 +6,7 @@
 #include "audio/spsc_queue.h"
 #include <chrono>
 
+// FORWARD DECLARATIONS
 namespace Amplitron {
 
 struct AudioDeviceInfo {
@@ -295,6 +296,8 @@ public:
      */
     void process_audio(const float* input, float* output, int frame_count);
 
+    // MIDI instance is managed by the GUI thread's MidiManager.
+
 private:
     // Platform backend state (defined in the backend .cpp that is compiled)
     AudioBackendState* backend_ = nullptr;
@@ -374,6 +377,7 @@ private:
     float metronome_click_phase_inc_ = 0.0f;
     float metronome_click_env_ = 0.0f;
     float metronome_click_decay_ = 0.0f;
+    // (MIDI instance removed - use MidiManager)
 };
 
 } // namespace Amplitron

@@ -167,6 +167,7 @@ set(APP_SOURCES
     src/audio/effects/equalizer.cpp
     src/audio/effects/noise_gate.cpp
     src/audio/effects/compressor.cpp
+    src/audio/effects/looper.cpp
     src/audio/effects/cabinet_sim.cpp
     src/audio/effects/ir_cabinet.cpp
     src/audio/effects/amp_simulator.cpp
@@ -450,7 +451,13 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${RTMIDI_INCLUDE_DIRS}
     )
 
-    target_compile_definitions(Amplitron PRIVATE AMPLITRON_VERSION="${AMPLITRON_VERSION}")
+    # ============================================================
+    # DEFINE AMPLITRON_HAS_MIDI FOR DESKTOP BUILDS
+    # ============================================================
+    target_compile_definitions(Amplitron PRIVATE 
+        AMPLITRON_VERSION="${AMPLITRON_VERSION}"
+        AMPLITRON_HAS_MIDI
+    )
 
     target_link_libraries(Amplitron PRIVATE
         nlohmann_json::nlohmann_json
@@ -479,6 +486,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/test_common.cpp
         tests/test_oboe_ring_buffer.cpp
         tests/test_effects.cpp
+        tests/test_looper.cpp
         tests/test_preset_manager.cpp
         tests/test_json_serialization.cpp
         tests/test_recorder.cpp
@@ -518,6 +526,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         src/audio/effects/equalizer.cpp
         src/audio/effects/noise_gate.cpp
         src/audio/effects/compressor.cpp
+        src/audio/effects/looper.cpp
         src/audio/effects/cabinet_sim.cpp
         src/audio/effects/ir_cabinet.cpp
         src/audio/effects/amp_simulator.cpp
@@ -550,6 +559,11 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${OPENGL_INCLUDE_DIR}
         ${RTMIDI_INCLUDE_DIRS}
     )
+
+    # ============================================================
+    # DEFINE AMPLITRON_HAS_MIDI FOR TEST BUILDS
+    # ============================================================
+    target_compile_definitions(amplitron-tests PRIVATE AMPLITRON_HAS_MIDI)
 
     target_link_libraries(amplitron-tests PRIVATE
         nlohmann_json::nlohmann_json
