@@ -288,6 +288,7 @@ bool AudioEngine::start() {
         const int actual_rate = static_cast<int>(si->sampleRate + 0.5);
         if (actual_rate != sample_rate_) {
             sample_rate_ = actual_rate;
+            update_metronome_timing();
             std::lock_guard<std::mutex> lock(effect_mutex_);
             for (auto& fx : effects_) {
                 fx->set_sample_rate(sample_rate_);

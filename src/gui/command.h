@@ -9,3 +9,4 @@
 #include "gui/command_param.h"
 #include "gui/command_preset.h"
 #include "gui/command_clear.h"
+#include "gui/command_reset.h"

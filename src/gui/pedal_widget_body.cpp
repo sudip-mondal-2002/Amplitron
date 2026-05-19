@@ -3,6 +3,7 @@
 #include "audio/effects/tuner.h"
 #include "audio/effects/amp_simulator.h"
 #include "audio/effects/ir_cabinet.h"
+#include "audio/effects/looper.h"
 #include "gui/file_dialog.h"
 #include "gui/theme.h"
 
@@ -266,6 +267,127 @@ void PedalWidget::render_ir_cabinet_display(ImVec2 p0, float pedal_width) {
             ImGui::PushStyleColor(ImGuiCol_Text, Theme::TextDim());
             ImGui::TextUnformatted(no_ir);
             ImGui::PopStyleColor();
+        }
+    }
+}
+
+void PedalWidget::render_looper_display(ImVec2 p0, float pedal_width) {
+    auto* looper = dynamic_cast<Looper*>(effect_.get());
+    if (!looper) return;
+
+    float cx = p0.x + pedal_width * 0.5f;
+    float display_y = p0.y + 55;
+
+    Looper::State st = looper->state();
+    bool has_loop = looper->has_loop();
+    int loop_len = looper->loop_length_samples();
+    int play_pos = looper->playhead_samples();
+
+    const char* state_label = "EMPTY";
+    ImVec4 state_col = Theme::TextDim();
+    switch (st) {
+        case Looper::State::Empty:      state_label = "EMPTY";  state_col = Theme::TextDim(); break;
+        case Looper::State::Idle:       state_label = "STOP";   state_col = Theme::TextSecondary(); break;
+        case Looper::State::Recording:  state_label = "REC";    state_col = ImVec4(1.0f, 0.2f, 0.2f, 1.0f); break;
+        case Looper::State::Playing:    state_label = "PLAY";   state_col = ImVec4(0.2f, 0.9f, 0.3f, 1.0f); break;
+        case Looper::State::Overdubbing:state_label = "DUB";    state_col = ImVec4(0.95f, 0.80f, 0.25f, 1.0f); break;
+    }
+
+    ImVec2 st_size = ImGui::CalcTextSize(state_label);
+    ImGui::SetCursorScreenPos(ImVec2(cx - st_size.x * 0.5f, display_y));
+    ImGui::PushStyleColor(ImGuiCol_Text, state_col);
+    ImGui::TextUnformatted(state_label);
+    ImGui::PopStyleColor();
+
+    display_y += 18;
+
+    float bar_w = pedal_width - 30;
+    float progress = 0.0f;
+    if (has_loop && loop_len > 0) {
+        progress = clamp(static_cast<float>(play_pos) / static_cast<float>(loop_len), 0.0f, 1.0f);
+    }
+    ImGui::SetCursorScreenPos(ImVec2(p0.x + 15, display_y));
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.12f, 0.11f, 0.10f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, state_col);
+    ImGui::ProgressBar(progress, ImVec2(bar_w, 8), "");
+    ImGui::PopStyleColor(2);
+
+    display_y += 16;
+
+    float btn_w_total = bar_w;
+    float btn_gap = 8.0f;
+    float btn_w = (btn_w_total - btn_gap) * 0.5f;
+    float btn_h = 22.0f;
+
+    // Row 1: Record / Play
+    ImGui::SetCursorScreenPos(ImVec2(p0.x + 15, display_y));
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.12f, 0.12f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.50f, 0.18f, 0.18f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.65f, 0.22f, 0.22f, 1.0f));
+    char rec_id[64];
+    std::snprintf(rec_id, sizeof(rec_id), "Record##looper_rec_%d", index_);
+    if (ImGui::Button(rec_id, ImVec2(btn_w, btn_h))) {
+        looper->request_record_toggle();
+    }
+    ImGui::PopStyleColor(3);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Start/stop recording (new loop)");
+
+    ImGui::SameLine(0.0f, btn_gap);
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.14f, 0.30f, 0.18f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.18f, 0.42f, 0.22f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.22f, 0.55f, 0.28f, 1.0f));
+    char play_id[64];
+    std::snprintf(play_id, sizeof(play_id), "Play/Stop##looper_play_%d", index_);
+    if (ImGui::Button(play_id, ImVec2(btn_w, btn_h))) {
+        looper->request_play_toggle();
+    }
+    ImGui::PopStyleColor(3);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Toggle playback (keeps loop in memory)");
+
+    display_y += btn_h + 6;
+
+    // Row 2: Overdub / Clear
+    ImGui::SetCursorScreenPos(ImVec2(p0.x + 15, display_y));
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.30f, 0.26f, 0.10f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.40f, 0.34f, 0.12f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.52f, 0.45f, 0.15f, 1.0f));
+    char dub_id[64];
+    std::snprintf(dub_id, sizeof(dub_id), "Overdub##looper_dub_%d", index_);
+    if (ImGui::Button(dub_id, ImVec2(btn_w, btn_h))) {
+        looper->request_overdub_toggle();
+    }
+    ImGui::PopStyleColor(3);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Toggle overdub mode (record over existing loop)");
+
+    ImGui::SameLine(0.0f, btn_gap);
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.22f, 0.12f, 0.10f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.35f, 0.15f, 0.12f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.50f, 0.20f, 0.15f, 1.0f));
+    char clr_id[64];
+    std::snprintf(clr_id, sizeof(clr_id), "Clear##looper_clear_%d", index_);
+    if (ImGui::Button(clr_id, ImVec2(btn_w, btn_h))) {
+        looper->request_clear();
+    }
+    ImGui::PopStyleColor(3);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Clear loop from memory");
+
+    display_y += btn_h + 8;
+
+    // Loop Level slider (param 0)
+    if (!effect_->params().empty()) {
+        float& level = effect_->params()[0].value;
+        ImGui::SetCursorScreenPos(ImVec2(p0.x + 15, display_y));
+        ImGui::SetNextItemWidth(bar_w);
+        char slider_id[64];
+        std::snprintf(slider_id, sizeof(slider_id), "##looper_level_%d", index_);
+        float old_val = level;
+        if (ImGui::SliderFloat(slider_id, &level, 0.0f, 1.0f, "Loop Level: %.2f")) {
+            level = clamp(level, 0.0f, 1.0f);
+            engine_.push_param_change(index_, 0, level);
+            commit_param_change(0, old_val, level);
+        }
+        if (ImGui::IsItemHovered() && !effect_->params()[0].tooltip.empty()) {
+            ImGui::SetTooltip("%s", effect_->params()[0].tooltip.c_str());
         }
     }
 }

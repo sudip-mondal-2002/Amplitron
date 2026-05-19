@@ -6,6 +6,7 @@
 #include "audio/spsc_queue.h"
 #include <chrono>
 
+// FORWARD DECLARATIONS
 namespace Amplitron {
 
 struct AudioDeviceInfo {
@@ -217,13 +218,13 @@ public:
     /** @brief Return the current output gain (atomic relaxed read). */
     float get_output_gain() const { return output_gain_.load(std::memory_order_relaxed); }
 
-    /** @brief Toggle the metronome on/off (enqueued to audio thread). */
+    /** @brief Toggle the metronome on/off (atomic update). */
     void toggle_metronome();
 
-    /** @brief Set the metronome BPM (enqueued to audio thread). */
+    /** @brief Set the metronome BPM (atomic update). */
     void set_metronome_bpm(int bpm);
 
-    /** @brief Set the metronome click volume (enqueued to audio thread). */
+    /** @brief Set the metronome click volume (atomic update). */
     void set_metronome_volume(float volume);
 
     /** @brief Return the current metronome enabled state (atomic relaxed read). */
@@ -295,6 +296,8 @@ public:
      */
     void process_audio(const float* input, float* output, int frame_count);
 
+    // MIDI instance is managed by the GUI thread's MidiManager.
+
 private:
     // Platform backend state (defined in the backend .cpp that is compiled)
     AudioBackendState* backend_ = nullptr;
@@ -365,6 +368,12 @@ private:
     bool metronome_enabled_ = false;
     int metronome_bpm_ = 120;
     float metronome_volume_ = 0.5f;
+
+    float metronome_volume_smoothed_ = 0.0f;
+    float metronome_volume_smooth_alpha_ = 0.05f;
+    float metronome_bpm_smoothed_ = 120.0f;
+    float metronome_bpm_smooth_alpha_ = 0.05f;
+
     int metronome_sample_rate_ = 0;
     double metronome_samples_per_beat_ = 0.0;
     double metronome_sample_counter_ = 0.0;
@@ -374,6 +383,7 @@ private:
     float metronome_click_phase_inc_ = 0.0f;
     float metronome_click_env_ = 0.0f;
     float metronome_click_decay_ = 0.0f;
+    // (MIDI instance removed - use MidiManager)
 };
 
 } // namespace Amplitron

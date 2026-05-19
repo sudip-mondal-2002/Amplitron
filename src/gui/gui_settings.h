@@ -17,6 +17,7 @@ public:
 
 private:
     AudioEngine& engine_;
+
 };
 
 } // namespace Amplitron
