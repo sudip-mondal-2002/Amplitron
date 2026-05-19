@@ -174,9 +174,10 @@ void GuiManager::render_menu_bar() {
         }
         if (ImGui::BeginMenu("Audio")) {
             if (engine_.is_running()) {
-                if (ImGui::MenuItem("Stop Audio")) engine_.stop();
-            } else {
-                if (ImGui::MenuItem("Start Audio")) {
+                if (ImGui::MenuItem("Stop Audio", "M")) engine_.stop();
+            } 
+            else {
+                if (ImGui::MenuItem("Start Audio", "M")) {
                     engine_.restart();
                 }
             }
