@@ -48,7 +48,8 @@ public:
 private:
     void render_menu_bar();
     void render_master_controls();
-
+    void toggle_audio_mute_state();
+    
     AudioEngine& engine_;
     CommandHistory command_history_;
     SDL_Window* window_ = nullptr;
