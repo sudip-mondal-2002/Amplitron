@@ -368,6 +368,12 @@ private:
     bool metronome_enabled_ = false;
     int metronome_bpm_ = 120;
     float metronome_volume_ = 0.5f;
+
+    float metronome_volume_smoothed_ = 0.0f;
+    float metronome_volume_smooth_alpha_ = 0.05f;
+    float metronome_bpm_smoothed_ = 120.0f;
+    float metronome_bpm_smooth_alpha_ = 0.05f;
+
     int metronome_sample_rate_ = 0;
     double metronome_samples_per_beat_ = 0.0;
     double metronome_sample_counter_ = 0.0;
