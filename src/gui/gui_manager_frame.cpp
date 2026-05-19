@@ -166,7 +166,7 @@ void GuiManager::render_master_controls() {
     smoothed_input_level_ += (input_lvl - smoothed_input_level_) * 0.3f;
     smoothed_output_level_ += (output_lvl - smoothed_output_level_) * 0.3f;
 
-    ImGui::BeginChild("MasterControls", ImVec2(0, 0), true, ImGuiWindowFlags_NoScrollbar);
+    ImGui::BeginChild("MasterControls", ImVec2(0, 150), true, ImGuiWindowFlags_NoScrollbar);
 
     ImGui::Columns(4, "master_cols", false);
 
