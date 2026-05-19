@@ -218,13 +218,13 @@ public:
     /** @brief Return the current output gain (atomic relaxed read). */
     float get_output_gain() const { return output_gain_.load(std::memory_order_relaxed); }
 
-    /** @brief Toggle the metronome on/off (enqueued to audio thread). */
+    /** @brief Toggle the metronome on/off (atomic update). */
     void toggle_metronome();
 
-    /** @brief Set the metronome BPM (enqueued to audio thread). */
+    /** @brief Set the metronome BPM (atomic update). */
     void set_metronome_bpm(int bpm);
 
-    /** @brief Set the metronome click volume (enqueued to audio thread). */
+    /** @brief Set the metronome click volume (atomic update). */
     void set_metronome_volume(float volume);
 
     /** @brief Return the current metronome enabled state (atomic relaxed read). */
