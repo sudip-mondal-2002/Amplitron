@@ -2,6 +2,7 @@
 #include "gui/pedal_board.h"
 #include "gui/command.h"
 #include "gui/theme.h"
+#include "audio/effects/cabinet_sim.h"
 #include "audio/effects/ir_cabinet.h"
 #include <cstring>
 #include <imgui.h>
@@ -33,6 +34,13 @@ static PresetData capture_current_state(AudioEngine& engine) {
             auto* ir_cab = dynamic_cast<IRCabinet*>(fx.get());
             if (ir_cab && ir_cab->has_ir()) {
                 fd.metadata["ir_path"] = ir_cab->ir_path();
+            }
+        }
+
+        if (std::strcmp(fx->name(), "Cabinet") == 0) {
+            auto* cab = dynamic_cast<CabinetSim*>(fx.get());
+            if (cab && cab->has_ir()) {
+                fd.metadata["ir_path"] = cab->ir_path();
             }
         }
 

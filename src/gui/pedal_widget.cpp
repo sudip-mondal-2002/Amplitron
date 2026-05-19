@@ -41,6 +41,7 @@ bool PedalWidget::render() {
     bool is_amp = (std::strcmp(effect_->name(), "Amp Sim") == 0);
     bool enabled = effect_->is_enabled();
     bool is_looper = !is_amp && (std::strcmp(effect_->name(), "Looper") == 0);
+    bool is_cabinet = !is_amp && (std::strcmp(effect_->name(), "Cabinet") == 0);
 
     // Pedal body
     ImVec2 p0 = cursor;
@@ -76,10 +77,15 @@ bool PedalWidget::render() {
         render_ir_cabinet_display(p0, pedal_width);
     }
 
+    if (is_cabinet) {
+        render_cabinet_ir_display(p0, pedal_width);
+    }
+
     if (is_looper) {
         render_looper_display(p0, pedal_width);
     } else {
-        render_knobs(dl, p0, pedal_width, is_amp, is_tuner, is_ir_cab);
+        bool shift_knobs_down = is_ir_cab || is_cabinet;
+        render_knobs(dl, p0, pedal_width, is_amp, is_tuner, shift_knobs_down);
     }
 
     render_footswitch_and_extras(dl, p0, p1, pedal_width, pedal_height, is_amp, enabled, should_remove);

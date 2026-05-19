@@ -1,6 +1,7 @@
 #include "preset_manager.h"
 #include "preset_json.h"
 #include "audio/effect_factory.h"
+#include "audio/effects/cabinet_sim.h"
 #include "audio/effects/ir_cabinet.h"
 #include "preset_manager_impl.h"
 #include <iostream>
@@ -67,6 +68,13 @@ bool PresetManager::save_preset(const std::string& filepath,
             }
         }
 
+        if (std::strcmp(fx->name(), "Cabinet") == 0) {
+            auto* cab = dynamic_cast<CabinetSim*>(fx.get());
+            if (cab && cab->has_ir()) {
+                fd.metadata["ir_path"] = cab->ir_path();
+            }
+        }
+
         preset.effects.push_back(fd);
     }
 
@@ -130,6 +138,14 @@ bool PresetManager::load_preset(const std::string& filepath,
             if (ir_cab) {
                 if (!ir_cab->load_ir(it->second)) {
                     std::cerr << "IR Cabinet: could not load IR file: "
+                              << it->second << std::endl;
+                }
+            }
+
+            auto* cab = dynamic_cast<CabinetSim*>(fx.get());
+            if (cab) {
+                if (!cab->load_ir(it->second)) {
+                    std::cerr << "Cabinet: could not load IR file: "
                               << it->second << std::endl;
                 }
             }
