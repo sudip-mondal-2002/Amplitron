@@ -142,7 +142,7 @@ jobs:
           genhtml coverage.filtered.info --output-directory coverage-report
           lcov --summary coverage.filtered.info | tee coverage-summary.txt
 
-      - name: Enforce Coverage Threshold
+      -      - name: Enforce Coverage Threshold
         run: |
           COVERAGE=$(lcov --summary coverage.filtered.info 2>&1 | awk '/lines......:/ {print $2}' | sed 's/%//')
           echo "Line coverage: $COVERAGE%"
@@ -164,10 +164,13 @@ jobs:
             coverage-summary.txt
           retention-days: 7
 
-
   test-macos:
     name: Test on macOS
     runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
     steps:
       - uses: actions/checkout@v6
         with:
