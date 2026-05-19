@@ -143,7 +143,7 @@ void PedalWidget::render_footswitch_and_extras(ImDrawList* dl, ImVec2 p0, ImVec2
     bool is_looper = !is_amp && (std::strcmp(effect_->name(), "Looper") == 0);
 
     // LED tooltip — hover area over the LED indicator
-    if (!is_amp && !is_looper) {
+    if (!is_amp) {
         float led_x = p0.x + pedal_width - 25;
         float led_y = p0.y + 20;
         ImGui::SetCursorScreenPos(ImVec2(led_x - 10, led_y - 10));
@@ -155,7 +155,7 @@ void PedalWidget::render_footswitch_and_extras(ImDrawList* dl, ImVec2 p0, ImVec2
     }
 
     // Footswitch (toggle on/off) — amps are always on, no footswitch
-    if (!is_amp && !is_looper) {
+    if (!is_amp) {
         float switch_y = p0.y + pedal_height - Theme::SWITCH_BOTTOM_OFFSET;
         float switch_x = p0.x + (pedal_width - 50) / 2;
         ImGui::SetCursorScreenPos(ImVec2(switch_x, switch_y));

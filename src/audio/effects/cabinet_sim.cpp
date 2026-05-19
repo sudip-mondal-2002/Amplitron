@@ -24,6 +24,11 @@ CabinetSim::CabinetSim() {
     // Resonance peak ~2kHz
     peak_.b0 = 1.05f; peak_.b1 = -1.65f; peak_.b2 = 0.65f;
     peak_.a1 = -1.65f; peak_.a2 = 0.70f;
+
+    bright_smooth_ = params_[1].value;
+    const float sr = static_cast<float>(std::max(sample_rate_, 1));
+    bright_alpha_ = 1.0f - std::exp(-1.0f / (sr * 0.01f));
+    dry_buffer_.reserve(1024);
 }
 
 CabinetSim::~CabinetSim() {
@@ -95,17 +100,19 @@ void CabinetSim::check_pending_kernel() {
     if (pending) {
         conv_engine_.set_kernel(
             std::shared_ptr<const ConvolutionKernel>(pending));
+        expected_block_size_ = pending->block_size();
     }
 
-    int new_block_size = pending_block_size_.exchange(0);
-    if (new_block_size > 0 && new_block_size != expected_block_size_ &&
-        !raw_ir_samples_.empty()) {
-        build_kernel(new_block_size);
-    }
+    // Block size mismatch is handled via pending_kernel_ rebuild on the
+    // GUI thread. The audio thread only consumes pre-built kernels.
+    pending_block_size_.store(0);
 }
 
 void CabinetSim::set_sample_rate(int sample_rate) {
     Effect::set_sample_rate(sample_rate);
+
+    const float sr = static_cast<float>(std::max(sample_rate_, 1));
+    bright_alpha_ = 1.0f - std::exp(-1.0f / (sr * 0.01f));
 
     // Reload IR at new sample rate if one is loaded
     if (!ir_path_.empty()) {
@@ -124,7 +131,7 @@ void CabinetSim::process(float* buffer, int num_samples) {
             pending_block_size_.store(num_samples, std::memory_order_release);
         }
 
-        if (dry_buffer_.size() != static_cast<size_t>(num_samples)) {
+        if (dry_buffer_.size() < static_cast<size_t>(num_samples)) {
             dry_buffer_.resize(num_samples);
         }
         std::copy(buffer, buffer + num_samples, dry_buffer_.begin());
@@ -137,9 +144,11 @@ void CabinetSim::process(float* buffer, int num_samples) {
         return;
     }
 
-    float bright = params_[1].value;
+    const float bright_target = params_[1].value;
 
     for (int i = 0; i < num_samples; ++i) {
+        bright_smooth_ += bright_alpha_ * (bright_target - bright_smooth_);
+        float bright = bright_smooth_;
         float dry = buffer[i];
         float x = buffer[i];
 
@@ -159,6 +168,10 @@ void CabinetSim::reset() {
     hp_.reset();
     peak_.reset();
     conv_engine_.reset();
+    bright_smooth_ = params_[1].value;
+    if (dry_buffer_.capacity() < 1024) {
+        dry_buffer_.reserve(1024);
+    }
 }
 
 } // namespace Amplitron

@@ -75,8 +75,10 @@ TEST(CabinetSim_IR_UnitImpulse_Identity) {
     ASSERT_TRUE(write_wav_mono_pcm16(path, {1.0f}, 48000));
 
     CabinetSim cab;
+    cab.set_sample_rate(48000);
     ASSERT_TRUE(cab.load_ir(path));
     ASSERT_TRUE(cab.has_ir());
+    cab.set_enabled(true);
 
     std::vector<float> buf(block_size);
     for (int i = 0; i < block_size; ++i) {
@@ -103,7 +105,9 @@ TEST(CabinetSim_IR_DelayedImpulse) {
     ASSERT_TRUE(write_wav_mono_pcm16(path, ir, 48000));
 
     CabinetSim cab;
+    cab.set_sample_rate(48000);
     ASSERT_TRUE(cab.load_ir(path));
+    cab.set_enabled(true);
 
     std::vector<float> buf(block_size, 0.0f);
     buf[0] = 1.0f;

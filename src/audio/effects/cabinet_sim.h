@@ -58,6 +58,10 @@ private:
     std::string ir_name_;
     float ir_duration_ms_ = 0.0f;
 
+    // Brightness one-pole smoother
+    float bright_smooth_ = 0.5f;
+    float bright_alpha_ = 0.0f;
+
     // Expected block size for the current kernel
     int expected_block_size_ = 0;
 
