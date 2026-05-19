@@ -139,6 +139,14 @@ void AudioEngine::process_audio(const float* input, float* output, int frame_cou
     float peak_out = 0.0f;
     constexpr float kTwoPi = 6.28318530718f;
     auto next_metronome_sample = [this, kTwoPi]() -> float {
+        
+        metronome_bpm_smoothed_ += metronome_bpm_smooth_alpha_ * (metronome_bpm_ - metronome_bpm_smoothed_);
+        metronome_volume_smoothed_ += metronome_volume_smooth_alpha_ * (metronome_volume_ - metronome_volume_smoothed_);
+        
+        if (metronome_bpm_smoothed_ > 0.0f) {
+            metronome_samples_per_beat_ = (static_cast<double>(sample_rate_) * 60.0) / metronome_bpm_smoothed_;
+        }
+        
         if (!metronome_enabled_ || metronome_samples_per_beat_ <= 0.0) {
             return 0.0f;
         }
@@ -152,7 +160,7 @@ void AudioEngine::process_audio(const float* input, float* output, int frame_cou
         if (metronome_click_samples_remaining_ <= 0) {
             return 0.0f;
         }
-        float click = std::sin(metronome_click_phase_) * metronome_click_env_ * metronome_volume_;
+        float click = std::sin(metronome_click_phase_) * metronome_click_env_ * metronome_volume_smoothed_;
         metronome_click_phase_ += metronome_click_phase_inc_;
         if (metronome_click_phase_ >= kTwoPi) {
             metronome_click_phase_ -= kTwoPi;
