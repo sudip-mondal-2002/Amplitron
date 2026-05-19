@@ -6,7 +6,6 @@
 #include "gui/command_history.h"
 #include "audio/effects/tuner.h"
 #include "audio/effects/amp_simulator.h"
-#include "audio/effects/ir_cabinet.h"
 #include "gui/file_dialog.h"
 #include <cstring>
 #include <cmath>
@@ -71,12 +70,6 @@ bool PedalWidget::render() {
         render_tuner_display(dl, p0, pedal_width);
     }
 
-    // --- IR Cabinet custom display ---
-    bool is_ir_cab = !is_amp && (std::strcmp(effect_->name(), "IR Cabinet") == 0);
-    if (is_ir_cab) {
-        render_ir_cabinet_display(p0, pedal_width);
-    }
-
     if (is_cabinet) {
         render_cabinet_ir_display(p0, pedal_width);
     }
@@ -84,7 +77,7 @@ bool PedalWidget::render() {
     if (is_looper) {
         render_looper_display(p0, pedal_width);
     } else {
-        bool shift_knobs_down = is_ir_cab || is_cabinet;
+        bool shift_knobs_down = is_cabinet;
         render_knobs(dl, p0, pedal_width, is_amp, is_tuner, shift_knobs_down);
     }
 

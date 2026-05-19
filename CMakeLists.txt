@@ -169,7 +169,6 @@ set(APP_SOURCES
     src/audio/effects/compressor.cpp
     src/audio/effects/looper.cpp
     src/audio/effects/cabinet_sim.cpp
-    src/audio/effects/ir_cabinet.cpp
     src/audio/effects/amp_simulator.cpp
     src/audio/dsp/wav_loader.cpp
     src/audio/dsp/convolution_engine.cpp
@@ -493,7 +492,6 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/test_theme.cpp
         tests/test_command_history.cpp
         tests/test_snapshot_manager.cpp
-        tests/test_ir_cabinet.cpp
         tests/test_cabinet_sim_ir.cpp
         tests/test_midi_manager.cpp
         tests/test_unsaved_preset.cpp
@@ -530,7 +528,6 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         src/audio/effects/compressor.cpp
         src/audio/effects/looper.cpp
         src/audio/effects/cabinet_sim.cpp
-        src/audio/effects/ir_cabinet.cpp
         src/audio/effects/amp_simulator.cpp
         src/audio/effects/tuner.cpp
         src/audio/effects/wah.cpp

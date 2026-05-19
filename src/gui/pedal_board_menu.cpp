@@ -15,7 +15,6 @@
 #include "audio/effects/reverb.h"
 #include "audio/effects/looper.h"
 #include "audio/effects/cabinet_sim.h"
-#include "audio/effects/ir_cabinet.h"
 #include "audio/effects/amp_simulator.h"
 #include "audio/effects/wah.h"
 #include "audio/effects/octaver.h"
@@ -95,9 +94,6 @@ void PedalBoard::render_add_pedal_menu() {
         }
         if (ImGui::MenuItem("Cabinet Sim")) {
             add_effect_and_show(std::make_shared<CabinetSim>());
-        }
-        if (ImGui::MenuItem("IR Cabinet")) {
-            add_effect_and_show(std::make_shared<IRCabinet>());
         }
 
         ImGui::EndPopup();

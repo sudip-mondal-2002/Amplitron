@@ -42,7 +42,7 @@ WavData load_wav_file(const std::string& filepath,
 
     drwav wav;
     if (!drwav_init_file(&wav, filepath.c_str(), nullptr)) {
-        std::cerr << "IR Cabinet: failed to open WAV file: " << filepath << std::endl;
+        std::cerr << "Cabinet IR: failed to open WAV file: " << filepath << std::endl;
         return result;
     }
 
@@ -51,7 +51,7 @@ WavData load_wav_file(const std::string& filepath,
 
     drwav_uint64 total_frames = wav.totalPCMFrameCount;
     if (total_frames == 0) {
-        std::cerr << "IR Cabinet: WAV file is empty: " << filepath << std::endl;
+        std::cerr << "Cabinet IR: WAV file is empty: " << filepath << std::endl;
         drwav_uninit(&wav);
         return result;
     }
@@ -67,7 +67,7 @@ WavData load_wav_file(const std::string& filepath,
     drwav_uninit(&wav);
 
     if (frames_read == 0) {
-        std::cerr << "IR Cabinet: failed to read WAV data: " << filepath << std::endl;
+        std::cerr << "Cabinet IR: failed to read WAV data: " << filepath << std::endl;
         result.sample_rate = 0;
         return result;
     }
@@ -99,7 +99,7 @@ WavData load_wav_file(const std::string& filepath,
     // Cap length
     if (max_length_samples > 0 &&
         static_cast<int>(result.samples.size()) > max_length_samples) {
-        std::cerr << "IR Cabinet: IR truncated from "
+        std::cerr << "Cabinet IR: IR truncated from "
                   << result.samples.size() << " to " << max_length_samples
                   << " samples" << std::endl;
         result.samples.resize(static_cast<size_t>(max_length_samples));
