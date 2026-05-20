@@ -260,6 +260,7 @@ make build
 - **X button** (top-right of pedal) — remove pedal from chain
 - **Reset All** — reset all pedal parameters to defaults
 - **Audio → Start/Stop** — toggle the audio stream
+- **File → Copy Preset to Clipboard** — serialise the current pedal chain to JSON and copy to clipboard for easy sharing
 - **M** — quickly mute/unmute the audio stream while the main window is focused
 
 ### Default Signal Chain

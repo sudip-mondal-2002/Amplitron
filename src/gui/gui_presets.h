@@ -61,6 +61,9 @@ public:
     /** @brief Return the current preset name or "Untitled" if unset. */
     std::string current_preset_name() const;
 
+    /** @brief Serialise the current engine state to a JSON string for clipboard export. */
+    std::string serialise_current_preset_to_json() const;
+
     /** @brief Record the current engine state as the clean saved preset state. */
     void mark_clean();
 

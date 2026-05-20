@@ -88,11 +88,18 @@ private:
 
     int current_fft_size_ = 0;
 
+    // Preallocated FFT buffers (raw storage for kiss_fft_cpx arrays)
+    // Kept here to avoid per-block allocations in the audio callback.
+    std::vector<char> input_cpx_;
+    std::vector<char> accum_cpx_;
+    std::vector<char> ifft_out_cpx_;
+
     void init_fft(int fft_size);
     void cleanup_fft();
 
     // Direct time-domain convolution fallback
     void process_direct(float* buffer, int num_samples);
+    std::vector<float> direct_input_;    // scratch copy of input (allocation-free in callback)
     std::vector<float> direct_overlap_;  // tail from direct convolution
 };
 

@@ -23,43 +23,43 @@ namespace Amplitron {
 
 void append_json_files(const std::string& dir,
                        std::vector<std::string>& result) {
-#ifdef _WIN32
-    std::string pattern = dir + "\\*.json";
-    struct _finddata_t fd;
-    intptr_t handle = _findfirst(pattern.c_str(), &fd);
-    if (handle != -1) {
-        do {
-            if (!(fd.attrib & _A_SUBDIR)) {
-                result.push_back(dir + "\\" + fd.name);
-            }
-        } while (_findnext(handle, &fd) == 0);
-        _findclose(handle);
-    }
-#else
-    DIR* d = opendir(dir.c_str());
-    if (d) {
-        struct dirent* entry;
-        while ((entry = readdir(d)) != nullptr) {
-            std::string name = entry->d_name;
-            if (name.size() > 5 && name.substr(name.size() - 5) == ".json") {
-                result.push_back(dir + "/" + name);
+    try {
+        for (const auto& entry : std::filesystem::directory_iterator(dir)) {
+            if (!entry.is_regular_file()) continue;
+            const auto& path = entry.path();
+            if (path.extension() == ".json") {
+                result.push_back(path.string());
             }
         }
-        closedir(d);
+    } catch (...) {
+        // Ignore invalid or non-existent directories
     }
-#endif
 }
 
 std::string get_bundled_presets_dir() {
 #ifdef _WIN32
+    auto has_json_presets = [](const std::string& dir) -> bool {
+        std::vector<std::string> files;
+        append_json_files(dir, files);
+        return !files.empty();
+    };
+
     char path[MAX_PATH];
     if (GetModuleFileNameA(nullptr, path, sizeof(path))) {
-        std::string exe_dir = path;
-        size_t last_slash = exe_dir.find_last_of("\\");
-        if (last_slash != std::string::npos) {
-            return exe_dir.substr(0, last_slash) + "\\presets";
-        }
+        std::filesystem::path exe_path(path);
+        std::filesystem::path exe_dir = exe_path.parent_path();
+
+        // Installed/bundled layout: presets next to the executable.
+        std::string bundled = (exe_dir / "presets").string();
+        if (dir_exists(bundled) && has_json_presets(bundled)) return bundled;
+
+        // Dev/CMake layout: executable under build dir, presets at repo root.
+        std::string repo_root_presets = (exe_dir / ".." / "presets").string();
+        if (dir_exists(repo_root_presets) && has_json_presets(repo_root_presets)) return repo_root_presets;
     }
+
+    // Fallback: relative to current working directory (useful for local runs).
+    if (dir_exists("presets") && has_json_presets("presets")) return "presets";
     return "presets";
 #elif defined(__APPLE__)
     char exe_path[4096];
@@ -88,17 +88,24 @@ void PresetManager::set_presets_dir(const std::string& dir) {
         custom_presets_dir_ = "";
         return;
     }
+    std::string normalized = dir;
+#ifdef _WIN32
+    // Allow callers/tests to pass forward slashes; normalize for _findfirst/_mkdir.
+    for (char& c : normalized) {
+        if (c == '/') c = '\\';
+    }
+#endif
     try {
-        std::filesystem::create_directories(dir);
+        std::filesystem::create_directories(normalized);
     } catch (...) {
         return;
     }
-    if (dir_exists(dir)) {
-        custom_presets_dir_ = dir;
+    if (dir_exists(normalized)) {
+        custom_presets_dir_ = normalized;
         std::vector<std::string> dir_presets;
-        append_json_files(dir, dir_presets);
+        append_json_files(normalized, dir_presets);
         if (dir_presets.empty()) {
-            save_factory_presets(dir);
+            save_factory_presets(normalized);
         }
     }
 }

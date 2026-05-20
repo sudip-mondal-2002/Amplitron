@@ -128,6 +128,14 @@ void AudioEngine::process_audio(const float* input, float* output, int frame_cou
         std::memcpy(process_buffer_right_.data(), process_buffer_.data(),
                     static_cast<size_t>(frame_count) * sizeof(float));
     }
+    //tempo/bpm broadcast
+    float current_bpm = static_cast<float>(metronome_bpm_);
+    for (auto& fx : audio_shadow_effects_) {
+        if (fx) {
+            fx->set_transport_state(current_bpm);
+        }
+    }
+    
     for (auto& fx : audio_shadow_effects_) {
         if (fx->is_enabled()) {
             fx->process_stereo(process_buffer_.data(),

@@ -146,6 +146,21 @@ bool GuiManager::run_frame() {
         gui_midi_.render(show_midi_);
     }
 
+    // Toast notification overlay
+    if (toast_timer_ > 0.0f) {
+        toast_timer_ -= ImGui::GetIO().DeltaTime;
+        ImGuiIO& io = ImGui::GetIO();
+        ImVec2 toast_pos = ImVec2(io.DisplaySize.x - 20.0f, io.DisplaySize.y - 20.0f);
+        ImGui::SetNextWindowPos(toast_pos, ImGuiCond_Always, ImVec2(1.0f, 1.0f));
+        ImGui::SetNextWindowBgAlpha(0.75f);
+        ImGui::Begin("##toast", nullptr,
+            ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
+            ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing |
+            ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove);
+        ImGui::Text("%s", toast_message_.c_str());
+        ImGui::End();
+    }
+
     // Rendering
     ImGui::Render();
     int display_w, display_h;

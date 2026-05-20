@@ -140,7 +140,7 @@ void GuiSnapshots::render() {
             ImGui::EndPopup();
         }
     }
-
+    
     ImGui::SameLine();
 
     // Status message or hint text

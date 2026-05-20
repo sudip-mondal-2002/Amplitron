@@ -1,7 +1,7 @@
 #include "preset_manager.h"
 #include "preset_json.h"
 #include "audio/effect_factory.h"
-#include "audio/effects/ir_cabinet.h"
+#include "audio/effects/cabinet_sim.h"
 #include "preset_manager_impl.h"
 #include <iostream>
 #include <cstring>
@@ -60,10 +60,10 @@ bool PresetManager::save_preset(const std::string& filepath,
             fd.params.push_back({p.name, p.value});
         }
 
-        if (std::strcmp(fx->name(), "IR Cabinet") == 0) {
-            auto* ir_cab = dynamic_cast<IRCabinet*>(fx.get());
-            if (ir_cab && ir_cab->has_ir()) {
-                fd.metadata["ir_path"] = ir_cab->ir_path();
+        if (std::strcmp(fx->name(), "Cabinet") == 0) {
+            auto* cab = dynamic_cast<CabinetSim*>(fx.get());
+            if (cab && cab->has_ir()) {
+                fd.metadata["ir_path"] = cab->ir_path();
             }
         }
 
@@ -124,12 +124,32 @@ bool PresetManager::load_preset(const std::string& filepath,
             }
         }
 
+        // Migrate old "IR Cabinet" type to "Cabinet" (IRCabinet was removed)
+        if (fd.type == "IR Cabinet") {
+            fd.type = "Cabinet";
+            fx = EffectFactory::instance().create(fd.type);
+            if (!fx) {
+                std::cerr << "Failed to create Cabinet effect for migrated IR Cabinet preset" << std::endl;
+                continue;
+            }
+            fx->set_enabled(fd.enabled);
+            fx->set_mix(fd.mix);
+            for (auto& saved_param : fd.params) {
+                for (auto& ep : fx->params()) {
+                    if (ep.name == saved_param.first) {
+                        ep.value = clamp(saved_param.second, ep.min_val, ep.max_val);
+                        break;
+                    }
+                }
+            }
+        }
+
         auto it = fd.metadata.find("ir_path");
         if (it != fd.metadata.end() && !it->second.empty()) {
-            auto* ir_cab = dynamic_cast<IRCabinet*>(fx.get());
-            if (ir_cab) {
-                if (!ir_cab->load_ir(it->second)) {
-                    std::cerr << "IR Cabinet: could not load IR file: "
+            auto* cab = dynamic_cast<CabinetSim*>(fx.get());
+            if (cab) {
+                if (!cab->load_ir(it->second)) {
+                    std::cerr << "Cabinet: could not load IR file: "
                               << it->second << std::endl;
                 }
             }

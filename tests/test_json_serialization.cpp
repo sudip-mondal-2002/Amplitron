@@ -212,7 +212,7 @@ TEST(json_roundtrip_via_file)
     PresetData original = make_test_preset();
     original.name = "FileRoundtripTest";
 
-    // Keep this PresetManager load test deterministic. IR Cabinet metadata
+    // Keep this PresetManager load test deterministic. IR metadata
     // serialization is already covered in json_preset_roundtrip_via_string.
     original.effects.resize(2);
 

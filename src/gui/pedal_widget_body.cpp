@@ -2,7 +2,7 @@
 #include "audio/audio_engine.h"
 #include "audio/effects/tuner.h"
 #include "audio/effects/amp_simulator.h"
-#include "audio/effects/ir_cabinet.h"
+#include "audio/effects/cabinet_sim.h"
 #include "audio/effects/looper.h"
 #include "gui/file_dialog.h"
 #include "gui/theme.h"
@@ -292,6 +292,14 @@ namespace Amplitron
                 ImGui::PopStyleColor();
             }
         }
+        ImGui::PopStyleColor(3);
+    } else {
+        const char* no_ir = "No IR loaded";
+        ImVec2 ni_size = ImGui::CalcTextSize(no_ir);
+        ImGui::SetCursorScreenPos(ImVec2(cx - ni_size.x * 0.5f, display_y));
+        ImGui::PushStyleColor(ImGuiCol_Text, Theme::TextDim());
+        ImGui::TextUnformatted(no_ir);
+        ImGui::PopStyleColor();
     }
 
 void PedalWidget::render_looper_display(ImVec2 p0, float pedal_width) {
@@ -403,11 +411,19 @@ void PedalWidget::render_looper_display(ImVec2 p0, float pedal_width) {
         ImGui::SetNextItemWidth(bar_w);
         char slider_id[64];
         std::snprintf(slider_id, sizeof(slider_id), "##looper_level_%d", index_);
-        float old_val = level;
         if (ImGui::SliderFloat(slider_id, &level, 0.0f, 1.0f, "Loop Level: %.2f")) {
             level = clamp(level, 0.0f, 1.0f);
             engine_.push_param_change(index_, 0, level);
-            commit_param_change(0, old_val, level);
+        }
+        if (ImGui::IsItemActivated()) {
+            popup_active_param_index_ = 0;
+            popup_param_value_before_edit_ = level;
+        }
+        if (ImGui::IsItemDeactivatedAfterEdit() && popup_active_param_index_ == 0) {
+            if (level != popup_param_value_before_edit_) {
+                commit_param_change(0, popup_param_value_before_edit_, level);
+            }
+            popup_active_param_index_ = -1;
         }
         if (ImGui::IsItemHovered() && !effect_->params()[0].tooltip.empty()) {
             ImGui::SetTooltip("%s", effect_->params()[0].tooltip.c_str());
