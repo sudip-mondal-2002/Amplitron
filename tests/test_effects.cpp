@@ -1217,3 +1217,35 @@ TEST(pitch_shifter_with_mix_and_shift_differs_from_dry) {
     // The shifted frequency should be dominant (higher magnitude than original)
     ASSERT_GT(mag_shifted, mag_440 * 0.5f);
 }
+
+// ============================================================
+// Tempo / BPM Syncing Tests
+// ============================================================
+
+TEST(delay_calculates_correct_time_from_bpm) {
+    Delay dl;
+    dl.set_sample_rate(48000);
+    dl.reset();
+
+    // To test quarter-note snapping at 120 BPM (500ms), we first set the
+    // knob close to 500ms so the subdivision logic picks the quarter note.
+    dl.params()[0].value = 490.0f; 
+    
+    // Trigger the BPM sync
+    dl.set_transport_state(120.0f); 
+
+    // At 120 BPM, a quarter note is 500.0 ms (60000 / 120)
+    ASSERT_NEAR(dl.params()[0].value, 500.0f, 0.01f);
+}
+
+TEST(chorus_calculates_correct_rate_from_bpm) {
+    Chorus ch;
+    ch.set_sample_rate(48000);
+    ch.reset();
+
+    // Trigger the BPM sync
+    ch.set_transport_state(120.0f);
+
+    // At 120 BPM, the LFO rate should be 2.0 Hz (120 / 60)
+    ASSERT_NEAR(ch.params()[0].value, 2.0f, 0.01f);
+}

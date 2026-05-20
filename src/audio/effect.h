@@ -37,6 +37,9 @@ public:
     // Clear delay lines, envelopes, filters, and other effect state.
     virtual void reset() = 0;
 
+    // Tempo broadcast receiver.
+    virtual void set_transport_state(float /*bpm*/) {}
+
     // Display name used by the pedal board and preset serialization.
     virtual const char* name() const = 0;
 

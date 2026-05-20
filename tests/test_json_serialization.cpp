@@ -64,7 +64,7 @@ static PresetData make_test_preset() {
     }
     {
         PresetData::EffectData fx;
-        fx.type     = "IR Cabinet";
+        fx.type     = "Cabinet";
         fx.enabled  = true;
         fx.mix      = 1.0f;
         fx.metadata = {{"ir_path", "/some/path/cabinet.wav"}};
@@ -185,8 +185,8 @@ TEST(json_preset_roundtrip_via_string) {
     ASSERT_EQ(restored.effects[1].enabled, false);
     ASSERT_NEAR(restored.effects[1].mix,   0.8f, 0.001f);
 
-    // Third effect: IR Cabinet with metadata
-    ASSERT_EQ(restored.effects[2].type,    std::string("IR Cabinet"));
+    // Third effect: Cabinet with IR metadata
+    ASSERT_EQ(restored.effects[2].type,    std::string("Cabinet"));
     ASSERT_EQ(restored.effects[2].metadata.count("ir_path"), 1u);
     ASSERT_EQ(restored.effects[2].metadata.at("ir_path"),
               std::string("/some/path/cabinet.wav"));
@@ -202,7 +202,7 @@ TEST(json_roundtrip_via_file) {
     PresetData original = make_test_preset();
     original.name = "FileRoundtripTest";
 
-    // Keep this PresetManager load test deterministic. IR Cabinet metadata
+    // Keep this PresetManager load test deterministic. IR metadata
     // serialization is already covered in json_preset_roundtrip_via_string.
     original.effects.resize(2);
 
@@ -219,7 +219,7 @@ TEST(json_roundtrip_via_file) {
     bool loaded = PresetManager::load_preset(path, engine);
     ASSERT_TRUE(loaded);
 
-    ASSERT_EQ(static_cast<int>(engine.effects().size()), 2); // IR Cabinet skipped (no real IR)
+    ASSERT_EQ(static_cast<int>(engine.effects().size()), 2); // IR effect skipped (no real IR)
     ASSERT_NEAR(engine.get_input_gain(),  0.75f, 0.01f);
     ASSERT_NEAR(engine.get_output_gain(), 0.85f, 0.01f);
 

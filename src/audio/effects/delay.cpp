@@ -67,4 +67,30 @@ void Delay::reset() {
     tone_lp_.reset();
 }
 
+void Delay::set_transport_state(float bpm){
+    if(bpm <= 0.0f || !std::isfinite(bpm)) return;
+    if(bpm == last_bpm_) return;
+    last_bpm_=bpm;
+
+    //Quarter-note duration
+    float quarter_note_ms = 60000.0f / bpm;
+    //Check current knob
+    float current_knob_time = params_[0].value;
+    //Distance to nearest subdivisions
+    float diff_quarter = std::fabs(current_knob_time - quarter_note_ms);
+    float diff_eighth = std::fabs(current_knob_time - (quarter_note_ms * 0.5f));
+    float diff_sixteenth = std::fabs(current_knob_time - (quarter_note_ms * 0.25f));
+    //Check closest
+    float target_time = quarter_note_ms; //default to 1/4 note
+    if(diff_eighth < diff_quarter && diff_eighth < diff_sixteenth){
+        target_time = quarter_note_ms * 0.5f; // 1/8 note
+    }
+    else if(diff_sixteenth < diff_quarter && diff_sixteenth < diff_eighth){
+        target_time = quarter_note_ms * 0.25f; // 1/16 note
+    }
+    
+    //Set knob
+    params_[0].value = clamp(target_time, params_[0].min_val, params_[0].max_val);
+}
+
 } // namespace Amplitron

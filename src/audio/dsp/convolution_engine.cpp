@@ -110,7 +110,11 @@ void ConvolutionEngine::reset() {
         cleanup_fft();
         fdl_.clear();
         overlap_.clear();
+        direct_input_.clear();
         direct_overlap_.clear();
+        input_cpx_.clear();
+        accum_cpx_.clear();
+        ifft_out_cpx_.clear();
         fdl_index_ = 0;
         return;
     }
@@ -143,6 +147,14 @@ void ConvolutionEngine::reset() {
     } else {
         direct_overlap_.clear();
     }
+
+    // Scratch input copy for direct convolution fallback
+    direct_input_.assign(static_cast<size_t>(kernel_->block_size()), 0.0f);
+
+    // Initialize FFT workspace buffers (allocation-free during process())
+    input_cpx_.assign(cpx_bytes, 0);
+    accum_cpx_.assign(cpx_bytes, 0);
+    ifft_out_cpx_.assign(cpx_bytes, 0);
 }
 
 void ConvolutionEngine::process_direct(float* buffer, int num_samples) {
@@ -150,37 +162,46 @@ void ConvolutionEngine::process_direct(float* buffer, int num_samples) {
     int ir_len = static_cast<int>(ir.size());
     if (ir_len == 0) return;
 
-    // Output length = num_samples + ir_len - 1
-    // We output num_samples and carry over the tail
-    int tail_len = ir_len - 1;
+    // Output length = num_samples + ir_len - 1.
+    // We output num_samples and carry over the tail (overlap-add) in direct_overlap_.
+    const int tail_len = ir_len - 1;
+    if (tail_len <= 0) return;
 
-    // Ensure direct_overlap_ is correct size
-    if (static_cast<int>(direct_overlap_.size()) < tail_len)
-        direct_overlap_.resize(static_cast<size_t>(tail_len), 0.0f);
+    // direct_overlap_ should be pre-sized in reset(); avoid allocations here.
+    if (static_cast<int>(direct_overlap_.size()) != tail_len) return;
 
-    // Temporary output buffer
-    std::vector<float> output(static_cast<size_t>(num_samples + tail_len), 0.0f);
+    // Need original input; avoid per-call allocations by using direct_input_ scratch.
+    if (static_cast<int>(direct_input_.size()) < num_samples) return;
+    std::memcpy(direct_input_.data(), buffer, sizeof(float) * static_cast<size_t>(num_samples));
 
-    // Direct convolution
-    for (int i = 0; i < num_samples; ++i) {
-        float x = buffer[i];
-        for (int j = 0; j < ir_len; ++j) {
-            output[static_cast<size_t>(i + j)] += x * ir[static_cast<size_t>(j)];
+    // First num_samples samples: convolution + previous overlap
+    for (int n = 0; n < num_samples; ++n) {
+        float y = (n < tail_len) ? direct_overlap_[static_cast<size_t>(n)] : 0.0f;
+
+        // y += sum_{j=0}^{ir_len-1} x[n-j] * h[j]
+        int j0 = std::max(0, n - (num_samples - 1));
+        int j1 = std::min(ir_len - 1, n);
+        for (int j = j0; j <= j1; ++j) {
+            y += direct_input_[static_cast<size_t>(n - j)] * ir[static_cast<size_t>(j)];
         }
+        buffer[n] = y;
     }
 
-    // Add previous overlap
-    for (int i = 0; i < std::min(tail_len, num_samples); ++i) {
-        output[static_cast<size_t>(i)] += direct_overlap_[static_cast<size_t>(i)];
-    }
+    // Tail samples for next block: y[num_samples .. num_samples+tail_len-1]
+    for (int t = 0; t < tail_len; ++t) {
+        const int n = num_samples + t;
+        float y = 0.0f;
 
-    // Copy output to buffer
-    std::memcpy(buffer, output.data(), sizeof(float) * static_cast<size_t>(num_samples));
-
-    // Store new overlap tail
-    for (int i = 0; i < tail_len; ++i) {
-        direct_overlap_[static_cast<size_t>(i)] =
-            output[static_cast<size_t>(num_samples + i)];
+        // y += sum_{j=0}^{ir_len-1} x[n-j] * h[j], where (n-j) in [0, num_samples-1]
+        int j0 = std::max(0, n - (num_samples - 1));
+        int j1 = std::min(ir_len - 1, n);
+        for (int j = j0; j <= j1; ++j) {
+            int xi = n - j;
+            if (xi >= 0 && xi < num_samples) {
+                y += direct_input_[static_cast<size_t>(xi)] * ir[static_cast<size_t>(j)];
+            }
+        }
+        direct_overlap_[static_cast<size_t>(t)] = y;
     }
 }
 
@@ -206,7 +227,7 @@ void ConvolutionEngine::process(float* buffer, int num_samples) {
     // --- Partitioned overlap-add convolution ---
 
     // 1. Prepare input: zero-pad to fft_size
-    std::vector<kiss_fft_cpx> input_cpx(static_cast<size_t>(fft_size));
+    auto* input_cpx = reinterpret_cast<kiss_fft_cpx*>(input_cpx_.data());
     for (int i = 0; i < block_size; ++i) {
         input_cpx[static_cast<size_t>(i)].r = buffer[i];
         input_cpx[static_cast<size_t>(i)].i = 0.0f;
@@ -219,10 +240,11 @@ void ConvolutionEngine::process(float* buffer, int num_samples) {
     // 2. Forward FFT of input -> store in FDL at current index
     auto* fdl_data = reinterpret_cast<kiss_fft_cpx*>(
         fdl_[static_cast<size_t>(fdl_index_)].data());
-    kiss_fft(fft_cfg_, input_cpx.data(), fdl_data);
+    kiss_fft(fft_cfg_, input_cpx, fdl_data);
 
     // 3. Complex multiply-accumulate across all partitions
-    std::vector<kiss_fft_cpx> accum(static_cast<size_t>(fft_size), {0.0f, 0.0f});
+    auto* accum = reinterpret_cast<kiss_fft_cpx*>(accum_cpx_.data());
+    std::memset(accum, 0, sizeof(kiss_fft_cpx) * static_cast<size_t>(fft_size));
 
     for (int k = 0; k < num_parts; ++k) {
         // FDL index for partition k (circular)
@@ -232,12 +254,12 @@ void ConvolutionEngine::process(float* buffer, int num_samples) {
         const auto* ir_block = reinterpret_cast<const kiss_fft_cpx*>(
             kernel_->partition_freq(k));
 
-        complex_multiply_accumulate(accum.data(), fdl_block, ir_block, fft_size);
+        complex_multiply_accumulate(accum, fdl_block, ir_block, fft_size);
     }
 
     // 4. Inverse FFT
-    std::vector<kiss_fft_cpx> ifft_out(static_cast<size_t>(fft_size));
-    kiss_fft(ifft_cfg_, accum.data(), ifft_out.data());
+    auto* ifft_out = reinterpret_cast<kiss_fft_cpx*>(ifft_out_cpx_.data());
+    kiss_fft(ifft_cfg_, accum, ifft_out);
 
     // kiss_fft inverse does NOT normalize -- divide by fft_size
     float norm = 1.0f / static_cast<float>(fft_size);

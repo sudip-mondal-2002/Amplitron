@@ -2,7 +2,7 @@
 #include "audio/audio_engine.h"
 #include "audio/effects/tuner.h"
 #include "audio/effects/amp_simulator.h"
-#include "audio/effects/ir_cabinet.h"
+#include "audio/effects/cabinet_sim.h"
 #include "audio/effects/looper.h"
 #include "gui/file_dialog.h"
 #include "gui/theme.h"
@@ -202,72 +202,72 @@ void PedalWidget::render_tuner_display(ImDrawList* dl, ImVec2 p0, float pedal_wi
     }
 }
 
-void PedalWidget::render_ir_cabinet_display(ImVec2 p0, float pedal_width) {
-    auto* ir_cab = dynamic_cast<IRCabinet*>(effect_.get());
-    if (ir_cab) {
-        float cx = p0.x + pedal_width * 0.5f;
-        float display_y = p0.y + 50;
+void PedalWidget::render_cabinet_ir_display(ImVec2 p0, float pedal_width) {
+    auto* cab = dynamic_cast<CabinetSim*>(effect_.get());
+    if (!cab) return;
 
-        float btn_w = pedal_width - 30;
+    float cx = p0.x + pedal_width * 0.5f;
+    float display_y = p0.y + 50;
+
+    float btn_w = pedal_width - 30;
+    ImGui::SetCursorScreenPos(ImVec2(p0.x + 15, display_y));
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.22f, 0.20f, 0.16f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.35f, 0.30f, 0.18f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.50f, 0.42f, 0.20f, 1.0f));
+    char load_id[64];
+    snprintf(load_id, sizeof(load_id), "Load IR##cab_ir_load_%d", index_);
+    if (ImGui::Button(load_id, ImVec2(btn_w, 22))) {
+        std::string path = show_open_dialog("Load Cabinet Impulse Response",
+                                            "WAV Audio", "wav");
+        if (!path.empty()) {
+            cab->load_ir(path);
+        }
+    }
+    ImGui::PopStyleColor(3);
+
+    display_y += 28;
+
+    if (cab->has_ir()) {
+        const std::string& ir_name = cab->ir_name();
+        std::string display_name = ir_name;
+        if (display_name.size() > 20) {
+            display_name = display_name.substr(0, 17) + "...";
+        }
+        ImVec2 name_size = ImGui::CalcTextSize(display_name.c_str());
+        ImGui::SetCursorScreenPos(ImVec2(cx - name_size.x * 0.5f, display_y));
+        ImGui::PushStyleColor(ImGuiCol_Text, Theme::TextPrimary());
+        ImGui::TextUnformatted(display_name.c_str());
+        ImGui::PopStyleColor();
+
+        display_y += 18;
+
+        char dur_buf[32];
+        snprintf(dur_buf, sizeof(dur_buf), "%.1f ms", cab->ir_duration_ms());
+        ImVec2 dur_size = ImGui::CalcTextSize(dur_buf);
+        ImGui::SetCursorScreenPos(ImVec2(cx - dur_size.x * 0.5f, display_y));
+        ImGui::PushStyleColor(ImGuiCol_Text, Theme::TextSecondary());
+        ImGui::TextUnformatted(dur_buf);
+        ImGui::PopStyleColor();
+
+        display_y += 22;
+
         ImGui::SetCursorScreenPos(ImVec2(p0.x + 15, display_y));
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.22f, 0.20f, 0.16f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.35f, 0.30f, 0.18f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.50f, 0.42f, 0.20f, 1.0f));
-        char load_id[64];
-        snprintf(load_id, sizeof(load_id), "Load IR##ir_load_%d", index_);
-        if (ImGui::Button(load_id, ImVec2(btn_w, 22))) {
-            std::string path = show_open_dialog("Load Impulse Response",
-                                               "WAV Audio", "wav");
-            if (!path.empty()) {
-                ir_cab->load_ir(path);
-            }
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.18f, 0.12f, 0.10f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.35f, 0.15f, 0.12f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.50f, 0.20f, 0.15f, 1.0f));
+        char clear_id[64];
+        snprintf(clear_id, sizeof(clear_id), "Clear##cab_ir_clear_%d", index_);
+        if (ImGui::Button(clear_id, ImVec2(btn_w, 20))) {
+            cab->clear_ir();
         }
         ImGui::PopStyleColor(3);
-
-        display_y += 28;
-
-        if (ir_cab->has_ir()) {
-            const std::string& ir_name = ir_cab->ir_name();
-            std::string display_name = ir_name;
-            if (display_name.size() > 20) {
-                display_name = display_name.substr(0, 17) + "...";
-            }
-            ImVec2 name_size = ImGui::CalcTextSize(display_name.c_str());
-            ImGui::SetCursorScreenPos(ImVec2(cx - name_size.x * 0.5f, display_y));
-            ImGui::PushStyleColor(ImGuiCol_Text, Theme::TextPrimary());
-            ImGui::TextUnformatted(display_name.c_str());
-            ImGui::PopStyleColor();
-
-            display_y += 18;
-
-            char dur_buf[32];
-            snprintf(dur_buf, sizeof(dur_buf), "%.1f ms", ir_cab->ir_duration_ms());
-            ImVec2 dur_size = ImGui::CalcTextSize(dur_buf);
-            ImGui::SetCursorScreenPos(ImVec2(cx - dur_size.x * 0.5f, display_y));
-            ImGui::PushStyleColor(ImGuiCol_Text, Theme::TextSecondary());
-            ImGui::TextUnformatted(dur_buf);
-            ImGui::PopStyleColor();
-
-            display_y += 22;
-
-            ImGui::SetCursorScreenPos(ImVec2(p0.x + 15, display_y));
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.18f, 0.12f, 0.10f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.35f, 0.15f, 0.12f, 1.0f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.50f, 0.20f, 0.15f, 1.0f));
-            char clear_id[64];
-            snprintf(clear_id, sizeof(clear_id), "Clear##ir_clear_%d", index_);
-            if (ImGui::Button(clear_id, ImVec2(btn_w, 20))) {
-                ir_cab->clear_ir();
-            }
-            ImGui::PopStyleColor(3);
-        } else {
-            const char* no_ir = "No IR loaded";
-            ImVec2 ni_size = ImGui::CalcTextSize(no_ir);
-            ImGui::SetCursorScreenPos(ImVec2(cx - ni_size.x * 0.5f, display_y));
-            ImGui::PushStyleColor(ImGuiCol_Text, Theme::TextDim());
-            ImGui::TextUnformatted(no_ir);
-            ImGui::PopStyleColor();
-        }
+    } else {
+        const char* no_ir = "No IR loaded";
+        ImVec2 ni_size = ImGui::CalcTextSize(no_ir);
+        ImGui::SetCursorScreenPos(ImVec2(cx - ni_size.x * 0.5f, display_y));
+        ImGui::PushStyleColor(ImGuiCol_Text, Theme::TextDim());
+        ImGui::TextUnformatted(no_ir);
+        ImGui::PopStyleColor();
     }
 }
 
@@ -380,11 +380,19 @@ void PedalWidget::render_looper_display(ImVec2 p0, float pedal_width) {
         ImGui::SetNextItemWidth(bar_w);
         char slider_id[64];
         std::snprintf(slider_id, sizeof(slider_id), "##looper_level_%d", index_);
-        float old_val = level;
         if (ImGui::SliderFloat(slider_id, &level, 0.0f, 1.0f, "Loop Level: %.2f")) {
             level = clamp(level, 0.0f, 1.0f);
             engine_.push_param_change(index_, 0, level);
-            commit_param_change(0, old_val, level);
+        }
+        if (ImGui::IsItemActivated()) {
+            popup_active_param_index_ = 0;
+            popup_param_value_before_edit_ = level;
+        }
+        if (ImGui::IsItemDeactivatedAfterEdit() && popup_active_param_index_ == 0) {
+            if (level != popup_param_value_before_edit_) {
+                commit_param_change(0, popup_param_value_before_edit_, level);
+            }
+            popup_active_param_index_ = -1;
         }
         if (ImGui::IsItemHovered() && !effect_->params()[0].tooltip.empty()) {
             ImGui::SetTooltip("%s", effect_->params()[0].tooltip.c_str());
