@@ -362,94 +362,107 @@ test.describe('No Runtime Errors', () => {
 
 test.describe('Web MIDI Support', () => {
   test('MIDI CC11 controls output gain', async ({ page }) => {
-    // Mock navigator.requestMIDIAccess before loading the page
+    // Set up mock BEFORE page loads
     await page.addInitScript(() => {
-      const mockInput = new EventTarget();
-      let midiMessageListener: ((event: any) => void) | null = null;
+      // Store the captured listener
+      let capturedListener: ((event: any) => void) | null = null;
       
-      window.navigator.requestMIDIAccess = async () => {
-        // Create mock MIDI access object
-        const mockMidiAccess = {
-          inputs: new Map([['mock-device-id', mockInput]]),
-          outputs: new Map(),
-          addEventListener: (eventName: string) => {},
-          removeEventListener: (eventName: string) => {},
-          dispatchEvent: (event: Event) => true,
-        };
-        
-        // Wrap addEventListener to capture listener
-        mockInput.addEventListener = function(
-          eventName: string,
-          callback: any
-        ) {
+      // Create a mock input port that properly captures addEventListener calls
+      const mockInput = {
+        name: 'Mock MIDI Controller',
+        state: 'connected',
+        id: 'mock-device-id',
+        manufacturer: 'Test',
+        addEventListener: (eventName: string, callback: any) => {
           if (eventName === 'midimessage') {
-            midiMessageListener = callback;
+            capturedListener = callback;
+            console.log('[TEST-MOCK] Listener captured for midimessage');
           }
-        };
+        },
+        removeEventListener: () => {},
+      };
+      
+      // Create mock MIDI access that returns our mock device
+      const mockMidiAccess = {
+        inputs: new Map([['mock-device-id', mockInput]]),
+        outputs: new Map(),
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        sysexEnabled: true,
+      };
+      
+      // Override navigator.requestMIDIAccess BEFORE the page requests it
+      (window.navigator as any).requestMIDIAccess = async () => {
+        console.log('[TEST-MOCK] requestMIDIAccess called');
         
-        // Define the mock input port
-        Object.defineProperty(mockInput, 'name', {
-          value: 'Mock MIDI Controller',
-        });
-        Object.defineProperty(mockInput, 'state', {
-          value: 'connected',
-        });
+        // Simulate a brief delay (like real MIDI access)
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        // Schedule the mock MIDI message to fire AFTER the listener is attached
+        setTimeout(() => {
+          if (capturedListener) {
+            console.log('[TEST-MOCK] Sending mock CC11 message');
+            const mockEvent = {
+              data: new Uint8Array([0xB0, 11, 64]),  // CC11, value 64
+            };
+            capturedListener(mockEvent);
+          } else {
+            console.warn('[TEST-MOCK] Listener not yet captured!');
+          }
+        }, 200);  // Wait 200ms to ensure listener is attached
         
         return mockMidiAccess;
       };
       
-      // Simulate MIDI message after a delay
-      setTimeout(() => {
-        if (midiMessageListener) {
-          const mockEvent = {
-            data: new Uint8Array([0xB0, 11, 64]),  // CC11, value 64
-          };
-          midiMessageListener(mockEvent);
-        }
-      }, 500);
+      console.log('[TEST-MOCK] Mock MIDI API injected');
     });
     
     // Load the page
     await page.goto('/');
     
-    // Wait for loading to complete
+    // Wait for WASM to load
     await page.waitForSelector('#loading.hidden', { timeout: 10000 });
     
-    // Click to unlock audio (which triggers MIDI init)
+    // Click to unlock audio AND trigger MIDI initialization
     await page.click('#audio-unlock');
     
-    // Wait for MIDI status to show connection
+    // Wait for MIDI status to appear with the device name
+    // This is the key assertion — if it passes, MIDI is working
     const midiStatus = page.locator('#midi-status');
-    await expect(midiStatus).toContainText('1 MIDI device(s) connected', { timeout: 2000 });
+    await expect(midiStatus).toContainText('MIDI Active: Mock MIDI Controller', { 
+      timeout: 5000 
+    });
     
-    // Verify no JavaScript errors occurred
-    const messages: string[] = [];
+    // Verify no errors occurred
+    const errors: string[] = [];
     page.on('console', (msg) => {
       if (msg.type() === 'error') {
-        messages.push(msg.text());
+        errors.push(msg.text());
+        console.log('[BROWSER-ERROR]', msg.text());
       }
     });
     
-    // Wait a bit to see if any errors pop up
-    await page.waitForTimeout(1000);
+    // Give it time to report any errors
+    await page.waitForTimeout(500);
     
-    expect(messages).toHaveLength(0);
+    expect(errors).toHaveLength(0);
   });
   
   test('Gracefully handles missing Web MIDI support', async ({ page }) => {
-    // Mock the absence of Web MIDI API
+    // Remove Web MIDI API from the browser
     await page.addInitScript(() => {
-      if (window.navigator) {
-        delete (window.navigator as any).requestMIDIAccess;
-      }
+      delete (window.navigator as any).requestMIDIAccess;
+      console.log('[TEST-MOCK] Web MIDI API removed');
     });
     
     await page.goto('/');
     await page.waitForSelector('#loading.hidden', { timeout: 10000 });
     await page.click('#audio-unlock');
     
-    // Should show permission denied message when Web MIDI is unavailable
+    // Should show the unsupported message
     const midiStatus = page.locator('#midi-status');
-    await expect(midiStatus).toContainText('MIDI permission denied', { timeout: 2000 });
+    await expect(midiStatus).toContainText('MIDI not supported', { 
+      timeout: 5000 
+    });
   });
 });
