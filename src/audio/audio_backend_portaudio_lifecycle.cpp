@@ -283,6 +283,24 @@ bool AudioEngine::start() {
         }
     }
 
+    const PaStreamInfo* si = Pa_GetStreamInfo(backend_->stream);
+    if (si && si->sampleRate > 0.0) {
+        const int actual_rate = static_cast<int>(si->sampleRate + 0.5);
+        if (actual_rate != sample_rate_) {
+            sample_rate_ = actual_rate;
+            update_metronome_timing();
+            std::lock_guard<std::mutex> lock(effect_mutex_);
+            for (auto& fx : effects_) {
+                fx->set_sample_rate(sample_rate_);
+                fx->reset();
+            }
+            if (tuner_tap_) {
+                tuner_tap_->set_sample_rate(sample_rate_);
+                tuner_tap_->reset();
+            }
+        }
+    }
+
     err = Pa_StartStream(backend_->stream);
     if (err != paNoError) {
         std::cerr << "Failed to start stream: " << Pa_GetErrorText(err) << std::endl;
@@ -292,7 +310,7 @@ bool AudioEngine::start() {
     }
 
     running_ = true;
-    const PaStreamInfo* si = Pa_GetStreamInfo(backend_->stream);
+    si = Pa_GetStreamInfo(backend_->stream);
     const PaDeviceInfo* in_info = Pa_GetDeviceInfo(input_device_);
     const PaDeviceInfo* out_info = Pa_GetDeviceInfo(output_device_);
     std::cout << "Audio stream started:" << std::endl;
