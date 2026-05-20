@@ -166,7 +166,7 @@ void GuiManager::render_master_controls() {
     smoothed_input_level_ += (input_lvl - smoothed_input_level_) * 0.3f;
     smoothed_output_level_ += (output_lvl - smoothed_output_level_) * 0.3f;
 
-    ImGui::BeginChild("MasterControls", ImVec2(0, 80), true);
+    ImGui::BeginChild("MasterControls", ImVec2(0, 150), true, ImGuiWindowFlags_NoScrollbar);
 
     ImGui::Columns(4, "master_cols", false);
 
@@ -221,6 +221,32 @@ void GuiManager::render_master_controls() {
     float output_gain = engine_.get_output_gain();
     if (ImGui::SliderFloat("##OutputGain", &output_gain, 0.0f, 2.0f, "%.2f")) {
         engine_.set_output_gain(output_gain);
+    }
+
+    ImGui::Columns(1);
+
+    ImGui::Separator();
+
+    ImGui::Columns(3, "metronome_cols", false);
+
+    ImGui::Text("METRONOME");
+    bool metronome_on = engine_.get_metronome_enabled();
+    if (ImGui::Button(metronome_on ? "Stop" : "Play")) {
+        engine_.toggle_metronome();
+    }
+
+    ImGui::NextColumn();
+
+    int bpm = engine_.get_metronome_bpm();
+    if (ImGui::SliderInt("BPM", &bpm, 40, 240)) {
+        engine_.set_metronome_bpm(bpm);
+    }
+
+    ImGui::NextColumn();
+
+    float click = engine_.get_metronome_volume();
+    if (ImGui::SliderFloat("Click", &click, 0.0f, 1.0f, "%.2f")) {
+        engine_.set_metronome_volume(click);
     }
 
     ImGui::Columns(1);
