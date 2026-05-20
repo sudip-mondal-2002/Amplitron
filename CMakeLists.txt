@@ -26,7 +26,8 @@ else()
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
         add_compile_options(-O3 -ftree-vectorize)
         # -march=native is only valid for native (non-cross) builds
-        if(NOT ANDROID AND NOT IOS AND NOT EMSCRIPTEN)
+    
+    if(NOT ANDROID AND NOT IOS AND NOT EMSCRIPTEN)
             add_compile_options(-march=native)
         endif()
     endif()
@@ -34,7 +35,8 @@ endif()
 
 # --- nlohmann/json (header-only, fetched at configure time) ----------------
 # Single-header C++17 JSON library used for preset serialization /
-# deserialization.  We disable nlohmann's own tests and install rules so
+# deserialization.
+# We disable nlohmann's own tests and install rules so
 # they don't pollute the Amplitron build.
 include(FetchContent)
 FetchContent_Declare(
@@ -66,6 +68,7 @@ if(NOT PORTAUDIO_FOUND)
     find_library(PORTAUDIO_LIBRARIES NAMES portaudio portaudio_x64
         PATHS /usr/lib /usr/local/lib /opt/homebrew/lib
               "C:/Program Files/portaudio/lib"
+       
               "${CMAKE_SOURCE_DIR}/external/portaudio/lib")
 endif()
 
@@ -82,7 +85,8 @@ if(NOT SDL2_FOUND)
         find_path(SDL2_INCLUDE_DIRS SDL.h
             PATH_SUFFIXES SDL2
             PATHS /usr/include /usr/local/include /opt/homebrew/include
-                  "C:/Program Files/SDL2/include"
+                 
+  "C:/Program Files/SDL2/include"
                   "${CMAKE_SOURCE_DIR}/external/SDL2/include")
         find_library(SDL2_LIBRARIES NAMES SDL2
             PATHS /usr/lib /usr/local/lib /opt/homebrew/lib
@@ -92,7 +96,8 @@ if(NOT SDL2_FOUND)
 endif()
 
 # RtMidi (MIDI input)
-# Skip auto-detection when paths are provided explicitly (e.g. CI -D flags).
+# Skip auto-detection when paths are provided explicitly (e.g.
+# CI -D flags).
 if(NOT RTMIDI_LIBRARIES)
     if(PkgConfig_FOUND)
         pkg_check_modules(RTMIDI rtmidi)
@@ -103,15 +108,18 @@ if(NOT RTMIDI_LIBRARIES)
                   "C:/Program Files/rtmidi/include"
                   "${CMAKE_SOURCE_DIR}/external/rtmidi")
         find_library(RTMIDI_LIBRARIES NAMES rtmidi
-            PATHS /usr/lib /usr/local/lib /opt/homebrew/lib
+   
+          PATHS /usr/lib /usr/local/lib /opt/homebrew/lib
                   "C:/Program Files/rtmidi/lib"
                   "${CMAKE_SOURCE_DIR}/external/rtmidi")
     endif()
 endif()
 # pkg_check_modules sets RTMIDI_LIBRARIES to just the name ("rtmidi") and
-# RTMIDI_LIBRARY_DIRS to the directory (/opt/homebrew/lib).  Without
+# RTMIDI_LIBRARY_DIRS to the directory (/opt/homebrew/lib).
+# Without
 # link_directories the linker never searches that path, so we add it
-# explicitly.  This is a no-op when RTMIDI_LIBRARIES is a full path.
+# explicitly.
+# This is a no-op when RTMIDI_LIBRARIES is a full path.
 if(RTMIDI_LIBRARY_DIRS)
     link_directories(${RTMIDI_LIBRARY_DIRS})
 endif()
@@ -150,7 +158,8 @@ set(APP_SOURCES
     src/preset_manager.cpp
     src/preset_json.cpp
     src/audio/audio_engine.cpp
-    src/audio/audio_engine_chain.cpp
+  
+   src/audio/audio_engine_chain.cpp
     src/audio/audio_engine_process.cpp
     src/audio/audio_engine_api.cpp
     src/audio/recorder.cpp
@@ -175,7 +184,8 @@ set(APP_SOURCES
     src/audio/effects/tuner.cpp
     src/audio/effects/wah.cpp
     src/audio/effects/octaver.cpp
-    src/audio/effects/pitch_shifter.cpp
+  
+   src/audio/effects/pitch_shifter.cpp
     src/gui/gui_manager.cpp
     src/gui/gui_manager_frame.cpp
     src/gui/gui_manager_menu.cpp
@@ -201,7 +211,8 @@ set(APP_SOURCES
 # --- MIDI Support (desktop only) ---
 set(MIDI_SOURCES)
 if(NOT EMSCRIPTEN AND NOT ANDROID AND NOT IOS)
-    list(APPEND MIDI_SOURCES
+    list(APPEND 
+ MIDI_SOURCES
         src/midi/midi_manager.cpp
         src/midi/midi_manager_mapping.cpp
         src/midi/midi_manager_persist.cpp
@@ -235,7 +246,8 @@ endif()
 # Target configuration: Emscripten (web) vs Native (desktop)
 # =============================================================================
 # =============================================================================
-# Shared helper: SDL2 for mobile builds (Android / iOS)
+# Shared 
+# helper: SDL2 for mobile builds (Android / iOS)
 # Prefer a pre-installed SDL2 (e.g. from CI cache via -DSDL2_DIR=...).
 # Fall back to building from source via FetchContent for local/first-time builds.
 # =============================================================================
@@ -243,8 +255,8 @@ if(ANDROID)
     # Oboe: low-latency audio for Android 8+ (AAudio exclusive mode)
     # Follow the repo's external-library pattern: allow CI to inject pre-built
     # paths via -DOBOE_INCLUDE_DIRS=... / -DOBOE_LIBRARIES=... flags.
-    # Fall back to FetchContent when those overrides are absent.
-    if(NOT OBOE_LIBRARIES)
+# Fall back to FetchContent when those overrides are absent.
+if(NOT OBOE_LIBRARIES)
         include(FetchContent)
         FetchContent_Declare(oboe
             GIT_REPOSITORY https://github.com/google/oboe.git
@@ -258,6 +270,7 @@ endif()
 
 if(ANDROID OR IOS)
     find_package(SDL2 QUIET CONFIG)
+ 
     if(NOT TARGET SDL2::SDL2-static)
         include(FetchContent)
         FetchContent_Declare(SDL2
@@ -267,7 +280,8 @@ if(ANDROID OR IOS)
         set(SDL_SHARED  OFF CACHE BOOL "" FORCE)
         set(SDL_TEST    OFF CACHE BOOL "" FORCE)
         FetchContent_MakeAvailable(SDL2)
-        # Suppress warnings from SDL2's own source (unused-parameter, etc.)
+     
+    # Suppress warnings from SDL2's own source (unused-parameter, etc.)
         if(TARGET SDL2-static)
             target_compile_options(SDL2-static PRIVATE -w)
         endif()
@@ -283,7 +297,8 @@ if(EMSCRIPTEN)
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/external
         ${CMAKE_SOURCE_DIR}/external/kiss_fft
-        ${IMGUI_DIR}
+     
+    ${IMGUI_DIR}
         ${IMGUI_DIR}/backends
     )
 
@@ -298,12 +313,14 @@ if(EMSCRIPTEN)
         "-sUSE_SDL=2"
         "-sMIN_WEBGL_VERSION=2"
         "-sMAX_WEBGL_VERSION=2"
-        "-sALLOW_MEMORY_GROWTH=1"
+      
+   "-sALLOW_MEMORY_GROWTH=1"
         "-sAUDIO_WORKLET=1"
         "-sWASM_WORKERS=1"
         "-pthread"
         "-sSHARED_MEMORY=1"
-        "-sEXPORTED_RUNTIME_METHODS=['ccall','cwrap']"
+        "-sASYNCIFY=1"
+        "-sEXPORTED_RUNTIME_METHODS=['ccall','cwrap','stringToUTF8']"
         "-sSTACK_SIZE=1048576"
         "-sPTHREAD_POOL_SIZE=4"
         "-Wno-pthreads-mem-growth"
@@ -311,7 +328,8 @@ if(EMSCRIPTEN)
         "--preload-file" "${CMAKE_SOURCE_DIR}/presets@/presets"
     )
 
-    # Output name: index.html (+ index.js, index.wasm generated by emcc)
+    # Output name: index.html (+ index.js, index.wasm generated 
+# by emcc)
     set_target_properties(Amplitron PROPERTIES
         OUTPUT_NAME "index"
         SUFFIX ".html"
@@ -326,9 +344,10 @@ if(EMSCRIPTEN)
 
 elseif(ANDROID)
 
-    # --- Android build: shared library loaded by SDLActivity via JNI ---
+    # --- Android build: shared library loaded by SDLActivity 
+# via JNI ---
     # SDL2 is linked statically so only libmain.so needs to be packaged.
-    # AmplitronActivity.java overrides getLibraries() to load only "main".
+# AmplitronActivity.java overrides getLibraries() to load only "main".
     add_library(main SHARED
         ${APP_SOURCES}
         ${MIDI_SOURCES}
@@ -343,7 +362,8 @@ elseif(ANDROID)
         ${CMAKE_SOURCE_DIR}/external
         ${CMAKE_SOURCE_DIR}/external/kiss_fft
         ${IMGUI_DIR}
-        ${IMGUI_DIR}/backends
+  
+       ${IMGUI_DIR}/backends
     )
     if(SDL2_SOURCE_DIR)
         target_include_directories(main PRIVATE ${SDL2_SOURCE_DIR}/include)
@@ -360,7 +380,8 @@ elseif(ANDROID)
 
     target_link_libraries(main PRIVATE
         nlohmann_json::nlohmann_json
-        ${OBOE_LIBRARIES}
+  
+       ${OBOE_LIBRARIES}
         SDL2::SDL2-static
         android
         log
@@ -375,7 +396,8 @@ elseif(IOS)
         ${APP_SOURCES}
         ${MIDI_SOURCES}
         ${BACKEND_SOURCES}
-        ${DIALOG_SOURCES}
+        
+ ${DIALOG_SOURCES}
         ${IMGUI_SOURCES}
         ${KISS_FFT_SOURCES}
     )
@@ -392,7 +414,8 @@ elseif(IOS)
     endif()
 
     target_compile_definitions(Amplitron PRIVATE
-        IMGUI_IMPL_OPENGL_ES3
+        
+ IMGUI_IMPL_OPENGL_ES3
         AMPLITRON_VERSION="${AMPLITRON_VERSION}"
         AMPLITRON_NO_DESKTOP_SHELL
         AMPLITRON_NO_MIDI
@@ -406,7 +429,8 @@ elseif(IOS)
         "-framework OpenGLES"
         "-framework AudioToolbox"
         "-framework CoreAudio"
-        "-framework CoreMotion"
+       
+  "-framework CoreMotion"
         "-framework CoreHaptics"
         "-framework GameController"
         "-framework Foundation"
@@ -417,7 +441,8 @@ elseif(IOS)
     set_target_properties(Amplitron PROPERTIES
         MACOSX_BUNDLE_INFO_PLIST              "${CMAKE_SOURCE_DIR}/ios/Info.plist"
         MACOSX_BUNDLE_BUNDLE_NAME             "Amplitron"
-        MACOSX_BUNDLE_BUNDLE_VERSION          "${AMPLITRON_VERSION}"
+  
+       MACOSX_BUNDLE_BUNDLE_VERSION          "${AMPLITRON_VERSION}"
         MACOSX_BUNDLE_SHORT_VERSION_STRING    "${AMPLITRON_VERSION}"
         XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "15.0"
         XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY    ""
@@ -430,7 +455,8 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
     # --- Native desktop build (unchanged) ---
 
     # Windows resource file for app icon
-    if(WIN32 AND NOT MSVC)
+  
+     if(WIN32 AND NOT MSVC)
         set(WIN_RC ${CMAKE_SOURCE_DIR}/assets/app.rc)
         set(CMAKE_RC_COMPILER_INIT windres)
         enable_language(RC)
@@ -445,6 +471,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${IMGUI_DIR}
         ${IMGUI_DIR}/backends
         ${PORTAUDIO_INCLUDE_DIRS}
+ 
         ${SDL2_INCLUDE_DIRS}
         ${OPENGL_INCLUDE_DIR}
         ${RTMIDI_INCLUDE_DIRS}
@@ -461,12 +488,18 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
     target_link_libraries(Amplitron PRIVATE
         nlohmann_json::nlohmann_json
         ${PORTAUDIO_LIBRARIES}
+       
         ${SDL2_LIBRARIES}
         ${OPENGL_LIBRARIES}
         ${RTMIDI_LIBRARIES}
     )
 
     if(WIN32)
+        # --- FIX: Remove 'dl' if it leaks into RTMIDI_LIBRARIES from pkg-config ---
+        if(RTMIDI_LIBRARIES)
+            list(REMOVE_ITEM RTMIDI_LIBRARIES "dl")
+        endif()
+        
         target_link_libraries(Amplitron PRIVATE winmm ole32 setupapi comdlg32 shell32)
         if(NOT MSVC)
             target_link_options(Amplitron PRIVATE -mwindows)
@@ -475,7 +508,8 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         endif()
     endif()
 
-    if(UNIX AND NOT APPLE)
+   
+    if(UNIX AND NOT APPLE AND NOT WIN32)
         target_link_libraries(Amplitron PRIVATE dl pthread)
     endif()
 
@@ -489,6 +523,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/test_preset_manager.cpp
         tests/test_json_serialization.cpp
         tests/test_recorder.cpp
+  
         tests/test_theme.cpp
         tests/test_command_history.cpp
         tests/test_snapshot_manager.cpp
@@ -502,7 +537,8 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
     set(CORE_SOURCES
         src/preset_manager.cpp
         src/preset_json.cpp
-        src/preset_manager_dirs.cpp
+       
+   src/preset_manager_dirs.cpp
         src/preset_manager_io.cpp
         src/audio/audio_engine.cpp
         src/audio/audio_engine_chain.cpp
@@ -515,7 +551,8 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         src/audio/recorder_session.cpp
         src/audio/recorder_io.cpp
         src/audio/recorder_wav.cpp
-        src/gui/command_history.cpp
+   
+       src/gui/command_history.cpp
         src/audio/effects/distortion.cpp
         src/audio/effects/overdrive.cpp
         src/audio/effects/delay.cpp
@@ -527,7 +564,8 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         src/audio/effects/noise_gate.cpp
         src/audio/effects/compressor.cpp
         src/audio/effects/looper.cpp
-        src/audio/effects/cabinet_sim.cpp
+       
+   src/audio/effects/cabinet_sim.cpp
         src/audio/effects/amp_simulator.cpp
         src/audio/effects/tuner.cpp
         src/audio/effects/wah.cpp
@@ -542,6 +580,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         src/midi/midi_manager.cpp
         src/midi/midi_manager_mapping.cpp
         src/midi/midi_manager_persist.cpp
+ 
     )
 
     add_executable(amplitron-tests ${TEST_SOURCES} ${CORE_SOURCES} ${KISS_FFT_SOURCES})
@@ -559,6 +598,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${RTMIDI_INCLUDE_DIRS}
     )
 
+ 
     # ============================================================
     # DEFINE AMPLITRON_HAS_MIDI FOR TEST BUILDS
     # ============================================================
@@ -573,10 +613,15 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
     )
 
     if(WIN32)
+        # --- FIX: Clean it for tests too ---
+        if(RTMIDI_LIBRARIES)
+            list(REMOVE_ITEM RTMIDI_LIBRARIES "dl")
+        endif()
+        
         target_link_libraries(amplitron-tests PRIVATE winmm ole32 setupapi)
     endif()
 
-    if(UNIX AND NOT APPLE)
+    if(UNIX AND NOT APPLE AND NOT WIN32)
         target_link_libraries(amplitron-tests PRIVATE dl pthread)
     endif()
 
@@ -589,7 +634,8 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
     )
     add_dependencies(copy_presets Amplitron)
 
-    # Copy fonts into build directory alongside the executable
+    # Copy fonts into 
+    # build directory alongside the executable
     add_custom_target(copy_fonts ALL
         COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${CMAKE_SOURCE_DIR}/assets/fonts"
