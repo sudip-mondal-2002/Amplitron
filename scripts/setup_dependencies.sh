@@ -53,7 +53,7 @@ else
 fi
 
 # --- nanosvg (single-header SVG rasterizer) ---
-if [ ! -f "$EXTERNAL_DIR/nanosvg.h" ]; then
+if [ ! -f "$EXTERNAL_DIR/nanosvg.h" ] || [ ! -f "$EXTERNAL_DIR/nanosvgrast.h" ]; then
     echo ""
     echo "Fetching nanosvg..."
     curl -fsSL -o "$EXTERNAL_DIR/nanosvg.h"     https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h
@@ -99,9 +99,14 @@ install_deps() {
     fi
 }
 
-read -p "Install system dependencies? [y/N] " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
+if [ -t 0 ]; then
+    read -p "Install system dependencies? [y/N] " -n 1 -r
+    echo
+else
+    REPLY="N"
+    echo "Non-interactive shell detected; skipping system dependency install prompt."
+fi
+if [[ ${REPLY:-N} =~ ^[Yy]$ ]]; then
     install_deps
 fi
 

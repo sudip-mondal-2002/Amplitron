@@ -48,26 +48,14 @@ set(JSON_Install    OFF CACHE INTERNAL "Disable nlohmann/json install")
 FetchContent_MakeAvailable(nlohmann_json)
 # ---------------------------------------------------------------------------
 
-# Ensure small header-only third-party libs are available in external/
-# (do not commit these files; CI already fetches them). This downloads
-# nanosvg (nanosvg.h, nanosvgrast.h) and dr_wav.h at configure time if
-# they are not already present in the repository's external/ directory.
 file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/external")
-set(_nanosvg_url "https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h")
-set(_nanosvgrast_url "https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h")
-set(_dr_wav_url "https://raw.githubusercontent.com/mackron/dr_libs/master/dr_wav.h")
-
-if(NOT EXISTS "${CMAKE_SOURCE_DIR}/external/nanosvg.h")
-    message(STATUS "Downloading nanosvg.h to external/")
-    file(DOWNLOAD ${_nanosvg_url} "${CMAKE_SOURCE_DIR}/external/nanosvg.h" SHOW_PROGRESS STATUS _dl_status)
-endif()
-if(NOT EXISTS "${CMAKE_SOURCE_DIR}/external/nanosvgrast.h")
-    message(STATUS "Downloading nanosvgrast.h to external/")
-    file(DOWNLOAD ${_nanosvgrast_url} "${CMAKE_SOURCE_DIR}/external/nanosvgrast.h" SHOW_PROGRESS STATUS _dl_status2)
-endif()
-if(NOT EXISTS "${CMAKE_SOURCE_DIR}/external/dr_wav.h")
-    message(STATUS "Downloading dr_wav.h to external/")
-    file(DOWNLOAD ${_dr_wav_url} "${CMAKE_SOURCE_DIR}/external/dr_wav.h" SHOW_PROGRESS STATUS _dl_status3)
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/external/nanosvg.h" OR
+   NOT EXISTS "${CMAKE_SOURCE_DIR}/external/nanosvgrast.h" OR
+   NOT EXISTS "${CMAKE_SOURCE_DIR}/external/dr_wav.h")
+    message(FATAL_ERROR
+        "Missing external header dependencies in external/. "
+        "Run scripts/setup_dependencies.sh (Linux/macOS) or "
+        "scripts/setup_dependencies.ps1 (Windows) to fetch nanosvg and dr_wav.")
 endif()
 
 

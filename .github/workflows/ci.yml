@@ -39,16 +39,7 @@ jobs:
 
       - name: Setup External Dependencies
         run: |
-          mkdir -p external external/kiss_fft
-          git clone --depth 1 --branch v1.90.1 https://github.com/ocornut/imgui.git external/imgui &
-          curl -fsSL -o external/nanosvg.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h &
-          curl -fsSL -o external/nanosvgrast.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h &
-          curl -fsSL -o external/dr_wav.h https://raw.githubusercontent.com/mackron/dr_libs/master/dr_wav.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.c https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.c &
-          curl -fsSL -o external/kiss_fft/_kiss_fft_guts.h https://raw.githubusercontent.com/mborgerding/kissfft/master/_kiss_fft_guts.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft_log.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft_log.h &
-          wait
+          bash ./scripts/setup_dependencies.sh
 
       - name: Generate Version
         id: version
@@ -86,16 +77,7 @@ jobs:
 
       - name: Setup External Dependencies
         run: |
-          mkdir -p external external/kiss_fft
-          git clone --depth 1 --branch v1.90.1 https://github.com/ocornut/imgui.git external/imgui &
-          curl -fsSL -o external/nanosvg.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h &
-          curl -fsSL -o external/nanosvgrast.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h &
-          curl -fsSL -o external/dr_wav.h https://raw.githubusercontent.com/mackron/dr_libs/master/dr_wav.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.c https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.c &
-          curl -fsSL -o external/kiss_fft/_kiss_fft_guts.h https://raw.githubusercontent.com/mborgerding/kissfft/master/_kiss_fft_guts.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft_log.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft_log.h &
-          wait
+          bash ./scripts/setup_dependencies.sh
 
       - name: Generate Version
         id: version
@@ -233,16 +215,7 @@ jobs:
 
       - name: Setup External Dependencies
         run: |
-          mkdir -p external external/kiss_fft
-          git clone --depth 1 --branch v1.90.1 https://github.com/ocornut/imgui.git external/imgui &
-          curl -fsSL -o external/nanosvg.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h &
-          curl -fsSL -o external/nanosvgrast.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h &
-          curl -fsSL -o external/dr_wav.h https://raw.githubusercontent.com/mackron/dr_libs/master/dr_wav.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.c https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.c &
-          curl -fsSL -o external/kiss_fft/_kiss_fft_guts.h https://raw.githubusercontent.com/mborgerding/kissfft/master/_kiss_fft_guts.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft_log.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft_log.h &
-          wait
+          bash ./scripts/setup_dependencies.sh
 
       - name: Generate Version
         id: version
@@ -345,16 +318,7 @@ jobs:
       - name: Setup External Dependencies
         shell: msys2 {0}
         run: |
-          mkdir -p external external/kiss_fft
-          git clone --depth 1 --branch v1.90.1 https://github.com/ocornut/imgui.git external/imgui &
-          curl -fsSL -o external/nanosvg.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h &
-          curl -fsSL -o external/nanosvgrast.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h &
-          curl -fsSL -o external/dr_wav.h https://raw.githubusercontent.com/mackron/dr_libs/master/dr_wav.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.c https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.c &
-          curl -fsSL -o external/kiss_fft/_kiss_fft_guts.h https://raw.githubusercontent.com/mborgerding/kissfft/master/_kiss_fft_guts.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft_log.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft_log.h &
-          wait
+          bash ./scripts/setup_dependencies.sh
 
       - name: Generate Version
         shell: msys2 {0}
@@ -428,16 +392,7 @@ jobs:
 
       - name: Setup External Dependencies
         run: |
-          mkdir -p external external/kiss_fft
-          git clone --depth 1 --branch v1.90.1 https://github.com/ocornut/imgui.git external/imgui &
-          curl -fsSL -o external/nanosvg.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h &
-          curl -fsSL -o external/nanosvgrast.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h &
-          curl -fsSL -o external/dr_wav.h https://raw.githubusercontent.com/mackron/dr_libs/master/dr_wav.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.c https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.c &
-          curl -fsSL -o external/kiss_fft/_kiss_fft_guts.h https://raw.githubusercontent.com/mborgerding/kissfft/master/_kiss_fft_guts.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft_log.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft_log.h &
-          wait
+          bash ./scripts/setup_dependencies.sh
 
       - name: Fetch SDL2 Java bridge
         run: |
@@ -494,16 +449,7 @@ jobs:
 
       - name: Setup External Dependencies
         run: |
-          mkdir -p external external/kiss_fft
-          git clone --depth 1 --branch v1.90.1 https://github.com/ocornut/imgui.git external/imgui &
-          curl -fsSL -o external/nanosvg.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h &
-          curl -fsSL -o external/nanosvgrast.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h &
-          curl -fsSL -o external/dr_wav.h https://raw.githubusercontent.com/mackron/dr_libs/master/dr_wav.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.c https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.c &
-          curl -fsSL -o external/kiss_fft/_kiss_fft_guts.h https://raw.githubusercontent.com/mborgerding/kissfft/master/_kiss_fft_guts.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft_log.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft_log.h &
-          wait
+          bash ./scripts/setup_dependencies.sh
 
       - name: Generate Version
         id: version

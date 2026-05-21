@@ -58,8 +58,9 @@ if (-Not (Test-Path $DR_WAV_PATH)) {
 
 # --- nanosvg (single-header SVG rasterizer) ---
 $NANOSVG_PATH = Join-Path $EXTERNAL_DIR "nanosvg.h"
+$NANOSVG_RAST_PATH = Join-Path $EXTERNAL_DIR "nanosvgrast.h"
 
-if (-Not (Test-Path $NANOSVG_PATH)) {
+if ((-Not (Test-Path $NANOSVG_PATH)) -or (-Not (Test-Path $NANOSVG_RAST_PATH))) {
     Write-Host "`nFetching nanosvg..." -ForegroundColor Yellow
     Invoke-WebRequest -Uri "https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h" -OutFile (Join-Path $EXTERNAL_DIR "nanosvg.h")
     Invoke-WebRequest -Uri "https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h" -OutFile (Join-Path $EXTERNAL_DIR "nanosvgrast.h")
