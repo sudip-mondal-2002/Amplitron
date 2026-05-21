@@ -290,9 +290,11 @@ bool AudioEngine::start() {
             sample_rate_ = actual_rate;
             update_metronome_timing();
             std::lock_guard<std::mutex> lock(effect_mutex_);
-            for (auto& fx : effects_) {
-                fx->set_sample_rate(sample_rate_);
-                fx->reset();
+            for (const auto& node : main_graph_.get_nodes()) {
+                if (node.pedal) {
+                    node.pedal->set_sample_rate(sample_rate_);
+                    node.pedal->reset();
+                }
             }
             if (tuner_tap_) {
                 tuner_tap_->set_sample_rate(sample_rate_);

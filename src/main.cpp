@@ -13,6 +13,7 @@
 #include "audio/effects/delay.h"
 #include "audio/effects/reverb.h"
 #include "audio/effects/cabinet_sim.h"
+#include "audio/effects/amp_simulator.h"
 
 #include <iostream>
 #include <csignal>
@@ -74,44 +75,14 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    auto noise_gate = std::make_shared<Amplitron::NoiseGate>();
-    noise_gate->set_enabled(false);
-    engine.add_effect(noise_gate);
-
-    auto compressor = std::make_shared<Amplitron::Compressor>();
-    compressor->set_enabled(false);
-    engine.add_effect(compressor);
-
-    auto overdrive = std::make_shared<Amplitron::Overdrive>();
-    overdrive->set_enabled(false);
-    engine.add_effect(overdrive);
-
-    auto distortion = std::make_shared<Amplitron::Distortion>();
-    distortion->set_enabled(false);
-    engine.add_effect(distortion);
-
-    auto eq = std::make_shared<Amplitron::Equalizer>();
-    eq->set_enabled(true);
-    engine.add_effect(eq);
-
-    auto chorus = std::make_shared<Amplitron::Chorus>();
-    chorus->set_enabled(false);
-    engine.add_effect(chorus);
-
-    auto delay = std::make_shared<Amplitron::Delay>();
-    delay->set_enabled(false);
-    engine.add_effect(delay);
-
-    auto reverb = std::make_shared<Amplitron::Reverb>();
-    reverb->set_enabled(true);
-    reverb->params()[0].value = 0.3f;
-    reverb->params()[1].value = 0.4f;
-    reverb->set_mix(0.25f);
-    engine.add_effect(reverb);
-
+    // Create a small, automatically wired, and highly playable circuit
     auto cabinet = std::make_shared<Amplitron::CabinetSim>();
-    cabinet->set_enabled(false);
-    engine.add_effect(cabinet);
+    cabinet->set_enabled(true);
+
+    auto amp = std::make_shared<Amplitron::AmpSimulator>();
+    amp->set_enabled(true);
+
+    engine.add_initial_effects({cabinet, amp});
 
     engine.set_input_gain(0.7f);
 

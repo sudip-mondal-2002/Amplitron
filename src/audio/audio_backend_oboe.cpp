@@ -253,8 +253,11 @@ bool AudioEngine::start() {
 
     {
         std::lock_guard<std::mutex> lock(effect_mutex_);
-        for (auto& fx : effects_)
-            fx->set_sample_rate(sample_rate_);
+        for (auto& node : main_graph_.get_nodes()) {
+            if (node.pedal) {
+            node.pedal->set_sample_rate(sample_rate_);
+            }  
+        }
     }
 
     LOGI("Playback stream opened: %d Hz, %d frames/callback, sharing=%s",

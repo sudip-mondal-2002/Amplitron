@@ -198,6 +198,8 @@ set(APP_SOURCES
     src/gui/gui_snapshots.cpp
     src/preset_manager_dirs.cpp
     src/preset_manager_io.cpp
+    src/audio/audio_graph.cpp
+    src/audio/audio_graph_executor.cpp
 )
 
 # --- MIDI Support (desktop only) ---
@@ -497,6 +499,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/test_cabinet_sim_ir.cpp
         tests/test_midi_manager.cpp
         tests/test_unsaved_preset.cpp
+        tests/test_audio_graph.cpp
         tests/test_metronome.cpp
         tests/test_gui_manager.cpp
         tests/test_clipboard_preset.cpp
@@ -539,6 +542,8 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         src/audio/effects/pitch_shifter.cpp
         src/audio/dsp/wav_loader.cpp
         src/audio/dsp/convolution_engine.cpp
+        src/audio/audio_graph.cpp
+        src/audio/audio_graph_executor.cpp
     )
 
     # Desktop-only MIDI support for tests
