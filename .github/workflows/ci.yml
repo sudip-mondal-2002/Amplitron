@@ -173,12 +173,20 @@ jobs:
 
           cat coverage_comment.md >> $GITHUB_STEP_SUMMARY
 
-      - name: Post Coverage to PR
+      - name: Save PR Number and Coverage Comment
         if: github.event_name == 'pull_request'
-        uses: marocchino/sticky-pull-request-comment@v2
+        run: |
+          mkdir -p pr_coverage
+          echo "${{ github.event.pull_request.number }}" > pr_coverage/pr_number.txt
+          cp coverage_comment.md pr_coverage/coverage_comment.md
+
+      - name: Upload PR Coverage Artifact
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
         with:
-          header: coverage
-          path: coverage_comment.md
+          name: pr-coverage-comment
+          path: pr_coverage/
+          retention-days: 1
 
       - name: Upload Coverage HTML Report
         uses: actions/upload-artifact@v7
