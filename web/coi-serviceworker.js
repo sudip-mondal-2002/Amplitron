@@ -101,7 +101,11 @@ if (typeof window === 'undefined') {
         });
       }
       const RELOAD_KEY = "coiReloaded";
-      if (!sessionStorage.getItem(RELOAD_KEY)) {
+      if (
+        !navigator.webdriver && 
+        !sessionStorage.getItem(RELOAD_KEY) && 
+        navigator.serviceWorker.controller
+      ) {
         sessionStorage.setItem(RELOAD_KEY, "true");
         window.location.reload();
       }
