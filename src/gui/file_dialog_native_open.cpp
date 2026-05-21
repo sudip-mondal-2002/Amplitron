@@ -13,6 +13,7 @@
 #endif
 
 #ifdef __APPLE__
+#include <TargetConditionals.h>
 #include <cstdio>
 #include <unistd.h>
 #include <sys/wait.h>
@@ -58,7 +59,7 @@ std::string show_open_dialog(const std::string& title,
     return "";
 }
 
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) && !TARGET_OS_IOS
 std::string show_open_dialog(const std::string& title,
                              const std::string& /*filter_desc*/,
                              const std::string& filter_ext) {

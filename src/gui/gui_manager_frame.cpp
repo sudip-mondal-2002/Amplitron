@@ -6,6 +6,9 @@
 #include <imgui_impl_opengl3.h>
 #include <imgui_impl_sdl2.h>
 #include <SDL2/SDL.h>
+#include <SDL.h>
+#include "gui/gui_snapshots.h"
+#include "gui/gui_graph_state.h"
 
 namespace Amplitron {
 
@@ -100,29 +103,28 @@ bool GuiManager::run_frame() {
         ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse |
         ImGuiWindowFlags_NoBringToFrontOnFocus);
 
-    render_master_controls();
+    bool is_fullscreen = GuiGraphState::get_instance().is_fullscreen;
 
-    ImGui::Separator();
+    if (!is_fullscreen) {
+        render_master_controls();
+        ImGui::Separator();
+        gui_recording_.render_controls();
+        ImGui::Separator();
+        gui_snapshots_.render();
+        ImGui::Separator();
+    }
 
-    // Recording controls (above pedal board)
-    gui_recording_.render_controls();
-
-    ImGui::Separator();
-
-    // In-session snapshots (A/B/C/D slot row)
-    gui_snapshots_.render();
-
-    ImGui::Separator();
-
-    float analyzer_reserved_h = gui_analyzer_.analyzer_reserved_height();
+    float analyzer_reserved_h = is_fullscreen ? 0.0f : gui_analyzer_.analyzer_reserved_height();
     ImGui::BeginChild("PedalBoardRegion", ImVec2(0, -analyzer_reserved_h), false);
     if (pedal_board_) {
         pedal_board_->render();
     }
     ImGui::EndChild();
 
-    ImGui::Separator();
-    gui_analyzer_.render();
+    if (!is_fullscreen) {
+        ImGui::Separator();
+        gui_analyzer_.render();
+    }
 
     ImGui::End();
 
@@ -144,6 +146,21 @@ bool GuiManager::run_frame() {
     }
     if (show_midi_) {
         gui_midi_.render(show_midi_);
+    }
+
+    // Toast notification overlay
+    if (toast_timer_ > 0.0f) {
+        toast_timer_ -= ImGui::GetIO().DeltaTime;
+        ImGuiIO& io = ImGui::GetIO();
+        ImVec2 toast_pos = ImVec2(io.DisplaySize.x - 20.0f, io.DisplaySize.y - 20.0f);
+        ImGui::SetNextWindowPos(toast_pos, ImGuiCond_Always, ImVec2(1.0f, 1.0f));
+        ImGui::SetNextWindowBgAlpha(0.75f);
+        ImGui::Begin("##toast", nullptr,
+            ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
+            ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing |
+            ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove);
+        ImGui::Text("%s", toast_message_.c_str());
+        ImGui::End();
     }
 
     // Rendering
@@ -252,5 +269,4 @@ void GuiManager::render_master_controls() {
     ImGui::Columns(1);
     ImGui::EndChild();
 }
-
 } // namespace Amplitron

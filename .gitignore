@@ -71,3 +71,4 @@ android/app/src/main/java/org/libsdl/
 build-ios/
 *.xcworkspace/
 xcuserdata/
+emsdk/

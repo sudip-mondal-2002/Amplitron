@@ -117,7 +117,7 @@ void AudioEngine::process_audio(const float* input, float* output, int frame_cou
     if (effect_mutex_.try_lock()) {
         drain_commands();
         if (topology_dirty_.exchange(false, std::memory_order_acq_rel)) {
-            audio_shadow_effects_ = effects_;
+            audio_shadow_executor_ = main_executor_;
             audio_shadow_tuner_   = tuner_tap_;
         }
         effect_mutex_.unlock();
@@ -128,11 +128,15 @@ void AudioEngine::process_audio(const float* input, float* output, int frame_cou
         std::memcpy(process_buffer_right_.data(), process_buffer_.data(),
                     static_cast<size_t>(frame_count) * sizeof(float));
     }
-    for (auto& fx : audio_shadow_effects_) {
-        if (fx->is_enabled()) {
-            fx->process_stereo(process_buffer_.data(),
-                               process_buffer_right_.data(), frame_count);
-        }
+    // The executor handles all the looping, routing, and processing internally!
+    if (audio_shadow_executor_) {
+        // Broadcast tempo/bpm
+        audio_shadow_executor_->update_transport_state(static_cast<float>(metronome_bpm_));
+        
+        // Pass your mono/stereo buffers to the executor we built
+        audio_shadow_executor_->process(process_buffer_.data(), process_buffer_right_.data(), frame_count);
+        std::memcpy(process_buffer_.data(), process_buffer_right_.data(),
+                    static_cast<size_t>(frame_count) * sizeof(float));
     }
 
     float out_gain = output_gain_.load(std::memory_order_relaxed);
@@ -255,29 +259,42 @@ void AudioEngine::drain_gain_commands() {
 void AudioEngine::drain_commands() {
     AudioCommand cmd;
     while (command_queue_.try_pop(cmd)) {
+        
+        // Helper to find the effect pointer safely inside the new Graph architecture by chain index
+        auto get_effect = [&](int effect_index) -> std::shared_ptr<Effect> {
+            int current_idx = 0;
+            for (const auto& node : main_graph_.get_nodes()) {
+                if (node.pedal) {
+                    if (current_idx == effect_index) return node.pedal;
+                    current_idx++;
+                }
+            }
+            return nullptr;
+        };
+
         switch (cmd.type) {
-            case AudioCommand::SetEffectParam:
-                if (cmd.effect_index >= 0 &&
-                    cmd.effect_index < static_cast<int>(effects_.size())) {
-                    auto& params = effects_[cmd.effect_index]->params();
+            case AudioCommand::SetEffectParam: {
+                if (auto fx = get_effect(cmd.effect_index)) {
+                    auto& params = fx->params();
                     if (cmd.param_index >= 0 &&
                         cmd.param_index < static_cast<int>(params.size())) {
                         params[cmd.param_index].value = cmd.value;
                     }
                 }
                 break;
-            case AudioCommand::SetEffectEnabled:
-                if (cmd.effect_index >= 0 &&
-                    cmd.effect_index < static_cast<int>(effects_.size())) {
-                    effects_[cmd.effect_index]->set_enabled(cmd.value > 0.5f);
+            }
+            case AudioCommand::SetEffectEnabled: {
+                if (auto fx = get_effect(cmd.effect_index)) {
+                    fx->set_enabled(cmd.value > 0.5f);
                 }
                 break;
-            case AudioCommand::SetEffectMix:
-                if (cmd.effect_index >= 0 &&
-                    cmd.effect_index < static_cast<int>(effects_.size())) {
-                    effects_[cmd.effect_index]->set_mix(cmd.value);
+            }
+            case AudioCommand::SetEffectMix: {
+                if (auto fx = get_effect(cmd.effect_index)) {
+                    fx->set_mix(cmd.value);
                 }
                 break;
+            }
             case AudioCommand::SetInputGain:
                 input_gain_.store(cmd.value, std::memory_order_relaxed);
                 break;
@@ -312,5 +329,4 @@ void AudioEngine::drain_commands() {
         }
     }
 }
-
 } // namespace Amplitron

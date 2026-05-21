@@ -7,6 +7,12 @@
 #include <SDL2/SDL.h>
 #include <cstdio>
 #include <string>
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#endif
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 #if defined(_WIN32)
 #include <windows.h>
 #include <shellapi.h>
@@ -107,6 +113,30 @@ void GuiManager::render_menu_bar() {
                     ImGui::CloseCurrentPopup();
                 }
                 ImGui::EndPopup();
+            }
+            if (ImGui::MenuItem("Copy Preset to Clipboard")) {
+                std::string json_string = gui_presets_.serialise_current_preset_to_json();
+                if (!json_string.empty()) {
+#ifdef __EMSCRIPTEN__
+                    // Web build — use browser Clipboard API
+                    EM_ASM({
+                        var text = UTF8ToString($0);
+                        navigator.clipboard.writeText(text).then(function() {
+                            // success
+                        }).catch(function(err) {
+                            console.error("Clipboard write failed: ", err);
+                        });
+                    }, json_string.c_str());
+#else
+                    // Native build — ImGui clipboard works fine
+                    ImGui::SetClipboardText(json_string.c_str());
+#endif
+                    toast_message_ = "Preset copied to clipboard!";
+                    toast_timer_ = 2.0f;
+                } else {
+                    toast_message_ = "Failed to copy: empty preset.";
+                    toast_timer_ = 2.0f;
+                }
             }
             ImGui::Separator();
 #ifndef AMPLITRON_NO_DESKTOP_SHELL

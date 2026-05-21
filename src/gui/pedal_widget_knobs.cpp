@@ -8,9 +8,9 @@
 
 namespace Amplitron {
 
-void PedalWidget::render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, bool is_amp, bool is_tuner, bool is_ir_cab) {
-    float knob_y_start = p0.y + Theme::KNOB_Y_START;
-    if (is_ir_cab) knob_y_start = p0.y + 180;
+void PedalWidget::render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, bool is_amp, bool is_tuner, bool is_ir_cab, float zoom) {
+    float knob_y_start = p0.y + Theme::KNOB_Y_START * zoom;
+    if (is_ir_cab) knob_y_start = p0.y + 180 * zoom;
     auto& params = effect_->params();
     int num_params = is_tuner ? 0 : static_cast<int>(params.size());
     int param_offset = 0;
@@ -19,9 +19,9 @@ void PedalWidget::render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, boo
         num_params = std::max(0, num_params - 1);
     }
 
-    float knob_radius    = Theme::KNOB_RADIUS;
-    float knob_spacing_x = Theme::KNOB_SPACING_X;
-    float knob_spacing_y = Theme::KNOB_SPACING_Y;
+    float knob_radius    = Theme::KNOB_RADIUS * zoom;
+    float knob_spacing_x = Theme::KNOB_SPACING_X * zoom;
+    float knob_spacing_y = Theme::KNOB_SPACING_Y * zoom;
     float knob_hit_size  = knob_radius * Theme::KNOB_HIT_MULT;
 
     constexpr float PI = 3.14159265f;
@@ -42,7 +42,7 @@ void PedalWidget::render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, boo
             : knob_grid_left + col * knob_spacing_x;
         float ky = knob_y_start + row * knob_spacing_y;
 
-        ImVec2 knob_center = ImVec2(kx + knob_spacing_x * 0.5f, ky + knob_radius + 2);
+        ImVec2 knob_center = ImVec2(kx + knob_spacing_x * 0.5f, ky + knob_radius + 2 * zoom);
 
         char label[64];
         snprintf(label, sizeof(label), "##knob_%s_%d_%d", effect_->name(), index_, pi);
@@ -216,7 +216,7 @@ void PedalWidget::render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, boo
 
         float normalized = (params[pi].value - params[pi].min_val) / range;
 
-        float track_radius = knob_radius + 3;
+        float track_radius = knob_radius + 3 * zoom;
         int segments = 40;
         for (int s = 0; s < segments; ++s) {
             float t0 = static_cast<float>(s) / segments;
@@ -234,14 +234,14 @@ void PedalWidget::render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, boo
                        knob_center.y + std::sin(a0) * track_radius),
                 ImVec2(knob_center.x + std::cos(a1) * track_radius,
                        knob_center.y + std::sin(a1) * track_radius),
-                seg_color, 3.0f);
+                seg_color, 3.0f * zoom);
         }
 
         ImU32 knob_bg = is_active ? Theme::KNOB_ACTIVE :
                         is_hovered ? Theme::KNOB_HOVER :
                                      Theme::KNOB_FACE;
         dl->AddCircleFilled(knob_center, knob_radius, Theme::KNOB_BG);
-        dl->AddCircleFilled(knob_center, knob_radius - 1, knob_bg);
+        dl->AddCircleFilled(knob_center, knob_radius - 1 * zoom, knob_bg);
 
         // Flash blue border if currently learning this parameter
 #ifndef AMPLITRON_NO_MIDI
@@ -253,13 +253,13 @@ void PedalWidget::render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, boo
             float alpha = (std::sin(time * 2.0f * 3.14159f * LEARN_FLASH_HZ) + 1.0f) * 0.5f;
             ImU32 outline_col = ImGui::ColorConvertFloat4ToU32(
                 ImVec4(0.2f, 0.6f, 1.0f, 0.4f + alpha * 0.6f));
-            dl->AddCircle(knob_center, knob_radius + 4.0f, outline_col, 0, 3.0f);
+            dl->AddCircle(knob_center, knob_radius + 4.0f * zoom, outline_col, 0, 3.0f * zoom);
         }
 #endif
 
         float pointer_angle = ARC_START + normalized * ARC_RANGE;
         float ptr_inner = knob_radius * 0.25f;
-        float ptr_outer = knob_radius - 3.0f;
+        float ptr_outer = knob_radius - 3.0f * zoom;
         ImVec2 ptr_from = ImVec2(
             knob_center.x + std::cos(pointer_angle) * ptr_inner,
             knob_center.y + std::sin(pointer_angle) * ptr_inner);
@@ -270,8 +270,8 @@ void PedalWidget::render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, boo
         ImU32 ptr_color = is_active ?
             Theme::ACCENT_GOLD_HOT :
             Theme::ACCENT_GOLD;
-        dl->AddLine(ptr_from, ptr_to, ptr_color, 2.5f);
-        dl->AddCircleFilled(ptr_to, 3.0f, ptr_color);
+        dl->AddLine(ptr_from, ptr_to, ptr_color, 2.5f * zoom);
+        dl->AddCircleFilled(ptr_to, 3.0f * zoom, ptr_color);
 
         // Enhanced tooltip with MIDI info
         if (is_hovered || is_active) {
@@ -300,7 +300,7 @@ void PedalWidget::render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, boo
         ImVec2 text_size = ImGui::CalcTextSize(pname);
         ImGui::SetCursorScreenPos(ImVec2(
             knob_center.x - text_size.x * 0.5f,
-            knob_center.y + knob_radius + 8));
+            knob_center.y + knob_radius + 8 * zoom));
         ImGui::PushStyleColor(ImGuiCol_Text, Theme::TextSecondary());
         ImGui::TextUnformatted(pname);
         ImGui::PopStyleColor();
@@ -309,7 +309,7 @@ void PedalWidget::render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, boo
         ImVec2 val_size = ImGui::CalcTextSize(val_display.c_str());
         ImGui::SetCursorScreenPos(ImVec2(
             knob_center.x - val_size.x * 0.5f,
-            knob_center.y - knob_radius - 20));
+            knob_center.y - knob_radius - 20 * zoom));
         ImGui::PushStyleColor(ImGuiCol_Text,
             is_active ? Theme::GoldHot() :
                         Theme::TextDim());
