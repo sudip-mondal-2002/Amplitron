@@ -298,8 +298,8 @@ Amplitron/
 ├── external/                      # Vendored deps (fetched by setup script)
 │   ├── imgui/                     # Dear ImGui v1.90.1
 │   ├── kiss_fft/                  # kiss_fft (BSD-3-Clause, FFT library)
-│   ├── dr_wav.h                   # dr_wav (single-header WAV library)
-│   ├── nanosvg.h                  # nanosvg (SVG parser)
+│   ├── dr_wav.h                   # dr_wav (downloaded by setup_dependencies.*)
+│   ├── nanosvg.h                  # nanosvg (downloaded by setup_dependencies.*)
 │   └── nanosvgrast.h              # nanosvg rasterizer
 ├── presets/                       # Example presets (JSON)
 │   ├── 01_Sparkling_Clean.json
