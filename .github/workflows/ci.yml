@@ -141,20 +141,44 @@ jobs:
           genhtml coverage.filtered.info --output-directory coverage-report
           lcov --summary coverage.filtered.info | tee coverage-summary.txt
 
-      - name: Enforce Coverage Threshold
+      - name: Enforce Coverage Threshold and Generate Markdown
         run: |
           COVERAGE=$(lcov --summary coverage.filtered.info 2>&1 | awk '/lines......:/ {print $2}' | sed 's/%//')
           echo "Line coverage: $COVERAGE%"
 
           THRESHOLD=60
 
+          echo "### Code Coverage Report 📊" > coverage_comment.md
+          echo "**Line Coverage:** ${COVERAGE}%" >> coverage_comment.md
+          echo "" >> coverage_comment.md
+
           if awk "BEGIN {exit !($COVERAGE >= $THRESHOLD)}"; then
             echo "✅ Coverage meets threshold: $COVERAGE% >= $THRESHOLD%"
+            echo "✅ Coverage meets threshold: $COVERAGE% >= $THRESHOLD%" >> coverage_comment.md
           else
             echo "⚠️ Coverage is below threshold: $COVERAGE% < $THRESHOLD%"
+            echo "⚠️ Coverage is below threshold: $COVERAGE% < $THRESHOLD%" >> coverage_comment.md
             echo "This PR adds coverage reporting, so low coverage is reported as a warning."
             echo "CI will continue and upload the coverage report."
           fi
+
+          echo "" >> coverage_comment.md
+          echo "<details>" >> coverage_comment.md
+          echo "<summary>Full Coverage Summary</summary>" >> coverage_comment.md
+          echo "" >> coverage_comment.md
+          echo '```text' >> coverage_comment.md
+          cat coverage-summary.txt >> coverage_comment.md
+          echo '```' >> coverage_comment.md
+          echo "</details>" >> coverage_comment.md
+
+          cat coverage_comment.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Post Coverage to PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: coverage
+          path: coverage_comment.md
 
       - name: Upload Coverage HTML Report
         uses: actions/upload-artifact@v7
