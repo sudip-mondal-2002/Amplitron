@@ -50,6 +50,9 @@ private:
 
     /** @brief Render the amp model selector dropdown. */
     void render_amp_selector();
+    
+    /** @brief Render the MIDI status and quick actions menu. */
+    void render_midi_menu();
 
     /** @brief Render the signal flow line, pedal widgets, and drag-and-drop targets. */
     void render_signal_chain();
@@ -66,6 +69,9 @@ private:
     bool show_active_only_ = true;
     std::set<int> visible_indices_; // Indices of pedals that should be visible
     GuiMidi* gui_midi_ = nullptr;
+    bool show_confirm_reset_ = false;
+    bool show_confirm_clear_ = false;
+    bool show_confirm_midi_clear_ = false;
 };
 
 } // namespace Amplitron

@@ -16,7 +16,7 @@ if (-Not (Test-Path $EXTERNAL_DIR)) {
 
 # --- Dear ImGui ---
 $IMGUI_DIR = Join-Path $EXTERNAL_DIR "imgui"
-$IMGUI_VERSION = "v1.90.4"
+$IMGUI_VERSION = "v1.90.1"
 
 if (-Not (Test-Path $IMGUI_DIR)) {
     Write-Host "`nFetching Dear ImGui $IMGUI_VERSION..." -ForegroundColor Yellow
@@ -28,6 +28,44 @@ if (-Not (Test-Path $IMGUI_DIR)) {
     Write-Host "Dear ImGui fetched successfully." -ForegroundColor Green
 } else {
     Write-Host "Dear ImGui already present, skipping." -ForegroundColor Green
+}
+
+# --- kiss_fft (BSD-3-Clause) ---
+$KISS_FFT_DIR = Join-Path $EXTERNAL_DIR "kiss_fft"
+
+if (-Not (Test-Path (Join-Path $KISS_FFT_DIR "kiss_fft.c"))) {
+    Write-Host "`nFetching kiss_fft..." -ForegroundColor Yellow
+    New-Item -ItemType Directory -Path $KISS_FFT_DIR -Force | Out-Null
+    Invoke-WebRequest -Uri "https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.h" -OutFile (Join-Path $KISS_FFT_DIR "kiss_fft.h")
+    Invoke-WebRequest -Uri "https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.c" -OutFile (Join-Path $KISS_FFT_DIR "kiss_fft.c")
+    Invoke-WebRequest -Uri "https://raw.githubusercontent.com/mborgerding/kissfft/master/_kiss_fft_guts.h" -OutFile (Join-Path $KISS_FFT_DIR "_kiss_fft_guts.h")
+    Invoke-WebRequest -Uri "https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft_log.h" -OutFile (Join-Path $KISS_FFT_DIR "kiss_fft_log.h")
+    Write-Host "kiss_fft fetched successfully." -ForegroundColor Green
+} else {
+    Write-Host "kiss_fft already present, skipping." -ForegroundColor Green
+}
+
+# --- dr_wav (single-header WAV library) ---
+$DR_WAV_PATH = Join-Path $EXTERNAL_DIR "dr_wav.h"
+
+if (-Not (Test-Path $DR_WAV_PATH)) {
+    Write-Host "`nFetching dr_wav.h..." -ForegroundColor Yellow
+    Invoke-WebRequest -Uri "https://raw.githubusercontent.com/mackron/dr_libs/master/dr_wav.h" -OutFile $DR_WAV_PATH
+    Write-Host "dr_wav.h fetched successfully." -ForegroundColor Green
+} else {
+    Write-Host "dr_wav.h already present, skipping." -ForegroundColor Green
+}
+
+# --- nanosvg (single-header SVG rasterizer) ---
+$NANOSVG_PATH = Join-Path $EXTERNAL_DIR "nanosvg.h"
+
+if (-Not (Test-Path $NANOSVG_PATH)) {
+    Write-Host "`nFetching nanosvg..." -ForegroundColor Yellow
+    Invoke-WebRequest -Uri "https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h" -OutFile (Join-Path $EXTERNAL_DIR "nanosvg.h")
+    Invoke-WebRequest -Uri "https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h" -OutFile (Join-Path $EXTERNAL_DIR "nanosvgrast.h")
+    Write-Host "nanosvg fetched successfully." -ForegroundColor Green
+} else {
+    Write-Host "nanosvg already present, skipping." -ForegroundColor Green
 }
 
 # --- Check for PortAudio ---

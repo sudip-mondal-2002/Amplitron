@@ -1,8 +1,9 @@
 #include "midi/midi_manager.h"
 
+#include <nlohmann/json.hpp>
 #include <fstream>
-#include <sstream>
 #include <filesystem>
+#include <iostream>
 
 namespace Amplitron {
 
@@ -34,116 +35,51 @@ std::string MidiManager::get_config_path() {
 #endif
 }
 
-static void escape_json(std::ostream& os, const std::string& s) {
-    for (char c : s) {
-        if (c == '\\') os << "\\\\";
-        else if (c == '"') os << "\\\"";
-        else if (c == '\n') os << "\\n";
-        else os << c;
-    }
-}
-
 std::string MidiManager::mappings_to_json() const {
-    std::ostringstream os;
-    os << "{\n  \"mappings\": [\n";
+    nlohmann::ordered_json root = nlohmann::ordered_json::object();
+    nlohmann::ordered_json arr  = nlohmann::ordered_json::array();
 
-    for (size_t i = 0; i < mappings_.size(); ++i) {
-        const auto& m = mappings_[i];
-        os << "    {\n";
-        os << "      \"cc\": " << m.cc_number << ",\n";
-        os << "      \"channel\": " << m.midi_channel << ",\n";
-        os << "      \"target\": " << static_cast<int>(m.target_type) << ",\n";
-        os << "      \"mode\": " << static_cast<int>(m.mode) << ",\n";
-        os << "      \"effect\": \""; escape_json(os, m.effect_name); os << "\",\n";
-        os << "      \"param\": \""; escape_json(os, m.param_name); os << "\"\n";
-        os << "    }";
-        if (i + 1 < mappings_.size()) os << ",";
-        os << "\n";
+    for (const auto& m : mappings_) {
+        nlohmann::ordered_json jm = nlohmann::ordered_json::object();
+        jm["cc"]      = m.cc_number;
+        jm["channel"] = m.midi_channel;
+        jm["target"]  = static_cast<int>(m.target_type);
+        jm["mode"]    = static_cast<int>(m.mode);
+        jm["effect"]  = m.effect_name;
+        jm["param"]   = m.param_name;
+        arr.push_back(std::move(jm));
     }
 
-    os << "  ]\n}\n";
-    return os.str();
+    root["mappings"] = std::move(arr);
+    return root.dump(2) + "\n";
 }
 
-// Minimal JSON parsing helpers (matches project convention — no external JSON lib)
-static std::string extract_string(const std::string& json, const std::string& key) {
-    std::string search = "\"" + key + "\"";
-    size_t pos = json.find(search);
-    if (pos == std::string::npos) return "";
-
-    size_t colon = json.find(':', pos + search.size());
-    if (colon == std::string::npos) return "";
-
-    size_t q1 = json.find('"', colon + 1);
-    if (q1 == std::string::npos) return "";
-
-    std::string result;
-    for (size_t i = q1 + 1; i < json.size() && json[i] != '"'; ++i) {
-        if (json[i] == '\\' && i + 1 < json.size()) {
-            ++i;
-            if (json[i] == '\\') result += '\\';
-            else if (json[i] == '"') result += '"';
-            else if (json[i] == 'n') result += '\n';
-            else { result += '\\'; result += json[i]; }
-        } else {
-            result += json[i];
-        }
-    }
-    return result;
-}
-
-static int extract_int(const std::string& json, const std::string& key, int def = 0) {
-    std::string search = "\"" + key + "\"";
-    size_t pos = json.find(search);
-    if (pos == std::string::npos) return def;
-
-    size_t colon = json.find(':', pos + search.size());
-    if (colon == std::string::npos) return def;
-
-    size_t start = colon + 1;
-    while (start < json.size() && (json[start] == ' ' || json[start] == '\t')) ++start;
-
-    try {
-        return std::stoi(json.substr(start));
-    } catch (...) {
-        return def;
-    }
-}
-
-bool MidiManager::mappings_from_json(const std::string& json) {
+bool MidiManager::mappings_from_json(const std::string& json_str) {
     mappings_.clear();
 
-    // Find "mappings" array
-    size_t arr_start = json.find("\"mappings\"");
-    if (arr_start == std::string::npos) return false;
+    try {
+        auto j = nlohmann::json::parse(json_str);
 
-    size_t bracket = json.find('[', arr_start);
-    if (bracket == std::string::npos) return false;
+        if (!j.contains("mappings") || !j["mappings"].is_array()) {
+            return false;
+        }
 
-    // Parse each object in the array
-    size_t pos = bracket + 1;
-    while (pos < json.size()) {
-        size_t obj_start = json.find('{', pos);
-        if (obj_start == std::string::npos) break;
+        for (const auto& jm : j["mappings"]) {
+            MidiMapping m;
+            m.cc_number    = jm.value("cc",      0);
+            m.midi_channel = jm.value("channel", -1);
+            m.target_type  = static_cast<MidiTargetType>(jm.value("target", 0));
+            m.mode         = static_cast<MidiMappingMode>(jm.value("mode",   0));
+            m.effect_name  = jm.value("effect",  std::string{});
+            m.param_name   = jm.value("param",   std::string{});
+            mappings_.push_back(m);
+        }
 
-        size_t obj_end = json.find('}', obj_start);
-        if (obj_end == std::string::npos) break;
-
-        std::string obj = json.substr(obj_start, obj_end - obj_start + 1);
-
-        MidiMapping m;
-        m.cc_number = extract_int(obj, "cc", 0);
-        m.midi_channel = extract_int(obj, "channel", -1);
-        m.target_type = static_cast<MidiTargetType>(extract_int(obj, "target", 0));
-        m.mode = static_cast<MidiMappingMode>(extract_int(obj, "mode", 0));
-        m.effect_name = extract_string(obj, "effect");
-        m.param_name = extract_string(obj, "param");
-        mappings_.push_back(m);
-
-        pos = obj_end + 1;
+        return true;
+    } catch (const nlohmann::json::exception& e) {
+        std::cerr << "[midi_config] JSON parse error: " << e.what() << std::endl;
+        return false;
     }
-
-    return true;  // Successfully parsed (even if no mappings)
 }
 
 void MidiManager::save_config() const {
@@ -165,3 +101,4 @@ void MidiManager::load_config() {
 }
 
 } // namespace Amplitron
+

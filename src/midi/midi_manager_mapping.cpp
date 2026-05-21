@@ -25,6 +25,18 @@ void MidiManager::remove_mapping(int index) {
     }
 }
 
+void MidiManager::remove_mapping_for_param(const std::string& effect_name,
+                                           const std::string& param_name) {
+    for (auto it = mappings_.begin(); it != mappings_.end(); ++it) {
+        if (it->target_type == MidiTargetType::EffectParam &&
+            it->effect_name == effect_name &&
+            it->param_name == param_name) {
+            mappings_.erase(it);
+            return;
+        }
+    }
+}
+
 void MidiManager::clear_mappings() {
     mappings_.clear();
 }

@@ -230,3 +230,69 @@ TEST(preset_set_presets_dir_copies_bundled_presets) {
     PresetManager::set_presets_dir("");
     std::filesystem::remove_all(test_dir);
 }
+
+TEST(preset_midi_mappings_roundtrip) {
+    AudioEngine engine;
+    engine.initialize();
+
+    std::vector<MidiMapping> mappings;
+    MidiMapping m1;
+    m1.cc_number = 74;
+    m1.midi_channel = 0;
+    m1.target_type = MidiTargetType::EffectParam;
+    m1.mode = MidiMappingMode::Continuous;
+    m1.effect_name = "WahPedal";
+    m1.param_name = "Sweep";
+    mappings.push_back(m1);
+
+    MidiMapping m2;
+    m2.cc_number = 64;
+    m2.midi_channel = -1;
+    m2.target_type = MidiTargetType::EffectBypass;
+    m2.mode = MidiMappingMode::Toggle;
+    m2.effect_name = "Overdrive";
+    m2.param_name = "";
+    mappings.push_back(m2);
+
+    std::string path = "presets/test_midi_mappings.json";
+    bool saved = PresetManager::save_preset(path, "Midi Test", "Testing midi mappings", engine, mappings);
+    ASSERT_TRUE(saved);
+
+    // Read json to verify
+    std::string json = read_file(path);
+    ASSERT_TRUE(json.find("\"midi_mappings\"") != std::string::npos);
+    ASSERT_TRUE(json.find("WahPedal") != std::string::npos);
+
+    // Verify loading
+    AudioEngine engine2;
+    engine2.initialize();
+    
+    // We can't easily check internal MidiManager state from PresetManager without passing one,
+    // so let's instantiate a MidiManager to see if it receives the mappings.
+    MidiManager midi_manager;
+    midi_manager.clear_mappings();
+    bool loaded = PresetManager::load_preset(path, engine2, &midi_manager);
+    ASSERT_TRUE(loaded);
+
+    const auto& loaded_mappings = midi_manager.mappings();
+    ASSERT_EQ(loaded_mappings.size(), 2);
+    
+    ASSERT_EQ(loaded_mappings[0].cc_number, 74);
+    ASSERT_EQ(loaded_mappings[0].midi_channel, 0);
+    ASSERT_EQ(static_cast<int>(loaded_mappings[0].target_type), static_cast<int>(MidiTargetType::EffectParam));
+    ASSERT_EQ(static_cast<int>(loaded_mappings[0].mode), static_cast<int>(MidiMappingMode::Continuous));
+    ASSERT_EQ(loaded_mappings[0].effect_name, "WahPedal");
+    ASSERT_EQ(loaded_mappings[0].param_name, "Sweep");
+
+    ASSERT_EQ(loaded_mappings[1].cc_number, 64);
+    ASSERT_EQ(loaded_mappings[1].midi_channel, -1);
+    ASSERT_EQ(static_cast<int>(loaded_mappings[1].target_type), static_cast<int>(MidiTargetType::EffectBypass));
+    ASSERT_EQ(static_cast<int>(loaded_mappings[1].mode), static_cast<int>(MidiMappingMode::Toggle));
+    ASSERT_EQ(loaded_mappings[1].effect_name, "Overdrive");
+    ASSERT_EQ(loaded_mappings[1].param_name, "");
+
+    // Cleanup
+    std::remove(path.c_str());
+    engine.shutdown();
+    engine2.shutdown();
+}

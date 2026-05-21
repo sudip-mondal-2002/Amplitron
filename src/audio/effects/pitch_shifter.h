@@ -1,5 +1,10 @@
 #pragma once
 
+// Pitch shifting effect for semitone-based transposition.
+// The shift ratio is r = 2^(semitones/12); the processor reads from a delay
+// line/resampling window at rate r and crossfades windows to reduce clicks,
+// producing y[n] from time-scaled input samples.
+
 #include "audio/effect.h"
 #include <vector>
 

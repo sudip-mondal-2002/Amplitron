@@ -6,7 +6,6 @@
 #include "gui/command_history.h"
 #include "audio/effects/tuner.h"
 #include "audio/effects/amp_simulator.h"
-#include "audio/effects/ir_cabinet.h"
 #include "gui/file_dialog.h"
 #include <cstring>
 #include <cmath>
@@ -40,6 +39,8 @@ bool PedalWidget::render() {
 
     bool is_amp = (std::strcmp(effect_->name(), "Amp Sim") == 0);
     bool enabled = effect_->is_enabled();
+    bool is_looper = !is_amp && (std::strcmp(effect_->name(), "Looper") == 0);
+    bool is_cabinet = !is_amp && (std::strcmp(effect_->name(), "Cabinet") == 0);
 
     // Pedal body
     ImVec2 p0 = cursor;
@@ -69,13 +70,16 @@ bool PedalWidget::render() {
         render_tuner_display(dl, p0, pedal_width);
     }
 
-    // --- IR Cabinet custom display ---
-    bool is_ir_cab = !is_amp && (std::strcmp(effect_->name(), "IR Cabinet") == 0);
-    if (is_ir_cab) {
-        render_ir_cabinet_display(p0, pedal_width);
+    if (is_cabinet) {
+        render_cabinet_ir_display(p0, pedal_width);
     }
 
-    render_knobs(dl, p0, pedal_width, is_amp, is_tuner, is_ir_cab);
+    if (is_looper) {
+        render_looper_display(p0, pedal_width);
+    } else {
+        bool shift_knobs_down = is_cabinet;
+        render_knobs(dl, p0, pedal_width, is_amp, is_tuner, shift_knobs_down);
+    }
 
     render_footswitch_and_extras(dl, p0, p1, pedal_width, pedal_height, is_amp, enabled, should_remove);
 
@@ -129,6 +133,8 @@ void PedalWidget::render_standard_pedal(ImDrawList* dl, ImVec2 p0, ImVec2 p1, fl
 
 
 void PedalWidget::render_footswitch_and_extras(ImDrawList* dl, ImVec2 p0, ImVec2 p1, float pedal_width, float pedal_height, bool is_amp, bool enabled, bool& should_remove) {
+    bool is_looper = !is_amp && (std::strcmp(effect_->name(), "Looper") == 0);
+
     // LED tooltip — hover area over the LED indicator
     if (!is_amp) {
         float led_x = p0.x + pedal_width - 25;

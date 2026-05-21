@@ -30,7 +30,7 @@ jobs:
         echo "Release version: v0.1.${COUNT}"
 
     - name: Create GitHub Release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v3
       with:
         tag_name: v${{ steps.version.outputs.version }}
         name: Amplitron v${{ steps.version.outputs.version }}
@@ -99,7 +99,7 @@ jobs:
         makensis "-DSRCDIR=$(pwd)/staging" "-DOUTFILE=$(pwd)/Amplitron-Windows-Setup.exe" scripts/installer.nsi
 
     - name: Upload to Release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v3
       with:
         tag_name: v${{ needs.create-release.outputs.version }}
         files: Amplitron-Windows-Setup.exe
@@ -236,7 +236,7 @@ jobs:
         hdiutil create -volname "Amplitron" -srcfolder dmg_staging -ov -format UDZO Amplitron-macOS.dmg
 
     - name: Upload to Release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v3
       with:
         tag_name: v${{ needs.create-release.outputs.version }}
         files: Amplitron-macOS.dmg
@@ -268,7 +268,7 @@ jobs:
         tar -czf Amplitron-Linux-x64.tar.gz Amplitron-Linux
 
     - name: Upload to Release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v3
       with:
         tag_name: v${{ needs.create-release.outputs.version }}
         files: Amplitron-Linux-x64.tar.gz
@@ -299,7 +299,7 @@ jobs:
         ls -lh Amplitron-Android.apk
 
     - name: Upload to Release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v3
       with:
         tag_name: v${{ needs.create-release.outputs.version }}
         files: Amplitron-Android.apk
@@ -323,7 +323,7 @@ jobs:
         ls -lh Amplitron-iOS.ipa
 
     - name: Upload to Release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v3
       with:
         tag_name: v${{ needs.create-release.outputs.version }}
         files: Amplitron-iOS.ipa

@@ -1,5 +1,10 @@
 #pragma once
 
+// Algorithmic reverb for adding room and tail reflections.
+// Uses a Schroeder-style network: parallel feedback combs y_i[n]=x[n]+g_i*y_i[n-d_i]
+// build the decay tail, followed by all-pass filters that diffuse echoes while
+// keeping magnitude roughly flat.
+
 #include "audio/effect.h"
 
 namespace Amplitron {

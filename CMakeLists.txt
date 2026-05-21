@@ -32,6 +32,22 @@ else()
     endif()
 endif()
 
+# --- nlohmann/json (header-only, fetched at configure time) ----------------
+# Single-header C++17 JSON library used for preset serialization /
+# deserialization.  We disable nlohmann's own tests and install rules so
+# they don't pollute the Amplitron build.
+include(FetchContent)
+FetchContent_Declare(
+    nlohmann_json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG        v3.11.3
+    GIT_SHALLOW    TRUE
+)
+set(JSON_BuildTests OFF CACHE INTERNAL "Disable nlohmann/json tests")
+set(JSON_Install    OFF CACHE INTERNAL "Disable nlohmann/json install")
+FetchContent_MakeAvailable(nlohmann_json)
+# ---------------------------------------------------------------------------
+
 # --- Dependencies ---
 # Emscripten provides SDL2, OpenGL ES, and audio via built-in ports.
 # Native builds find PortAudio, SDL2, and OpenGL from the system.
@@ -151,8 +167,8 @@ set(APP_SOURCES
     src/audio/effects/equalizer.cpp
     src/audio/effects/noise_gate.cpp
     src/audio/effects/compressor.cpp
+    src/audio/effects/looper.cpp
     src/audio/effects/cabinet_sim.cpp
-    src/audio/effects/ir_cabinet.cpp
     src/audio/effects/amp_simulator.cpp
     src/audio/dsp/wav_loader.cpp
     src/audio/dsp/convolution_engine.cpp
@@ -195,8 +211,12 @@ endif()
 
 # --- Platform-specific sources (selected at configure time) ---
 # Mobile (Android/iOS) and Web use SDL audio backend + stub file dialog
-if(EMSCRIPTEN OR ANDROID OR IOS)
+# Android 8+ uses Oboe (AAudio exclusive mode) for low-latency audio.
+if(EMSCRIPTEN OR IOS)
     set(BACKEND_SOURCES src/audio/audio_backend_sdl.cpp)
+    set(DIALOG_SOURCES  src/gui/file_dialog_web.cpp)
+elseif(ANDROID)
+    set(BACKEND_SOURCES src/audio/audio_backend_oboe.cpp)
     set(DIALOG_SOURCES  src/gui/file_dialog_web.cpp)
 else()
     set(BACKEND_SOURCES
@@ -219,6 +239,23 @@ endif()
 # Prefer a pre-installed SDL2 (e.g. from CI cache via -DSDL2_DIR=...).
 # Fall back to building from source via FetchContent for local/first-time builds.
 # =============================================================================
+if(ANDROID)
+    # Oboe: low-latency audio for Android 8+ (AAudio exclusive mode)
+    # Follow the repo's external-library pattern: allow CI to inject pre-built
+    # paths via -DOBOE_INCLUDE_DIRS=... / -DOBOE_LIBRARIES=... flags.
+    # Fall back to FetchContent when those overrides are absent.
+    if(NOT OBOE_LIBRARIES)
+        include(FetchContent)
+        FetchContent_Declare(oboe
+            GIT_REPOSITORY https://github.com/google/oboe.git
+            GIT_TAG        1.8.0
+        )
+        FetchContent_MakeAvailable(oboe)
+        set(OBOE_INCLUDE_DIRS ${oboe_SOURCE_DIR}/include)
+        set(OBOE_LIBRARIES    oboe)
+    endif()
+endif()
+
 if(ANDROID OR IOS)
     find_package(SDL2 QUIET CONFIG)
     if(NOT TARGET SDL2::SDL2-static)
@@ -252,6 +289,8 @@ if(EMSCRIPTEN)
 
     # OpenGL ES 3 for ImGui's OpenGL3 backend on WebGL 2
     target_compile_definitions(Amplitron PRIVATE IMGUI_IMPL_OPENGL_ES3 AMPLITRON_VERSION="${AMPLITRON_VERSION}" AMPLITRON_NO_MIDI)
+
+    target_link_libraries(Amplitron PRIVATE nlohmann_json::nlohmann_json)
 
     # Emscripten linker flags for Web Audio + AudioWorklet + SharedArrayBuffer
     target_link_options(Amplitron PRIVATE
@@ -314,9 +353,14 @@ elseif(ANDROID)
         IMGUI_IMPL_OPENGL_ES3
         AMPLITRON_VERSION="${AMPLITRON_VERSION}"
         AMPLITRON_NO_MIDI
+        AMPLITRON_ANDROID_OBOE   # signals that Oboe backend is in use
     )
 
+    target_include_directories(main PRIVATE ${OBOE_INCLUDE_DIRS})
+
     target_link_libraries(main PRIVATE
+        nlohmann_json::nlohmann_json
+        ${OBOE_LIBRARIES}
         SDL2::SDL2-static
         android
         log
@@ -355,6 +399,7 @@ elseif(IOS)
     )
 
     target_link_libraries(Amplitron PRIVATE
+        nlohmann_json::nlohmann_json
         SDL2::SDL2main
         SDL2::SDL2-static
         "-framework UIKit"
@@ -405,9 +450,16 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${RTMIDI_INCLUDE_DIRS}
     )
 
-    target_compile_definitions(Amplitron PRIVATE AMPLITRON_VERSION="${AMPLITRON_VERSION}")
+    # ============================================================
+    # DEFINE AMPLITRON_HAS_MIDI FOR DESKTOP BUILDS
+    # ============================================================
+    target_compile_definitions(Amplitron PRIVATE 
+        AMPLITRON_VERSION="${AMPLITRON_VERSION}"
+        AMPLITRON_HAS_MIDI
+    )
 
     target_link_libraries(Amplitron PRIVATE
+        nlohmann_json::nlohmann_json
         ${PORTAUDIO_LIBRARIES}
         ${SDL2_LIBRARIES}
         ${OPENGL_LIBRARIES}
@@ -431,14 +483,21 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
     set(TEST_SOURCES
         tests/test_main.cpp
         tests/test_common.cpp
+        tests/test_oboe_ring_buffer.cpp
         tests/test_effects.cpp
+        tests/test_looper.cpp
         tests/test_preset_manager.cpp
+        tests/test_json_serialization.cpp
         tests/test_recorder.cpp
         tests/test_theme.cpp
         tests/test_command_history.cpp
         tests/test_snapshot_manager.cpp
-        tests/test_ir_cabinet.cpp
+        tests/test_cabinet_sim_ir.cpp
         tests/test_midi_manager.cpp
+        tests/test_unsaved_preset.cpp
+        tests/test_metronome.cpp
+        tests/test_gui_manager.cpp
+        tests/test_clipboard_preset.cpp
     )
 
     # Effect + core sources needed by tests (no GUI, no main)
@@ -469,8 +528,8 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         src/audio/effects/equalizer.cpp
         src/audio/effects/noise_gate.cpp
         src/audio/effects/compressor.cpp
+        src/audio/effects/looper.cpp
         src/audio/effects/cabinet_sim.cpp
-        src/audio/effects/ir_cabinet.cpp
         src/audio/effects/amp_simulator.cpp
         src/audio/effects/tuner.cpp
         src/audio/effects/wah.cpp
@@ -502,7 +561,13 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${RTMIDI_INCLUDE_DIRS}
     )
 
+    # ============================================================
+    # DEFINE AMPLITRON_HAS_MIDI FOR TEST BUILDS
+    # ============================================================
+    target_compile_definitions(amplitron-tests PRIVATE AMPLITRON_HAS_MIDI)
+
     target_link_libraries(amplitron-tests PRIVATE
+        nlohmann_json::nlohmann_json
         ${PORTAUDIO_LIBRARIES}
         ${SDL2_LIBRARIES}
         ${OPENGL_LIBRARIES}

@@ -1,5 +1,10 @@
 #pragma once
 
+// Noise gate that attenuates low-level input between notes.
+// An envelope follower tracks amplitude e[n]; when e[n] falls below threshold
+// T, gain approaches 0 with release smoothing, and when e[n]>=T it approaches
+// 1 with attack smoothing, preventing abrupt chopping.
+
 #include "audio/effect.h"
 #include "audio/dsp/envelope_follower.h"
 

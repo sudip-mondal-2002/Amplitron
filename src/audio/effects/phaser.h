@@ -1,5 +1,10 @@
 #pragma once
 
+// Cascaded all-pass phaser with LFO modulation.
+// Each all-pass stage has near-unity magnitude and phase shift A(z); mixing
+// dry + wet creates notches where phase cancellation occurs. The LFO modulates
+// the all-pass coefficient so notch frequencies sweep over time.
+
 #include "audio/effect.h"
 #include <array>
 
