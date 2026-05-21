@@ -871,6 +871,119 @@ TEST(flanger_disabled_passes_dry_signal) {
         ASSERT_NEAR(buf[i], ref[i], 1e-6f);
 }
 
+TEST(flanger_silence_passthrough){
+    Flanger fl;
+    fl.set_sample_rate(48000);
+    fl.reset();
+
+    float buf[512];
+    std::memset(buf, 0, sizeof(buf));
+
+    fl.process(buf, 512);
+
+    ASSERT_TRUE(buffer_is_finite(buf, 512));
+    ASSERT_LT(rms(buf, 512), 1e-8f);
+}
+
+TEST(flanger_extreme_params_stay_finite){
+    Flanger fl;
+    fl.set_sample_rate(48000);
+
+    const float rates[] = {0.05f, 5.0f};
+    const float depths[] = {0.1f, 7.0f};
+    const float feedbacks[] = {-0.95f, 0.95f};
+    const float mixes[] = {0.0f, 1.0f};
+
+    for (float rate : rates){
+        for (float depth : depths){
+            for (float feedback : feedbacks){
+                for (float mix : mixes){
+                    fl.reset();
+                    fl.params()[0].value = rate;
+                    fl.params()[1].value = depth;
+                    fl.params()[3].value = feedback;
+                    fl.params()[4].value = mix;
+
+                    float buf[512];
+                    fill_sine(buf, 512, 440.0f, 48000);
+                    fl.process(buf, 512);
+
+                    ASSERT_TRUE(buffer_is_finite(buf, 512));
+                }
+            }
+        }
+    }
+}
+
+TEST(flanger_sample_rate_change){
+    Flanger fl;
+
+    fl.set_sample_rate(48000);
+    fl.reset();
+    float buf_a[512];
+    fill_sine(buf_a, 512, 440.0f, 48000);
+    fl.process(buf_a, 512);
+    ASSERT_TRUE(buffer_is_finite(buf_a, 512));
+
+    fl.set_sample_rate(96000);
+    fl.reset();
+    float buf_b[512];
+    fill_sine(buf_b, 512, 440.0f, 96000);
+    fl.process(buf_b, 512);
+    ASSERT_TRUE(buffer_is_finite(buf_b, 512));
+}
+
+TEST(flanger_toggle_no_gliches) {
+    Flanger fl;
+    fl.set_sample_rate(48000);
+    fl.reset();
+
+    const int N = 512;
+
+    fl.set_enabled(true);
+    float buf_a[N];
+    fill_sine(buf_a, N, 440.0f, 48000);
+    fl.process(buf_a, N);
+
+    float mean_a = 0.0f;
+    for (int i = 0; i < N; ++i) mean_a += buf_a[i];
+    mean_a /= static_cast<float>(N);
+
+    fl.set_enabled(false);
+    float buf_b[N];
+    fill_sine(buf_b, N, 440.0f, 48000);
+    fl.process(buf_b, N);
+
+    float mean_b = 0.0f;
+    for (int i = 0; i < N; ++i) mean_b += buf_b[i];
+    mean_b /= static_cast<float>(N);
+
+    ASSERT_LT(std::fabs(mean_b - mean_a), 5e-3f);
+}
+
+TEST(flanger_wet_differs_from_dry){
+    Flanger fl;
+    fl.set_sample_rate(48000);
+    fl.reset();
+    fl.set_enabled(true);
+
+    fl.params()[0].value = 1.0f; // Rate
+    fl.params()[1].value = 5.0f; // Depth
+    fl.params()[4].value = 0.5f; // Mix
+
+    float buf[512];
+    float ref[512];
+    fill_sine(buf, 512, 440.0f, 48000);
+    for (int i = 0; i < 512; ++i) ref[i] = buf[i];
+
+    fl.process(buf, 512);
+
+    float diff_sum = 0.0f;
+    for (int i = 0; i < 512; i++)
+        diff_sum += std::fabs(buf[i] - ref[i]);
+
+    ASSERT_GT(diff_sum, 0.01f);
+}
 // Verify the LFO modulates the delay: two consecutive equal-signal blocks
 // should differ because the sweep position advances between them.
 TEST(flanger_lfo_modulates_output) {

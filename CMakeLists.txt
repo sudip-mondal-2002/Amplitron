@@ -147,6 +147,7 @@ endif()
 # --- Application Sources (platform-agnostic) ---
 set(APP_SOURCES
     src/main.cpp
+    src/SessionManager.h
     src/preset_manager.cpp
     src/preset_json.cpp
     src/audio/audio_engine.cpp
@@ -176,6 +177,7 @@ set(APP_SOURCES
     src/audio/effects/wah.cpp
     src/audio/effects/octaver.cpp
     src/audio/effects/pitch_shifter.cpp
+    src/gui/CrashRecoveryUI.h
     src/gui/gui_manager.cpp
     src/gui/gui_manager_frame.cpp
     src/gui/gui_manager_menu.cpp

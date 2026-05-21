@@ -19,14 +19,14 @@
 #include <atomic>
 #include <filesystem>
 
+// New includes for Autosave and Recovery
+#include "SessionManager.h"
+#include "gui/CrashRecoveryUI.h"
+
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
 
-// SDL2's Android and iOS JNI/UIKit bridge locates the app entry point by
-// looking up the symbol "SDL_main" at runtime.  SDL_main.h renames our
-// main() to SDL_main() via a macro so the bridge can find it.  Without this
-// include the app crashes immediately on launch on both platforms.
 #ifdef __ANDROID__
 #include <SDL_main.h>
 #elif defined(__APPLE__)
@@ -93,7 +93,6 @@ void signal_handler(int /*signal*/) {
     g_running = false;
 }
 
-
 int main(int argc, char* argv[]) {
     if (Amplitron::handle_cli_args(argc, argv)) {
         return 0;
@@ -101,6 +100,9 @@ int main(int argc, char* argv[]) {
 
     std::signal(SIGINT, signal_handler);
     std::signal(SIGTERM, signal_handler);
+
+    // Initialize Session Manager
+    Amplitron::SessionManager sessionManager("SudipMondal", "Amplitron");
 
     std::cout << "=== Amplitron v1.0 - Guitar Amp Simulator ===" << std::endl;
     std::cout << "Starting up..." << std::endl;
@@ -111,10 +113,6 @@ int main(int argc, char* argv[]) {
         std::cerr << "Failed to initialize audio engine!" << std::endl;
         return 1;
     }
-
-    // Set up default signal chain
-    // Only EQ and light reverb are enabled by default — clean acoustic tone.
-    // All other effects start bypassed; click the footswitch to enable them.
 
     auto noise_gate = std::make_shared<Amplitron::NoiseGate>();
     noise_gate->set_enabled(false);
@@ -133,7 +131,7 @@ int main(int argc, char* argv[]) {
     engine.add_effect(distortion);
 
     auto eq = std::make_shared<Amplitron::Equalizer>();
-    eq->set_enabled(true);  // ON: gentle EQ for tone shaping
+    eq->set_enabled(true);
     engine.add_effect(eq);
 
     auto chorus = std::make_shared<Amplitron::Chorus>();
@@ -145,29 +143,35 @@ int main(int argc, char* argv[]) {
     engine.add_effect(delay);
 
     auto reverb = std::make_shared<Amplitron::Reverb>();
-    reverb->set_enabled(true);  // ON: light room reverb
-    reverb->params()[0].value = 0.3f;  // Decay: 30% (short, natural room)
-    reverb->params()[1].value = 0.4f;  // Damping: mellow
-    reverb->set_mix(0.25f);  // 25% wet — subtle, doesn't wash out the signal
+    reverb->set_enabled(true);
+    reverb->params()[0].value = 0.3f;
+    reverb->params()[1].value = 0.4f;
+    reverb->set_mix(0.25f);
     engine.add_effect(reverb);
 
     auto cabinet = std::make_shared<Amplitron::CabinetSim>();
-    cabinet->set_enabled(false);  // OFF: not needed for acoustic guitar
+    cabinet->set_enabled(false);
     engine.add_effect(cabinet);
 
-    // Lower input gain for piezo/USB guitar cable (they tend to run hot)
     engine.set_input_gain(0.7f);
 
-    std::cout << "Default signal chain loaded (clean acoustic preset)." << std::endl;
-    std::cout << "  EQ and Reverb are ON. All other effects are bypassed." << std::endl;
-    std::cout << "  Click pedal footswitches in the GUI to enable more effects." << std::endl;
-
-    // Initialize preset manager with bundled presets if available
+    if (sessionManager.hasUnsavedSession()) {
+        if (promptRestoreSession()) {
+            try {
+                nlohmann::json savedState = sessionManager.loadSession();
+                engine.deserialize(savedState);
+            } catch (const nlohmann::json::parse_error& e) {
+                std::cerr << "Autosave file corrupted. Discarding." << std::endl;
+                sessionManager.clearSession();
+            }
+        } else {
+            sessionManager.clearSession();
+        }
+    }
     if (std::filesystem::exists("presets")) {
         Amplitron::PresetManager::set_presets_dir("presets");
     }
 
-     // Initialize GUI first — audio stream only starts if GUI succeeds
     Amplitron::GuiManager gui(engine);
     if (!gui.initialize(1280, 720)) {
         std::cerr << "Failed to initialize GUI!" << std::endl;
@@ -179,20 +183,15 @@ int main(int argc, char* argv[]) {
         std::cerr << "Warning: Could not start audio stream." << std::endl;
     }
 
-    if (!engine.start()) {
-        std::cerr << "Warning: Could not start audio stream." << std::endl;
-    }
-
     std::cout << "Amplitron is ready. Let's play!" << std::endl;
-
-    // Main loop
 #ifdef __EMSCRIPTEN__
     g_gui = &gui;
-    // 0 = use requestAnimationFrame, 1 = simulate infinite loop
     emscripten_set_main_loop(em_main_loop, 0, 1);
 #else
     while (g_running && gui.run_frame()) {
-        // GUI drives the frame rate via vsync
+        if (sessionManager.shouldSave()) {
+            sessionManager.saveSession(engine.serialize());
+        }
     }
 #endif
 

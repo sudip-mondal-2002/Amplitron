@@ -2,6 +2,7 @@
 #include "audio/audio_backend.h"
 #include <iostream>
 #include <algorithm>
+#include <nlohmann/json.hpp>
 
 namespace Amplitron {
 
@@ -17,6 +18,50 @@ AudioEngine::~AudioEngine() {
     destroy_audio_backend(backend_);
     backend_ = nullptr;
 }
+
+// --- Serialization Methods ---
+
+
+nlohmann::json AudioEngine::serialize() {
+    std::lock_guard<std::mutex> lock(effect_mutex_);
+    nlohmann::json j;
+    
+    // Read atomic variables safely
+    j["input_gain"] = input_gain_.load(std::memory_order_relaxed);
+    
+    auto effects_array = nlohmann::json::array();
+    for (const auto& fx : effects_) {
+        if (fx) {
+            effects_array.push_back({
+                {"name", fx->name()}, // Corrected from get_name()
+                {"params", fx->get_params()}
+            });
+        }
+    }
+    j["effects"] = effects_array;
+    return j;
+}
+
+void AudioEngine::deserialize(const nlohmann::json& j) {
+    std::lock_guard<std::mutex> lock(effect_mutex_);
+    
+    if (j.contains("input_gain")) {
+        set_input_gain(j["input_gain"]);
+    }
+    
+    if (j.contains("effects")) {
+        for (const auto& fx_data : j["effects"]) {
+            std::string name = fx_data["name"];
+            for (auto& fx : effects_) {
+                if (fx && std::string(fx->name()) == name) {
+                    fx->set_params(fx_data["params"]);
+                }
+            }
+        }
+    }
+}
+
+// --- Existing Methods ---
 
 void AudioEngine::set_buffer_size(int size) {
     size = std::max(MIN_BUFFER_SIZE, std::min(MAX_BUFFER_SIZE, size));

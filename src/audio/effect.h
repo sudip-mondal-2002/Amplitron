@@ -2,6 +2,9 @@
 
 #include "common.h"
 #include <cstring>
+#include <vector>
+#include <string>
+#include <nlohmann/json.hpp>
 
 namespace Amplitron {
 
@@ -51,6 +54,34 @@ public:
 
     void set_mix(float mix) { mix_ = clamp(mix, 0.0f, 1.0f); }
     float get_mix() const { return mix_; }
+
+    // --- AUTOMATED SERIALIZATION LOGIC ---
+    // These methods automatically handle saving/loading for any effect 
+    // that uses the EffectParam vector.
+    
+    virtual nlohmann::json get_params() const {
+        nlohmann::json j;
+        // Accessing mutable params to read values
+        auto& p_list = const_cast<Effect*>(this)->params();
+        for (const auto& p : p_list) {
+            j[p.name] = p.value;
+        }
+        j["enabled"] = enabled_;
+        j["mix"] = mix_;
+        return j;
+    }
+
+    virtual void set_params(const nlohmann::json& j) {
+        if (j.contains("enabled")) enabled_ = j["enabled"];
+        if (j.contains("mix")) mix_ = j["mix"];
+        
+        auto& p_list = params();
+        for (auto& p : p_list) {
+            if (j.contains(p.name)) {
+                p.value = j[p.name];
+            }
+        }
+    }
 
 protected:
     int sample_rate_ = DEFAULT_SAMPLE_RATE;

@@ -5,7 +5,7 @@
 #include "audio/recorder.h"
 #include "audio/spsc_queue.h"
 #include <chrono>
-
+#include <nlohmann/json.hpp>
 // FORWARD DECLARATIONS
 namespace Amplitron {
 
@@ -38,6 +38,10 @@ public:
     /** @brief Destructor — shuts down the audio stream if still running. */
     ~AudioEngine();
 
+    /** @brief serialize and deserialize method signatures to AudioEngine class definition */
+    
+    nlohmann::json serialize();
+    void deserialize(const nlohmann::json& j);
     /** @brief Initialize the audio back-end. @return true on success. */
     bool initialize();
 
