@@ -100,13 +100,10 @@ if (typeof window === 'undefined') {
           }
         });
       }
-      const RELOAD_KEY = "coiReloaded"; 
-      if (!sessionStorage.getItem(RELOAD_KEY)){
-        sessionStorage.setItem(RELOAD_KEY, "true"); 
-        if (!sessionStorage.getItem("coiReloaded")) {
-          sessionStorage.setItem("coiReloaded", "true");
-          window.location.reload();
-        }
+      const RELOAD_KEY = "coiReloaded";
+      if (!sessionStorage.getItem(RELOAD_KEY)) {
+        sessionStorage.setItem(RELOAD_KEY, "true");
+        window.location.reload();
       }
     }
   })();
