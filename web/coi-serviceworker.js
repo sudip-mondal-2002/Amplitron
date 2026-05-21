@@ -51,18 +51,32 @@ if (typeof window === 'undefined') {
             headers: newHeaders,
           });
         })
-        .catch(function (e) {
-          console.error(e);
+        .catch((e) => { 
+          console.error("Fetch failed:", e); 
+          return new Response("Network error", 
+            { status: 503, 
+              statusText: "Service Unavailable", 
+              headers: { "Content-Type": "text/plain", },
+            });
         })
     );
   });
 } else {
   // Window context — register the service worker
   (async function () {
+    if (!("serviceWorker" in navigator)){
+      console.warn("Service workers are not supported in this browser."); 
+      return;
+    }
     if (window.crossOriginIsolated !== false) return;
 
+    const existingRegistration = await navigator.serviceWorker.getRegistration(); 
+    if (existingRegistration) {
+      console.log("COOP/COEP Service Worker already registered."); 
+      return;
+    }
     const registration = await navigator.serviceWorker
-      .register(window.document.currentScript.src)
+      .register( window.document.currentScript.src )
       .catch((e) =>
         console.error("COOP/COEP Service Worker failed to register:", e)
       );
@@ -72,14 +86,22 @@ if (typeof window === 'undefined') {
       if (registration.installing) {
         const sw = registration.installing || registration.waiting;
         await new Promise((resolve) => {
-          sw.addEventListener("statechange", (e) => {
-            if (e.target.state === "activated") {
-              resolve();
-            }
-          });
+          if (sw) { 
+            await new Promise((resolve) => { 
+              sw.addEventListener("statechange", (e) => { 
+                if (e.target.state === "activated") { 
+                  resolve(); 
+                }
+              }); 
+            }); 
+          }
         });
       }
-      window.location.reload();
+      const RELOAD_KEY = "coiReloaded"; 
+      if (!sessionStorage.getItem(RELOAD_KEY)){
+        sessionStorage.setItem(RELOAD_KEY, "true"); 
+        window.location.reload(); 
+      }
     }
   })();
 }
