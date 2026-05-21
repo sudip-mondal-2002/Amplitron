@@ -18,9 +18,12 @@
 #include <dirent.h>
 #define MKDIR(path) mkdir(path, 0755)
 #endif
-#ifdef _EMSCRIPTEN_
-#include <emscripten.h>
+
 namespace Amplitron {
+   
+    #ifdef _EMSCRIPTEN_
+    #include <emscripten.h>
+
     std::string PresetManager::get_user_presets_dir() {
         char* result = (char*)EM_ASM_PTR({
             return stringToNewUTF8(
