@@ -68,8 +68,11 @@ if (typeof window === 'undefined') {
       console.warn("Service workers are not supported in this browser."); 
       return;
     }
-    if (window.crossOriginIsolated !== false) return;
-
+    if (window.crossOriginIsolated !== false) {
+      sessionStorage.removeItem("coiReloaded");
+      return;
+    }
+    
     const existingRegistration = await navigator.serviceWorker.getRegistration(); 
     if (existingRegistration) {
       console.log("COOP/COEP Service Worker already registered."); 
@@ -100,7 +103,10 @@ if (typeof window === 'undefined') {
       const RELOAD_KEY = "coiReloaded"; 
       if (!sessionStorage.getItem(RELOAD_KEY)){
         sessionStorage.setItem(RELOAD_KEY, "true"); 
-        window.location.reload(); 
+        if (!sessionStorage.getItem("coiReloaded")) {
+          sessionStorage.setItem("coiReloaded", "true");
+          window.location.reload();
+        }
       }
     }
   })();
