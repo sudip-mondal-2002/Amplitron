@@ -55,6 +55,13 @@ void to_ordered_json(OrderedJson& j, const PresetData::EffectData& fx) {
         }
         j["metadata"] = std::move(metadata_obj);
     }
+
+    j["node_id"] = fx.node_id;
+    j["position_x"] = fx.position_x;
+    j["position_y"] = fx.position_y;
+    j["routing_type"] = fx.routing_type;
+    j["is_graph_input"] = fx.is_graph_input;
+    j["is_graph_output"] = fx.is_graph_output;
 }
 
 void from_ordered_json(const OrderedJson& j, PresetData::EffectData& fx) {
@@ -80,6 +87,13 @@ void from_ordered_json(const OrderedJson& j, PresetData::EffectData& fx) {
             }
         }
     }
+
+    fx.node_id         = j.value("node_id", -1);
+    fx.position_x      = j.value("position_x", 0.0f);
+    fx.position_y      = j.value("position_y", 0.0f);
+    fx.routing_type    = j.value("routing_type", 0);
+    fx.is_graph_input  = j.value("is_graph_input", false);
+    fx.is_graph_output = j.value("is_graph_output", false);
 }
 
 void to_ordered_json_midi(OrderedJson& j, const MidiMapping& m) {
@@ -127,8 +141,19 @@ void to_ordered_json(OrderedJson& j, const PresetData& preset) {
         midi_arr.push_back(std::move(jm));
     }
 
+    OrderedJson links_arr = OrderedJson::array();
+    for (const auto& l : preset.links) {
+        OrderedJson jl = OrderedJson::object();
+        jl["source_node_id"] = l.source_node_id;
+        jl["source_pin_index"] = l.source_pin_index;
+        jl["dest_node_id"] = l.dest_node_id;
+        jl["dest_pin_index"] = l.dest_pin_index;
+        links_arr.push_back(std::move(jl));
+    }
+
     j = OrderedJson::object();
     j["format_version"] = 1;
+    j["routing"] = preset.routing;
     j["name"] = preset.name;
     j["description"] = preset.description;
     j["saved_at"] = timebuf;
@@ -136,6 +161,7 @@ void to_ordered_json(OrderedJson& j, const PresetData& preset) {
     j["output_gain"] = preset.output_gain;
     j["effects"] = std::move(effects_arr);
     j["midi_mappings"] = std::move(midi_arr);
+    j["links"] = std::move(links_arr);
 }
 
 void from_ordered_json(const OrderedJson& j, PresetData& preset) {
@@ -143,9 +169,11 @@ void from_ordered_json(const OrderedJson& j, PresetData& preset) {
     preset.description  = j.value("description",  std::string{});
     preset.input_gain   = j.value("input_gain",   0.7f);
     preset.output_gain  = j.value("output_gain",  0.8f);
+    preset.routing      = j.value("routing",      "linear");
 
     preset.effects.clear();
     preset.midi_mappings.clear();
+    preset.links.clear();
 
     if (j.contains("effects") && j["effects"].is_array()) {
         for (const auto& jfx : j["effects"]) {
@@ -162,6 +190,17 @@ void from_ordered_json(const OrderedJson& j, PresetData& preset) {
             MidiMapping m;
             from_ordered_json_midi(jm, m);
             preset.midi_mappings.push_back(m);
+        }
+    }
+
+    if (j.contains("links") && j["links"].is_array()) {
+        for (const auto& jl : j["links"]) {
+            PresetData::LinkData l;
+            l.source_node_id = jl.value("source_node_id", -1);
+            l.source_pin_index = jl.value("source_pin_index", 0);
+            l.dest_node_id = jl.value("dest_node_id", -1);
+            l.dest_pin_index = jl.value("dest_pin_index", 0);
+            preset.links.push_back(l);
         }
     }
 }
@@ -184,6 +223,12 @@ void to_json(nlohmann::json& j, const PresetData::EffectData& fx) {
         {"enabled", fx.enabled},
         {"mix",     fx.mix},
         {"params",  params_obj},
+        {"node_id", fx.node_id},
+        {"position_x", fx.position_x},
+        {"position_y", fx.position_y},
+        {"routing_type", fx.routing_type},
+        {"is_graph_input", fx.is_graph_input},
+        {"is_graph_output", fx.is_graph_output}
     };
 
     // Optional metadata sub-object (e.g. IR cabinet file path)
@@ -216,6 +261,13 @@ void from_json(const nlohmann::json& j, PresetData::EffectData& fx) {
             }
         }
     }
+
+    fx.node_id         = j.value("node_id", -1);
+    fx.position_x      = j.value("position_x", 0.0f);
+    fx.position_y      = j.value("position_y", 0.0f);
+    fx.routing_type    = j.value("routing_type", 0);
+    fx.is_graph_input  = j.value("is_graph_input", false);
+    fx.is_graph_output = j.value("is_graph_output", false);
 }
 
 // ============================================================
@@ -274,8 +326,20 @@ void to_json(nlohmann::json& j, const PresetData& preset) {
         midi_arr.push_back(std::move(jm));
     }
 
+    nlohmann::json links_arr = nlohmann::json::array();
+    for (const auto& l : preset.links) {
+        nlohmann::json jl = {
+            {"source_node_id", l.source_node_id},
+            {"source_pin_index", l.source_pin_index},
+            {"dest_node_id", l.dest_node_id},
+            {"dest_pin_index", l.dest_pin_index}
+        };
+        links_arr.push_back(std::move(jl));
+    }
+
     j = {
         {"format_version", 1},
+        {"routing",        preset.routing},
         {"name",           preset.name},
         {"description",    preset.description},
         {"saved_at",       timebuf},
@@ -283,6 +347,7 @@ void to_json(nlohmann::json& j, const PresetData& preset) {
         {"output_gain",    preset.output_gain},
         {"effects",        std::move(effects_arr)},
         {"midi_mappings",  std::move(midi_arr)},
+        {"links",          std::move(links_arr)},
     };
 }
 
@@ -291,11 +356,13 @@ void from_json(const nlohmann::json& j, PresetData& preset) {
     preset.description  = j.value("description",  std::string{});
     preset.input_gain   = j.value("input_gain",   0.7f);
     preset.output_gain  = j.value("output_gain",  0.8f);
+    preset.routing      = j.value("routing",      "linear");
 
     // Clear before repopulating so parsing into a non-empty PresetData never
     // duplicates/retains old entries.
     preset.effects.clear();
     preset.midi_mappings.clear();
+    preset.links.clear();
 
     if (j.contains("effects") && j["effects"].is_array()) {
         for (const auto& jfx : j["effects"]) {
@@ -312,6 +379,17 @@ void from_json(const nlohmann::json& j, PresetData& preset) {
             MidiMapping m;
             from_json_midi(jm, m);
             preset.midi_mappings.push_back(m);
+        }
+    }
+
+    if (j.contains("links") && j["links"].is_array()) {
+        for (const auto& jl : j["links"]) {
+            PresetData::LinkData l;
+            l.source_node_id = jl.value("source_node_id", -1);
+            l.source_pin_index = jl.value("source_pin_index", 0);
+            l.dest_node_id = jl.value("dest_node_id", -1);
+            l.dest_pin_index = jl.value("dest_pin_index", 0);
+            preset.links.push_back(l);
         }
     }
 }

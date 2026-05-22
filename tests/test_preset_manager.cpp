@@ -1,5 +1,6 @@
 #include "test_framework.h"
 #include "preset_manager.h"
+#include "preset_json.h"
 #include "audio/audio_engine.h"
 #include "audio/effects/noise_gate.h"
 #include "audio/effects/compressor.h"
@@ -296,3 +297,167 @@ TEST(preset_midi_mappings_roundtrip) {
     engine.shutdown();
     engine2.shutdown();
 }
+
+TEST(preset_migration_legacy_detection) {
+    std::string clean_preset = "presets/01_Sparkling_Clean.json";
+    ASSERT_TRUE(PresetManager::is_legacy_preset(clean_preset));
+
+    AudioEngine engine;
+    engine.initialize();
+
+    std::string graph_preset_path = "presets/test_graph_detection_temp.json";
+    bool saved = PresetManager::save_preset(graph_preset_path, "Graph Preset", "testing", engine);
+    ASSERT_TRUE(saved);
+
+    ASSERT_FALSE(PresetManager::is_legacy_preset(graph_preset_path));
+    std::remove(graph_preset_path.c_str());
+    engine.shutdown();
+}
+
+TEST(preset_migration_convert_linear_to_graph) {
+    PresetData legacy;
+    legacy.name = "Legacy Test";
+    legacy.description = "Legacy Description";
+    legacy.input_gain = 0.5f;
+    legacy.output_gain = 0.9f;
+    legacy.routing = "linear";
+
+    PresetData::EffectData fx1;
+    fx1.type = "Noise Gate";
+    fx1.enabled = true;
+    fx1.mix = 1.0f;
+    fx1.params.push_back({"Threshold", -40.0f});
+    legacy.effects.push_back(fx1);
+
+    PresetData::EffectData fx2;
+    fx2.type = "Overdrive";
+    fx2.enabled = false;
+    fx2.mix = 0.8f;
+    fx2.params.push_back({"Drive", 2.0f});
+    legacy.effects.push_back(fx2);
+
+    PresetData graph = PresetManager::convert_linear_to_graph(legacy);
+
+    ASSERT_EQ(graph.name, "Legacy Test");
+    ASSERT_EQ(graph.description, "Legacy Description");
+    ASSERT_NEAR(graph.input_gain, 0.5f, 0.01f);
+    ASSERT_NEAR(graph.output_gain, 0.9f, 0.01f);
+    ASSERT_EQ(graph.routing, "graph");
+
+    ASSERT_EQ(static_cast<int>(graph.effects.size()), 3);
+
+    ASSERT_EQ(graph.effects[0].type, "Input");
+    ASSERT_EQ(graph.effects[0].node_id, 1);
+    ASSERT_TRUE(graph.effects[0].is_graph_input);
+    ASSERT_FALSE(graph.effects[0].is_graph_output);
+    ASSERT_NEAR(graph.effects[0].position_x, 40.0f, 0.01f);
+    ASSERT_NEAR(graph.effects[0].position_y, 150.0f, 0.01f);
+
+    ASSERT_EQ(graph.effects[1].type, "Noise Gate");
+    ASSERT_EQ(graph.effects[1].node_id, 2);
+    ASSERT_FALSE(graph.effects[1].is_graph_input);
+    ASSERT_FALSE(graph.effects[1].is_graph_output);
+    ASSERT_NEAR(graph.effects[1].position_x, 260.0f, 0.01f);
+    ASSERT_NEAR(graph.effects[1].position_y, 150.0f, 0.01f);
+    ASSERT_EQ(graph.effects[1].enabled, true);
+
+    ASSERT_EQ(graph.effects[2].type, "Overdrive");
+    ASSERT_EQ(graph.effects[2].node_id, 3);
+    ASSERT_FALSE(graph.effects[2].is_graph_input);
+    ASSERT_TRUE(graph.effects[2].is_graph_output);
+    ASSERT_NEAR(graph.effects[2].position_x, 480.0f, 0.01f);
+    ASSERT_NEAR(graph.effects[2].position_y, 150.0f, 0.01f);
+    ASSERT_EQ(graph.effects[2].enabled, false);
+
+    ASSERT_EQ(static_cast<int>(graph.links.size()), 2);
+    ASSERT_EQ(graph.links[0].source_node_id, 1);
+    ASSERT_EQ(graph.links[0].source_pin_index, 0);
+    ASSERT_EQ(graph.links[0].dest_node_id, 2);
+    ASSERT_EQ(graph.links[0].dest_pin_index, 0);
+
+    ASSERT_EQ(graph.links[1].source_node_id, 2);
+    ASSERT_EQ(graph.links[1].source_pin_index, 0);
+    ASSERT_EQ(graph.links[1].dest_node_id, 3);
+    ASSERT_EQ(graph.links[1].dest_pin_index, 0);
+}
+
+TEST(preset_migration_convert_and_verify_all_examples) {
+    std::vector<std::string> examples = {
+        "presets/01_Sparkling_Clean.json",
+        "presets/02_Classic_Rock_Crunch.json",
+        "presets/03_Modern_Metal_Lead.json",
+        "presets/04_Ambient_Swells.json",
+        "presets/05_Phase_Shift_Lead.json",
+        "presets/06_Jet_Flanger.json"
+    };
+
+    for (const auto& path : examples) {
+        if (!file_exists(path)) continue;
+
+        ASSERT_TRUE(PresetManager::is_legacy_preset(path));
+
+        std::ifstream file(path);
+        ASSERT_TRUE(file.is_open());
+        std::string json_str((std::istreambuf_iterator<char>(file)),
+                             std::istreambuf_iterator<char>());
+        file.close();
+
+        PresetData legacy;
+        bool parsed = from_json_ext(json_str, legacy);
+        ASSERT_TRUE(parsed);
+
+        PresetData graph = PresetManager::convert_linear_to_graph(legacy);
+
+        int expected_nodes = static_cast<int>(legacy.effects.size()) + 1;
+        ASSERT_EQ(static_cast<int>(graph.effects.size()), expected_nodes);
+
+        int expected_links = static_cast<int>(legacy.effects.size());
+        ASSERT_EQ(static_cast<int>(graph.links.size()), expected_links);
+
+        AudioEngine engine_linear;
+        engine_linear.initialize();
+        engine_linear.set_sample_rate(48000);
+
+        bool loaded_linear = PresetManager::load_preset(path, engine_linear);
+        ASSERT_TRUE(loaded_linear);
+
+        AudioEngine engine_graph;
+        engine_graph.initialize();
+        engine_graph.set_sample_rate(48000);
+
+        std::string temp_graph_path = "presets/temp_graph_test_examples.json";
+        bool saved_graph = PresetManager::save_preset_data(temp_graph_path, graph);
+        ASSERT_TRUE(saved_graph);
+
+        bool loaded_graph = PresetManager::load_preset(temp_graph_path, engine_graph);
+        ASSERT_TRUE(loaded_graph);
+        std::remove(temp_graph_path.c_str());
+
+        ASSERT_EQ(engine_linear.effects().size(), engine_graph.effects().size());
+        for (size_t i = 0; i < engine_linear.effects().size(); ++i) {
+            ASSERT_EQ(std::string(engine_linear.effects()[i]->name()), std::string(engine_graph.effects()[i]->name()));
+            ASSERT_EQ(engine_linear.effects()[i]->is_enabled(), engine_graph.effects()[i]->is_enabled());
+        }
+
+        // Run one buffer of audio through both engines and compare outputs
+        constexpr int BUFFER_SIZE = 128;
+        std::vector<float> input_buffer(BUFFER_SIZE);
+        for (int i = 0; i < BUFFER_SIZE; ++i) {
+            input_buffer[i] = std::sin(2.0f * 3.1415926535f * 440.0f * i / 48000.0f) * 0.5f;
+        }
+
+        std::vector<float> output_linear(BUFFER_SIZE * 2, 0.0f);
+        std::vector<float> output_graph(BUFFER_SIZE * 2, 0.0f);
+
+        engine_linear.process_audio(input_buffer.data(), output_linear.data(), BUFFER_SIZE);
+        engine_graph.process_audio(input_buffer.data(), output_graph.data(), BUFFER_SIZE);
+
+        for (size_t i = 0; i < output_linear.size(); ++i) {
+            ASSERT_NEAR(output_linear[i], output_graph[i], 1e-4f);
+        }
+
+        engine_linear.shutdown();
+        engine_graph.shutdown();
+    }
+}
+

@@ -16,6 +16,7 @@ struct PresetData {
     std::string description;
     float input_gain = 0.7f;
     float output_gain = 0.8f;
+    std::string routing = "linear";
 
     struct EffectData {
         std::string type;
@@ -23,9 +24,25 @@ struct PresetData {
         float mix = 1.0f;
         std::vector<std::pair<std::string, float>> params;
         std::map<std::string, std::string> metadata;
+
+        // Graph attributes
+        int node_id = -1;
+        float position_x = 0.0f;
+        float position_y = 0.0f;
+        int routing_type = 0;
+        bool is_graph_input = false;
+        bool is_graph_output = false;
     };
     std::vector<EffectData> effects;
     std::vector<MidiMapping> midi_mappings;
+
+    struct LinkData {
+        int source_node_id = -1;
+        int source_pin_index = 0;
+        int dest_node_id = -1;
+        int dest_pin_index = 0;
+    };
+    std::vector<LinkData> links;
 };
 
 class PresetManager {
@@ -45,6 +62,9 @@ public:
     static bool load_preset(const std::string& filepath,
                             AudioEngine& engine,
                             MidiManager* midi_manager = nullptr);
+
+    static bool is_legacy_preset(const std::string& filepath);
+    static PresetData convert_linear_to_graph(const PresetData& legacy);
 
     static std::string get_presets_dir();
     static void set_presets_dir(const std::string& dir);

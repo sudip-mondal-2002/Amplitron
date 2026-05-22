@@ -29,6 +29,9 @@ public:
     /** @brief Render load preset popup. Only call when show is true. */
     void render_load_popup(bool& show);
 
+    /** @brief Render migration wizard popup for legacy presets. */
+    void render_migration_popup(bool& show);
+
     /** @brief Initialize dialog for "New Preset" (clears fields). */
     void begin_new_preset();
 
@@ -67,9 +70,16 @@ public:
     /** @brief Record the current engine state as the clean saved preset state. */
     void mark_clean();
 
+    /** @brief Returns reference to show_migration_dialog_ state. */
+    bool& show_migration_dialog() { return show_migration_dialog_; }
+
+    /** @brief Cancels migration loading. */
+    void cancel_migration() { show_migration_dialog_ = false; }
+
 private:
     std::string preset_name_from_path(const std::string& filepath) const;
     std::string preset_path_from_name(const std::string& preset_name) const;
+    bool load_preset_by_index_internal(int index);
 
     AudioEngine& engine_;
     CommandHistory& history_;
@@ -86,6 +96,11 @@ private:
     bool factory_presets_initialized_ = false;
     bool preset_dialog_is_new_ = false;
     std::string preset_status_msg_;
+
+    // Legacy migration state
+    bool show_migration_dialog_ = false;
+    std::string migration_preset_path_;
+    int migration_preset_index_ = -1;
 };
 
 } // namespace Amplitron

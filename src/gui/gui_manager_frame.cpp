@@ -138,6 +138,9 @@ bool GuiManager::run_frame() {
     if (show_load_preset_) {
         gui_presets_.render_load_popup(show_load_preset_);
     }
+    if (gui_presets_.show_migration_dialog()) {
+        gui_presets_.render_migration_popup(gui_presets_.show_migration_dialog());
+    }
     if (gui_recording_.show_save()) {
         gui_recording_.render_save_dialog(gui_recording_.show_save());
     }

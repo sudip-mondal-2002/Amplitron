@@ -187,6 +187,23 @@ bool GuiPresets::load_preset_by_index(int index) {
     }
 
     const std::string& path = preset_files_[index];
+    if (PresetManager::is_legacy_preset(path)) {
+        migration_preset_path_ = path;
+        migration_preset_index_ = index;
+        show_migration_dialog_ = true;
+        return false; // Defer loading
+    }
+
+    return load_preset_by_index_internal(index);
+}
+
+bool GuiPresets::load_preset_by_index_internal(int index) {
+    if (index < 0 || index >= static_cast<int>(preset_files_.size())) {
+        preset_status_msg_ = "Error: No preset selected.";
+        return false;
+    }
+
+    const std::string& path = preset_files_[index];
     std::vector<LoadPresetCommand::EffectSnapshot> before_state;
     for (auto& fx : engine_.effects()) {
         LoadPresetCommand::EffectSnapshot snap;
@@ -429,6 +446,57 @@ std::string GuiPresets::serialise_current_preset_to_json() const {
         preset.midi_mappings = midi_manager_->mappings();
     }
     return to_json_ext(preset);
+}
+
+void GuiPresets::render_migration_popup(bool& show) {
+    if (show && !ImGui::IsPopupOpen("Legacy Preset Detected")) {
+        ImGui::OpenPopup("Legacy Preset Detected");
+    }
+
+    ImGui::SetNextWindowSize(ImVec2(480, 200), ImGuiCond_Always);
+    if (ImGui::BeginPopupModal("Legacy Preset Detected", &show, ImGuiWindowFlags_NoResize)) {
+        ImGui::Text("📦 Legacy preset detected");
+        ImGui::Separator();
+        ImGui::Spacing();
+
+        std::string display_name = preset_name_from_path(migration_preset_path_);
+        ImGui::TextWrapped("\"%s\" uses a linear signal chain.", display_name.c_str());
+        ImGui::TextWrapped("Convert to graph layout for full modular routing?");
+        ImGui::Spacing();
+        ImGui::Spacing();
+
+        if (ImGui::Button("Convert & Save", ImVec2(130, 35))) {
+            PresetData legacy;
+            std::ifstream file(migration_preset_path_);
+            if (file.is_open()) {
+                std::string json((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+                file.close();
+                if (from_json_ext(json, legacy)) {
+                    PresetData graph_preset = PresetManager::convert_linear_to_graph(legacy);
+                    if (PresetManager::save_preset_data(migration_preset_path_, graph_preset)) {
+                        load_preset_by_index_internal(migration_preset_index_);
+                    }
+                }
+            }
+            show = false;
+            show_migration_dialog_ = false;
+        }
+
+        ImGui::SameLine();
+        if (ImGui::Button("Keep as Linear", ImVec2(130, 35))) {
+            load_preset_by_index_internal(migration_preset_index_);
+            show = false;
+            show_migration_dialog_ = false;
+        }
+
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(130, 35))) {
+            show = false;
+            show_migration_dialog_ = false;
+        }
+
+        ImGui::EndPopup();
+    }
 }
 
 } // namespace Amplitron
