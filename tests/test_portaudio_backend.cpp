@@ -95,7 +95,10 @@ TEST(devices_share_host_api_invalid) {
 TEST(devices_share_host_api_same_device) {
     PaGuard pa;
     if (!pa.ok) return;
-    ASSERT_TRUE(devices_share_host_api(0, 0));
+    int dev = Pa_GetDefaultInputDevice();
+    if (dev == paNoDevice) dev = Pa_GetDefaultOutputDevice();
+    if (dev == paNoDevice) return;
+    ASSERT_TRUE(devices_share_host_api(dev, dev));
 }
 
 // GROUP 5 — AudioEngine device enumeration (guard with initialize()):
@@ -156,7 +159,9 @@ TEST(audio_engine_set_invalid_output_device) {
 TEST(audio_engine_init_shutdown) {
     AudioEngine engine;
     if (!engine.initialize()) return;
+    ASSERT_EQ(engine.get_last_error(), std::string(""));
     engine.shutdown();
+    ASSERT_FALSE(engine.start());
 }
 
 TEST(audio_engine_double_shutdown) {
@@ -164,12 +169,13 @@ TEST(audio_engine_double_shutdown) {
     if (!engine.initialize()) return;
     engine.shutdown();
     engine.shutdown();
+    ASSERT_FALSE(engine.start());
 }
 
 TEST(audio_engine_double_init) {
     AudioEngine engine;
     if (!engine.initialize()) return;
-    if (!engine.initialize()) return;
+    ASSERT_FALSE(engine.initialize());
 }
 
 // GROUP 7 — lifecycle: start/stop:
@@ -182,12 +188,15 @@ TEST(audio_engine_start_after_init) {
     AudioEngine engine;
     if (!engine.initialize()) return;
     engine.start();
+    engine.stop();
+    ASSERT_EQ(engine.get_last_error(), std::string(""));
 }
 
 TEST(audio_engine_stop_without_start) {
     AudioEngine engine;
     engine.stop();
     engine.stop();
+    ASSERT_EQ(engine.get_last_error(), std::string(""));
 }
 
 TEST(audio_engine_start_stop_start) {
@@ -211,7 +220,9 @@ TEST(audio_engine_restart_after_stop) {
     if (!engine.initialize()) return;
     engine.start();
     engine.stop();
-    engine.restart();
+    if (!engine.restart()) {
+        ASSERT_NE(engine.get_last_error(), std::string(""));
+    }
 }
 
 // GROUP 8 — error string management:
