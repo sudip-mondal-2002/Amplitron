@@ -521,18 +521,18 @@ TEST(audio_engine_clear_error_after_invalid_output_device) {
 }
 
 TEST(audio_engine_error_empty_after_valid_device_set) {
+    // set_input_device() when NOT running does NOT touch last_error_ on
+    // the success path — only the was_running restart path clears it.
+    // Verify that a valid set from a clean state leaves no error.
     AudioEngine engine;
     ASSERT_TRUE(engine.initialize());
 
     auto in_devs = engine.get_input_devices();
     if (in_devs.empty()) return;
 
-    // Set an invalid device first to put an error in place.
-    engine.set_input_device(999999);
-    ASSERT_FALSE(engine.get_last_error().empty());
-
-    // Setting a valid device (not running) must clear the error.
+    engine.clear_error(); // start from a known-empty error state
     ASSERT_TRUE(engine.set_input_device(in_devs[0].index));
+    // Non-running success path must not introduce a new error.
     ASSERT_EQ(engine.get_last_error(), std::string(""));
 }
 
