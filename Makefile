@@ -38,6 +38,8 @@ install: build
 uninstall:
 	@echo "=== Uninstalling ==="
 	@rm -f /usr/local/bin/amplitron
+	@rm -rf /usr/local/share/amplitron
+	@rm -rf /usr/local/bin/assets
 
 run: build
 	@echo "=== Running Guitar Amp Simulator ==="
