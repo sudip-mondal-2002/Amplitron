@@ -460,6 +460,8 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="feature_style.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
     <script>
         !function(t,e){var o,n,p,r;e.__SV||(window.posthog && window.posthog.__loaded)||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="ci init Pi Ci ft Oi Fi ki capture calculateEventProperties Ui register register_once register_for_session unregister unregister_for_session Bi getFeatureFlag getFeatureFlagPayload getFeatureFlagResult isFeatureEnabled reloadFeatureFlags updateFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSurveysLoaded onSessionId getSurveys getActiveMatchingSurveys renderSurvey displaySurvey cancelPendingSurvey canRenderSurvey canRenderSurveyAsync identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException startExceptionAutocapture stopExceptionAutocapture loadToolbar get_property getSessionProperty ji Di createPersonProfile setInternalOrTestUser zi Ti Hi opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing get_explicit_consent_status is_capturing clear_opt_in_out_capturing Ai debug bt Ni getPageViewId captureTraceFeedback captureTraceMetric Ei".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
         posthog.init('phc_ecTrgEi1Wfx1rgTVwSZxCWt9swjuWiKaXAYssHhHLNr', {
@@ -521,68 +523,86 @@
             </p>
         </div>
 
-        <div class="features" id="features" style="margin: 40px 0;">
-            <h2 style="font-family: 'Cinzel', serif; font-size: var(--text-h2); color: var(--gold); text-align: left; margin-bottom: 20px;">
-                Transform Your Guitar Sound
-            </h2>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-                <div>
-                    <h3 style="font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--gold); border-left: 2px solid rgba(200, 168, 74, 0.5); padding-left: 10px;">
-                        Real-Time Processing
-                    </h3>
-                    <hr style="border: none; border-top: 1px solid rgba(255, 215, 0, 0.2); margin: 10px 0;">
-                    <p style="font-family: 'DM Sans', sans-serif; font-size: 1rem; color: var(--text-primary);">
+        <section class="features-section" id="features">
+            <div class="section-header">
+                <h1>Transform Your Guitar Sound</h1>
+            </div>
+
+            <div class="features-grid">
+                <div class="features-card">
+                    <div class="icon-box">
+                        <span class="material-symbols-outlined">headphones</span>
+                    </div>
+
+                    <h3>Real-Time Processing</h3>
+
+                    <p>
                         Ultra-low latency audio engine with configurable buffer sizes. Play through your computer with no noticeable delay.
                     </p>
                 </div>
-                <div>
-                    <h3 style="font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--gold); border-left: 2px solid rgba(200, 168, 74, 0.5); padding-left: 10px;">
-                        12 Studio Effects
-                    </h3>
-                    <hr style="border: none; border-top: 1px solid rgba(255, 215, 0, 0.2); margin: 10px 0;">
-                    <p style="font-family: 'DM Sans', sans-serif; font-size: 1rem; color: var(--text-primary);">
+
+                <div class="features-card">
+                    <div class="icon-box">
+                        <span class="material-symbols-outlined">favorite</span>
+                    </div>
+
+                    <h3>12 Studio Effects</h3>
+
+                    <p>
                         Noise Gate, Compressor, Overdrive, Distortion, EQ, Amp Simulator (4 models), Cabinet Sim, Chorus, Delay, Reverb, Wah (manual & auto-wah), and Chromatic Tuner.
                     </p>
                 </div>
-                <div>
-                    <h3 style="font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--gold); border-left: 2px solid rgba(255, 215, 0, 0.5); padding-left: 10px;">
-                        Preset System
-                    </h3>
-                    <hr style="border: none; border-top: 1px solid rgba(255, 215, 0, 0.2); margin: 10px 0;">
-                    <p style="font-family: 'DM Sans', sans-serif; font-size: 1rem; color: var(--text-primary);">
+
+                <div class="features-card">
+                    <div class="icon-box">
+                        <span class="material-symbols-outlined">save</span>
+                    </div>
+
+                    <h3>Preset System</h3>
+
+                    <p>
                         Save and load your favorite tones. Share presets with other musicians. Build your signature sound library.
                     </p>
                 </div>
-                <div>
-                    <h3 style="font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--gold); border-left: 2px solid rgba(255, 215, 0, 0.5); padding-left: 10px;">
-                        WAV Recording
-                    </h3>
-                    <hr style="border: none; border-top: 1px solid rgba(255, 215, 0, 0.2); margin: 10px 0;">
-                    <p style="font-family: 'DM Sans', sans-serif; font-size: 1rem; color: var(--text-primary);">
+
+                <div class="features-card">
+                    <div class="icon-box">
+                        <span class="material-symbols-outlined">music_note_2</span>
+                    </div>
+
+                    <h3>WAV Recording</h3>
+
+                    <p>
                         Record your processed guitar output directly to WAV files. Capture your performances with the full effect chain applied.
                     </p>
                 </div>
-                <div>
-                    <h3 style="font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--gold); border-left: 2px solid rgba(255, 215, 0, 0.5); padding-left: 10px;">
-                        Beautiful Interface
-                    </h3>
-                    <hr style="border: none; border-top: 1px solid rgba(255, 215, 0, 0.2); margin: 10px 0;">
-                    <p style="font-family: 'DM Sans', sans-serif; font-size: 1rem; color: var(--text-primary);">
+
+                <div class="features-card">
+                    <div class="icon-box">
+                        <span class="material-symbols-outlined">design_services</span>
+                    </div>
+
+                    <h3>Beautiful Interface</h3>
+
+                    <p>
                         Intuitive pedal board UI with visual feedback. Drag-and-drop effect ordering. Real-time level metering.
                     </p>
                 </div>
-                <div>
-                    <h3 style="font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--gold); border-left: 2px solid rgba(255, 215, 0, 0.5); padding-left: 10px;">
-                        Cross-Platform
-                    </h3>
-                    <hr style="border: none; border-top: 1px solid rgba(255, 215, 0, 0.2); margin: 10px 0;">
-                    <p style="font-family: 'DM Sans', sans-serif; font-size: 1rem; color: var(--text-primary);">
+
+                <div class="features-card">
+                    <div class="icon-box">
+                        <span class="material-symbols-outlined">devices</span>
+                    </div>
+
+                    <h3>Cross-Platform</h3>
+
+                    <p>
                         Native builds for Windows, macOS, and Linux, plus a browser-based web demo via WebAssembly. Optimized for each platform.
                     </p>
                 </div>
-                <!-- Add remaining features here following the same structure -->
-            </div>
-        </div>
+
+            </div>            
+        </section>
 
         <div class="hero">
             <h2>🎬 First Look & Demo</h2>
