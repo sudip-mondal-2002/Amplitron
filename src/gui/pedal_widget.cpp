@@ -31,15 +31,16 @@ bool PedalWidget::render(float zoom) {
 
     ImGui::PushID(index_);
 
-    float pedal_width = Theme::PEDAL_WIDTH * zoom;
+    bool is_amp = (std::strcmp(effect_->name(), "Amp Sim") == 0);
+    bool is_mb_comp = (std::strcmp(effect_->name(), "MultiBand Compressor") == 0);
+    bool enabled = effect_->is_enabled();
+    bool is_looper = !is_amp && (std::strcmp(effect_->name(), "Looper") == 0);
+
+    float pedal_width = is_mb_comp ? (Theme::PEDAL_WIDTH * 2.2f * zoom) : (Theme::PEDAL_WIDTH * zoom);
     float pedal_height = Theme::PEDAL_HEIGHT * zoom;
 
     ImVec2 cursor = ImGui::GetCursorScreenPos();
     ImDrawList* dl = ImGui::GetWindowDrawList();
-
-    bool is_amp = (std::strcmp(effect_->name(), "Amp Sim") == 0);
-    bool enabled = effect_->is_enabled();
-    bool is_looper = !is_amp && (std::strcmp(effect_->name(), "Looper") == 0);
 
     // Pedal body
     ImVec2 p0 = cursor;
@@ -77,6 +78,8 @@ bool PedalWidget::render(float zoom) {
 
     if (is_looper) {
         render_looper_display(p0, pedal_width, zoom);
+    } else if (is_mb_comp) {
+        render_multiband_compressor_display(dl, p0, pedal_width, zoom);
     } else {
         render_knobs(dl, p0, pedal_width, is_amp, is_tuner, is_ir_cab, zoom);
     }
@@ -134,7 +137,6 @@ void PedalWidget::render_standard_pedal(ImDrawList* dl, ImVec2 p0, ImVec2 p1, fl
 
 void PedalWidget::render_footswitch_and_extras(ImDrawList* dl, ImVec2 p0, ImVec2 p1, float pedal_width, float pedal_height, bool is_amp, bool enabled, bool& should_remove, float zoom) {
     bool is_looper = !is_amp && (std::strcmp(effect_->name(), "Looper") == 0);
-
     // LED tooltip — hover area over the LED indicator
     if (!is_amp && !is_looper) {
         float led_x = p0.x + pedal_width - 25 * zoom;

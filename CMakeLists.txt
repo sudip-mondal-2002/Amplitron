@@ -36,16 +36,19 @@ endif()
 # Single-header C++17 JSON library used for preset serialization /
 # deserialization.  We disable nlohmann's own tests and install rules so
 # they don't pollute the Amplitron build.
-include(FetchContent)
-FetchContent_Declare(
-    nlohmann_json
-    GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG        v3.11.3
-    GIT_SHALLOW    TRUE
-)
-set(JSON_BuildTests OFF CACHE INTERNAL "Disable nlohmann/json tests")
-set(JSON_Install    OFF CACHE INTERNAL "Disable nlohmann/json install")
-FetchContent_MakeAvailable(nlohmann_json)
+find_package(nlohmann_json QUIET)
+if(NOT nlohmann_json_FOUND)
+    include(FetchContent)
+    FetchContent_Declare(
+        nlohmann_json
+        GIT_REPOSITORY https://github.com/nlohmann/json.git
+        GIT_TAG        v3.11.3
+        GIT_SHALLOW    TRUE
+    )
+    set(JSON_BuildTests OFF CACHE INTERNAL "Disable nlohmann/json tests")
+    set(JSON_Install    OFF CACHE INTERNAL "Disable nlohmann/json install")
+    FetchContent_MakeAvailable(nlohmann_json)
+endif()
 # ---------------------------------------------------------------------------
 
 file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/external")
@@ -179,6 +182,7 @@ set(APP_SOURCES
     src/audio/effects/equalizer.cpp
     src/audio/effects/noise_gate.cpp
     src/audio/effects/compressor.cpp
+    src/audio/effects/multiband_compressor.cpp
     src/audio/effects/looper.cpp
     src/audio/effects/cabinet_sim.cpp
     src/audio/effects/amp_simulator.cpp
@@ -544,6 +548,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         src/audio/effects/equalizer.cpp
         src/audio/effects/noise_gate.cpp
         src/audio/effects/compressor.cpp
+        src/audio/effects/multiband_compressor.cpp
         src/audio/effects/looper.cpp
         src/audio/effects/cabinet_sim.cpp
         src/audio/effects/amp_simulator.cpp
