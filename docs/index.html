@@ -477,19 +477,46 @@
             .nav-links a:hover {
                 color: var(--gold);
             }
-            /* Mobile responsive */
-            @media (max-width: 768px) {
-                nav {
-                    padding: 0 24px;
-                    height: 70px;
-                }
-                .nav-logo {
-                    font-size: 20px;
-                }
-                .nav-links {
-                    display: none;
-                }
+            .hamburger {
+                display: none;
+                background: none;
+                border: none;
+                color: var(--gold);
+                font-size: 2rem;
+                cursor: pointer;
             }
+            /* Mobile responsive */
+           @media (max-width: 768px) {
+
+            .hamburger {
+                display: block;
+            }
+
+            .nav-links {
+                position: absolute;
+                top: 70px;
+                right: 0;
+                width: 100%;
+                background: rgba(28, 26, 24, 0.98);
+
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 24px;
+
+                padding: 30px 0;
+
+                transform: translateY(-200%);
+                opacity: 0;
+
+                transition: all 0.35s ease;
+            }
+
+            .nav-links.active {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
          .product-hunt-wrapper {
     margin-top: 18px;
     display: flex;
@@ -608,7 +635,8 @@
         <!-- Sticky navbar -->
         <nav id="navbar">
             <div class="nav-logo">AMPLITRON</div>
-            <div class="nav-links">
+            <button class="hamburger" id="hamburger">☰</button>
+            <div class="nav-links" id="navLinks">
                 <a href="#features">Features</a>
                 <a href="#downloads">Downloads</a>
                 <a href="#requirements">Requirements</a>
@@ -1149,5 +1177,25 @@
                 }
             }
         </style>
+        <script>
+        document.addEventListener("DOMContentLoaded", () => {
+
+            const hamburger = document.getElementById("hamburger");
+            const navLinks = document.getElementById("navLinks");
+
+            hamburger.addEventListener("click", () => {
+
+                navLinks.classList.toggle("active");
+
+                if (navLinks.classList.contains("active")) {
+                    hamburger.innerHTML = "✕";
+                } else {
+                    hamburger.innerHTML = "☰";
+                }
+
+            });
+
+        });
+        </script>
     </body>
 </html>
