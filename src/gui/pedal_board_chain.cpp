@@ -79,6 +79,17 @@ void PedalBoard::render_signal_chain() {
 
     int node_to_delete = -1; // Safely track deletions outside the render loop
 
+    // Prune stale nodes from the UI state if the backend graph was reset or rebuilt
+    std::vector<int> stale_ids;
+    for (auto& pair : ui_state.node_positions) {
+        if (!audio_graph.find_node(pair.first)) {
+            stale_ids.push_back(pair.first);
+        }
+    }
+    for (int id : stale_ids) {
+        ui_state.node_positions.erase(id);
+    }
+
     // Give all new nodes a default position at the end of the chain without shifting existing nodes
     for (const auto& node : audio_graph.get_nodes()) {
         if (ui_state.node_positions.find(node.id) == ui_state.node_positions.end()) {
@@ -86,15 +97,22 @@ void PedalBoard::render_signal_chain() {
             for (const auto& existing_node : audio_graph.get_nodes()) {
                 auto pos_it = ui_state.node_positions.find(existing_node.id);
                 if (pos_it != ui_state.node_positions.end()) {
-                    float width = (existing_node.routing_type == NodeRoutingType::StandardEffect) ? 190.0f : 110.0f;
+                    float width = 110.0f;
+                    if (existing_node.routing_type == NodeRoutingType::StandardEffect) {
+                        if (existing_node.pedal && std::strcmp(existing_node.pedal->name(), "MultiBand Compressor") == 0) {
+                            width = 190.0f * 2.2f;
+                        } else {
+                            width = 190.0f;
+                        }
+                    }
                     float right_edge = pos_it->second.position.x + width;
                     if (right_edge > max_right) {
                         max_right = right_edge;
                     }
                 }
+                float insert_x = ui_state.node_positions.empty() ? 40.0f : max_right + 80.0f;
+                ui_state.node_positions[node.id] = { ImVec2(insert_x, 60.0f), false };
             }
-            float insert_x = ui_state.node_positions.empty() ? 40.0f : max_right + 80.0f;
-            ui_state.node_positions[node.id] = { ImVec2(insert_x, 60.0f), false };
         }
     }
 
@@ -110,7 +128,11 @@ void PedalBoard::render_signal_chain() {
             }
         }
 
-        float node_width = (target_widget ? 190.0f : 110.0f) * ui_state.zoom;
+        bool is_mb_comp = false;
+        if (target_widget && std::strcmp(target_widget->get_effect()->name(), "MultiBand Compressor") == 0) {
+            is_mb_comp = true;
+        }
+        float node_width = (target_widget ? (is_mb_comp ? 190.0f * 2.2f : 190.0f) : 110.0f) * ui_state.zoom;
         float node_height = (target_widget ? 360.0f : 70.0f) * ui_state.zoom;
 
         ImGui::PushID(node.id);
