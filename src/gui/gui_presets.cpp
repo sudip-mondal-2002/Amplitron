@@ -191,6 +191,7 @@ bool GuiPresets::load_preset_by_index(int index) {
         migration_preset_path_ = path;
         migration_preset_index_ = index;
         show_migration_dialog_ = true;
+        preset_status_msg_ = "";
         return false; // Defer loading
     }
 
@@ -453,7 +454,7 @@ void GuiPresets::render_migration_popup(bool& show) {
         ImGui::OpenPopup("Legacy Preset Detected");
     }
 
-    ImGui::SetNextWindowSize(ImVec2(480, 200), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(480, 230), ImGuiCond_Always);
     if (ImGui::BeginPopupModal("Legacy Preset Detected", &show, ImGuiWindowFlags_NoResize)) {
         ImGui::Text("📦 Legacy preset detected");
         ImGui::Separator();
@@ -463,9 +464,18 @@ void GuiPresets::render_migration_popup(bool& show) {
         ImGui::TextWrapped("\"%s\" uses a linear signal chain.", display_name.c_str());
         ImGui::TextWrapped("Convert to graph layout for full modular routing?");
         ImGui::Spacing();
+
+        if (!preset_status_msg_.empty() && preset_status_msg_.rfind("Error", 0) == 0) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.4f, 0.4f, 1.0f));
+            ImGui::TextWrapped("%s", preset_status_msg_.c_str());
+            ImGui::PopStyleColor();
+        } else {
+            ImGui::Spacing();
+        }
         ImGui::Spacing();
 
         if (ImGui::Button("Convert & Save", ImVec2(130, 35))) {
+            bool migrated = false;
             PresetData legacy;
             std::ifstream file(migration_preset_path_);
             if (file.is_open()) {
@@ -474,12 +484,23 @@ void GuiPresets::render_migration_popup(bool& show) {
                 if (from_json_ext(json, legacy)) {
                     PresetData graph_preset = PresetManager::convert_linear_to_graph(legacy);
                     if (PresetManager::save_preset_data(migration_preset_path_, graph_preset)) {
-                        load_preset_by_index_internal(migration_preset_index_);
+                        migrated = load_preset_by_index_internal(migration_preset_index_);
+                        if (!migrated) {
+                            preset_status_msg_ = "Error: Failed to load converted preset.";
+                        }
+                    } else {
+                        preset_status_msg_ = "Error: " + PresetManager::last_error();
                     }
+                } else {
+                    preset_status_msg_ = "Error: Failed to parse legacy preset.";
                 }
+            } else {
+                preset_status_msg_ = "Error: Could not open legacy preset file.";
             }
-            show = false;
-            show_migration_dialog_ = false;
+            if (migrated) {
+                show = false;
+                show_migration_dialog_ = false;
+            }
         }
 
         ImGui::SameLine();

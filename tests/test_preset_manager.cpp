@@ -391,8 +391,10 @@ TEST(preset_migration_convert_and_verify_all_examples) {
         "presets/06_Jet_Flanger.json"
     };
 
+    int processed = 0;
     for (const auto& path : examples) {
-        if (!file_exists(path)) continue;
+        ASSERT_TRUE(file_exists(path));
+        processed++;
 
         ASSERT_TRUE(PresetManager::is_legacy_preset(path));
 
@@ -459,5 +461,6 @@ TEST(preset_migration_convert_and_verify_all_examples) {
         engine_linear.shutdown();
         engine_graph.shutdown();
     }
+    ASSERT_EQ(processed, static_cast<int>(examples.size()));
 }
 
