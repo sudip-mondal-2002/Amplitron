@@ -152,13 +152,7 @@ TEST(json_preset_roundtrip_via_string) {
 
     // Validate it is parseable as valid JSON
     ASSERT_TRUE(!json_str.empty());
-    bool is_valid = true;
-    try {
-        nlohmann::json::parse(json_str);
-    } catch (...) {
-        is_valid = false;
-    }
-    ASSERT_TRUE(is_valid);
+    ASSERT_TRUE(nlohmann::json::accept(json_str));
 
     // Deserialise back
     PresetData restored;

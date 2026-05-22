@@ -86,12 +86,22 @@ private:
 };
 
 // Macros
-#define TEST(name) \
+#define TEST1(name) \
     static void test_##name(); \
     namespace { struct Register_##name { \
         Register_##name() { TestFramework::TestSuite::instance().add_test(#name, test_##name); } \
     } reg_##name; } \
     static void test_##name()
+
+#define TEST2(suite, name) \
+    static void test_##suite##_##name(); \
+    namespace { struct Register_##suite##_##name { \
+        Register_##suite##_##name() { TestFramework::TestSuite::instance().add_test(#suite "." #name, test_##suite##_##name); } \
+    } reg_##suite##_##name; } \
+    static void test_##suite##_##name()
+
+#define TEST_GET_MACRO(_1, _2, NAME, ...) NAME
+#define TEST(...) TEST_GET_MACRO(__VA_ARGS__, TEST2, TEST1)(__VA_ARGS__)
 
 #define ASSERT_TRUE(expr) \
     do { if (!(expr)) { \
