@@ -1,6 +1,7 @@
 #include "test_framework.h"
 #include "audio/effects/noise_gate.h"
 #include "audio/effects/compressor.h"
+#include "audio/effects/multiband_compressor.h"
 #include "audio/effects/overdrive.h"
 #include "audio/effects/distortion.h"
 #include "audio/effects/equalizer.h"
@@ -554,6 +555,7 @@ TEST(all_effects_handle_silence) {
     std::vector<std::shared_ptr<Effect>> effects = {
         std::make_shared<NoiseGate>(),
         std::make_shared<Compressor>(),
+        std::make_shared<MultiBandCompressor>(),
         std::make_shared<Overdrive>(),
         std::make_shared<Distortion>(),
         std::make_shared<Equalizer>(),
@@ -584,6 +586,7 @@ TEST(all_effects_reset_without_crash) {
     std::vector<std::shared_ptr<Effect>> effects = {
         std::make_shared<NoiseGate>(),
         std::make_shared<Compressor>(),
+        std::make_shared<MultiBandCompressor>(),
         std::make_shared<Overdrive>(),
         std::make_shared<Distortion>(),
         std::make_shared<Equalizer>(),
@@ -620,6 +623,7 @@ TEST(all_effects_handle_different_sample_rates) {
     std::vector<std::shared_ptr<Effect>> effects = {
         std::make_shared<NoiseGate>(),
         std::make_shared<Compressor>(),
+        std::make_shared<MultiBandCompressor>(),
         std::make_shared<Overdrive>(),
         std::make_shared<Distortion>(),
         std::make_shared<Equalizer>(),
@@ -1332,6 +1336,124 @@ TEST(pitch_shifter_with_mix_and_shift_differs_from_dry) {
 }
 
 // ============================================================
+// MultiBandCompressor tests
+// ============================================================
+
+TEST(multiband_compressor_unity_gain_passthrough) {
+    MultiBandCompressor mbc;
+    mbc.set_sample_rate(48000);
+    mbc.reset();
+
+    // Set ratios of all bands to 1:1, makeup to 0 dB, and Out Gain to 0 dB
+    // This makes the compressor transparent (unity gain passthrough)
+    mbc.params()[0].value = 200.0f;   // Low XOver
+    mbc.params()[1].value = 4000.0f;  // High XOver
+
+    // Low Band (2 to 6)
+    mbc.params()[2].value = -20.0f;   // Thresh
+    mbc.params()[3].value = 1.0f;     // Ratio = 1.0 (1:1)
+    mbc.params()[4].value = 5.0f;     // Attack
+    mbc.params()[5].value = 100.0f;   // Release
+    mbc.params()[6].value = 0.0f;     // Makeup = 0.0 dB
+
+    // Mid Band (7 to 11)
+    mbc.params()[7].value = -20.0f;   // Thresh
+    mbc.params()[8].value = 1.0f;     // Ratio = 1.0
+    mbc.params()[9].value = 5.0f;     // Attack
+    mbc.params()[10].value = 100.0f;  // Release
+    mbc.params()[11].value = 0.0f;    // Makeup = 0.0 dB
+
+    // High Band (12 to 16)
+    mbc.params()[12].value = -20.0f;  // Thresh
+    mbc.params()[13].value = 1.0f;    // Ratio = 1.0
+    mbc.params()[14].value = 5.0f;    // Attack
+    mbc.params()[15].value = 100.0f;  // Release
+    mbc.params()[16].value = 0.0f;    // Makeup = 0.0 dB
+
+    // Global
+    mbc.params()[17].value = 0.0f;    // Out Gain = 0.0 dB
+
+    float buf[512];
+    float ref[512];
+    fill_sine(buf, 512, 1000.0f, 48000);
+    for (int i = 0; i < 512; ++i) ref[i] = buf[i];
+
+    mbc.process(buf, 512);
+
+    // After filtering and summing, output should match input extremely closely.
+    // LR4 crossovers sum flat at unity gain, so it should be almost identical!
+    for (int i = 0; i < 512; ++i) {
+        ASSERT_NEAR(buf[i], ref[i], 1e-4f);
+    }
+}
+
+TEST(multiband_compressor_independent_band_compression) {
+    MultiBandCompressor mbc;
+    mbc.set_sample_rate(48000);
+    mbc.reset();
+
+    // Crossovers
+    mbc.params()[0].value = 200.0f;   // Low XOver = 200 Hz
+    mbc.params()[1].value = 4000.0f;  // High XOver = 4000 Hz
+
+    // Set Low Band ratio to 10:1 and Mid/High ratios to 1:1
+    // And very low Threshold for all to trigger compression
+    for (int b = 0; b < 3; ++b) {
+        int offset = 2 + b * 5;
+        mbc.params()[offset + 0].value = -40.0f; // Threshold = -40 dB
+        mbc.params()[offset + 1].value = (b == 0) ? 10.0f : 1.0f; // Low Ratio = 10:1, Mid/High = 1:1
+        mbc.params()[offset + 2].value = 2.0f;   // Fast attack
+        mbc.params()[offset + 3].value = 50.0f;  // Fast release
+        mbc.params()[offset + 4].value = 0.0f;   // Makeup = 0 dB
+    }
+    mbc.params()[17].value = 0.0f; // Out Gain = 0 dB
+
+    // Feed a 100 Hz sine wave (Low band)
+    float low_buf[1024];
+    fill_sine(low_buf, 1024, 100.0f, 48000);
+    // scale to high amplitude so it goes over the -40 dB threshold
+    for (int i = 0; i < 1024; ++i) low_buf[i] *= 0.8f;
+
+    // Process a few times to let envelope followers charge up
+    for (int rep = 0; rep < 10; ++rep) {
+        fill_sine(low_buf, 1024, 100.0f, 48000);
+        for (int i = 0; i < 1024; ++i) low_buf[i] *= 0.8f;
+        mbc.process(low_buf, 1024);
+    }
+
+    // Low band compression should be active, Mid/High should be inactive
+    ASSERT_GT(mbc.get_gain_reduction_db(0), 1.0f);
+    ASSERT_NEAR(mbc.get_gain_reduction_db(1), 0.0f, 1e-4f);
+    ASSERT_NEAR(mbc.get_gain_reduction_db(2), 0.0f, 1e-4f);
+
+    // Now reset and do the opposite: compress only the High Band
+    mbc.reset();
+    for (int b = 0; b < 3; ++b) {
+        int offset = 2 + b * 5;
+        mbc.params()[offset + 0].value = -40.0f;
+        mbc.params()[offset + 1].value = (b == 2) ? 10.0f : 1.0f; // High Ratio = 10:1, Low/Mid = 1:1
+        mbc.params()[offset + 2].value = 2.0f;
+        mbc.params()[offset + 3].value = 50.0f;
+        mbc.params()[offset + 4].value = 0.0f;
+    }
+
+    // Feed a 6000 Hz sine wave (High band)
+    float high_buf[1024];
+    fill_sine(high_buf, 1024, 6000.0f, 48000);
+    for (int i = 0; i < 1024; ++i) high_buf[i] *= 0.8f;
+
+    for (int rep = 0; rep < 10; ++rep) {
+        fill_sine(high_buf, 1024, 6000.0f, 48000);
+        for (int i = 0; i < 1024; ++i) high_buf[i] *= 0.8f;
+        mbc.process(high_buf, 1024);
+    }
+
+    // High band compression should be active, Low/Mid should be inactive
+    ASSERT_GT(mbc.get_gain_reduction_db(2), 1.0f);
+    ASSERT_NEAR(mbc.get_gain_reduction_db(0), 0.0f, 1e-4f);
+    ASSERT_NEAR(mbc.get_gain_reduction_db(1), 0.0f, 1e-4f);
+}
+
 // Tempo / BPM Syncing Tests
 // ============================================================
 
@@ -1345,7 +1467,7 @@ TEST(delay_calculates_correct_time_from_bpm) {
     dl.params()[0].value = 490.0f; 
     
     // Trigger the BPM sync
-    dl.set_transport_state(120.0f); 
+    dl.set_transport_state(120.0f);
 
     // At 120 BPM, a quarter note is 500.0 ms (60000 / 120)
     ASSERT_NEAR(dl.params()[0].value, 500.0f, 0.01f);
