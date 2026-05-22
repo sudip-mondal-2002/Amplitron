@@ -1,5 +1,7 @@
 #include "test_framework.h"
 #include "preset_manager.h"
+#include "preset_json.h"
+#include "preset_manager_impl.h"
 #include "audio/audio_engine.h"
 #include "audio/effects/noise_gate.h"
 #include "audio/effects/compressor.h"
@@ -295,4 +297,69 @@ TEST(preset_midi_mappings_roundtrip) {
     std::remove(path.c_str());
     engine.shutdown();
     engine2.shutdown();
+}
+
+// -----------------------------------------------------------------------
+// Additional tests to cover preset_json and preset_manager_dirs/io gaps
+// -----------------------------------------------------------------------
+
+TEST(PresetJson, UnknownFieldsIgnoredOnLoad) {
+    std::string json = R"({"format_version":1,"name":"Test","version":1,"unknown_field":42,"effects":[]})";
+    PresetData preset;
+    bool ok = from_json_ext(json, preset);
+    ASSERT_TRUE(ok);
+    ASSERT_EQ(preset.name, std::string("Test"));
+}
+
+TEST(PresetJson, MissingRequiredFieldsUseDefaults) {
+    // Provide a minimal JSON with no name/description/effects
+    std::string json = R"({"format_version":1})";
+    PresetData preset;
+    bool ok = from_json_ext(json, preset);
+    ASSERT_TRUE(ok);
+    // Missing name should be treated as empty string (defaults), not crash
+    ASSERT_EQ(preset.name, std::string(""));
+    ASSERT_EQ(preset.effects.size(), 0u);
+}
+
+TEST(PresetManagerDirs, GetUserPresetsDirWellFormedOrEmpty) {
+    std::string dir = get_user_presets_dir();
+    // On CI/isolated environments this may legitimately be empty,
+    // otherwise it should contain an Amplitron/ presets path segment.
+    ASSERT_TRUE(dir.empty() || dir.find("Amplitron") != std::string::npos);
+}
+
+TEST(PresetManagerDirs, PresetsDirCreatesIfMissing) {
+    std::string test_dir = "presets/test_auto_create_dir";
+
+    // Remove any previous run artifacts
+#ifdef _WIN32
+    system(("rmdir /s /q \"" + test_dir + "\" >nul 2>&1").c_str());
+#else
+    system(("rm -rf \"" + test_dir + "\" 2>/dev/null").c_str());
+#endif
+
+    PresetManager::set_presets_dir(test_dir);
+    ASSERT_TRUE(std::filesystem::exists(test_dir));
+
+    // Cleanup
+    PresetManager::set_presets_dir("");
+    std::filesystem::remove_all(test_dir);
+}
+
+TEST(PresetManagerIO, AppendJsonFilesEmptyDir) {
+    std::string empty_dir = "presets/empty_dir_for_test";
+    std::filesystem::create_directories(empty_dir);
+
+    std::vector<std::string> files;
+    append_json_files(empty_dir, files);
+    ASSERT_TRUE(files.empty());
+
+    std::filesystem::remove_all(empty_dir);
+}
+
+TEST(PresetManagerMigration, ApplyMigrationsAddsVersion) {
+    std::string raw = "{}"; // legacy unversioned format
+    std::string patched = PresetManager::apply_migrations(raw);
+    ASSERT_TRUE(patched.find("\"version\":") != std::string::npos);
 }
