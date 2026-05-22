@@ -3,6 +3,7 @@
 #include <atomic>
 #include <cstddef>
 #include <type_traits>
+#include <vector>
 
 namespace Amplitron {
 
@@ -55,6 +56,24 @@ public:
         return true;
     }
 
+    size_t try_pop_all(std::vector<T>& out_vec) {
+        size_t count = 0;
+        T item;
+        while (try_pop(item)) {
+            out_vec.push_back(item);
+            ++count;
+        }
+        return count;
+    }
+
+    size_t size() const {
+        return (head_.load(std::memory_order_acquire) - tail_.load(std::memory_order_acquire)) & kMask;
+    }
+
+    size_t capacity() const {
+        return Capacity - 1;
+    }
+
 private:
     static constexpr size_t kMask = Capacity - 1;
 
@@ -72,6 +91,9 @@ struct AudioCommand {
         SetEffectMix,        // Change effect wet/dry mix
         SetInputGain,        // Change master input gain
         SetOutputGain,       // Change master output gain
+        ToggleMetronome,     // Toggle metronome on/off
+        SetMetronomeBpm,     // Change metronome BPM
+        SetMetronomeVolume,  // Change metronome click level
         AddEffect,           // Signal that effect list changed (swap pointer)
         RemoveEffect,        // Signal that effect list changed
         MoveEffect,          // Signal that effect list changed

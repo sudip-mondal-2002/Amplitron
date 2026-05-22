@@ -14,11 +14,15 @@
 #include <cmath>
 #include <algorithm>
 #include <cstdio>
+#include <SDL2/SDL.h>
 #if defined(__APPLE__)
 #  include <TargetConditionals.h>
 #endif
 #if defined(EMSCRIPTEN) || (defined(__APPLE__) && TARGET_OS_IOS)
 #  define AMPLITRON_NO_DESKTOP_SHELL 1
+#endif
+#ifdef __EMSCRIPTEN__
+#  include <emscripten.h>
 #endif
 
 #pragma GCC diagnostic push
@@ -35,13 +39,21 @@ namespace Amplitron {
 
 GuiManager::GuiManager(AudioEngine& engine)
     : engine_(engine),
+      command_history_(),
       gui_settings_(engine),
       gui_presets_(engine, command_history_),
       gui_recording_(engine),
       gui_tuner_(engine, std::make_shared<TunerPedal>()),
       gui_analyzer_(engine),
-      gui_snapshots_(engine, command_history_),
-      gui_midi_(midi_manager_) {}
+      gui_snapshots_(engine, command_history_), // <-- UNCOMMENT THIS FIELD HERE!
+      gui_midi_(midi_manager_) 
+{
+    pedal_board_ = std::make_unique<PedalBoard>(engine_, command_history_, &gui_midi_);
+    gui_presets_.set_pedal_board(pedal_board_.get());
+    gui_presets_.set_midi_manager(&midi_manager_);
+    
+    gui_snapshots_.set_pedal_board(pedal_board_.get()); // <-- UNCOMMENT THIS ACTION TOO!
+}
 
 GuiManager::~GuiManager() {
     shutdown();
@@ -103,6 +115,14 @@ bool GuiManager::initialize(int width, int height) {
             dpi_scale = static_cast<float>(draw_w) / static_cast<float>(window_width_);
     }
 
+#ifdef __EMSCRIPTEN__
+    // If SDL didn't pick up a high DPI scaling factor inside the browser, fallback safely
+    if (dpi_scale <= 1.0f) {
+        dpi_scale = emscripten_get_device_pixel_ratio();
+        if (dpi_scale <= 0.0f) dpi_scale = 1.0f;
+    }
+#endif
+
     {
         const float base_font_size = 14.0f;
         const float scaled_size    = base_font_size * dpi_scale;
@@ -115,8 +135,6 @@ bool GuiManager::initialize(int width, int height) {
 
         char* base_path = SDL_GetBasePath();
         if (base_path) {
-            // On a macOS app bundle, SDL_GetBasePath() returns Contents/Resources/ (not MacOS/).
-            // Assets are copied there by the CI workflow, so this resolves correctly.
             try_font(std::string(base_path) + "assets/fonts/Roboto-Medium.ttf");
             SDL_free(base_path);
         }
@@ -128,7 +146,17 @@ bool GuiManager::initialize(int width, int height) {
         if (!loaded_font)
             io.Fonts->AddFontDefault();
 
+        // On desktop platforms (like macOS), SDL uses logical coordinates for ImGui, 
+        // so we shouldn't scale the style sizes (padding, margins, etc.) by dpi_scale.
+#ifdef __EMSCRIPTEN__
+        ImGuiStyle& style = ImGui::GetStyle();
+        style.ScaleAllSizes(dpi_scale);
+        // On web viewports, setting FontGlobalScale smaller shrinks text rendering. 
+        // We set it to 1.0f here so that font rendering uses the high-res texture space fully.
+        io.FontGlobalScale = 1.0f;
+#else
         io.FontGlobalScale = 1.0f / dpi_scale;
+#endif
     }
 
     // Load window icon from assets/icon.svg
@@ -177,6 +205,7 @@ bool GuiManager::initialize(int width, int height) {
 
     pedal_board_ = std::make_unique<PedalBoard>(engine_, command_history_, &gui_midi_);
     gui_presets_.set_pedal_board(pedal_board_.get());
+    gui_presets_.set_midi_manager(&midi_manager_);
     gui_snapshots_.set_pedal_board(pedal_board_.get());
 
     PresetManager::load_config();
@@ -195,6 +224,7 @@ bool GuiManager::initialize(int width, int height) {
     initialized_ = true;
     return true;
 }
+
 
 void GuiManager::shutdown() {
     if (!initialized_) return;
@@ -224,6 +254,5 @@ void GuiManager::shutdown() {
     }
     SDL_Quit();
 }
-
 
 } // namespace Amplitron

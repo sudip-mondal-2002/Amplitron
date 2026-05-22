@@ -1,5 +1,10 @@
 #pragma once
 
+// Chromatic tuner based on pitch detection from the input signal.
+// Uses the YIN difference d(tau)=sum_j(x[j]-x[j+tau])^2 and cumulative mean
+// normalized difference to estimate period tau; frequency is Fs/tau and cents
+// error is 1200*log2(freq / nearest_note_freq).
+
 #include "audio/effect.h"
 #include <atomic>
 
@@ -12,6 +17,7 @@ public:
     void set_sample_rate(int sample_rate) override;
     void reset() override;
     const char* name() const override { return "Tuner"; }
+    const char* type_id() const override { return "Tuner"; }
     std::vector<EffectParam>& params() override { return params_; }
 
     // Tuner detection results (audio thread writes, UI thread reads)

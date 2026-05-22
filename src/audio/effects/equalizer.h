@@ -1,5 +1,9 @@
 #pragma once
 
+// 3-band parametric equalizer for tone correction and pedal-chain shaping.
+// The Equalizer cascades active biquads H(z)=H_lowShelf(z)*H_peakMid(z)*H_highShelf(z),
+// giving independent low-shelf, peaking-mid, and high-shelf gain control.
+
 #include "audio/effect.h"
 #include "audio/dsp/biquad.h"
 
@@ -12,6 +16,7 @@ public:
     void set_sample_rate(int sample_rate) override;
     void reset() override;
     const char* name() const override { return "Equalizer"; }
+    const char* type_id() const override { return "Equalizer"; }
     std::vector<EffectParam>& params() override { return params_; }
 
 private:

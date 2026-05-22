@@ -1,5 +1,10 @@
 #pragma once
 
+// Cascaded all-pass phaser with LFO modulation.
+// Each all-pass stage has near-unity magnitude and phase shift A(z); mixing
+// dry + wet creates notches where phase cancellation occurs. The LFO modulates
+// the all-pass coefficient so notch frequencies sweep over time.
+
 #include "audio/effect.h"
 #include <array>
 
@@ -17,6 +22,7 @@ public:
     void set_sample_rate(int sample_rate) override;
     void reset() override;
     const char* name() const override { return "Phaser"; }
+    const char* type_id() const override { return "Phaser"; }
     std::vector<EffectParam>& params() override { return params_; }
 
 private:

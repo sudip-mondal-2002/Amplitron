@@ -118,6 +118,27 @@
     </p>
   </div>
 
+  <!-- MIDI status indicator -->
+  <div id="midi-status" style="
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    padding: 6px 12px;
+    background: rgba(20, 18, 16, 0.8);
+    color: #888;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    border: 1px solid rgba(240, 160, 48, 0.2);
+    font-family: monospace;
+    z-index: 50;
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  ">
+    🎹 Waiting for permission...
+  </div>
+
   <!-- Emscripten canvas -->
   <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
 
@@ -150,6 +171,126 @@
         console.log('[Amplitron] WASM runtime ready.');
       }
     };
+
+  // ==========================================
+  // Web MIDI API Bridge
+  // ==========================================
+  
+  function initMIDI() {
+    // Check browser support
+    if (!navigator.requestMIDIAccess) {
+      console.warn('[MIDI] Web MIDI API not supported in this browser');
+      updateMIDIStatus('MIDI not supported');
+      return;
+    }
+    
+    navigator.requestMIDIAccess()
+      .then(onMIDISuccess)
+      .catch(() => {
+        updateMIDIStatus('MIDI not supported');
+      });
+  }
+  
+  function onMIDISuccess(midiAccess) {
+    console.log('[MIDI] Access granted');
+    
+    // Iterate through all available MIDI input ports
+    const inputs = midiAccess.inputs.values();
+    let inputCount = 0;
+    let firstInputName = "";
+    
+    for (let input of inputs) {
+      if (inputCount === 0) firstInputName = input.name;
+      inputCount++;
+      console.log(`[MIDI] Input ${inputCount}: ${input.name}`);
+      
+      // Attach event listener to this input port
+      input.addEventListener('midimessage', handleMIDIMessage);
+      
+      // Notify C++ about the device
+      if (Module && Module.ccall) {
+        Module.ccall(
+          'on_midi_device_connected',
+          null,
+          ['string'],
+          [input.name]
+        );
+      }
+    }
+    
+    if (inputCount > 0) {
+      updateMIDIStatus(`MIDI Active: ${firstInputName}`);
+      console.log(`[MIDI] Listening on ${inputCount} input port(s)`);
+    } else {
+      updateMIDIStatus('📭 No MIDI devices detected (connect a controller)');
+    }
+    
+    // Handle dynamic MIDI port connections/disconnections
+    midiAccess.addEventListener('statechange', handleMIDIStateChange);
+  }
+  
+  function onMIDIFailure(error) {
+    console.error('[MIDI] Permission denied or error:', error);
+    updateMIDIStatus('MIDI not supported');
+  }
+  
+  function handleMIDIMessage(event) {
+    const [status, data1, data2] = event.data;
+    
+    // Extract message type from status byte
+    const messageType = status & 0xF0;
+    const channel = status & 0x0F;
+    
+    // Only handle Control Change (CC) messages: 0xB0-0xBF
+    if (messageType !== 0xB0) {
+      return;  // Ignore other MIDI message types
+    }
+    
+    const cc = data1;        // CC number (0-127)
+    const value = data2;     // CC value (0-127)
+    
+    console.log(`[MIDI] CC ${cc} = ${value} on channel ${channel}`);
+    
+    // Call C++ handler via Emscripten
+    if (Module && Module.ccall) {
+      try {
+        Module.ccall(
+          'on_midi_cc',
+          null,  // return type
+          ['number', 'number', 'number'],  // argument types
+          [channel, cc, value]  // arguments
+        );
+      } catch (err) {
+        console.error('[MIDI] Error calling on_midi_cc:', err);
+      }
+    }
+  }
+  
+  function handleMIDIStateChange(event) {
+    console.log(`[MIDI] Port state changed: ${event.port.name} (${event.port.state})`);
+    // Could refresh the device list, but keeping it simple for now
+  }
+  
+  function updateMIDIStatus(message) {
+    const statusEl = document.getElementById('midi-status');
+    if (statusEl) {
+      statusEl.textContent = message;
+    }
+  }
+  
+  // Request MIDI access after audio is unlocked
+  const audioUnlockEl = document.getElementById('audio-unlock');
+  if (audioUnlockEl) {
+    audioUnlockEl.addEventListener('click', function(e) {
+      this.style.display = 'none';
+      
+      // Request MIDI after a brief delay to let audio settle
+      setTimeout(() => {
+        console.log('[MIDI] Requesting Web MIDI access...');
+        initMIDI();
+      }, 100);
+    });
+  }
   </script>
   {{{ SCRIPT }}}
 </body>

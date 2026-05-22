@@ -6,6 +6,12 @@
 #include "audio/spsc_queue.h"
 #include <chrono>
 
+#include "audio/audio_graph.h"
+#include "audio/audio_graph_executor.h"
+#include <memory>
+
+#include <nlohmann/json.hpp>
+// FORWARD DECLARATIONS
 namespace Amplitron {
 
 struct AudioDeviceInfo {
@@ -37,6 +43,12 @@ public:
     /** @brief Destructor — shuts down the audio stream if still running. */
     ~AudioEngine();
 
+    void commit_graph_changes();
+
+    /** @brief serialize and deserialize method signatures to AudioEngine class definition */
+    
+    nlohmann::json serialize();
+    void deserialize(const nlohmann::json& j);
     /** @brief Initialize the audio back-end. @return true on success. */
     bool initialize();
 
@@ -57,6 +69,15 @@ public:
 
     /** @brief Clear the stored error message. */
     void clear_error() { last_error_.clear(); }
+
+#ifdef AMPLITRON_ANDROID_OBOE
+    /**
+     * @brief Return a human-readable label for the Oboe sharing mode negotiated at runtime.
+     * "AAudio exclusive mode" when AAudio exclusive path is active; "OpenSL ES (shared)" otherwise.
+     * Used by the Android settings UI to display the actual backend, not a hardcoded string.
+     */
+    const char* get_oboe_sharing_mode_label() const;
+#endif
 
     /** @brief Enumerate available audio input devices. */
     std::vector<AudioDeviceInfo> get_input_devices() const;
@@ -88,44 +109,38 @@ public:
     /** @brief Return the human-readable output device name. */
     std::string get_output_device_name() const;
 
-    /**
-     * @brief Append an effect to the end of the chain (mutex-protected).
-     * @param effect Shared pointer to the effect to add.
-     */
-    void add_effect(std::shared_ptr<Effect> effect);
 
-    /**
-     * @brief Insert an effect at a specific index in the chain (mutex-protected).
-     * @param index  Position to insert at. If index >= size, appends to the end.
-     * @param effect Shared pointer to the effect to insert.
-     */
-    void insert_effect(int index, std::shared_ptr<Effect> effect);
-
-    /**
-     * @brief Remove the effect at @p index from the chain (mutex-protected).
-     * @param index Zero-based position in the effect chain.
-     */
-    void remove_effect(int index);
-
-    /**
-     * @brief Move an effect from position @p from to position @p to (mutex-protected).
-     * @param from Source index.
-     * @param to   Destination index.
-     */
-    void move_effect(int from, int to);
 
     /** @brief Direct access to the effect chain vector (GUI thread only). */
-    std::vector<std::shared_ptr<Effect>>& effects() { return effects_; }
+    AudioGraph& graph() { return main_graph_; }
+    const AudioGraph& graph() const { return main_graph_; }
 
-    /**
-     * @brief Atomically replace the entire effect chain (mutex-protected).
-     *
-     * Used by LoadPresetCommand undo/redo so the audio thread never observes
-     * a half-applied state.
-     *
-     * @param new_effects The complete new effect chain to install.
-     */
-    void restore_effects_state(std::vector<std::shared_ptr<Effect>> new_effects);
+    // =========================================================================
+    // TEMPORARY COMPILER BRIDGE 
+    // (Keeps the Undo/Redo & Snapshot systems quiet while we build the DAG UI)
+    // =========================================================================
+    std::vector<std::shared_ptr<Effect>> dummy_effects_;
+    std::vector<std::shared_ptr<Effect>>& effects() { return dummy_effects_; }
+    // void remove_effect(int index) { 
+    //     if (index >= 0 && index < static_cast<int>(dummy_effects_.size())) {
+    //         dummy_effects_.erase(dummy_effects_.begin() + index);
+    //     }
+    // }
+
+    void add_effect(std::shared_ptr<Effect> fx);
+    void add_initial_effects(const std::vector<std::shared_ptr<Effect>>& fxs) {
+        dummy_effects_.clear();
+        for (const auto& fx : fxs) {
+            dummy_effects_.push_back(fx);
+        }
+        sync_graph_with_dummy_effects(true);
+    }
+    void insert_effect(int index, std::shared_ptr<Effect> fx);
+    void remove_effect(int index);
+    void clear_effects();
+    void move_effect(int from, int to);
+    void restore_effects_state(std::vector<std::shared_ptr<Effect>> state);
+
 
     /**
      * @brief Set the audio buffer size (takes effect on next stream restart).
@@ -202,11 +217,30 @@ public:
      */
     void set_output_gain(float gain);
 
+    
     /** @brief Return the current input gain (atomic relaxed read). */
     float get_input_gain() const { return input_gain_.load(std::memory_order_relaxed); }
 
     /** @brief Return the current output gain (atomic relaxed read). */
     float get_output_gain() const { return output_gain_.load(std::memory_order_relaxed); }
+
+    /** @brief Toggle the metronome on/off (atomic update). */
+    void toggle_metronome();
+
+    /** @brief Set the metronome BPM (atomic update). */
+    void set_metronome_bpm(int bpm);
+
+    /** @brief Set the metronome click volume (atomic update). */
+    void set_metronome_volume(float volume);
+
+    /** @brief Return the current metronome enabled state (atomic relaxed read). */
+    bool get_metronome_enabled() const { return metronome_enabled_state_.load(std::memory_order_relaxed); }
+
+    /** @brief Return the current metronome BPM (atomic relaxed read). */
+    int get_metronome_bpm() const { return metronome_bpm_state_.load(std::memory_order_relaxed); }
+
+    /** @brief Return the current metronome volume (atomic relaxed read). */
+    float get_metronome_volume() const { return metronome_volume_state_.load(std::memory_order_relaxed); }
 
     /**
      * @brief Enqueue a parameter value change from the GUI thread (lock-free).
@@ -268,6 +302,8 @@ public:
      */
     void process_audio(const float* input, float* output, int frame_count);
 
+    // MIDI instance is managed by the GUI thread's MidiManager.
+
 private:
     // Platform backend state (defined in the backend .cpp that is compiled)
     AudioBackendState* backend_ = nullptr;
@@ -279,9 +315,12 @@ private:
     int output_device_ = -1;
     int sample_rate_ = DEFAULT_SAMPLE_RATE;
     int buffer_size_ = DEFAULT_BUFFER_SIZE;
-
+    //global transport
     std::atomic<float> input_gain_{1.0f};
     std::atomic<float> output_gain_{0.8f};
+    std::atomic<bool> metronome_enabled_state_{false};
+    std::atomic<int> metronome_bpm_state_{120};
+    std::atomic<float> metronome_volume_state_{0.5f};
 
     std::atomic<float> input_level_{0.0f};
     std::atomic<float> output_level_{0.0f};
@@ -291,7 +330,7 @@ private:
     std::atomic<bool> output_clipped_{false};
     std::atomic<bool> analyzer_enabled_{false};
 
-    std::vector<std::shared_ptr<Effect>> effects_;
+    // std::vector<std::shared_ptr<Effect>> effects_;
     std::vector<float> process_buffer_;
     std::vector<float> process_buffer_right_;
     std::mutex effect_mutex_;
@@ -303,14 +342,26 @@ private:
     // Copied from effects_ / tuner_tap_ whenever effect_mutex_ is acquired
     // and topology_dirty_ is set, avoiding unnecessary shared_ptr churn on
     // every callback when the chain is stable.
-    std::vector<std::shared_ptr<Effect>> audio_shadow_effects_;
+    // std::vector<std::shared_ptr<Effect>> audio_shadow_effects_;
     std::shared_ptr<Effect> audio_shadow_tuner_;
     std::atomic<bool> topology_dirty_{true};
+
+    // The main graph data model (Edited by the GUI/Main thread)
+    AudioGraph main_graph_;
+    
+    // The compiled executor (Built by the GUI thread)
+    std::shared_ptr<AudioGraphExecutor> main_executor_;
+    
+    // The shadow executor (Safely copied by the Audio thread)
+    std::shared_ptr<AudioGraphExecutor> audio_shadow_executor_;
+
+    void sync_graph_with_dummy_effects(bool reset_graph = false);
 
     // Lock-free GUI -> Audio command queue (256 slots)
     SPSCQueue<AudioCommand, 256> command_queue_;
     void drain_commands();        // Must be called while holding effect_mutex_
     void drain_gain_commands();   // Safe to call without effect_mutex_
+    void update_metronome_timing();
 
     // CPU load watchdog for buffer auto-tuning
     std::atomic<float> cpu_load_{0.0f};
@@ -329,6 +380,27 @@ private:
     std::array<float, ANALYZER_FFT_SIZE> analyzer_snapshot_input_{};
     std::array<float, ANALYZER_FFT_SIZE> analyzer_snapshot_output_{};
     std::atomic<uint64_t> analyzer_sequence_{0};
+
+    // Metronome state (audio thread only)
+    bool metronome_enabled_ = false;
+    int metronome_bpm_ = 120;
+    float metronome_volume_ = 0.5f;
+
+    float metronome_volume_smoothed_ = 0.0f;
+    float metronome_volume_smooth_alpha_ = 0.05f;
+    float metronome_bpm_smoothed_ = 120.0f;
+    float metronome_bpm_smooth_alpha_ = 0.05f;
+
+    int metronome_sample_rate_ = 0;
+    double metronome_samples_per_beat_ = 0.0;
+    double metronome_sample_counter_ = 0.0;
+    int metronome_click_samples_total_ = 0;
+    int metronome_click_samples_remaining_ = 0;
+    float metronome_click_phase_ = 0.0f;
+    float metronome_click_phase_inc_ = 0.0f;
+    float metronome_click_env_ = 0.0f;
+    float metronome_click_decay_ = 0.0f;
+    // (MIDI instance removed - use MidiManager)
 };
 
 } // namespace Amplitron

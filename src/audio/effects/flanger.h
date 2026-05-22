@@ -1,5 +1,10 @@
 #pragma once
 
+// Short modulated delay effect for comb-filter sweep sounds.
+// Uses y[n]=x[n]+feedback*y[n-D(n)] mixed with a wet tap x[n-D(n)], where
+// D(n)=D0 + A*sin(2*pi*f_lfo*n/Fs); the varying delay moves comb notches at
+// frequencies approximately k*Fs/D(n).
+
 #include "audio/effect.h"
 
 namespace Amplitron {
@@ -16,6 +21,7 @@ public:
     void set_sample_rate(int sample_rate) override;
     void reset() override;
     const char* name() const override { return "Flanger"; }
+    const char* type_id() const override { return "Flanger"; }
     std::vector<EffectParam>& params() override { return params_; }
 
 private:

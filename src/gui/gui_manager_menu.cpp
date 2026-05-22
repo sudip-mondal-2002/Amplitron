@@ -7,6 +7,12 @@
 #include <SDL2/SDL.h>
 #include <cstdio>
 #include <string>
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#endif
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 #if defined(_WIN32)
 #include <windows.h>
 #include <shellapi.h>
@@ -92,7 +98,45 @@ void GuiManager::render_menu_bar() {
             bool has_selected_preset = gui_presets_.selected_preset_index() >= 0 &&
                                        gui_presets_.selected_preset_index() < gui_presets_.preset_count();
             if (ImGui::MenuItem("Delete Selected Preset", nullptr, false, has_selected_preset)) {
-                gui_presets_.delete_preset_by_index(gui_presets_.selected_preset_index());
+                ImGui::OpenPopup("Confirm Delete Preset");
+            }
+
+            if (ImGui::BeginPopupModal("Confirm Delete Preset", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::Text("Are you sure you want to delete the selected preset?\nThis action cannot be undone.");
+                ImGui::Separator();
+                if (ImGui::Button("Delete", ImVec2(120, 0))) {
+                    gui_presets_.delete_preset_by_index(gui_presets_.selected_preset_index());
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
+            }
+            if (ImGui::MenuItem("Copy Preset to Clipboard")) {
+                std::string json_string = gui_presets_.serialise_current_preset_to_json();
+                if (!json_string.empty()) {
+#ifdef __EMSCRIPTEN__
+                    // Web build — use browser Clipboard API
+                    EM_ASM({
+                        var text = UTF8ToString($0);
+                        navigator.clipboard.writeText(text).then(function() {
+                            // success
+                        }).catch(function(err) {
+                            console.error("Clipboard write failed: ", err);
+                        });
+                    }, json_string.c_str());
+#else
+                    // Native build — ImGui clipboard works fine
+                    ImGui::SetClipboardText(json_string.c_str());
+#endif
+                    toast_message_ = "Preset copied to clipboard!";
+                    toast_timer_ = 2.0f;
+                } else {
+                    toast_message_ = "Failed to copy: empty preset.";
+                    toast_timer_ = 2.0f;
+                }
             }
             ImGui::Separator();
 #ifndef AMPLITRON_NO_DESKTOP_SHELL
@@ -105,9 +149,23 @@ void GuiManager::render_menu_bar() {
                 }
             }
             if (ImGui::MenuItem("Reset to Default Presets Directory")) {
-                PresetManager::set_presets_dir("");
-                PresetManager::save_config();
-                gui_presets_.refresh_presets(false);
+                ImGui::OpenPopup("Confirm Reset Presets Dir");
+            }
+
+            if (ImGui::BeginPopupModal("Confirm Reset Presets Dir", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::Text("Reset presets directory to the default internal path?");
+                ImGui::Separator();
+                if (ImGui::Button("Reset", ImVec2(120, 0))) {
+                    PresetManager::set_presets_dir("");
+                    PresetManager::save_config();
+                    gui_presets_.refresh_presets(false);
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
             }
 #endif
             ImGui::Separator();
@@ -146,9 +204,10 @@ void GuiManager::render_menu_bar() {
         }
         if (ImGui::BeginMenu("Audio")) {
             if (engine_.is_running()) {
-                if (ImGui::MenuItem("Stop Audio")) engine_.stop();
-            } else {
-                if (ImGui::MenuItem("Start Audio")) {
+                if (ImGui::MenuItem("Stop Audio", "M")) engine_.stop();
+            } 
+            else {
+                if (ImGui::MenuItem("Start Audio", "M")) {
                     engine_.restart();
                 }
             }
@@ -179,6 +238,13 @@ void GuiManager::render_menu_bar() {
         };
         std::vector<StatusItem> items;
 
+        // Preset status with dirty indicator
+        std::string preset_label = "Preset: " + gui_presets_.current_preset_name();
+        if (gui_presets_.is_dirty()) {
+            preset_label += " *";
+        }
+        items.push_back({preset_label, false});
+
         // Sample rate (rightmost)
         char sr_buf[16];
         snprintf(sr_buf, sizeof(sr_buf), "%dHz", engine_.get_sample_rate());
@@ -196,7 +262,7 @@ void GuiManager::render_menu_bar() {
         }
 
         // MIDI status
-        items.push_back({midi_manager_.is_port_open() ? "MIDI" : "MIDI", false});
+        items.push_back({midi_manager_.is_port_open() ? "MIDI" : "MIDI", true});
 
         // Check for update (leftmost of right-aligned group)
         bool show_update = false;
@@ -236,6 +302,13 @@ void GuiManager::render_menu_bar() {
                     ImGui::TextColored(Theme::Live(), "%s", it->label.c_str());
                 } else {
                     ImGui::TextColored(ImVec4(0.4f, 0.4f, 0.4f, 1.0f), "%s", it->label.c_str());
+                }
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip(midi_manager_.is_port_open() ? "MIDI Connected. Click for settings." : "MIDI Disconnected. Click for settings.");
+                    ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+                }
+                if (ImGui::IsItemClicked()) {
+                    show_midi_ = !show_midi_;
                 }
             } else if (it->label == "LIVE") {
                 ImGui::TextColored(Theme::Live(), "%s", it->label.c_str());
