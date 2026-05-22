@@ -324,9 +324,9 @@ TEST(PresetJson, MissingRequiredFieldsUseDefaults) {
 
 TEST(PresetManagerDirs, GetUserPresetsDirWellFormedOrEmpty) {
     std::string dir = get_user_presets_dir();
-    // On CI/isolated environments this may legitimately be empty,
-    // otherwise it should contain an Amplitron/ presets path segment.
-    ASSERT_TRUE(dir.empty() || dir.find("Amplitron") != std::string::npos);
+    // On CI/isolated environments this may legitimately be empty;
+    // otherwise the path should end in a presets directory.
+    ASSERT_TRUE(dir.empty() || std::filesystem::path(dir).filename() == "presets");
 }
 
 TEST(PresetManagerDirs, PresetsDirCreatesIfMissing) {
