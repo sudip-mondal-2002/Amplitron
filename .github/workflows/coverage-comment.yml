@@ -1,0 +1,42 @@
+name: Post Coverage Comment
+
+on:
+  workflow_run:
+    workflows: ["CI - Build and Test"]
+    types:
+      - completed
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  post-comment:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.event == 'pull_request'
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: pr-coverage-comment
+          path: pr_coverage
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Get PR Number
+        id: get-pr-number
+        run: |
+          if [ -f "pr_coverage/pr_number.txt" ]; then
+            PR_NUMBER=$(cat pr_coverage/pr_number.txt)
+            echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_ENV
+          else
+            echo "No PR number found"
+            exit 1
+          fi
+
+      - name: Post Comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: coverage
+          number: ${{ env.PR_NUMBER }}
+          path: pr_coverage/coverage_comment.md
