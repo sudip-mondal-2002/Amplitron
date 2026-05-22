@@ -12,28 +12,28 @@
 
 namespace Amplitron {
 
-void PedalWidget::render_amp_cabinet(ImDrawList* dl, ImVec2 p0, ImVec2 p1, float pedal_width, float pedal_height) {
+void PedalWidget::render_amp_cabinet(ImDrawList* dl, ImVec2 p0, ImVec2 p1, float pedal_width, float pedal_height, float zoom) {
     ImU32 cab_body = IM_COL32(30, 22, 16, 255);
     ImU32 cab_border = IM_COL32(90, 70, 40, 255);
     ImU32 cab_grille = IM_COL32(18, 14, 10, 255);
     ImU32 cab_grille_line = IM_COL32(38, 30, 22, 180);
 
-    dl->AddRectFilled(p0, p1, cab_body, Theme::ROUNDING_MD);
-    dl->AddRect(p0, p1, cab_border, Theme::ROUNDING_MD, 0, 2.5f);
+    dl->AddRectFilled(p0, p1, cab_body, Theme::ROUNDING_MD * zoom);
+    dl->AddRect(p0, p1, cab_border, Theme::ROUNDING_MD * zoom, 0, 2.5f * zoom);
 
     dl->AddRectFilled(
-        ImVec2(p0.x + 6, p0.y + 6),
-        ImVec2(p1.x - 6, p0.y + 10),
-        Theme::ACCENT_GOLD_DIM, 2.0f);
+        ImVec2(p0.x + 6 * zoom, p0.y + 6 * zoom),
+        ImVec2(p1.x - 6 * zoom, p0.y + 10 * zoom),
+        Theme::ACCENT_GOLD_DIM, 2.0f * zoom);
 
-    ImVec2 plate_p0 = ImVec2(p0.x + 8, p0.y + 14);
-    ImVec2 plate_p1 = ImVec2(p1.x - 8, p0.y + 50);
+    ImVec2 plate_p0 = ImVec2(p0.x + 8 * zoom, p0.y + 14 * zoom);
+    ImVec2 plate_p1 = ImVec2(p1.x - 8 * zoom, p0.y + 50 * zoom);
     dl->AddRectFilled(plate_p0, plate_p1,
-        IM_COL32(46, 38, 28, 220), Theme::ROUNDING_SM);
+        IM_COL32(46, 38, 28, 220), Theme::ROUNDING_SM * zoom);
     dl->AddRect(plate_p0, plate_p1,
-        IM_COL32(70, 58, 38, 180), Theme::ROUNDING_SM, 0, 1.0f);
+        IM_COL32(70, 58, 38, 180), Theme::ROUNDING_SM * zoom, 0, 1.0f * zoom);
 
-    ImGui::SetCursorScreenPos(ImVec2(p0.x + 12, p0.y + 18));
+    ImGui::SetCursorScreenPos(ImVec2(p0.x + 12 * zoom, p0.y + 18 * zoom));
     ImGui::PushStyleColor(ImGuiCol_Text, Theme::Gold());
     ImGui::Text("AMP");
     ImGui::PopStyleColor();
@@ -46,44 +46,44 @@ void PedalWidget::render_amp_cabinet(ImDrawList* dl, ImVec2 p0, ImVec2 p1, float
     }
     ImVec2 mn_size = ImGui::CalcTextSize(model_name);
     float mn_x = p0.x + (pedal_width - mn_size.x) * 0.5f;
-    ImGui::SetCursorScreenPos(ImVec2(mn_x, p0.y + 33));
+    ImGui::SetCursorScreenPos(ImVec2(mn_x, p0.y + 33 * zoom));
     ImGui::PushStyleColor(ImGuiCol_Text, Theme::TextPrimary());
     ImGui::Text("%s", model_name);
     ImGui::PopStyleColor();
 
-    float led_x = p1.x - 22;
-    float led_y = p0.y + 26;
-    dl->AddCircleFilled(ImVec2(led_x, led_y), 5, Theme::LED_GREEN);
-    dl->AddCircleFilled(ImVec2(led_x, led_y), 8, Theme::LED_GREEN_GLOW & 0x30FFFFFF);
+    float led_x = p1.x - 22 * zoom;
+    float led_y = p0.y + 26 * zoom;
+    dl->AddCircleFilled(ImVec2(led_x, led_y), 5 * zoom, Theme::LED_GREEN);
+    dl->AddCircleFilled(ImVec2(led_x, led_y), 8 * zoom, Theme::LED_GREEN_GLOW & 0x30FFFFFF);
 
-    float grille_top = p1.y - 100;
-    float grille_bottom = p1.y - 12;
-    float grille_left = p0.x + 12;
-    float grille_right = p1.x - 12;
+    float grille_top = p1.y - 100 * zoom;
+    float grille_bottom = p1.y - 12 * zoom;
+    float grille_left = p0.x + 12 * zoom;
+    float grille_right = p1.x - 12 * zoom;
 
     dl->AddRectFilled(
         ImVec2(grille_left, grille_top),
         ImVec2(grille_right, grille_bottom),
-        cab_grille, Theme::ROUNDING_SM);
+        cab_grille, Theme::ROUNDING_SM * zoom);
     dl->AddRect(
         ImVec2(grille_left, grille_top),
         ImVec2(grille_right, grille_bottom),
-        IM_COL32(50, 40, 28, 180), Theme::ROUNDING_SM, 0, 1.0f);
+        IM_COL32(50, 40, 28, 180), Theme::ROUNDING_SM * zoom, 0, 1.0f * zoom);
 
-    for (float gy = grille_top + 6; gy < grille_bottom - 4; gy += 5.0f) {
+    for (float gy = grille_top + 6 * zoom; gy < grille_bottom - 4 * zoom; gy += 5.0f * zoom) {
         dl->AddLine(
-            ImVec2(grille_left + 4, gy),
-            ImVec2(grille_right - 4, gy),
-            cab_grille_line, 1.0f);
+            ImVec2(grille_left + 4 * zoom, gy),
+            ImVec2(grille_right - 4 * zoom, gy),
+            cab_grille_line, 1.0f * zoom);
     }
 
     dl->AddRectFilled(
-        ImVec2(p0.x + 6, p1.y - 10),
-        ImVec2(p1.x - 6, p1.y - 6),
-        Theme::ACCENT_GOLD_DIM, 2.0f);
+        ImVec2(p0.x + 6 * zoom, p1.y - 10 * zoom),
+        ImVec2(p1.x - 6 * zoom, p1.y - 6 * zoom),
+        Theme::ACCENT_GOLD_DIM, 2.0f * zoom);
 }
 
-void PedalWidget::render_tuner_display(ImDrawList* dl, ImVec2 p0, float pedal_width) {
+void PedalWidget::render_tuner_display(ImDrawList* dl, ImVec2 p0, float pedal_width, float zoom) {
     auto* tuner = dynamic_cast<TunerPedal*>(effect_.get());
     if (tuner) {
         float cx = p0.x + pedal_width * 0.5f;
@@ -94,7 +94,7 @@ void PedalWidget::render_tuner_display(ImDrawList* dl, ImVec2 p0, float pedal_wi
         float cents = tuner->detected_cents.load(std::memory_order_relaxed);
         float freq = tuner->detected_freq.load(std::memory_order_relaxed);
 
-        float display_y = p0.y + 55;
+        float display_y = p0.y + 55 * zoom;
 
         if (has_signal && note_idx >= 0) {
             char note_buf[16];
@@ -106,7 +106,7 @@ void PedalWidget::render_tuner_display(ImDrawList* dl, ImVec2 p0, float pedal_wi
                 ImVec2(note_x, display_y),
                 Theme::TEXT_PRIMARY, note_buf);
 
-            display_y += 45;
+            display_y += 45 * zoom;
 
             char cents_buf[32];
             snprintf(cents_buf, sizeof(cents_buf), "%+.1f cents", cents);
@@ -122,30 +122,30 @@ void PedalWidget::render_tuner_display(ImDrawList* dl, ImVec2 p0, float pedal_wi
             ImGui::TextUnformatted(cents_buf);
             ImGui::PopStyleColor();
 
-            display_y += 22;
+            display_y += 22 * zoom;
 
-            float bar_w = pedal_width - 30;
-            float bar_h = 10;
-            float bar_x = p0.x + 15;
+            float bar_w = pedal_width - 30 * zoom;
+            float bar_h = 10 * zoom;
+            float bar_x = p0.x + 15 * zoom;
             float bar_y = display_y;
             dl->AddRectFilled(
                 ImVec2(bar_x, bar_y),
                 ImVec2(bar_x + bar_w, bar_y + bar_h),
-                Theme::KNOB_BG, 3.0f);
+                Theme::KNOB_BG, 3.0f * zoom);
             float center_x = bar_x + bar_w * 0.5f;
             dl->AddLine(
-                ImVec2(center_x, bar_y - 1),
-                ImVec2(center_x, bar_y + bar_h + 1),
-                Theme::TEXT_DIM, 1.5f);
+                ImVec2(center_x, bar_y - 1 * zoom),
+                ImVec2(center_x, bar_y + bar_h + 1 * zoom),
+                Theme::TEXT_DIM, 1.5f * zoom);
             float needle_norm = clamp(cents / 50.0f, -1.0f, 1.0f);
             float needle_x = center_x + needle_norm * (bar_w * 0.5f);
             ImU32 needle_col = ImGui::ColorConvertFloat4ToU32(cents_col);
             dl->AddRectFilled(
-                ImVec2(needle_x - 3, bar_y - 2),
-                ImVec2(needle_x + 3, bar_y + bar_h + 2),
-                needle_col, 2.0f);
+                ImVec2(needle_x - 3 * zoom, bar_y - 2 * zoom),
+                ImVec2(needle_x + 3 * zoom, bar_y + bar_h + 2 * zoom),
+                needle_col, 2.0f * zoom);
 
-            display_y += bar_h + 14;
+            display_y += bar_h + 14 * zoom;
 
             char freq_buf[32];
             snprintf(freq_buf, sizeof(freq_buf), "%.1f Hz", freq);
@@ -155,14 +155,14 @@ void PedalWidget::render_tuner_display(ImDrawList* dl, ImVec2 p0, float pedal_wi
             ImGui::TextUnformatted(freq_buf);
             ImGui::PopStyleColor();
 
-            display_y += 22;
+            display_y += 22 * zoom;
         } else {
             const char* no_sig = "---";
             ImVec2 ns_size = ImGui::CalcTextSize(no_sig);
             dl->AddText(ImGui::GetFont(), ImGui::GetFontSize() * 2.0f,
                 ImVec2(cx - ns_size.x * 1.5f, display_y),
                 Theme::TEXT_DIM, no_sig);
-            display_y += 45;
+            display_y += 45 * zoom;
 
             const char* waiting = "Play a note...";
             ImVec2 wt_size = ImGui::CalcTextSize(waiting);
@@ -171,10 +171,10 @@ void PedalWidget::render_tuner_display(ImDrawList* dl, ImVec2 p0, float pedal_wi
             ImGui::TextUnformatted(waiting);
             ImGui::PopStyleColor();
 
-            display_y += 22;
+            display_y += 22 * zoom;
         }
 
-        display_y += 8;
+        display_y += 8 * zoom;
         bool mute_on = effect_->params()[0].value >= 0.5f;
         const char* mute_label = mute_on ? "[MUTE ON]" : "[MUTE OFF]";
         ImVec2 ml_size = ImGui::CalcTextSize(mute_label);
@@ -202,81 +202,81 @@ void PedalWidget::render_tuner_display(ImDrawList* dl, ImVec2 p0, float pedal_wi
     }
 }
 
-void PedalWidget::render_cabinet_ir_display(ImVec2 p0, float pedal_width) {
-    auto* cab = dynamic_cast<CabinetSim*>(effect_.get());
-    if (!cab) return;
+void PedalWidget::render_ir_cabinet_display(ImVec2 p0, float pedal_width, float zoom) {
+    auto* ir_cab = dynamic_cast<CabinetSim*>(effect_.get());
+    if (ir_cab) {
+        float cx = p0.x + pedal_width * 0.5f;
+        float display_y = p0.y + 50 * zoom;
 
-    float cx = p0.x + pedal_width * 0.5f;
-    float display_y = p0.y + 50;
-
-    float btn_w = pedal_width - 30;
-    ImGui::SetCursorScreenPos(ImVec2(p0.x + 15, display_y));
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.22f, 0.20f, 0.16f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.35f, 0.30f, 0.18f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.50f, 0.42f, 0.20f, 1.0f));
-    char load_id[64];
-    snprintf(load_id, sizeof(load_id), "Load IR##cab_ir_load_%d", index_);
-    if (ImGui::Button(load_id, ImVec2(btn_w, 22))) {
-        std::string path = show_open_dialog("Load Cabinet Impulse Response",
-                                            "WAV Audio", "wav");
-        if (!path.empty()) {
-            cab->load_ir(path);
-        }
-    }
-    ImGui::PopStyleColor(3);
-
-    display_y += 28;
-
-    if (cab->has_ir()) {
-        const std::string& ir_name = cab->ir_name();
-        std::string display_name = ir_name;
-        if (display_name.size() > 20) {
-            display_name = display_name.substr(0, 17) + "...";
-        }
-        ImVec2 name_size = ImGui::CalcTextSize(display_name.c_str());
-        ImGui::SetCursorScreenPos(ImVec2(cx - name_size.x * 0.5f, display_y));
-        ImGui::PushStyleColor(ImGuiCol_Text, Theme::TextPrimary());
-        ImGui::TextUnformatted(display_name.c_str());
-        ImGui::PopStyleColor();
-
-        display_y += 18;
-
-        char dur_buf[32];
-        snprintf(dur_buf, sizeof(dur_buf), "%.1f ms", cab->ir_duration_ms());
-        ImVec2 dur_size = ImGui::CalcTextSize(dur_buf);
-        ImGui::SetCursorScreenPos(ImVec2(cx - dur_size.x * 0.5f, display_y));
-        ImGui::PushStyleColor(ImGuiCol_Text, Theme::TextSecondary());
-        ImGui::TextUnformatted(dur_buf);
-        ImGui::PopStyleColor();
-
-        display_y += 22;
-
-        ImGui::SetCursorScreenPos(ImVec2(p0.x + 15, display_y));
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.18f, 0.12f, 0.10f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.35f, 0.15f, 0.12f, 1.0f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.50f, 0.20f, 0.15f, 1.0f));
-        char clear_id[64];
-        snprintf(clear_id, sizeof(clear_id), "Clear##cab_ir_clear_%d", index_);
-        if (ImGui::Button(clear_id, ImVec2(btn_w, 20))) {
-            cab->clear_ir();
+        float btn_w = pedal_width - 30 * zoom;
+        ImGui::SetCursorScreenPos(ImVec2(p0.x + 15 * zoom, display_y));
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.22f, 0.20f, 0.16f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.35f, 0.30f, 0.18f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.50f, 0.42f, 0.20f, 1.0f));
+        char load_id[64];
+        snprintf(load_id, sizeof(load_id), "Load IR##ir_load_%d", index_);
+        if (ImGui::Button(load_id, ImVec2(btn_w, 22 * zoom))) {
+            std::string path = show_open_dialog("Load Impulse Response",
+                                               "WAV Audio", "wav");
+            if (!path.empty()) {
+                ir_cab->load_ir(path);
+            }
         }
         ImGui::PopStyleColor(3);
-    } else {
-        const char* no_ir = "No IR loaded";
-        ImVec2 ni_size = ImGui::CalcTextSize(no_ir);
-        ImGui::SetCursorScreenPos(ImVec2(cx - ni_size.x * 0.5f, display_y));
-        ImGui::PushStyleColor(ImGuiCol_Text, Theme::TextDim());
-        ImGui::TextUnformatted(no_ir);
-        ImGui::PopStyleColor();
+
+        display_y += 28 * zoom;
+
+        if (ir_cab->has_ir()) {
+            const std::string& ir_name = ir_cab->ir_name();
+            std::string display_name = ir_name;
+            if (display_name.size() > 20) {
+                display_name = display_name.substr(0, 17) + "...";
+            }
+            ImVec2 name_size = ImGui::CalcTextSize(display_name.c_str());
+            ImGui::SetCursorScreenPos(ImVec2(cx - name_size.x * 0.5f, display_y));
+            ImGui::PushStyleColor(ImGuiCol_Text, Theme::TextPrimary());
+            ImGui::TextUnformatted(display_name.c_str());
+            ImGui::PopStyleColor();
+
+            display_y += 18 * zoom;
+
+            char dur_buf[32];
+            snprintf(dur_buf, sizeof(dur_buf), "%.1f ms", ir_cab->ir_duration_ms());
+            ImVec2 dur_size = ImGui::CalcTextSize(dur_buf);
+            ImGui::SetCursorScreenPos(ImVec2(cx - dur_size.x * 0.5f, display_y));
+            ImGui::PushStyleColor(ImGuiCol_Text, Theme::TextSecondary());
+            ImGui::TextUnformatted(dur_buf);
+            ImGui::PopStyleColor();
+
+            display_y += 22 * zoom;
+
+            ImGui::SetCursorScreenPos(ImVec2(p0.x + 15 * zoom, display_y));
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.18f, 0.12f, 0.10f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.35f, 0.15f, 0.12f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.50f, 0.20f, 0.15f, 1.0f));
+            char clear_id[64];
+            snprintf(clear_id, sizeof(clear_id), "Clear##ir_clear_%d", index_);
+            if (ImGui::Button(clear_id, ImVec2(btn_w, 20 * zoom))) {
+                ir_cab->clear_ir();
+            }
+            ImGui::PopStyleColor(3);
+        } else {
+            const char* no_ir = "No IR loaded";
+            ImVec2 ni_size = ImGui::CalcTextSize(no_ir);
+            ImGui::SetCursorScreenPos(ImVec2(cx - ni_size.x * 0.5f, display_y));
+            ImGui::PushStyleColor(ImGuiCol_Text, Theme::TextDim());
+            ImGui::TextUnformatted(no_ir);
+            ImGui::PopStyleColor();
+        }
     }
 }
 
-void PedalWidget::render_looper_display(ImVec2 p0, float pedal_width) {
+void PedalWidget::render_looper_display(ImVec2 p0, float pedal_width, float zoom) {
     auto* looper = dynamic_cast<Looper*>(effect_.get());
     if (!looper) return;
 
     float cx = p0.x + pedal_width * 0.5f;
-    float display_y = p0.y + 55;
+    float display_y = p0.y + 55 * zoom;
 
     Looper::State st = looper->state();
     bool has_loop = looper->has_loop();
@@ -299,28 +299,28 @@ void PedalWidget::render_looper_display(ImVec2 p0, float pedal_width) {
     ImGui::TextUnformatted(state_label);
     ImGui::PopStyleColor();
 
-    display_y += 18;
+    display_y += 18 * zoom;
 
-    float bar_w = pedal_width - 30;
+    float bar_w = pedal_width - 30 * zoom;
     float progress = 0.0f;
     if (has_loop && loop_len > 0) {
         progress = clamp(static_cast<float>(play_pos) / static_cast<float>(loop_len), 0.0f, 1.0f);
     }
-    ImGui::SetCursorScreenPos(ImVec2(p0.x + 15, display_y));
+    ImGui::SetCursorScreenPos(ImVec2(p0.x + 15 * zoom, display_y));
     ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.12f, 0.11f, 0.10f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_PlotHistogram, state_col);
-    ImGui::ProgressBar(progress, ImVec2(bar_w, 8), "");
+    ImGui::ProgressBar(progress, ImVec2(bar_w, 8 * zoom), "");
     ImGui::PopStyleColor(2);
 
-    display_y += 16;
+    display_y += 16 * zoom;
 
     float btn_w_total = bar_w;
-    float btn_gap = 8.0f;
+    float btn_gap = 8.0f * zoom;
     float btn_w = (btn_w_total - btn_gap) * 0.5f;
-    float btn_h = 22.0f;
+    float btn_h = 22.0f * zoom;
 
     // Row 1: Record / Play
-    ImGui::SetCursorScreenPos(ImVec2(p0.x + 15, display_y));
+    ImGui::SetCursorScreenPos(ImVec2(p0.x + 15 * zoom, display_y));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.12f, 0.12f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.50f, 0.18f, 0.18f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.65f, 0.22f, 0.22f, 1.0f));
@@ -344,10 +344,10 @@ void PedalWidget::render_looper_display(ImVec2 p0, float pedal_width) {
     ImGui::PopStyleColor(3);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Toggle playback (keeps loop in memory)");
 
-    display_y += btn_h + 6;
+    display_y += btn_h + 6 * zoom;
 
     // Row 2: Overdub / Clear
-    ImGui::SetCursorScreenPos(ImVec2(p0.x + 15, display_y));
+    ImGui::SetCursorScreenPos(ImVec2(p0.x + 15 * zoom, display_y));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.30f, 0.26f, 0.10f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.40f, 0.34f, 0.12f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.52f, 0.45f, 0.15f, 1.0f));
@@ -371,12 +371,12 @@ void PedalWidget::render_looper_display(ImVec2 p0, float pedal_width) {
     ImGui::PopStyleColor(3);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Clear loop from memory");
 
-    display_y += btn_h + 8;
+    display_y += btn_h + 8 * zoom;
 
     // Loop Level slider (param 0)
     if (!effect_->params().empty()) {
         float& level = effect_->params()[0].value;
-        ImGui::SetCursorScreenPos(ImVec2(p0.x + 15, display_y));
+        ImGui::SetCursorScreenPos(ImVec2(p0.x + 15 * zoom, display_y));
         ImGui::SetNextItemWidth(bar_w);
         char slider_id[64];
         std::snprintf(slider_id, sizeof(slider_id), "##looper_level_%d", index_);
