@@ -43,7 +43,6 @@ int AudioGraph::add_link(int source_pin_id, int dest_pin_id) {
             return existing_link.id; 
         }
     }
-  }
 
     // Enforce that each input pin can only have ONE incoming link
     for (const auto& existing_link : links_) {
@@ -52,26 +51,25 @@ int AudioGraph::add_link(int source_pin_id, int dest_pin_id) {
             return -1; // Pin already in use!
         }
     }
-  }
 
-  // Enforce that ALL pins can only have ONE outgoing link
-  int source_node_id = get_node_from_pin(source_pin_id);
-  if (source_node_id != -1) {
-    const DSPNode *src_node = find_node(source_node_id);
-    if (src_node) {
-      // Count existing outgoing links from this specific pin
-      int out_count = 0;
-      for (const auto &existing_link : links_) {
-        if (existing_link.source_pin_id == source_pin_id) {
-          printf("add_link failed: Output pin %d already has an outgoing connection!\n", source_pin_id);
-          out_count++;
+    // Enforce that ALL pins can only have ONE outgoing link
+    int source_node_id = get_node_from_pin(source_pin_id);
+    if (source_node_id != -1) {
+        const DSPNode *src_node = find_node(source_node_id);
+        if (src_node) {
+            // Count existing outgoing links from this specific pin
+            int out_count = 0;
+            for (const auto &existing_link : links_) {
+                if (existing_link.source_pin_id == source_pin_id) {
+                    printf("add_link failed: Output pin %d already has an outgoing connection!\n", source_pin_id);
+                    out_count++;
+                }
+            }
+            if (out_count >= 1) {
+                return -1; // Each output pin can only have 1 outgoing connection!
+            }
         }
-      }
-      if (out_count >= 1) {
-        return -1; // Each output pin can only have 1 outgoing connection!
-      }
     }
-  }
 
     GraphLink link;
     link.id = next_id_++; // Uses your unified member counter
@@ -89,7 +87,7 @@ int AudioGraph::add_link(int source_pin_id, int dest_pin_id) {
         return -1; 
     }
 
-  return link.id;
+    return link.id;
 }
 
 void AudioGraph::set_node_as_input(int node_id, bool is_input) {
