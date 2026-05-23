@@ -1516,3 +1516,19 @@ TEST(phaser_depth_zero_freezes_sweep) {
     for (int i = 0; i < 512; ++i)
         ASSERT_NEAR(buf_a[i], buf_b[i], 1e-5f);
 }
+
+// Covers: Feedback=0.0 — x = dry + 0*feedback_state_. The APF cascade
+// receives only dry input with no resonance loop; must stay finite.
+TEST(phaser_feedback_zero_stays_finite) {
+    Phaser ph;
+    ph.set_sample_rate(48000);
+    ph.reset();
+    ph.params()[3].value = 0.0f;  // Feedback = 0
+
+    float buf[512];
+    fill_sine(buf, 512, 440.0f, 48000);
+    ph.process(buf, 512);
+
+    ASSERT_TRUE(buffer_is_finite(buf, 512));
+    ASSERT_GT(rms(buf, 512), 0.001f);
+}
