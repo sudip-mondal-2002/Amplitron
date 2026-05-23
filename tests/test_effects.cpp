@@ -1348,3 +1348,21 @@ TEST(flanger_process_stereo_disabled_early_return) {
         ASSERT_NEAR(right[i], right_copy[i], 1e-6f);
     }
 }
+
+// Covers: negative feedback branch — params()[3] range is [-0.95, 0.95].
+// With feedback < 0 the write formula becomes clamp(dry - |fb|*delayed, -2, 2),
+// subtracting the delayed signal to create a hollow/phasey character.
+// Must remain finite even at deep negative values.
+TEST(flanger_negative_feedback_stays_finite) {
+    Flanger fl;
+    fl.set_sample_rate(48000);
+    fl.reset();
+    fl.params()[3].value = -0.9f;  // deep negative feedback
+
+    float buf[512];
+    fill_sine(buf, 512, 440.0f, 48000);
+    fl.process(buf, 512);
+
+    ASSERT_TRUE(buffer_is_finite(buf, 512));
+    ASSERT_GT(rms(buf, 512), 0.001f);
+}
