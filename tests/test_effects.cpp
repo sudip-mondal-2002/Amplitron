@@ -1532,3 +1532,19 @@ TEST(phaser_feedback_zero_stays_finite) {
     ASSERT_TRUE(buffer_is_finite(buf, 512));
     ASSERT_GT(rms(buf, 512), 0.001f);
 }
+
+// Covers: Feedback=0.95 — maximum resonance path. feedback_state_ is fed
+// back at full strength into each subsequent sample; must not produce NaN/Inf.
+TEST(phaser_feedback_max_stays_finite) {
+    Phaser ph;
+    ph.set_sample_rate(48000);
+    ph.reset();
+    ph.params()[3].value = 0.95f;  // Feedback = max
+
+    float buf[512];
+    fill_sine(buf, 512, 440.0f, 48000);
+    ph.process(buf, 512);
+
+    ASSERT_TRUE(buffer_is_finite(buf, 512));
+    ASSERT_GT(rms(buf, 512), 0.001f);
+}
