@@ -27,6 +27,7 @@ public:
     void set_sample_rate(int sample_rate) override;
     void reset() override;
     const char* name() const override { return "Octaver"; }
+    const char* type_id() const override { return "Octaver"; }
     std::vector<EffectParam>& params() override { return params_; }
 
 private:

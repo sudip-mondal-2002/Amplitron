@@ -477,19 +477,46 @@
             .nav-links a:hover {
                 color: var(--gold);
             }
-            /* Mobile responsive */
-            @media (max-width: 768px) {
-                nav {
-                    padding: 0 24px;
-                    height: 70px;
-                }
-                .nav-logo {
-                    font-size: 20px;
-                }
-                .nav-links {
-                    display: none;
-                }
+            .hamburger {
+                display: none;
+                background: none;
+                border: none;
+                color: var(--gold);
+                font-size: 2rem;
+                cursor: pointer;
             }
+            /* Mobile responsive */
+           @media (max-width: 768px) {
+
+            .hamburger {
+                display: block;
+            }
+
+            .nav-links {
+                position: absolute;
+                top: 70px;
+                right: 0;
+                width: 100%;
+                background: rgba(28, 26, 24, 0.98);
+
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 24px;
+
+                padding: 30px 0;
+
+                transform: translateY(-200%);
+                opacity: 0;
+
+                transition: all 0.35s ease;
+            }
+
+            .nav-links.active {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
          .product-hunt-wrapper {
     margin-top: 18px;
     display: flex;
@@ -532,6 +559,8 @@
     box-shadow: 0 0 18px rgba(212, 175, 55, 0.12);
 }
         </style>
+    <link rel="stylesheet" href="feature_style.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
         <script>
             !(function (t, e) {
                 var o, n, p, r
@@ -606,7 +635,8 @@
         <!-- Sticky navbar -->
         <nav id="navbar">
             <div class="nav-logo">AMPLITRON</div>
-            <div class="nav-links">
+            <button class="hamburger" id="hamburger">☰</button>
+            <div class="nav-links" id="navLinks">
                 <a href="#features">Features</a>
                 <a href="#downloads">Downloads</a>
                 <a href="#requirements">Requirements</a>
@@ -673,218 +703,86 @@
                 </p>
             </div>
 
-            <div class="features" id="features" style="margin: 40px 0">
-                <h2
-                    style="
-                        font-family: &quot;Cinzel&quot;, serif;
-                        font-size: var(--text-h2);
-                        color: var(--gold);
-                        text-align: left;
-                        margin-bottom: 20px;
-                    "
-                >
-                    Transform Your Guitar Sound
-                </h2>
-                <div
-                    style="
-                        display: grid;
-                        grid-template-columns: repeat(
-                            auto-fit,
-                            minmax(300px, 1fr)
-                        );
-                        gap: 20px;
-                    "
-                >
-                    <div>
-                        <h3
-                            style="
-                                font-family: &quot;Cinzel&quot;, serif;
-                                font-size: 1.1rem;
-                                color: var(--gold);
-                                border-left: 2px solid rgba(200, 168, 74, 0.5);
-                                padding-left: 10px;
-                            "
-                        >
-                            Real-Time Processing
-                        </h3>
-                        <hr
-                            style="
-                                border: none;
-                                border-top: 1px solid rgba(255, 215, 0, 0.2);
-                                margin: 10px 0;
-                            "
-                        />
-                        <p
-                            style="
-                                font-family: &quot;DM Sans&quot;, sans-serif;
-                                font-size: 1rem;
-                                color: var(--text-primary);
-                            "
-                        >
-                            Ultra-low latency audio engine with configurable
-                            buffer sizes. Play through your computer with no
-                            noticeable delay.
-                        </p>
-                    </div>
-                    <div>
-                        <h3
-                            style="
-                                font-family: &quot;Cinzel&quot;, serif;
-                                font-size: 1.1rem;
-                                color: var(--gold);
-                                border-left: 2px solid rgba(200, 168, 74, 0.5);
-                                padding-left: 10px;
-                            "
-                        >
-                            12 Studio Effects
-                        </h3>
-                        <hr
-                            style="
-                                border: none;
-                                border-top: 1px solid rgba(255, 215, 0, 0.2);
-                                margin: 10px 0;
-                            "
-                        />
-                        <p
-                            style="
-                                font-family: &quot;DM Sans&quot;, sans-serif;
-                                font-size: 1rem;
-                                color: var(--text-primary);
-                            "
-                        >
-                            Noise Gate, Compressor, Overdrive, Distortion, EQ,
-                            Amp Simulator (4 models), Cabinet Sim, Chorus,
-                            Delay, Reverb, Wah (manual & auto-wah), and
-                            Chromatic Tuner.
-                        </p>
-                    </div>
-                    <div>
-                        <h3
-                            style="
-                                font-family: &quot;Cinzel&quot;, serif;
-                                font-size: 1.1rem;
-                                color: var(--gold);
-                                border-left: 2px solid rgba(255, 215, 0, 0.5);
-                                padding-left: 10px;
-                            "
-                        >
-                            Preset System
-                        </h3>
-                        <hr
-                            style="
-                                border: none;
-                                border-top: 1px solid rgba(255, 215, 0, 0.2);
-                                margin: 10px 0;
-                            "
-                        />
-                        <p
-                            style="
-                                font-family: &quot;DM Sans&quot;, sans-serif;
-                                font-size: 1rem;
-                                color: var(--text-primary);
-                            "
-                        >
-                            Save and load your favorite tones. Share presets
-                            with other musicians. Build your signature sound
-                            library.
-                        </p>
-                    </div>
-                    <div>
-                        <h3
-                            style="
-                                font-family: &quot;Cinzel&quot;, serif;
-                                font-size: 1.1rem;
-                                color: var(--gold);
-                                border-left: 2px solid rgba(255, 215, 0, 0.5);
-                                padding-left: 10px;
-                            "
-                        >
-                            WAV Recording
-                        </h3>
-                        <hr
-                            style="
-                                border: none;
-                                border-top: 1px solid rgba(255, 215, 0, 0.2);
-                                margin: 10px 0;
-                            "
-                        />
-                        <p
-                            style="
-                                font-family: &quot;DM Sans&quot;, sans-serif;
-                                font-size: 1rem;
-                                color: var(--text-primary);
-                            "
-                        >
-                            Record your processed guitar output directly to WAV
-                            files. Capture your performances with the full
-                            effect chain applied.
-                        </p>
-                    </div>
-                    <div>
-                        <h3
-                            style="
-                                font-family: &quot;Cinzel&quot;, serif;
-                                font-size: 1.1rem;
-                                color: var(--gold);
-                                border-left: 2px solid rgba(255, 215, 0, 0.5);
-                                padding-left: 10px;
-                            "
-                        >
-                            Beautiful Interface
-                        </h3>
-                        <hr
-                            style="
-                                border: none;
-                                border-top: 1px solid rgba(255, 215, 0, 0.2);
-                                margin: 10px 0;
-                            "
-                        />
-                        <p
-                            style="
-                                font-family: &quot;DM Sans&quot;, sans-serif;
-                                font-size: 1rem;
-                                color: var(--text-primary);
-                            "
-                        >
-                            Intuitive pedal board UI with visual feedback.
-                            Drag-and-drop effect ordering. Real-time level
-                            metering.
-                        </p>
-                    </div>
-                    <div>
-                        <h3
-                            style="
-                                font-family: &quot;Cinzel&quot;, serif;
-                                font-size: 1.1rem;
-                                color: var(--gold);
-                                border-left: 2px solid rgba(255, 215, 0, 0.5);
-                                padding-left: 10px;
-                            "
-                        >
-                            Cross-Platform
-                        </h3>
-                        <hr
-                            style="
-                                border: none;
-                                border-top: 1px solid rgba(255, 215, 0, 0.2);
-                                margin: 10px 0;
-                            "
-                        />
-                        <p
-                            style="
-                                font-family: &quot;DM Sans&quot;, sans-serif;
-                                font-size: 1rem;
-                                color: var(--text-primary);
-                            "
-                        >
-                            Native builds for Windows, macOS, and Linux, plus a
-                            browser-based web demo via WebAssembly. Optimized
-                            for each platform.
-                        </p>
-                    </div>
-                    <!-- Add remaining features here following the same structure -->
-                </div>
+        <section class="features-section" id="features">
+            <div class="section-header">
+                <h1>Transform Your Guitar Sound</h1>
             </div>
+
+            <div class="features-grid">
+                <div class="features-card">
+                    <div class="icon-box">
+                        <span class="material-symbols-outlined">headphones</span>
+                    </div>
+
+                    <h3>Real-Time Processing</h3>
+
+                    <p>
+                        Ultra-low latency audio engine with configurable buffer sizes. Play through your computer with no noticeable delay.
+                    </p>
+                </div>
+
+                <div class="features-card">
+                    <div class="icon-box">
+                        <span class="material-symbols-outlined">favorite</span>
+                    </div>
+
+                    <h3>12 Studio Effects</h3>
+
+                    <p>
+                        Noise Gate, Compressor, Overdrive, Distortion, EQ, Amp Simulator (4 models), Cabinet Sim, Chorus, Delay, Reverb, Wah (manual & auto-wah), and Chromatic Tuner.
+                    </p>
+                </div>
+
+                <div class="features-card">
+                    <div class="icon-box">
+                        <span class="material-symbols-outlined">save</span>
+                    </div>
+
+                    <h3>Preset System</h3>
+
+                    <p>
+                        Save and load your favorite tones. Share presets with other musicians. Build your signature sound library.
+                    </p>
+                </div>
+
+                <div class="features-card">
+                    <div class="icon-box">
+                        <span class="material-symbols-outlined">music_note_2</span>
+                    </div>
+
+                    <h3>WAV Recording</h3>
+
+                    <p>
+                        Record your processed guitar output directly to WAV files. Capture your performances with the full effect chain applied.
+                    </p>
+                </div>
+
+                <div class="features-card">
+                    <div class="icon-box">
+                        <span class="material-symbols-outlined">design_services</span>
+                    </div>
+
+                    <h3>Beautiful Interface</h3>
+
+                    <p>
+                        Intuitive pedal board UI with visual feedback. Drag-and-drop effect ordering. Real-time level metering.
+                    </p>
+                </div>
+
+                <div class="features-card">
+                    <div class="icon-box">
+                        <span class="material-symbols-outlined">devices</span>
+                    </div>
+
+                    <h3>Cross-Platform</h3>
+
+                    <p>
+                        Native builds for Windows, macOS, and Linux, plus a browser-based web demo via WebAssembly. Optimized for each platform.
+                    </p>
+                </div>
+
+            </div>            
+          </section>
 
             <div class="hero">
                 <h2>🎬 First Look & Demo</h2>
@@ -1279,5 +1177,25 @@
                 }
             }
         </style>
+        <script>
+        document.addEventListener("DOMContentLoaded", () => {
+
+            const hamburger = document.getElementById("hamburger");
+            const navLinks = document.getElementById("navLinks");
+
+            hamburger.addEventListener("click", () => {
+
+                navLinks.classList.toggle("active");
+
+                if (navLinks.classList.contains("active")) {
+                    hamburger.innerHTML = "✕";
+                } else {
+                    hamburger.innerHTML = "☰";
+                }
+
+            });
+
+        });
+        </script>
     </body>
 </html>
