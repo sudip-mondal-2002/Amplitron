@@ -30,6 +30,7 @@ TEST(ConvolutionEngine_ResetClearsState) {
 
     for (float s : silent) {
         ASSERT_TRUE(std::isfinite(s));
+        ASSERT_NEAR(s, 0.0f, 1e-4f);
     }
 }
 

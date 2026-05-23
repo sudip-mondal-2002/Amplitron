@@ -4,6 +4,7 @@
 #include <fstream>
 #include <cmath>
 #include <cstdio>
+#include <cstdint>
 
 using namespace Amplitron;
 using namespace TestFramework;

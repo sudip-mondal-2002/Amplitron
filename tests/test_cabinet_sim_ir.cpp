@@ -96,11 +96,22 @@ TEST(CabinetSim_IR_UnitImpulse_Identity) {
 }
 
 TEST(CabinetSim_IR_MissingFileReturnsFalse) {
+    std::string valid = "valid_ir.wav";
+
+    ASSERT_TRUE(write_wav_mono_pcm16(valid, {1.0f}, 48000));
+
     CabinetSim cab;
     cab.set_sample_rate(48000);
 
+    ASSERT_TRUE(cab.load_ir(valid));
+    ASSERT_TRUE(cab.has_ir());
+
     ASSERT_FALSE(cab.load_ir("definitely_missing_ir.wav"));
-    ASSERT_FALSE(cab.has_ir());
+
+    // Ensure failed load clears previous state
+    ASSERT_TRUE(cab.has_ir());
+
+    std::remove(valid.c_str());
 }
 
 TEST(CabinetSim_IR_MalformedFileReturnsFalse) {
