@@ -1491,3 +1491,28 @@ TEST(phaser_process_stereo_disabled_early_return) {
         ASSERT_NEAR(right[i], right_copy[i], 1e-6f);
     }
 }
+
+// Covers: Depth=0.0 — fc = 200*exp(lfo * 0 * log_ratio) = 200 Hz constant.
+// LFO has no effect, so two identical instances with identical input must
+// produce identical output even at a fast rate that would normally diverge.
+TEST(phaser_depth_zero_freezes_sweep) {
+    Phaser p_a, p_b;
+    p_a.set_sample_rate(48000);
+    p_b.set_sample_rate(48000);
+    p_a.reset();
+    p_b.reset();
+    p_a.params()[1].value = 0.0f;  // Depth = 0
+    p_b.params()[1].value = 0.0f;
+    p_a.params()[0].value = 5.0f;  // fast rate — would diverge if LFO were active
+    p_b.params()[0].value = 5.0f;
+
+    float buf_a[512], buf_b[512];
+    fill_sine(buf_a, 512, 440.0f, 48000);
+    std::memcpy(buf_b, buf_a, sizeof(buf_a));
+
+    p_a.process(buf_a, 512);
+    p_b.process(buf_b, 512);
+
+    for (int i = 0; i < 512; ++i)
+        ASSERT_NEAR(buf_a[i], buf_b[i], 1e-5f);
+}
