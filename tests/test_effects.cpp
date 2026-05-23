@@ -1198,3 +1198,30 @@ TEST(chorus_level_zero_passes_input_unchanged) {
     for (int i = 0; i < 512; ++i)
         ASSERT_NEAR(buf[i], ref[i], 1e-5f);
 }
+
+// Covers: Level=1.0 code path — buffer[i] = dry*0.5 + delayed*1.0.
+// The blended delayed signal must visibly alter the output relative to dry:
+// measured by the RMS of (output - input) exceeding a threshold.
+TEST(chorus_level_one_fully_wet) {
+    Chorus ch;
+    ch.set_sample_rate(48000);
+    ch.reset();
+    ch.params()[2].value = 1.0f;  // Level = 1 (full wet blend)
+
+    float buf[512], ref[512];
+    fill_sine(buf, 512, 440.0f, 48000);
+    for (int i = 0; i < 512; ++i) ref[i] = buf[i];
+
+    ch.process(buf, 512);
+
+    ASSERT_TRUE(buffer_is_finite(buf, 512));
+
+    // Compute RMS of the difference: the wet delayed tap must have changed the output
+    float diff_rms = 0.0f;
+    for (int i = 0; i < 512; ++i) {
+        float d = buf[i] - ref[i];
+        diff_rms += d * d;
+    }
+    diff_rms = std::sqrt(diff_rms / 512);
+    ASSERT_GT(diff_rms, 0.01f);
+}
