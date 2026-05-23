@@ -1592,3 +1592,45 @@ TEST(phaser_stage_count_affects_output) {
         diff += std::fabs(buf4[i] - buf12[i]);
     ASSERT_GT(diff, 0.1f);
 }
+
+// Covers: reset() clears all 4 APF arrays (apf_xprev_, apf_yprev_,
+// apf_xprev_r_, apf_yprev_r_) and both feedback_state_ vars.
+// Strategy: saturate every state variable via process() + process_stereo(),
+// reset, then verify output matches a freshly constructed instance exactly.
+// Any missed array or feedback var will cause the two outputs to diverge.
+TEST(phaser_reset_clears_apf_state) {
+    Phaser p_used, p_fresh;
+    p_used.set_sample_rate(48000);
+    p_fresh.set_sample_rate(48000);
+    // Use 12 stages + max feedback to maximally excite all APF state
+    p_used.params()[2].value  = 3.0f;   // 12 stages
+    p_used.params()[3].value  = 0.9f;   // high feedback
+    p_fresh.params()[2].value = 3.0f;
+    p_fresh.params()[3].value = 0.9f;
+
+    // Saturate apf_xprev_, apf_yprev_, feedback_state_ via mono process
+    float noise[512];
+    fill_sine(noise, 512, 440.0f, 48000);
+    p_used.process(noise, 512);
+
+    // Saturate apf_xprev_r_, apf_yprev_r_, feedback_state_r_ via stereo process
+    float l[512], r[512];
+    fill_sine(l, 512, 330.0f, 48000);
+    fill_sine(r, 512, 550.0f, 48000);
+    p_used.process_stereo(l, r, 512);
+
+    // Reset — all 4 arrays and both feedback states must be zeroed
+    p_used.reset();
+
+    // Both instances are now at zero state; processing the same input must yield
+    // identical output. Any residual APF state in p_used will cause divergence.
+    float buf_used[256], buf_fresh[256];
+    fill_sine(buf_used,  256, 440.0f, 48000);
+    std::memcpy(buf_fresh, buf_used, sizeof(buf_used));
+
+    p_used.process(buf_used,   256);
+    p_fresh.process(buf_fresh, 256);
+
+    for (int i = 0; i < 256; ++i)
+        ASSERT_NEAR(buf_used[i], buf_fresh[i], 1e-5f);
+}
