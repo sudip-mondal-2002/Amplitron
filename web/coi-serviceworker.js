@@ -73,13 +73,27 @@ if (typeof window === 'undefined') {
       return;
     }
     
-    const existingRegistration = await navigator.serviceWorker.getRegistration(); 
-    if (existingRegistration) {
-      console.log("COOP/COEP Service Worker already registered."); 
-      return;
-    }
-    const registration = await navigator.serviceWorker
-      .register( window.document.currentScript.src )
+    const scriptUrl = window.document.currentScript?.src;
+
+if (!scriptUrl) {
+  console.warn("Unable to determine current service worker script URL.");
+  return;
+}
+
+const existingRegistration = await navigator.serviceWorker.getRegistration();
+
+const existingScriptUrl =
+  existingRegistration?.active?.scriptURL ??
+  existingRegistration?.waiting?.scriptURL ??
+  existingRegistration?.installing?.scriptURL;
+
+if (existingScriptUrl === scriptUrl) {
+  console.log("COOP/COEP Service Worker already registered.");
+  return;
+}
+
+const registration = await navigator.serviceWorker
+      .register(scriptUrl)
       .catch((e) =>
         console.error("COOP/COEP Service Worker failed to register:", e)
       );
@@ -89,23 +103,26 @@ if (typeof window === 'undefined') {
       if (registration.installing) {
         const sw = registration.installing || registration.waiting;
         await new Promise((resolve) => {
-          if (sw) { 
-            await new Promise((resolve) => { 
-              sw.addEventListener("statechange", (e) => { 
-                if (e.target.state === "activated") { 
-                  resolve(); 
+          if (sw) {
+            await new Promise((resolve) => {
+              // Resolve immediately if already activated
+              if (sw.state === "activated") {
+                resolve();
+                return;
+              }
+              const onStateChange = (e) => {
+                if (e.target.state === "activated") {
+                  sw.removeEventListener("statechange", onStateChange);
+                  resolve();
                 }
-              }); 
-            }); 
-          }
+              };
+              sw.addEventListener("statechange", onStateChange);
+            });
+}
         });
       }
       const RELOAD_KEY = "coiReloaded";
-      if (
-        !navigator.webdriver && 
-        !sessionStorage.getItem(RELOAD_KEY) && 
-        navigator.serviceWorker.controller
-      ) {
+      if (!sessionStorage.getItem(RELOAD_KEY)) {
         sessionStorage.setItem(RELOAD_KEY, "true");
         window.location.reload();
       }
