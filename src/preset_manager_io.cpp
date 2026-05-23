@@ -53,7 +53,7 @@ bool PresetManager::save_preset(const std::string& filepath,
 
     for (auto& fx : engine.effects()) {
         PresetData::EffectData fd;
-        fd.type = fx->name();
+        fd.type = fx->type_id();
         fd.enabled = fx->is_enabled();
         fd.mix = fx->get_mix();
         for (auto& p : fx->params()) {
@@ -96,14 +96,12 @@ bool PresetManager::load_preset(const std::string& filepath,
         return false;
     }
 
-    auto& effects = engine.effects();
-    while (!effects.empty()) {
-        engine.remove_effect(static_cast<int>(effects.size()) - 1);
-    }
+    engine.clear_effects();
 
     engine.set_input_gain(preset.input_gain);
     engine.set_output_gain(preset.output_gain);
 
+    std::vector<std::shared_ptr<Effect>> loaded_effects;
     for (auto& fd : preset.effects) {
         auto fx = EffectFactory::instance().create(fd.type);
         if (!fx) {
@@ -155,8 +153,10 @@ bool PresetManager::load_preset(const std::string& filepath,
             }
         }
 
-        engine.add_effect(fx);
+        loaded_effects.push_back(fx);
     }
+
+    engine.add_initial_effects(loaded_effects);
 
     if (midi_manager) {
         midi_manager->clear_mappings();

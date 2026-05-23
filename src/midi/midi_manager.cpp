@@ -1,5 +1,7 @@
 #include "midi/midi_manager.h"
+#ifndef __EMSCRIPTEN__
 #include <rtmidi/RtMidi.h>
+#endif
 
 #include <iostream>
 
@@ -19,6 +21,18 @@ MidiManager::~MidiManager() {
 // RtMidi callback — runs on RtMidi's internal thread, must be lock-free
 // ---------------------------------------------------------------------------
 
+#ifdef __EMSCRIPTEN__
+void MidiManager::midi_callback(double /*timestamp*/,
+                                std::vector<unsigned char>* /*message*/,
+                                void* /*user_data*/) {
+}
+
+bool MidiManager::initialize() { return true; }
+void MidiManager::shutdown() { close_port(); }
+std::vector<std::string> MidiManager::get_available_ports() const { return {}; }
+bool MidiManager::open_port(int /*port_index*/) { return false; }
+void MidiManager::close_port() { current_port_ = -1; current_port_name_.clear(); }
+#else
 void MidiManager::midi_callback(double /*timestamp*/,
                                 std::vector<unsigned char>* message,
                                 void* user_data) {
@@ -127,5 +141,6 @@ void MidiManager::close_port() {
     current_port_ = -1;
     current_port_name_.clear();
 }
+#endif
 
 } // namespace Amplitron

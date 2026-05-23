@@ -48,6 +48,46 @@ static void em_main_loop() {
         emscripten_cancel_main_loop();
     }
 }
+
+extern "C" EMSCRIPTEN_KEEPALIVE void on_midi_cc(int channel, int cc, int value) {
+    // Validate MIDI ranges before processing
+    if (!g_gui) {
+        emscripten_log(EM_LOG_WARN, "[MIDI] GUI not initialized, dropping event");
+        return;
+    }
+    
+    // Range validation (standard MIDI)
+    if (channel < 0 || channel > 15) {
+        emscripten_log(EM_LOG_DEBUG, "[MIDI] Invalid channel: %d", channel);
+        return;
+    }
+    if (cc < 0 || cc > 127) {
+        emscripten_log(EM_LOG_DEBUG, "[MIDI] Invalid CC number: %d", cc);
+        return;
+    }
+    if (value < 0 || value > 127) {
+        emscripten_log(EM_LOG_DEBUG, "[MIDI] Invalid CC value: %d", value);
+        return;
+    }
+    
+    // Create MIDI event
+    Amplitron::MidiEvent event;
+    event.status = static_cast<uint8_t>(0xB0 | (channel & 0x0F));  // CC message
+    event.data1 = static_cast<uint8_t>(cc);
+    event.data2 = static_cast<uint8_t>(value);
+    event.pad = 0;
+    
+    // Inject into MIDI queue
+    g_gui->midi_manager().inject_event(event);
+    
+    emscripten_log(EM_LOG_DEBUG, "[MIDI] CC %d = %d on channel %d", cc, value, channel);
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE void on_midi_device_connected(const char* device_name) {
+    if (!g_gui || !device_name) return;
+    
+    emscripten_log(EM_LOG_INFO, "[MIDI] Device connected: %s", device_name);
+}
 #endif
 
 void signal_handler(int /*signal*/) {
@@ -127,7 +167,10 @@ int main(int argc, char* argv[]) {
 #endif
 
     // Cleanup
-    sessionManager.clearSession();
+    std::cout << "Shutting down..." << std::endl;
+#ifdef __EMSCRIPTEN__
+    g_gui = nullptr;
+#endif
     gui.shutdown();
     engine.shutdown();
 

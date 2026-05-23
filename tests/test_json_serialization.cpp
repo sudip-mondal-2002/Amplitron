@@ -224,6 +224,13 @@ TEST(json_roundtrip_via_file) {
     ASSERT_NEAR(engine.get_input_gain(),  0.75f, 0.01f);
     ASSERT_NEAR(engine.get_output_gain(), 0.85f, 0.01f);
 
+    // Verify the legacy linear preset correctly wired the AudioGraph!
+    const auto& graph = engine.graph();
+    ASSERT_EQ(graph.get_nodes().size(), 3u); // Input -> Noise Gate -> Overdrive
+    ASSERT_EQ(graph.get_links().size(), 2u);
+    ASSERT_TRUE(graph.get_nodes().front().is_graph_input);
+    ASSERT_TRUE(graph.get_nodes().back().is_graph_output);
+
     std::remove(path.c_str());
     engine.shutdown();
 }

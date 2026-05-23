@@ -23,6 +23,7 @@ public:
     void set_sample_rate(int sample_rate) override;
     void reset() override;
     const char* name() const override { return "Cabinet"; }
+    const char* type_id() const override { return "Cabinet"; }
     std::vector<EffectParam>& params() override { return params_; }
 
     // --- IR management (called from GUI thread) ---

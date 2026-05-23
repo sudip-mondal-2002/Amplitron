@@ -18,6 +18,7 @@ public:
     void set_transport_state(float bpm) override;
     void reset() override;
     const char* name() const override { return "Delay"; }
+    const char* type_id() const override { return "Delay"; }
     std::vector<EffectParam>& params() override { return params_; }
 
 private:
