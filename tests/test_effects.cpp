@@ -1301,3 +1301,27 @@ TEST(chorus_parameters_have_valid_ranges) {
         ASSERT_TRUE(param.value      <= param.max_val);
     }
 }
+
+// ============================================================
+// Flanger additional coverage tests (issue #187)
+// ============================================================
+
+// Covers: process_stereo() — entire path never exercised.
+// Exercises delay_buffer_r_, write_pos_r_, and the 180° LFO offset
+// (lfo_phase_ + 0.5) used for the right channel.
+TEST(flanger_process_stereo_produces_finite_output) {
+    Flanger fl;
+    fl.set_sample_rate(48000);
+    fl.reset();
+
+    float left[512], right[512];
+    fill_sine(left,  512, 440.0f, 48000);
+    fill_sine(right, 512, 330.0f, 48000);
+
+    fl.process_stereo(left, right, 512);
+
+    ASSERT_TRUE(buffer_is_finite(left,  512));
+    ASSERT_TRUE(buffer_is_finite(right, 512));
+    ASSERT_GT(rms(left,  512), 0.001f);
+    ASSERT_GT(rms(right, 512), 0.001f);
+}
