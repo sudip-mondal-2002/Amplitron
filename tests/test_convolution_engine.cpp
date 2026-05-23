@@ -74,3 +74,58 @@ TEST(ConvolutionEngine_OverlapAddConsistency) {
         ASSERT_TRUE(std::isfinite(s));
     }
 }
+
+TEST(ConvolutionEngine_ClearKernel) {
+    std::vector<float> ir = {1.0f};
+
+    auto kernel =
+        std::make_shared<ConvolutionKernel>(ir, 256);
+
+    ConvolutionEngine conv;
+
+    conv.set_kernel(kernel);
+
+    ASSERT_TRUE(conv.has_kernel());
+
+    conv.set_kernel(nullptr);
+
+    ASSERT_FALSE(conv.has_kernel());
+}
+
+TEST(ConvolutionEngine_SmallBlockProcessing) {
+    std::vector<float> ir = {1.0f, 0.5f};
+
+    auto kernel =
+        std::make_shared<ConvolutionKernel>(ir, 64);
+
+    ConvolutionEngine conv;
+
+    conv.set_kernel(kernel);
+
+    std::vector<float> buffer(32, 1.0f);
+
+    conv.process(buffer.data(), 32);
+
+    for (float s : buffer) {
+        ASSERT_TRUE(std::isfinite(s));
+    }
+}
+
+TEST(ConvolutionEngine_ZeroInputRemainsSilent) {
+    std::vector<float> ir = {1.0f, 0.5f};
+
+    auto kernel =
+        std::make_shared<ConvolutionKernel>(ir, 128);
+
+    ConvolutionEngine conv;
+
+    conv.set_kernel(kernel);
+
+    std::vector<float> buffer(128, 0.0f);
+
+    conv.process(buffer.data(), 128);
+
+    for (float s : buffer) {
+        ASSERT_NEAR(s, 0.0f, 1e-5f);
+    }
+}

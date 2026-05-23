@@ -101,3 +101,42 @@ TEST(WavLoader_ResampleLinearChangesLength) {
     ASSERT_GT(static_cast<int>(output.size()),
               static_cast<int>(input.size()));
 }
+
+TEST(WavLoader_ResampleLinearUpsample) {
+    std::vector<float> input(441);
+
+    for (size_t i = 0; i < input.size(); ++i) {
+        input[i] = std::sin(
+            static_cast<float>(i) * 0.01f);
+    }
+
+    auto output =
+        resample_linear(input, 44100, 48000);
+
+    ASSERT_FALSE(output.empty());
+
+    ASSERT_TRUE(
+        output.size() > input.size());
+
+    for (float s : output) {
+        ASSERT_TRUE(std::isfinite(s));
+    }
+}
+
+TEST(WavLoader_MaxLengthLimit) {
+    const std::string path = "limit_test.wav";
+
+    std::vector<float> samples(4096, 0.25f);
+
+    ASSERT_TRUE(
+        write_wav_mono_pcm16(path, samples, 48000));
+
+    WavData wav =
+        load_wav_file(path, 48000, 512);
+
+    ASSERT_TRUE(
+        static_cast<int>(wav.samples.size()),
+        512);
+
+    std::remove(path.c_str());
+}

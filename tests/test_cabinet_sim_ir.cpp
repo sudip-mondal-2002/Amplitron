@@ -267,3 +267,42 @@ TEST(CabinetSim_SetSampleRate_ReloadsIR) {
 
     std::remove(path.c_str());
 }
+
+TEST(CabinetSim_ClearIRRemovesState) {
+    std::string path = "clear_ir.wav";
+
+    ASSERT_TRUE(
+        write_wav_mono_pcm16(path, {1.0f}, 48000));
+
+    CabinetSim cab;
+
+    cab.set_sample_rate(48000);
+
+    ASSERT_TRUE(cab.load_ir(path));
+
+    ASSERT_TRUE(cab.has_ir());
+
+    cab.clear_ir();
+
+    ASSERT_FALSE(cab.has_ir());
+
+    std::remove(path.c_str());
+}
+
+TEST(CabinetSim_DisabledProcessPassthrough) {
+    CabinetSim cab;
+
+    cab.set_enabled(false);
+
+    float buf[128];
+
+    for (int i = 0; i < 128; ++i) {
+        buf[i] = 0.25f;
+    }
+
+    cab.process(buf, 128);
+
+    for (float s : buf) {
+        ASSERT_NEAR(s, 0.25f, 1e-6f);
+    }
+}
