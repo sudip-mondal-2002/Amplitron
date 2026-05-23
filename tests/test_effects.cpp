@@ -1567,3 +1567,28 @@ TEST(phaser_mix_zero_passes_dry_signal) {
     for (int i = 0; i < 512; ++i)
         ASSERT_NEAR(buf[i], ref[i], 1e-5f);
 }
+
+// Covers: stage count produces different output — phaser_all_stage_counts_finite
+// only checks for no NaN; this verifies 4 stages (param=0) and 12 stages (param=3)
+// produce measurably different output from the same input.
+TEST(phaser_stage_count_affects_output) {
+    Phaser p4, p12;
+    p4.set_sample_rate(48000);
+    p12.set_sample_rate(48000);
+    p4.reset();
+    p12.reset();
+    p4.params()[2].value  = 0.0f;  // → 4 stages (STAGE_COUNTS[0])
+    p12.params()[2].value = 3.0f;  // → 12 stages (STAGE_COUNTS[3])
+
+    float buf4[512], buf12[512];
+    fill_sine(buf4, 512, 440.0f, 48000);
+    std::memcpy(buf12, buf4, sizeof(buf4));
+
+    p4.process(buf4,   512);
+    p12.process(buf12, 512);
+
+    float diff = 0.0f;
+    for (int i = 0; i < 512; ++i)
+        diff += std::fabs(buf4[i] - buf12[i]);
+    ASSERT_GT(diff, 0.1f);
+}
