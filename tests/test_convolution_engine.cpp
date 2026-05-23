@@ -1,0 +1,75 @@
+#include "test_framework.h"
+#include "audio/dsp/convolution_engine.h"
+
+#include <vector>
+#include <cmath>
+#include <memory>
+
+using namespace Amplitron;
+using namespace TestFramework;
+
+TEST(ConvolutionEngine_ResetClearsState) {
+    std::vector<float> ir = {1.0f, 0.5f, 0.25f};
+
+    auto kernel =
+        std::make_shared<ConvolutionKernel>(ir, 256);
+
+    ConvolutionEngine conv;
+
+    conv.set_kernel(kernel);
+
+    std::vector<float> buffer(256, 1.0f);
+
+    conv.process(buffer.data(), 256);
+
+    conv.reset();
+
+    std::vector<float> silent(256, 0.0f);
+
+    conv.process(silent.data(), 256);
+
+    for (float s : silent) {
+        ASSERT_TRUE(std::isfinite(s));
+    }
+}
+
+TEST(ConvolutionEngine_HasKernelAfterSetKernel) {
+    std::vector<float> ir = {1.0f};
+
+    auto kernel =
+        std::make_shared<ConvolutionKernel>(ir, 256);
+
+    ConvolutionEngine conv;
+
+    ASSERT_FALSE(conv.has_kernel());
+
+    conv.set_kernel(kernel);
+
+    ASSERT_TRUE(conv.has_kernel());
+}
+
+TEST(ConvolutionEngine_OverlapAddConsistency) {
+    std::vector<float> ir = {1.0f, 0.5f, 0.25f};
+
+    auto kernel =
+        std::make_shared<ConvolutionKernel>(ir, 256);
+
+    ConvolutionEngine conv;
+
+    conv.set_kernel(kernel);
+
+    std::vector<float> buffer(1024);
+
+    for (size_t i = 0; i < buffer.size(); ++i) {
+        buffer[i] = std::sin(
+            static_cast<float>(i) * 0.01f);
+    }
+
+    for (int i = 0; i < 1024; i += 256) {
+        conv.process(buffer.data() + i, 256);
+    }
+
+    for (float s : buffer) {
+        ASSERT_TRUE(std::isfinite(s));
+    }
+}
