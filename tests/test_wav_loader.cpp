@@ -135,8 +135,7 @@ TEST(WavLoader_MaxLengthLimit) {
         load_wav_file(path, 48000, 512);
 
     ASSERT_TRUE(
-        static_cast<int>(wav.samples.size()),
-        512);
+    static_cast<int>(wav.samples.size()) <= 512);
 
     std::remove(path.c_str());
 }
