@@ -1444,3 +1444,27 @@ TEST(flanger_reset_clears_both_buffers) {
     ASSERT_NEAR(al[0], 0.0f, 0.01f);
     ASSERT_NEAR(ar[0], 0.0f, 0.01f);
 }
+
+// ============================================================
+// Phaser additional coverage tests (issue #187)
+// ============================================================
+
+// Covers: process_stereo() — entire right-channel APF cascade never exercised.
+// Exercises apf_xprev_r_, apf_yprev_r_, feedback_state_r_, and the 180° LFO
+// offset (lfo_phase_ + 0.5f) for the right channel.
+TEST(phaser_process_stereo_produces_finite_output) {
+    Phaser ph;
+    ph.set_sample_rate(48000);
+    ph.reset();
+
+    float left[512], right[512];
+    fill_sine(left,  512, 440.0f, 48000);
+    fill_sine(right, 512, 330.0f, 48000);
+
+    ph.process_stereo(left, right, 512);
+
+    ASSERT_TRUE(buffer_is_finite(left,  512));
+    ASSERT_TRUE(buffer_is_finite(right, 512));
+    ASSERT_GT(rms(left,  512), 0.001f);
+    ASSERT_GT(rms(right, 512), 0.001f);
+}
