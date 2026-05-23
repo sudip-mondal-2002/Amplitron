@@ -1548,3 +1548,22 @@ TEST(phaser_feedback_max_stays_finite) {
     ASSERT_TRUE(buffer_is_finite(buf, 512));
     ASSERT_GT(rms(buf, 512), 0.001f);
 }
+
+// Covers: Mix=0.0 — formula: buffer[i] = dry*(1-0) + x*0 = dry.
+// With the wet APF output multiplied by zero, the output must equal the
+// dry input sample-for-sample regardless of APF or LFO state.
+TEST(phaser_mix_zero_passes_dry_signal) {
+    Phaser ph;
+    ph.set_sample_rate(48000);
+    ph.reset();
+    ph.params()[4].value = 0.0f;  // Mix = 0
+
+    float buf[512], ref[512];
+    fill_sine(buf, 512, 440.0f, 48000);
+    std::memcpy(ref, buf, sizeof(buf));
+
+    ph.process(buf, 512);
+
+    for (int i = 0; i < 512; ++i)
+        ASSERT_NEAR(buf[i], ref[i], 1e-5f);
+}
