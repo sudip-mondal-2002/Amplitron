@@ -99,7 +99,6 @@ std::string get_bundled_presets_dir() {
     }
     return "/usr/share/amplitron/presets";
 #endif
-}
 
 void PresetManager::set_presets_dir(const std::string& dir) {
     if (dir.empty()) {
