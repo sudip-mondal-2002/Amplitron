@@ -1134,3 +1134,27 @@ TEST(pitch_shifter_with_mix_and_shift_differs_from_dry) {
     // The shifted frequency should be dominant (higher magnitude than original)
     ASSERT_GT(mag_shifted, mag_440 * 0.5f);
 }
+
+// ============================================================
+// Chorus additional coverage tests (issue #187)
+// ============================================================
+
+// Covers: process_stereo() — entire code path was never exercised.
+// Uses a different frequency per channel so L and R take distinct paths through
+// the quadrature LFO (R uses lfo_phase_ + 0.25).
+TEST(chorus_process_stereo_produces_finite_output) {
+    Chorus ch;
+    ch.set_sample_rate(48000);
+    ch.reset();
+
+    float left[512], right[512];
+    fill_sine(left,  512, 440.0f, 48000);
+    fill_sine(right, 512, 330.0f, 48000);
+
+    ch.process_stereo(left, right, 512);
+
+    ASSERT_TRUE(buffer_is_finite(left,  512));
+    ASSERT_TRUE(buffer_is_finite(right, 512));
+    ASSERT_GT(rms(left,  512), 0.001f);
+    ASSERT_GT(rms(right, 512), 0.001f);
+}
