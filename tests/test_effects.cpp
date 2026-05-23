@@ -1409,3 +1409,38 @@ TEST(flanger_mix_zero_passes_dry_signal) {
     for (int i = 0; i < 512; ++i)
         ASSERT_NEAR(buf[i], ref[i], 1e-5f);
 }
+
+// Covers: reset() zeros both delay_buffer_ (left/mono) and delay_buffer_r_
+// (right channel). Populates both separately, resets, then verifies that a
+// single sample of silence reads back as silence — no residual in either line.
+TEST(flanger_reset_clears_both_buffers) {
+    Flanger fl;
+    fl.set_sample_rate(48000);
+    fl.reset();
+
+    // Populate the mono delay line with a loud signal
+    float fill[512];
+    fill_sine(fill, 512, 440.0f, 48000);
+    fl.process(fill, 512);
+
+    // Populate the right-channel delay line via process_stereo
+    float l[1] = {1.0f}, r[1] = {1.0f};
+    fl.process_stereo(l, r, 1);
+
+    // Reset — both buffers must be zeroed
+    fl.reset();
+
+    // One sample of silence through mono: no residual from old delay_buffer_
+    float after_mono[1] = {0.0f};
+    fl.process(after_mono, 1);
+    ASSERT_NEAR(after_mono[0], 0.0f, 0.01f);
+
+    // Reset again so lfo_phase_ is clean for the stereo check
+    fl.reset();
+
+    // One sample of silence through stereo: no residual from old delay_buffer_r_
+    float al[1] = {0.0f}, ar[1] = {0.0f};
+    fl.process_stereo(al, ar, 1);
+    ASSERT_NEAR(al[0], 0.0f, 0.01f);
+    ASSERT_NEAR(ar[0], 0.0f, 0.01f);
+}
