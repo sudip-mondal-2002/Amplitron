@@ -1325,3 +1325,26 @@ TEST(flanger_process_stereo_produces_finite_output) {
     ASSERT_GT(rms(left,  512), 0.001f);
     ASSERT_GT(rms(right, 512), 0.001f);
 }
+
+// Covers: if (!enabled_) early return in process_stereo() — both channels must
+// be returned unchanged when the effect is bypassed.
+TEST(flanger_process_stereo_disabled_early_return) {
+    Flanger fl;
+    fl.set_sample_rate(48000);
+    fl.reset();
+    fl.set_enabled(false);
+
+    float left[512], right[512];
+    float left_copy[512], right_copy[512];
+    fill_sine(left,  512, 440.0f, 48000);
+    fill_sine(right, 512, 330.0f, 48000);
+    std::memcpy(left_copy,  left,  sizeof(left));
+    std::memcpy(right_copy, right, sizeof(right));
+
+    fl.process_stereo(left, right, 512);
+
+    for (int i = 0; i < 512; ++i) {
+        ASSERT_NEAR(left[i],  left_copy[i],  1e-6f);
+        ASSERT_NEAR(right[i], right_copy[i], 1e-6f);
+    }
+}
