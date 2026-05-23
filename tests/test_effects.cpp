@@ -1180,3 +1180,21 @@ TEST(chorus_process_stereo_disabled_early_return) {
         ASSERT_NEAR(right[i], ref_r[i], 1e-6f);
     }
 }
+
+// Covers: Level=0 code path — buffer[i] = dry*(1 - 0*0.5) + delayed*0 = dry.
+// With no wet signal blended in, the output must equal the input sample-for-sample.
+TEST(chorus_level_zero_passes_input_unchanged) {
+    Chorus ch;
+    ch.set_sample_rate(48000);
+    ch.reset();
+    ch.params()[2].value = 0.0f;  // Level = 0
+
+    float buf[512], ref[512];
+    fill_sine(buf, 512, 440.0f, 48000);
+    for (int i = 0; i < 512; ++i) ref[i] = buf[i];
+
+    ch.process(buf, 512);
+
+    for (int i = 0; i < 512; ++i)
+        ASSERT_NEAR(buf[i], ref[i], 1e-5f);
+}
