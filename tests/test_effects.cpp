@@ -1366,3 +1366,27 @@ TEST(flanger_negative_feedback_stays_finite) {
     ASSERT_TRUE(buffer_is_finite(buf, 512));
     ASSERT_GT(rms(buf, 512), 0.001f);
 }
+
+// Covers: negative feedback actually diverges from positive — confirms the
+// subtraction path produces a measurably different output, not just no crash.
+TEST(flanger_negative_feedback_differs_from_positive) {
+    Flanger f_pos, f_neg;
+    f_pos.set_sample_rate(48000);
+    f_neg.set_sample_rate(48000);
+    f_pos.reset();
+    f_neg.reset();
+    f_pos.params()[3].value =  0.9f;
+    f_neg.params()[3].value = -0.9f;
+
+    float buf_pos[512], buf_neg[512];
+    fill_sine(buf_pos, 512, 440.0f, 48000);
+    std::memcpy(buf_neg, buf_pos, sizeof(buf_pos));
+
+    f_pos.process(buf_pos, 512);
+    f_neg.process(buf_neg, 512);
+
+    float diff = 0.0f;
+    for (int i = 0; i < 512; ++i)
+        diff += std::fabs(buf_pos[i] - buf_neg[i]);
+    ASSERT_GT(diff, 1.0f);
+}
