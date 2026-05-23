@@ -1266,3 +1266,38 @@ TEST(chorus_reset_clears_delay_and_lfo_phase) {
     for (int i = 0; i < 256; ++i)
         ASSERT_NEAR(probe_a[i], probe_b[i], 1e-5f);
 }
+
+// Covers: Chorus-specific params() ranges — the aggregate test only checks
+// Overdrive/Equalizer/Compressor. Verifies count, names, defaults, and bounds.
+TEST(chorus_parameters_have_valid_ranges) {
+    Chorus ch;
+    auto& p = ch.params();
+
+    ASSERT_EQ((int)p.size(), 3);
+
+    // [0] Rate
+    ASSERT_FALSE(p[0].name.empty());
+    ASSERT_NEAR(p[0].default_val, 1.5f, 1e-5f);
+    ASSERT_NEAR(p[0].min_val,     0.1f, 1e-5f);
+    ASSERT_NEAR(p[0].max_val,    10.0f, 1e-5f);
+
+    // [1] Depth
+    ASSERT_FALSE(p[1].name.empty());
+    ASSERT_NEAR(p[1].default_val,  5.0f, 1e-5f);
+    ASSERT_NEAR(p[1].min_val,      0.5f, 1e-5f);
+    ASSERT_NEAR(p[1].max_val,     20.0f, 1e-5f);
+
+    // [2] Level
+    ASSERT_FALSE(p[2].name.empty());
+    ASSERT_NEAR(p[2].default_val, 0.5f, 1e-5f);
+    ASSERT_NEAR(p[2].min_val,     0.0f, 1e-5f);
+    ASSERT_NEAR(p[2].max_val,     1.0f, 1e-5f);
+
+    // All defaults lie within [min, max]
+    for (auto& param : p) {
+        ASSERT_TRUE(param.default_val >= param.min_val);
+        ASSERT_TRUE(param.default_val <= param.max_val);
+        ASSERT_TRUE(param.value      >= param.min_val);
+        ASSERT_TRUE(param.value      <= param.max_val);
+    }
+}
