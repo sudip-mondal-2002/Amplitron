@@ -20,6 +20,7 @@ public:
     void reset() override;
     // Return the display name for this effect.
     const char* name() const override { return "Distortion"; }
+    const char* type_id() const override { return "Distortion"; }
     // Return editable parameters exposed by this effect.
     std::vector<EffectParam>& params() override { return params_; }
 

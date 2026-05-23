@@ -3,6 +3,7 @@
 #include "gui/theme.h"
 #include "gui/gui_graph_state.h"
 #include "gui/command.h"
+#include <algorithm>
 #include <imgui.h>
 #include <unordered_map>
 #include <cmath>
@@ -79,6 +80,17 @@ void PedalBoard::render_signal_chain() {
 
     int node_to_delete = -1; // Safely track deletions outside the render loop
 
+    // Prune stale nodes from the UI state if the backend graph was reset or rebuilt
+    std::vector<int> stale_ids;
+    for (auto& pair : ui_state.node_positions) {
+        if (!audio_graph.find_node(pair.first)) {
+            stale_ids.push_back(pair.first);
+        }
+    }
+    for (int id : stale_ids) {
+        ui_state.node_positions.erase(id);
+    }
+
     // Give all new nodes a default position at the end of the chain without shifting existing nodes
     for (const auto& node : audio_graph.get_nodes()) {
         if (ui_state.node_positions.find(node.id) == ui_state.node_positions.end()) {
@@ -86,7 +98,14 @@ void PedalBoard::render_signal_chain() {
             for (const auto& existing_node : audio_graph.get_nodes()) {
                 auto pos_it = ui_state.node_positions.find(existing_node.id);
                 if (pos_it != ui_state.node_positions.end()) {
-                    float width = (existing_node.routing_type == NodeRoutingType::StandardEffect) ? 190.0f : 110.0f;
+                    float width = 110.0f;
+                    if (existing_node.routing_type == NodeRoutingType::StandardEffect) {
+                        if (existing_node.pedal && std::strcmp(existing_node.pedal->name(), "MultiBand Compressor") == 0) {
+                            width = 190.0f * 2.2f;
+                        } else {
+                            width = 190.0f;
+                        }
+                    }
                     float right_edge = pos_it->second.position.x + width;
                     if (right_edge > max_right) {
                         max_right = right_edge;
@@ -97,6 +116,11 @@ void PedalBoard::render_signal_chain() {
             ui_state.node_positions[node.id] = { ImVec2(insert_x, 60.0f), false };
         }
     }
+
+    // Animation pulse based on time and audio level
+    float level = engine_.get_output_level();
+    float time = (float)ImGui::GetTime();
+    bool is_running = engine_.is_running();
 
     for (const auto& node : audio_graph.get_nodes()) {
 
@@ -110,11 +134,14 @@ void PedalBoard::render_signal_chain() {
             }
         }
 
-        float node_width = (target_widget ? 190.0f : 110.0f) * ui_state.zoom;
+        bool is_mb_comp = false;
+        if (target_widget && std::strcmp(target_widget->get_effect()->name(), "MultiBand Compressor") == 0) {
+            is_mb_comp = true;
+        }
+        float node_width = (target_widget ? (is_mb_comp ? 190.0f * 2.2f : 190.0f) : 110.0f) * ui_state.zoom;
         float node_height = (target_widget ? 360.0f : 70.0f) * ui_state.zoom;
 
         ImGui::PushID(node.id);
-
 
         if (target_widget) {
             ImGui::SetCursorScreenPos(node_screen_pos);
@@ -158,6 +185,102 @@ void PedalBoard::render_signal_chain() {
             ImGui::SetWindowFontScale(ui_state.zoom * 0.9f);
             draw_list->AddText(text_pos, IM_COL32(255, 60, 60, 255), "DISCONNECTED");
             ImGui::SetWindowFontScale(1.0f);
+        }
+
+        // --- INTERNAL SIGNAL FLOW / ELECTRICITY EFFECT ---
+        if (node.is_reachable && (!node.input_pin_ids.empty() || !node.output_pin_ids.empty())) {
+            bool enabled = true;
+            if (target_widget) {
+                enabled = target_widget->get_effect()->is_enabled();
+            }
+
+            // Align with pins
+            float in_y = node_screen_pos.y + node_height * 0.5f;
+            if (!node.input_pin_ids.empty()) {
+                in_y = node_screen_pos.y + (node_height * (0 + 1.0f) / (node.input_pin_ids.size() + 1.0f));
+            }
+            float out_y = node_screen_pos.y + node_height * 0.5f;
+            if (!node.output_pin_ids.empty()) {
+                out_y = node_screen_pos.y + (node_height * (0 + 1.0f) / (node.output_pin_ids.size() + 1.0f));
+            }
+            
+            ImVec2 flow_p1(node_screen_pos.x, in_y);
+            ImVec2 flow_p2(node_screen_pos.x + node_width, out_y);
+
+            // --- COLOR & PULSE CALCULATIONS (SHARED) ---
+            ImU32 flow_col = IM_COL32(200, 230, 255, 255);
+            if (target_widget) {
+                const auto* colors = get_effect_color(target_widget->get_effect()->name());
+                flow_col = ImGui::ColorConvertFloat4ToU32(colors->led_color);
+            }
+            
+            ImU32 r = (flow_col >> 0) & 0xFF;
+            ImU32 g = (flow_col >> 8) & 0xFF;
+            ImU32 b = (flow_col >> 16) & 0xFF;
+
+            float pulse = 0.6f + 0.4f * std::sin(time * 8.0f) * (0.5f + level * 2.0f);
+            float jitter = std::sin(time * 40.0f) * 1.5f * ui_state.zoom;
+
+            if (enabled) {
+                // --- ELECTRICITY PASSING THROUGH (ACTIVE) ---
+                // No internal line, only glowing edges
+                ImVec2 p_min(node_screen_pos.x - (2.0f + jitter), node_screen_pos.y - (2.0f + jitter));
+                ImVec2 p_max(node_screen_pos.x + node_width + (2.0f + jitter), node_screen_pos.y + node_height + (2.0f + jitter));
+                
+                draw_list->AddRect(p_min, p_max, IM_COL32(r, g, b, (int)(180 * pulse)), Theme::ROUNDING_MD * ui_state.zoom, 0, 3.0f * ui_state.zoom);
+                draw_list->AddRect(p_min, p_max, IM_COL32(255, 255, 255, (int)(220 * pulse)), Theme::ROUNDING_MD * ui_state.zoom, 0, 1.0f * ui_state.zoom);
+            } else {
+                // --- ELECTRIC HIGH-RAIL BYPASS PATH ---
+                // Rectangular "bridge" with CONSISTENT glow style
+                float rail_height = 65.0f * ui_state.zoom;
+                float rail_y = node_screen_pos.y - rail_height;
+                
+                ImVec2 p_rail_in(flow_p1.x, rail_y);
+                ImVec2 p_rail_out(flow_p2.x, rail_y);
+
+                auto draw_consistent_glow_line = [&](ImVec2 p1, ImVec2 p2) {
+                    ImVec2 p1j(p1.x, p1.y + jitter);
+                    ImVec2 p2j(p2.x, p2.y + jitter);
+                    draw_list->AddLine(p1j, p2j, IM_COL32(r, g, b, (int)(180 * pulse)), 4.0f * ui_state.zoom);
+                    draw_list->AddLine(p1j, p2j, IM_COL32(255, 255, 255, (int)(220 * pulse)), 1.5f * ui_state.zoom);
+                };
+
+                // Bridge segments
+                draw_consistent_glow_line(flow_p1, p_rail_in);
+                draw_consistent_glow_line(p_rail_in, p_rail_out);
+                draw_consistent_glow_line(p_rail_out, flow_p2);
+
+                // --- MOVING ELECTRONS (PULSES) ---
+                // Electrons travel along the bridge path: Up -> Across -> Down
+                float electron_time = std::fmod(time * 2.5f, 1.0f);
+                for (int e = 0; e < 2; ++e) {
+                    float t = std::fmod(electron_time + e * 0.5f, 1.0f);
+                    ImVec2 electron_pos;
+                    
+                    if (t < 0.2f) { // Segment 1: Up
+                        float st = t / 0.2f;
+                        electron_pos = ImVec2(flow_p1.x, flow_p1.y + (rail_y - flow_p1.y) * st + jitter);
+                    } else if (t < 0.8f) { // Segment 2: Across
+                        float st = (t - 0.2f) / 0.6f;
+                        electron_pos = ImVec2(p_rail_in.x + (p_rail_out.x - p_rail_in.x) * st, rail_y + jitter);
+                    } else { // Segment 3: Down
+                        float st = (t - 0.8f) / 0.2f;
+                        electron_pos = ImVec2(p_rail_out.x, rail_y + (flow_p2.y - rail_y) * st + jitter);
+                    }
+                    
+                    draw_list->AddCircleFilled(electron_pos, 3.5f * ui_state.zoom, IM_COL32(255, 255, 255, (int)(220 * pulse)));
+                    draw_list->AddCircle(electron_pos, 7.0f * ui_state.zoom, IM_COL32(r, g, b, (int)(180 * pulse)), 0, 2.0f * ui_state.zoom);
+                }
+
+                if (ImGui::IsMouseHoveringRect(ImVec2(node_screen_pos.x, rail_y - 10), flow_p2)) {
+                    ImGui::SetTooltip("%s (Bypassed - High Rail Signal Path)", target_widget->get_effect()->name());
+                }
+            }
+
+            if (ImGui::IsMouseHoveringRect(flow_p1, flow_p2) && (target_widget || !node.name.empty())) {
+                const char* name = target_widget ? target_widget->get_effect()->name() : node.name.c_str();
+                ImGui::SetTooltip("%s (%s)", name, enabled ? "Active" : "Bypassed");
+            }
         }
 
         // ====================================================================
@@ -309,6 +432,22 @@ void PedalBoard::render_signal_chain() {
 
             ImU32 color = hovered ? IM_COL32(255, 100, 100, 255) : IM_COL32(212, 175, 55, 255);
             draw_list->AddBezierCubic(p1, cp1, cp2, p2, color, hovered ? 5.0f * ui_state.zoom : 3.0f * ui_state.zoom);
+
+            // --- Signal Pulse Animation on Cables ---
+            if (is_running) {
+                float t_off = std::fmod(time * 2.0f, 1.0f); // Slightly faster
+                for (int step = 0; step < 4; ++step) { // More pulses
+                    float t = std::fmod(t_off + step * 0.25f, 1.0f);
+                    float u = 1.0f - t;
+                    float hx = (u*u*u) * p1.x + (3*u*u*t) * cp1.x + (3*u*t*t) * cp2.x + (t*t*t) * p2.x;
+                    float hy = (u*u*u) * p1.y + (3*u*u*t) * cp1.y + (3*u*t*t) * cp2.y + (t*t*t) * p2.y;
+                    
+                    // Larger, more vibrant pulse
+                    float pulse_size = (3.0f + 2.0f * level) * ui_state.zoom;
+                    draw_list->AddCircleFilled(ImVec2(hx, hy), pulse_size, Theme::ACCENT_GOLD_HOT);
+                    draw_list->AddCircle(ImVec2(hx, hy), pulse_size + 1.0f * ui_state.zoom, IM_COL32(255, 255, 255, 150));
+                }
+            }
 
             if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
                 link_to_delete = link.id;

@@ -4,8 +4,11 @@
 #include "audio/effects/amp_simulator.h"
 #include "audio/effects/cabinet_sim.h"
 #include "audio/effects/looper.h"
+#include "audio/effects/multiband_compressor.h"
 #include "gui/file_dialog.h"
 #include "gui/theme.h"
+#include "gui/gui_midi.h"
+#include "midi/midi_manager.h"
 
 #include <cstdio>
 #include <cmath>
@@ -398,6 +401,472 @@ void PedalWidget::render_looper_display(ImVec2 p0, float pedal_width, float zoom
             ImGui::SetTooltip("%s", effect_->params()[0].tooltip.c_str());
         }
     }
+}
+
+void PedalWidget::render_multiband_compressor_display(ImDrawList* dl, ImVec2 p0, float pedal_width, float zoom) {
+    auto* mb_comp = dynamic_cast<MultiBandCompressor*>(effect_.get());
+    if (!mb_comp) return;
+
+    auto& params = effect_->params();
+    if (params.size() < 18) return;
+
+    // Outer boundaries
+    ImVec2 p1 = ImVec2(p0.x + pedal_width, p0.y + Theme::PEDAL_HEIGHT * zoom);
+
+    // Dynamic horizontal divider separating header/plate and controls
+    dl->AddLine(ImVec2(p0.x + 8.0f * zoom, p0.y + 48.0f * zoom), ImVec2(p1.x - 8.0f * zoom, p0.y + 48.0f * zoom), Theme::BORDER_DARK, 1.0f * zoom);
+
+    float col_width = (pedal_width - 24.0f * zoom) / 3.0f;
+
+    // --- REUSABLE KNOB HELPER (LAMBDA) ---
+    auto render_mb_knob = [&](ImDrawList* dl, ImVec2 center, int pi, float radius, const char* label_prefix) {
+        auto& param = params[pi];
+        char label[64];
+        std::snprintf(label, sizeof(label), "##knob_%s_%d_%d_%s", effect_->name(), index_, pi, label_prefix);
+
+        float r = radius * zoom;
+        float knob_hit_size = r * Theme::KNOB_HIT_MULT;
+
+        ImGui::SetCursorScreenPos(ImVec2(center.x - knob_hit_size * 0.5f, center.y - knob_hit_size * 0.5f));
+        ImGui::SetNextItemAllowOverlap();
+        ImGui::InvisibleButton(label, ImVec2(knob_hit_size, knob_hit_size));
+
+        bool is_hovered = ImGui::IsItemHovered();
+        bool is_active = ImGui::IsItemActive();
+
+        float range = param.max_val - param.min_val;
+
+        if (is_active && !knob_was_active_) {
+            active_param_index_ = pi;
+            param_value_before_drag_ = param.value;
+        }
+
+        if (is_active) {
+            float mdy = ImGui::GetIO().MouseDelta.y;
+            if (mdy != 0.0f) {
+                float sensitivity = 0.005f;
+                float value_delta = -mdy * sensitivity * range;
+                if (ImGui::GetIO().KeyShift) value_delta *= 0.2f;
+                if (ImGui::GetIO().KeyCtrl)  value_delta *= 3.0f;
+
+                float new_val = clamp(param.value + value_delta, param.min_val, param.max_val);
+                if (new_val != param.value) {
+                    param.value = new_val;
+                    engine_.push_param_change(index_, pi, new_val);
+                }
+            }
+        }
+
+        if (knob_was_active_ && !is_active && active_param_index_ == pi) {
+            float new_val = param.value;
+            if (new_val != param_value_before_drag_) {
+                commit_param_change(pi, param_value_before_drag_, new_val);
+            }
+            active_param_index_ = -1;
+            knob_was_active_ = false;
+        }
+
+        if (active_param_index_ == pi) {
+            knob_was_active_ = is_active;
+        }
+
+        if (is_hovered && std::fabs(ImGui::GetIO().MouseWheel) > 0.0f) {
+            float old_val = param.value;
+            float step = range * 0.03f;
+            if (ImGui::GetIO().KeyShift) step *= 0.2f;
+            float new_val = clamp(param.value + ImGui::GetIO().MouseWheel * step, param.min_val, param.max_val);
+            if (new_val != old_val) {
+                param.value = new_val;
+                engine_.push_param_change(index_, pi, new_val);
+                commit_param_change(pi, old_val, new_val);
+            }
+        }
+
+        if (is_hovered && ImGui::IsMouseDoubleClicked(0)) {
+            float old_val = param.value;
+            float new_val = param.default_val;
+            if (new_val != old_val) {
+                param.value = new_val;
+                engine_.push_param_change(index_, pi, new_val);
+                commit_param_change(pi, old_val, new_val);
+            }
+        }
+
+        if (is_hovered && ImGui::IsMouseClicked(1)) {
+            ImGui::OpenPopup(label);
+        }
+        if (ImGui::BeginPopup(label)) {
+            ImGui::Text("%s", param.name.c_str());
+            ImGui::SetNextItemWidth(120);
+            float slider_val = param.value;
+            if (ImGui::SliderFloat("##edit", &slider_val, param.min_val, param.max_val, "%.2f")) {
+                param.value = slider_val;
+                engine_.push_param_change(index_, pi, slider_val);
+            }
+            if (ImGui::IsItemActivated()) {
+                popup_active_param_index_ = pi;
+                popup_param_value_before_edit_ = param.value;
+            }
+            if (ImGui::IsItemDeactivatedAfterEdit() && popup_active_param_index_ == pi) {
+                if (param.value != popup_param_value_before_edit_) {
+                    engine_.push_param_change(index_, pi, param.value);
+                    commit_param_change(pi, popup_param_value_before_edit_, param.value);
+                }
+                popup_active_param_index_ = -1;
+            }
+            if (ImGui::Button("Reset")) {
+                float old_val = param.value;
+                float new_val = param.default_val;
+                if (new_val != old_val) {
+                    param.value = new_val;
+                    engine_.push_param_change(index_, pi, new_val);
+                    commit_param_change(pi, old_val, new_val);
+                }
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::Separator();
+            ImGui::TextColored(Theme::Gold(), "MIDI Control");
+            if (gui_midi_) {
+                if (gui_midi_->render_remove_mapping_item(effect_->name(), param.name)) {
+                    ImGui::CloseCurrentPopup();
+                }
+                if (gui_midi_->render_learn_menu_item(effect_->name(), param.name)) {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::Spacing();
+                if (gui_midi_->render_remove_bypass_item(effect_->name())) {
+                    ImGui::CloseCurrentPopup();
+                }
+                if (gui_midi_->render_learn_bypass_item(effect_->name())) {
+                    ImGui::CloseCurrentPopup();
+                }
+            } else {
+                ImGui::TextDisabled("MIDI manager not available");
+            }
+            ImGui::EndPopup();
+        }
+
+        // Draw track
+        float normalized = (param.value - param.min_val) / range;
+        constexpr float ARC_START = 2.356f;
+        constexpr float ARC_RANGE = 4.712f;
+        float track_radius = r + 2.5f * zoom;
+        int segments = 30;
+        for (int s = 0; s < segments; ++s) {
+            float t0 = static_cast<float>(s) / segments;
+            float t1 = static_cast<float>(s + 1) / segments;
+            float a0 = ARC_START + t0 * ARC_RANGE;
+            float a1 = ARC_START + t1 * ARC_RANGE;
+
+            bool filled = t0 <= normalized;
+            ImU32 seg_color = filled ? ImGui::ColorConvertFloat4ToU32(led_color_) : Theme::KNOB_TRACK_OFF;
+
+            dl->AddLine(
+                ImVec2(center.x + std::cos(a0) * track_radius, center.y + std::sin(a0) * track_radius),
+                ImVec2(center.x + std::cos(a1) * track_radius, center.y + std::sin(a1) * track_radius),
+                seg_color, 2.0f * zoom);
+        }
+
+        ImU32 knob_bg = is_active ? Theme::KNOB_ACTIVE : (is_hovered ? Theme::KNOB_HOVER : Theme::KNOB_FACE);
+        dl->AddCircleFilled(center, r, Theme::KNOB_BG);
+        dl->AddCircleFilled(center, r - 1.0f * zoom, knob_bg);
+
+#ifndef AMPLITRON_NO_MIDI
+        if (gui_midi_ && gui_midi_->midi().is_learning() &&
+            gui_midi_->midi().learn_effect_name() == effect_->name() &&
+            gui_midi_->midi().learn_param_name() == param.name) {
+            float time = static_cast<float>(ImGui::GetTime());
+            float alpha = (std::sin(time * 2.0f * 3.14159f * 10.0f) + 1.0f) * 0.5f;
+            ImU32 outline_col = ImGui::ColorConvertFloat4ToU32(ImVec4(0.2f, 0.6f, 1.0f, 0.4f + alpha * 0.6f));
+            dl->AddCircle(center, r + 3.0f * zoom, outline_col, 0, 2.0f * zoom);
+        }
+#endif
+
+        float pointer_angle = ARC_START + normalized * ARC_RANGE;
+        float ptr_inner = r * 0.25f;
+        float ptr_outer = r - 2.0f * zoom;
+        ImVec2 ptr_from = ImVec2(center.x + std::cos(pointer_angle) * ptr_inner, center.y + std::sin(pointer_angle) * ptr_inner);
+        ImVec2 ptr_to = ImVec2(center.x + std::cos(pointer_angle) * ptr_outer, center.y + std::sin(pointer_angle) * ptr_outer);
+        ImU32 ptr_color = is_active ? Theme::ACCENT_GOLD_HOT : Theme::ACCENT_GOLD;
+        dl->AddLine(ptr_from, ptr_to, ptr_color, 2.0f * zoom);
+
+        // Tooltip
+        if (is_hovered || is_active) {
+            std::string val_str = Theme::formatParameterValue(param.value, param.unit);
+            std::string min_str = Theme::formatParameterValue(param.min_val, param.unit);
+            std::string max_str = Theme::formatParameterValue(param.max_val, param.unit);
+            std::string midi_info = gui_midi_ ? gui_midi_->get_mapping_info(effect_->name(), param.name) : "";
+            
+            if (param.tooltip.empty()) {
+                ImGui::SetTooltip("%s: %s\nRange: [%s, %s]%s", param.name.c_str(), val_str.c_str(), min_str.c_str(), max_str.c_str(), midi_info.c_str());
+            } else {
+                ImGui::SetTooltip("%s: %s\nRange: [%s, %s]\n\n%s%s", param.name.c_str(), val_str.c_str(), min_str.c_str(), max_str.c_str(), param.tooltip.c_str(), midi_info.c_str());
+            }
+        }
+
+        // Labels
+        const char* short_name = param.name.c_str();
+        if (std::strncmp(short_name, "Low ", 4) == 0) short_name += 4;
+        else if (std::strncmp(short_name, "Mid ", 4) == 0) short_name += 4;
+        else if (std::strncmp(short_name, "High ", 5) == 0) short_name += 5;
+
+        ImVec2 text_size = ImGui::CalcTextSize(short_name);
+        dl->AddText(ImGui::GetFont(), ImGui::GetFontSize() * 0.85f,
+                    ImVec2(center.x - text_size.x * 0.5f, center.y + r + 5.0f * zoom),
+                    Theme::TEXT_SECONDARY, short_name);
+
+        std::string val_display = Theme::formatParameterValue(param.value, param.unit);
+        ImVec2 val_size = ImGui::CalcTextSize(val_display.c_str());
+        dl->AddText(ImGui::GetFont(), ImGui::GetFontSize() * 0.75f,
+                    ImVec2(center.x - val_size.x * 0.5f, center.y - r - 13.0f * zoom),
+                    is_active ? Theme::ACCENT_GOLD_HOT : Theme::TEXT_DIM, val_display.c_str());
+    };
+
+    // --- REUSABLE SLIDER HELPER (LAMBDA) ---
+    auto render_xover_slider = [&](ImDrawList* dl, float track_x, int pi, const char* label_prefix, bool ticks_on_left) {
+        auto& param = params[pi];
+        char label[64];
+        std::snprintf(label, sizeof(label), "##slider_%s_%d_%d_%s", effect_->name(), index_, pi, label_prefix);
+
+        float track_top = p0.y + 90.0f * zoom;
+        float track_bottom = p0.y + 260.0f * zoom;
+        float range = param.max_val - param.min_val;
+        float normalized = (param.value - param.min_val) / range;
+        float handle_y = track_bottom - normalized * (track_bottom - track_top);
+
+        // Click-and-drag detection box
+        ImGui::SetCursorScreenPos(ImVec2(track_x - 12.0f * zoom, track_top));
+        ImGui::SetNextItemAllowOverlap();
+        ImGui::InvisibleButton(label, ImVec2(24.0f * zoom, track_bottom - track_top));
+
+        bool is_hovered = ImGui::IsItemHovered();
+        bool is_active = ImGui::IsItemActive();
+
+        if (is_active && !knob_was_active_) {
+            active_param_index_ = pi;
+            param_value_before_drag_ = param.value;
+        }
+
+        if (is_active) {
+            float my = ImGui::GetIO().MousePos.y;
+            float norm = (track_bottom - my) / (track_bottom - track_top);
+            norm = clamp(norm, 0.0f, 1.0f);
+            float new_val = param.min_val + norm * range;
+
+            // Prevent crossover overlap
+            if (pi == 0) {
+                float high_val = params[1].value;
+                if (new_val >= high_val) new_val = high_val - 10.0f;
+            } else if (pi == 1) {
+                float low_val = params[0].value;
+                if (new_val <= low_val) new_val = low_val + 10.0f;
+            }
+
+            if (new_val != param.value) {
+                param.value = new_val;
+                engine_.push_param_change(index_, pi, new_val);
+            }
+        }
+
+        if (knob_was_active_ && !is_active && active_param_index_ == pi) {
+            float new_val = param.value;
+            if (new_val != param_value_before_drag_) {
+                commit_param_change(pi, param_value_before_drag_, new_val);
+            }
+            active_param_index_ = -1;
+            knob_was_active_ = false;
+        }
+
+        if (active_param_index_ == pi) {
+            knob_was_active_ = is_active;
+        }
+
+        if (is_hovered && std::fabs(ImGui::GetIO().MouseWheel) > 0.0f) {
+            float old_val = param.value;
+            float step = range * 0.02f;
+            if (ImGui::GetIO().KeyShift) step *= 0.2f;
+            float new_val = clamp(param.value + ImGui::GetIO().MouseWheel * step, param.min_val, param.max_val);
+
+            // Prevent crossover overlap
+            if (pi == 0) {
+                float high_val = params[1].value;
+                if (new_val >= high_val) new_val = high_val - 10.0f;
+            } else if (pi == 1) {
+                float low_val = params[0].value;
+                if (new_val <= low_val) new_val = low_val + 10.0f;
+            }
+
+            if (new_val != old_val) {
+                param.value = new_val;
+                engine_.push_param_change(index_, pi, new_val);
+                commit_param_change(pi, old_val, new_val);
+            }
+        }
+
+        if (is_hovered && ImGui::IsMouseDoubleClicked(0)) {
+            float old_val = param.value;
+            float new_val = param.default_val;
+
+            // Prevent crossover overlap on reset
+            if (pi == 0) {
+                float high_val = params[1].value;
+                if (new_val >= high_val) new_val = high_val - 10.0f;
+            } else if (pi == 1) {
+                float low_val = params[0].value;
+                if (new_val <= low_val) new_val = low_val + 10.0f;
+            }
+
+            if (new_val != old_val) {
+                param.value = new_val;
+                engine_.push_param_change(index_, pi, new_val);
+                commit_param_change(pi, old_val, new_val);
+            }
+        }
+
+        // Draw track vertical line
+        dl->AddRectFilled(ImVec2(track_x - 1.5f * zoom, track_top), ImVec2(track_x + 1.5f * zoom, track_bottom), Theme::KNOB_TRACK_OFF, 1.5f * zoom);
+
+        // Draw Ticks & Labels
+        if (pi == 0) { // Low crossover (50 to 1000 Hz)
+            float tick_hzs[] = { 50.0f, 200.0f, 500.0f, 1000.0f };
+            for (float hz : tick_hzs) {
+                float norm = (hz - param.min_val) / range;
+                float ty = track_bottom - norm * (track_bottom - track_top);
+                dl->AddLine(ImVec2(track_x - 4.0f * zoom, ty), ImVec2(track_x, ty), Theme::BORDER_LIGHT, 1.0f * zoom);
+                
+                char tick_lbl[16];
+                if (hz >= 1000.0f) std::snprintf(tick_lbl, sizeof(tick_lbl), "1k");
+                else std::snprintf(tick_lbl, sizeof(tick_lbl), "%.0f", hz);
+
+                ImVec2 tsz = ImGui::CalcTextSize(tick_lbl);
+                dl->AddText(ImGui::GetFont(), ImGui::GetFontSize() * 0.65f,
+                            ImVec2(track_x - 6.0f * zoom - tsz.x, ty - tsz.y * 0.5f),
+                            Theme::TEXT_DIM, tick_lbl);
+            }
+        } else { // High crossover (1000 to 15000 Hz)
+            float tick_hzs[] = { 1000.0f, 4000.0f, 8000.0f, 12000.0f, 15000.0f };
+            for (float hz : tick_hzs) {
+                float norm = (hz - param.min_val) / range;
+                float ty = track_bottom - norm * (track_bottom - track_top);
+                dl->AddLine(ImVec2(track_x, ty), ImVec2(track_x + 4.0f * zoom, ty), Theme::BORDER_LIGHT, 1.0f * zoom);
+
+                char tick_lbl[16];
+                if (hz >= 1000.0f) std::snprintf(tick_lbl, sizeof(tick_lbl), "%.0fk", hz / 1000.0f);
+                else std::snprintf(tick_lbl, sizeof(tick_lbl), "%.0f", hz);
+
+                ImVec2 tsz = ImGui::CalcTextSize(tick_lbl);
+                dl->AddText(ImGui::GetFont(), ImGui::GetFontSize() * 0.65f,
+                            ImVec2(track_x + 6.0f * zoom, ty - tsz.y * 0.5f),
+                            Theme::TEXT_DIM, tick_lbl);
+            }
+        }
+
+        // Draw pill handle
+        ImVec2 handle_center = ImVec2(track_x, handle_y);
+        ImU32 handle_bg = is_active ? Theme::KNOB_ACTIVE : (is_hovered ? Theme::KNOB_HOVER : Theme::KNOB_FACE);
+        ImU32 border_col = (is_active || is_hovered) ? Theme::ACCENT_GOLD_HOT : Theme::ACCENT_GOLD;
+
+        dl->AddRectFilled(ImVec2(track_x - 8.0f * zoom, handle_y - 5.0f * zoom), ImVec2(track_x + 8.0f * zoom, handle_y + 5.0f * zoom), Theme::KNOB_BG, 3.0f * zoom);
+        dl->AddRectFilled(ImVec2(track_x - 7.0f * zoom, handle_y - 4.0f * zoom), ImVec2(track_x + 7.0f * zoom, handle_y + 4.0f * zoom), handle_bg, 2.0f * zoom);
+        dl->AddRect(ImVec2(track_x - 8.0f * zoom, handle_y - 5.0f * zoom), ImVec2(track_x + 8.0f * zoom, handle_y + 5.0f * zoom), border_col, 3.0f * zoom, 0, 1.5f * zoom);
+        dl->AddCircleFilled(handle_center, 2.0f * zoom, border_col);
+
+        // Value text at the top of the track
+        std::string val_str = Theme::formatParameterValue(param.value, param.unit);
+        ImVec2 vsz = ImGui::CalcTextSize(val_str.c_str());
+        dl->AddText(ImGui::GetFont(), ImGui::GetFontSize() * 0.75f,
+                    ImVec2(track_x - vsz.x * 0.5f, track_top - vsz.y - 4.0f * zoom),
+                    is_active ? Theme::ACCENT_GOLD_HOT : Theme::TEXT_SECONDARY, val_str.c_str());
+
+        // Header text above the value
+        const char* s_name = (pi == 0) ? "Low X" : "High X";
+        ImVec2 nsz = ImGui::CalcTextSize(s_name);
+        dl->AddText(ImGui::GetFont(), ImGui::GetFontSize() * 0.75f,
+                    ImVec2(track_x - nsz.x * 0.5f, track_top - vsz.y - nsz.y - 6.0f * zoom),
+                    Theme::TEXT_DIM, s_name);
+
+        if (is_hovered || is_active) {
+            std::string midi_info = gui_midi_ ? gui_midi_->get_mapping_info(effect_->name(), param.name) : "";
+            ImGui::SetTooltip("%s: %s\nRange: [%s, %s]%s\n\nDrag vertically to adjust\nShift=fine, Ctrl=coarse\nDbl-click to reset",
+                              param.name.c_str(), val_str.c_str(),
+                              Theme::formatParameterValue(param.min_val, param.unit).c_str(),
+                              Theme::formatParameterValue(param.max_val, param.unit).c_str(),
+                              midi_info.c_str());
+        }
+    };
+
+    // --- RENDER 3 COLUMNS & THEIR METERS/KNOBS ---
+    const char* titles[3] = { "LOW BAND", "MID BAND", "HIGH BAND" };
+    int band_param_offsets[3] = { 2, 7, 12 };
+
+    for (int b = 0; b < 3; ++b) {
+        float col_left = p0.x + 12.0f * zoom + b * col_width;
+        float col_center = col_left + col_width * 0.5f;
+
+        // Title
+        ImVec2 tsz = ImGui::CalcTextSize(titles[b]);
+        dl->AddText(ImGui::GetFont(), ImGui::GetFontSize() * 0.9f,
+                    ImVec2(col_center - tsz.x * 0.5f, p0.y + 55.0f * zoom),
+                    Theme::TEXT_PRIMARY, titles[b]);
+
+        // Horizontal Gain Reduction Meter
+        float meter_y = p0.y + 76.0f * zoom;
+        float meter_h = 7.0f * zoom;
+        float meter_w = col_width - 24.0f * zoom;
+        float meter_x = col_left + 12.0f * zoom;
+
+        dl->AddRectFilled(ImVec2(meter_x, meter_y), ImVec2(meter_x + meter_w, meter_y + meter_h), Theme::METER_BG, 3.0f * zoom);
+        dl->AddRect(ImVec2(meter_x, meter_y), ImVec2(meter_x + meter_w, meter_y + meter_h), Theme::BORDER_DARK, 3.0f * zoom, 0, 1.0f * zoom);
+
+        float gr_db = mb_comp->get_gain_reduction_db(b);
+        float norm_gr = clamp(gr_db / 20.0f, 0.0f, 1.0f);
+
+        if (norm_gr > 0.0f) {
+            float fill_x1 = meter_x + meter_w;
+            float fill_x0 = meter_x + meter_w - norm_gr * meter_w;
+            ImU32 fill_color = Theme::METER_GREEN;
+            if (gr_db > 12.0f) fill_color = Theme::METER_RED;
+            else if (gr_db > 6.0f) fill_color = Theme::METER_YELLOW;
+
+            dl->AddRectFilled(ImVec2(fill_x0, meter_y + 1.0f * zoom), ImVec2(fill_x1 - 1.0f * zoom, meter_y + meter_h - 1.0f * zoom), fill_color, 2.0f * zoom);
+        }
+
+        // GR Meter Ticks
+        float tick_dbs[] = { 0.0f, -3.0f, -6.0f, -12.0f, -20.0f };
+        for (float db : tick_dbs) {
+            float t_norm = -db / 20.0f;
+            float tx = meter_x + meter_w * (1.0f - t_norm);
+            dl->AddLine(ImVec2(tx, meter_y), ImVec2(tx, meter_y + meter_h + 2.0f * zoom), Theme::BORDER_MID, 1.0f * zoom);
+        }
+
+        // Render Knobs
+        int p_offset = band_param_offsets[b];
+        float k_radius = 12.0f;
+
+        float kx_left = col_left + col_width * 0.28f;
+        float kx_right = col_left + col_width * 0.72f;
+
+        // Row 1: Threshold & Ratio
+        render_mb_knob(dl, ImVec2(kx_left, p0.y + 120.0f * zoom), p_offset + 0, k_radius, "thresh");
+        render_mb_knob(dl, ImVec2(kx_right, p0.y + 120.0f * zoom), p_offset + 1, k_radius, "ratio");
+
+        // Row 2: Attack & Release
+        render_mb_knob(dl, ImVec2(kx_left, p0.y + 185.0f * zoom), p_offset + 2, k_radius, "attack");
+        render_mb_knob(dl, ImVec2(kx_right, p0.y + 185.0f * zoom), p_offset + 3, k_radius, "release");
+
+        // Row 3: Makeup (Centered)
+        render_mb_knob(dl, ImVec2(col_center, p0.y + 248.0f * zoom), p_offset + 4, k_radius, "makeup");
+    }
+
+    // --- RENDER 2 INTERACTIVE CROSSOVER SLIDERS ---
+    float x1 = p0.x + 12.0f * zoom + col_width;
+    float x2 = p0.x + 12.0f * zoom + 2.0f * col_width;
+
+    render_xover_slider(dl, x1, 0, "low", true);
+    render_xover_slider(dl, x2, 1, "high", false);
+
+    // --- RENDER GLOBAL OUT GAIN ---
+    render_mb_knob(dl, ImVec2(p0.x + pedal_width - 40.0f * zoom, p0.y + Theme::PEDAL_HEIGHT * zoom - Theme::SWITCH_BOTTOM_OFFSET * zoom + 10.0f * zoom), 17, 13.0f, "outgain");
 }
 
 } // namespace Amplitron
