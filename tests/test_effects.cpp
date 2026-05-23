@@ -1390,3 +1390,22 @@ TEST(flanger_negative_feedback_differs_from_positive) {
         diff += std::fabs(buf_pos[i] - buf_neg[i]);
     ASSERT_GT(diff, 1.0f);
 }
+
+// Covers: Mix=0.0 — formula: buffer[i] = dry*(1-0) + delayed*0 = dry.
+// With the wet tap multiplied by zero the output must equal the input exactly,
+// regardless of LFO position or delay line contents.
+TEST(flanger_mix_zero_passes_dry_signal) {
+    Flanger fl;
+    fl.set_sample_rate(48000);
+    fl.reset();
+    fl.params()[4].value = 0.0f;  // Mix = 0
+
+    float buf[512], ref[512];
+    fill_sine(buf, 512, 440.0f, 48000);
+    std::memcpy(ref, buf, sizeof(buf));
+
+    fl.process(buf, 512);
+
+    for (int i = 0; i < 512; ++i)
+        ASSERT_NEAR(buf[i], ref[i], 1e-5f);
+}
