@@ -1225,3 +1225,44 @@ TEST(chorus_level_one_fully_wet) {
     diff_rms = std::sqrt(diff_rms / 512);
     ASSERT_GT(diff_rms, 0.01f);
 }
+
+// Covers: reset() clears delay_buffer_ and resets lfo_phase_ to 0.
+// After reset, processing silence must yield silence (no residual from the
+// old delay buffer), and a post-reset chorus must produce output identical
+// to a freshly constructed instance (proving lfo_phase_ was also zeroed).
+TEST(chorus_reset_clears_delay_and_lfo_phase) {
+    Chorus ch;
+    ch.set_sample_rate(48000);
+    ch.reset();
+
+    // Saturate the delay buffer with a loud signal
+    float loud[1024];
+    fill_sine(loud, 1024, 440.0f, 48000);
+    ch.process(loud, 1024);
+
+    // Reset — delay buffer and lfo_phase_ must be zeroed
+    ch.reset();
+
+    // Processing silence should yield silence: no energy left in delay line
+    float silent[256] = {};
+    ch.process(silent, 256);
+    ASSERT_NEAR(silent[0], 0.0f, 0.01f);
+    ASSERT_LT(rms(silent, 256), 0.001f);
+
+    // Reset again so ch is at lfo_phase_=0, matching a fresh instance.
+    // (Processing silent[] above advanced lfo_phase_ by 256 steps.)
+    ch.reset();
+
+    // A freshly constructed instance at the same state should match exactly,
+    // confirming lfo_phase_ was also reset (not just the buffer).
+    Chorus fresh;
+    fresh.set_sample_rate(48000);
+    fresh.reset();
+    float probe_a[256], probe_b[256];
+    fill_sine(probe_a, 256, 220.0f, 48000);
+    fill_sine(probe_b, 256, 220.0f, 48000);
+    ch.process(probe_a, 256);
+    fresh.process(probe_b, 256);
+    for (int i = 0; i < 256; ++i)
+        ASSERT_NEAR(probe_a[i], probe_b[i], 1e-5f);
+}
