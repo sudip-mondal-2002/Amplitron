@@ -21,30 +21,46 @@ namespace Amplitron
         jack_client_t *client = nullptr;
         jack_port_t *in_port = nullptr;
         jack_port_t *out_port = nullptr;
+        bool ports_registered = false;
+        AudioEngine *engine = nullptr;
     };
 
     static int jack_process(jack_nframes_t nframes, void *arg)
     {
-        auto *s = static_cast<AudioBackendState *>(arg);
-        if (!s || !s->in_port || !s->out_port)
+        auto *state = static_cast<AudioBackendState *>(arg);
+        if (!state || !state->engine)
             return 0;
 
-        float *in = static_cast<float *>(jack_port_get_buffer(s->in_port, nframes));
-        float *out = static_cast<float *>(jack_port_get_buffer(s->out_port, nframes));
+        if (!state->in_port || !state->out_port)
+            return 0;
 
-        // For now, pass-through (copy input to output). The AudioEngine expects
-        // the platform backend to feed audio into the engine via its own callback
-        // wiring; a full integration will forward buffers into AudioEngine's
-        // processing path.
+        float *in = static_cast<float *>(jack_port_get_buffer(state->in_port, nframes));
+        float *out = static_cast<float *>(jack_port_get_buffer(state->out_port, nframes));
         if (in && out)
         {
-            for (jack_nframes_t i = 0; i < nframes; ++i)
-            {
-                out[i] = in[i];
-            }
+            state->engine->process_audio(in, out, static_cast<int>(nframes));
         }
 
         return 0;
+    }
+
+    static bool ensure_ports_registered(AudioBackendState *state, AudioEngine *engine)
+    {
+        if (!state || !state->client || state->ports_registered)
+            return state && state->ports_registered;
+
+        state->in_port = jack_port_register(state->client, "in_1", JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
+        state->out_port = jack_port_register(state->client, "out_1", JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
+        if (!state->in_port || !state->out_port)
+        {
+            std::cerr << "[Amplitron] JACK: failed to register in/out ports." << std::endl;
+            return false;
+        }
+
+        state->engine = engine;
+        jack_set_process_callback(state->client, jack_process, state);
+        state->ports_registered = true;
+        return true;
     }
 
     AudioBackendState *create_audio_backend()
@@ -85,6 +101,120 @@ namespace Amplitron
             jack_client_close(state->client);
         }
         delete state;
+    }
+
+    bool AudioEngine::initialize()
+    {
+        if (initialized_)
+            return true;
+
+        if (!backend_)
+        {
+            backend_ = create_audio_backend();
+        }
+
+        initialized_ = true;
+        last_error_.clear();
+        return true;
+    }
+
+    void AudioEngine::shutdown()
+    {
+        stop();
+
+        auto *state = static_cast<AudioBackendState *>(backend_);
+        if (state && state->client)
+        {
+            jack_client_close(state->client);
+            state->client = nullptr;
+            state->in_port = nullptr;
+            state->out_port = nullptr;
+            state->ports_registered = false;
+        }
+
+        initialized_ = false;
+    }
+
+    bool AudioEngine::start()
+    {
+        if (!initialized_ || running_)
+            return false;
+
+        auto *state = static_cast<AudioBackendState *>(backend_);
+        if (state && state->client)
+        {
+            if (!ensure_ports_registered(state, this))
+            {
+                last_error_ = "Failed to initialise JACK ports.";
+                return false;
+            }
+            if (jack_activate(state->client))
+            {
+                last_error_ = "Failed to activate JACK client.";
+                return false;
+            }
+        }
+
+        running_ = true;
+        last_error_.clear();
+        return true;
+    }
+
+    void AudioEngine::stop()
+    {
+        auto *state = static_cast<AudioBackendState *>(backend_);
+        if (state && state->client && running_)
+        {
+            jack_deactivate(state->client);
+        }
+        running_ = false;
+    }
+
+    bool AudioEngine::restart()
+    {
+        stop();
+        bool ok = start();
+        if (!ok)
+        {
+            last_error_ = "Failed to restart JACK audio.";
+            std::cerr << "[Amplitron] " << last_error_ << std::endl;
+        }
+        return ok;
+    }
+
+    std::string AudioEngine::get_input_device_name() const { return "JACK in_1"; }
+    std::string AudioEngine::get_output_device_name() const { return "JACK out_1"; }
+
+    std::vector<AudioDeviceInfo> AudioEngine::get_input_devices() const
+    {
+        return {{0, "JACK in_1", 1, 0, static_cast<double>(sample_rate_), false}};
+    }
+
+    std::vector<AudioDeviceInfo> AudioEngine::get_output_devices() const
+    {
+        return {{0, "JACK out_1", 0, 1, static_cast<double>(sample_rate_), false}};
+    }
+
+    bool AudioEngine::set_input_device(int device_index)
+    {
+        if (device_index != 0)
+        {
+            last_error_ = "Invalid JACK input device.";
+            return false;
+        }
+        input_device_ = 0;
+        return true;
+    }
+
+    bool AudioEngine::set_output_device(int device_index)
+    {
+        if (device_index != 0)
+        {
+            last_error_ = "Invalid JACK output device.";
+            return false;
+        }
+        output_device_ = 0;
+        return true;
     }
 #else
     // Fallback stub when built without JACK; should never be compiled in this TU
