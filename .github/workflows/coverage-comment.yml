@@ -35,7 +35,7 @@ jobs:
           fi
 
       - name: Post Comment
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@v3
         with:
           header: coverage
           number: ${{ env.PR_NUMBER }}
