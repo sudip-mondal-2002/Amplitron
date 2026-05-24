@@ -139,3 +139,52 @@ TEST(WavLoader_MaxLengthLimit) {
 
     std::remove(path.c_str());
 }
+
+TEST(WavLoader_ResampleLinearSameRate) {
+    std::vector<float> input(128);
+
+    for (size_t i = 0; i < input.size(); ++i) {
+        input[i] = static_cast<float>(i) * 0.01f;
+    }
+
+    auto output =
+        resample_linear(input, 48000, 48000);
+
+    ASSERT_EQ(
+        static_cast<int>(output.size()),
+        static_cast<int>(input.size()));
+
+    for (size_t i = 0; i < input.size(); ++i) {
+        ASSERT_NEAR(output[i], input[i], 1e-6f);
+    }
+}
+
+TEST(WavLoader_ResampleLinearEmptyInput) {
+    std::vector<float> input;
+
+    auto output =
+        resample_linear(input, 44100, 48000);
+
+    ASSERT_TRUE(output.empty());
+}
+
+TEST(WavLoader_ResampleLinearDownsample) {
+    std::vector<float> input(2048);
+
+    for (size_t i = 0; i < input.size(); ++i) {
+        input[i] = std::sin(
+            static_cast<float>(i) * 0.01f);
+    }
+
+    auto output =
+        resample_linear(input, 48000, 22050);
+
+    ASSERT_FALSE(output.empty());
+
+    ASSERT_TRUE(
+        output.size() < input.size());
+
+    for (float s : output) {
+        ASSERT_TRUE(std::isfinite(s));
+    }
+}
