@@ -178,6 +178,10 @@ static void auto_detect_devices(int& input_device, int& output_device, int& samp
 }
 
 bool AudioEngine::initialize() {
+    if (mock_devices_enabled_) {
+        initialized_ = true;
+        return true;
+    }
     PaError err = Pa_Initialize();
     if (err != paNoError) {
         std::cerr << "PortAudio init failed: " << Pa_GetErrorText(err) << std::endl;
@@ -193,7 +197,9 @@ bool AudioEngine::initialize() {
 void AudioEngine::shutdown() {
     stop();
     if (initialized_) {
-        Pa_Terminate();
+        if (!mock_devices_enabled_) {
+            Pa_Terminate();
+        }
         initialized_ = false;
     }
 }
@@ -207,6 +213,10 @@ extern int pa_audio_callback(const void* input, void* output,
 
 bool AudioEngine::start() {
     if (!initialized_ || running_) return false;
+    if (mock_devices_enabled_) {
+        running_ = true;
+        return true;
+    }
 
     const PaDeviceInfo* in_dev = Pa_GetDeviceInfo(input_device_);
     const PaDeviceInfo* out_dev = Pa_GetDeviceInfo(output_device_);
@@ -327,6 +337,10 @@ bool AudioEngine::start() {
 }
 
 void AudioEngine::stop() {
+    if (mock_devices_enabled_) {
+        running_ = false;
+        return;
+    }
     if (backend_->stream) {
         if (running_) {
             Pa_StopStream(backend_->stream);

@@ -126,6 +126,12 @@ endif()
 if(RTMIDI_LIBRARY_DIRS)
     link_directories(${RTMIDI_LIBRARY_DIRS})
 endif()
+if(PORTAUDIO_LIBRARY_DIRS)
+    link_directories(${PORTAUDIO_LIBRARY_DIRS})
+endif()
+if(SDL2_LIBRARY_DIRS)
+    link_directories(${SDL2_LIBRARY_DIRS})
+endif()
 
 # OpenGL
 find_package(OpenGL REQUIRED)

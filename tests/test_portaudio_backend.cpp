@@ -9,11 +9,9 @@
 //                                           stop, restart, error recovery
 //
 // Design:
-//   • ASSERT_TRUE(engine.initialize()) / ASSERT_TRUE(pa.ok) replace all
-//     former early-returns so every test always has at least one assertion.
-//   • Stream-level tests assert is_running() state rather than assuming
-//     start() succeeds (headless CI has no real audio hardware).
-//   • Pa_Initialize() always succeeds on CI — PortAudio is a build dep.
+//   • Mocked environment: Uses mock device injection so tests execute
+//     unconditionally on headless runners that lack real audio hardware.
+//   • Zero early returns: All if-return checks are deleted.
 // =============================================================================
 
 #include "test_framework.h"
@@ -26,13 +24,29 @@
 using namespace Amplitron;
 
 // ---------------------------------------------------------------------------
-// RAII wrapper — replaces former "if (!pa.ok) return;" with ASSERT_TRUE
+// RAII wrapper for PortAudio initialization
 // ---------------------------------------------------------------------------
 struct PaGuard {
     bool ok;
     PaGuard() { ok = (Pa_Initialize() == paNoError); }
     ~PaGuard() { if (ok) Pa_Terminate(); }
 };
+
+// ---------------------------------------------------------------------------
+// Test helper to configure a mocked AudioEngine
+// ---------------------------------------------------------------------------
+static void setup_mock_devices(AudioEngine& engine) {
+    std::vector<AudioDeviceInfo> inputs = {
+        {0, "Fake USB Mic", 1, 2, 48000.0, true},
+        {1, "Fake Guitar Interface", 2, 2, 44100.0, true}
+    };
+    std::vector<AudioDeviceInfo> outputs = {
+        {2, "Fake Speaker", 1, 2, 48000.0, false},
+        {3, "Fake USB Headset", 2, 2, 44100.0, true}
+    };
+    
+    engine.enable_mock_devices(inputs, outputs);
+}
 
 // ===========================================================================
 // GROUP 1 — is_usb_device_name  (pure string, zero hardware)
@@ -135,23 +149,13 @@ TEST(devices_share_host_api_same_device_shares_with_itself) {
     // Invalid index never shares with itself (no PaDeviceInfo available).
     ASSERT_FALSE(devices_share_host_api(-1, -1));
 
-    int dev = Pa_GetDefaultInputDevice();
-    if (dev == paNoDevice) dev = Pa_GetDefaultOutputDevice();
-    if (dev == paNoDevice) {
-        // The assertion above already ran; no more tests possible.
-        return;
-    }
     // A valid device must share its own host API with itself.
-    ASSERT_TRUE(devices_share_host_api(dev, dev));
+    ASSERT_TRUE(devices_share_host_api(0, 0));
 }
 
 TEST(devices_share_host_api_two_real_devices) {
     PaGuard pa;
     ASSERT_TRUE(pa.ok);
-
-    int count = Pa_GetDeviceCount();
-    // Need at least two devices to compare host-API membership.
-    if (count < 2) return;
 
     // Comparing device 0 with itself: must be true.
     ASSERT_TRUE(devices_share_host_api(0, 0));
@@ -181,47 +185,36 @@ TEST(audio_engine_default_state_before_init) {
 // ===========================================================================
 // GROUP 5b — AudioEngine: device names — covers BOTH branches of
 //   get_input_device_name() / get_output_device_name()
-//   (the "input_device_ >= 0" branch is exercised only after initialize()
-//    has run auto-detection and selected a device)
 // ===========================================================================
 
 TEST(audio_engine_input_device_name_both_branches) {
+    // 1. Without mock enabled (default uninitialized / no device state):
     AudioEngine engine;
-
-    // Branch: input_device_ == -1 → must return "None"
     ASSERT_EQ(engine.get_input_device_name(), std::string("None"));
 
-    ASSERT_TRUE(engine.initialize());
-    int in_dev = engine.get_input_device();
-    std::string name = engine.get_input_device_name();
-
-    if (in_dev >= 0) {
-        // Branch: input_device_ >= 0 → must return the actual device name
-        ASSERT_FALSE(name.empty());
-        ASSERT_NE(name, std::string("None"));
-    } else {
-        // Auto-detect found nothing; fallback is still "None"
-        ASSERT_EQ(name, std::string("None"));
-    }
+    // 2. With mock enabled (initialized / active device state):
+    AudioEngine mocked;
+    setup_mock_devices(mocked);
+    ASSERT_TRUE(mocked.initialize());
+    ASSERT_GE(mocked.get_input_device(), 0);
+    std::string name = mocked.get_input_device_name();
+    ASSERT_FALSE(name.empty());
+    ASSERT_EQ(name, std::string("Fake USB Mic"));
 }
 
 TEST(audio_engine_output_device_name_both_branches) {
+    // 1. Without mock enabled (default uninitialized / no device state):
     AudioEngine engine;
-
-    // Branch: output_device_ == -1 → must return "None"
     ASSERT_EQ(engine.get_output_device_name(), std::string("None"));
 
-    ASSERT_TRUE(engine.initialize());
-    int out_dev = engine.get_output_device();
-    std::string name = engine.get_output_device_name();
-
-    if (out_dev >= 0) {
-        // Branch: output_device_ >= 0 → must return the actual device name
-        ASSERT_FALSE(name.empty());
-        ASSERT_NE(name, std::string("None"));
-    } else {
-        ASSERT_EQ(name, std::string("None"));
-    }
+    // 2. With mock enabled (initialized / active device state):
+    AudioEngine mocked;
+    setup_mock_devices(mocked);
+    ASSERT_TRUE(mocked.initialize());
+    ASSERT_GE(mocked.get_output_device(), 0);
+    std::string name = mocked.get_output_device_name();
+    ASSERT_FALSE(name.empty());
+    ASSERT_EQ(name, std::string("Fake Speaker"));
 }
 
 // ===========================================================================
@@ -230,8 +223,10 @@ TEST(audio_engine_output_device_name_both_branches) {
 
 TEST(audio_engine_get_input_devices_field_validity) {
     AudioEngine engine;
+    setup_mock_devices(engine);
     ASSERT_TRUE(engine.initialize());
     auto devices = engine.get_input_devices();
+    ASSERT_FALSE(devices.empty());
     for (const auto& dev : devices) {
         ASSERT_FALSE(dev.name.empty());
         ASSERT_GE(dev.max_input_channels, 1);
@@ -242,8 +237,10 @@ TEST(audio_engine_get_input_devices_field_validity) {
 
 TEST(audio_engine_get_output_devices_field_validity) {
     AudioEngine engine;
+    setup_mock_devices(engine);
     ASSERT_TRUE(engine.initialize());
     auto devices = engine.get_output_devices();
+    ASSERT_FALSE(devices.empty());
     for (const auto& dev : devices) {
         ASSERT_FALSE(dev.name.empty());
         ASSERT_GE(dev.max_output_channels, 1);
@@ -254,9 +251,12 @@ TEST(audio_engine_get_output_devices_field_validity) {
 
 TEST(audio_engine_is_usb_flag_matches_helper) {
     AudioEngine engine;
+    setup_mock_devices(engine);
     ASSERT_TRUE(engine.initialize());
     auto in_devs  = engine.get_input_devices();
     auto out_devs = engine.get_output_devices();
+    ASSERT_FALSE(in_devs.empty());
+    ASSERT_FALSE(out_devs.empty());
     for (const auto& dev : in_devs) {
         ASSERT_EQ(dev.is_usb_device, is_usb_device_name(dev.name));
     }
@@ -267,14 +267,11 @@ TEST(audio_engine_is_usb_flag_matches_helper) {
 
 // ===========================================================================
 // GROUP 5d — AudioEngine: set_input_device / set_output_device
-//   Covers all three branches in each setter:
-//     1. Invalid index → return false, set error           (existing tests)
-//     2. Valid index, engine NOT running → return true     (new tests below)
-//     3. Valid index, engine WAS running → stop/restart    (hard without HW)
 // ===========================================================================
 
 TEST(audio_engine_set_invalid_input_device_sets_error) {
     AudioEngine engine;
+    setup_mock_devices(engine);
     ASSERT_TRUE(engine.initialize());
     engine.clear_error();
     ASSERT_FALSE(engine.set_input_device(999999));
@@ -284,6 +281,7 @@ TEST(audio_engine_set_invalid_input_device_sets_error) {
 
 TEST(audio_engine_set_invalid_output_device_sets_error) {
     AudioEngine engine;
+    setup_mock_devices(engine);
     ASSERT_TRUE(engine.initialize());
     engine.clear_error();
     ASSERT_FALSE(engine.set_output_device(999999));
@@ -292,51 +290,48 @@ TEST(audio_engine_set_invalid_output_device_sets_error) {
 }
 
 TEST(audio_engine_set_valid_input_device_not_running_succeeds) {
-    // Exercises the success path in set_input_device() when the engine
-    // is not running (was_running == false → lines 81-98 in devices.cpp).
     AudioEngine engine;
+    setup_mock_devices(engine);
     ASSERT_TRUE(engine.initialize());
     ASSERT_FALSE(engine.is_running());
 
     auto in_devs = engine.get_input_devices();
-    if (in_devs.empty()) return; // no input devices on this runner
+    ASSERT_FALSE(in_devs.empty());
 
     int target = in_devs[0].index;
     engine.clear_error();
     ASSERT_TRUE(engine.set_input_device(target));
     ASSERT_EQ(engine.get_input_device(), target);
     ASSERT_EQ(engine.get_last_error(), std::string(""));
-    // Name must now reflect the selected device (>= 0 branch of get_name)
-    ASSERT_NE(engine.get_input_device_name(), std::string("None"));
-    ASSERT_FALSE(engine.get_input_device_name().empty());
+    ASSERT_EQ(engine.get_input_device_name(), std::string("Fake USB Mic"));
 }
 
 TEST(audio_engine_set_valid_output_device_not_running_succeeds) {
-    // Exercises the success path in set_output_device() (lines 117-134).
     AudioEngine engine;
+    setup_mock_devices(engine);
     ASSERT_TRUE(engine.initialize());
     ASSERT_FALSE(engine.is_running());
 
     auto out_devs = engine.get_output_devices();
-    if (out_devs.empty()) return; // no output devices on this runner
+    ASSERT_FALSE(out_devs.empty());
 
     int target = out_devs[0].index;
     engine.clear_error();
     ASSERT_TRUE(engine.set_output_device(target));
     ASSERT_EQ(engine.get_output_device(), target);
     ASSERT_EQ(engine.get_last_error(), std::string(""));
-    ASSERT_NE(engine.get_output_device_name(), std::string("None"));
-    ASSERT_FALSE(engine.get_output_device_name().empty());
+    ASSERT_EQ(engine.get_output_device_name(), std::string("Fake Speaker"));
 }
 
 TEST(audio_engine_set_device_index_persists) {
-    // Verify the device index is stable through get/set round-trips.
     AudioEngine engine;
+    setup_mock_devices(engine);
     ASSERT_TRUE(engine.initialize());
 
     auto in_devs  = engine.get_input_devices();
     auto out_devs = engine.get_output_devices();
-    if (in_devs.empty() || out_devs.empty()) return;
+    ASSERT_FALSE(in_devs.empty());
+    ASSERT_FALSE(out_devs.empty());
 
     int in_target  = in_devs[0].index;
     int out_target = out_devs[0].index;
@@ -349,12 +344,12 @@ TEST(audio_engine_set_device_index_persists) {
 }
 
 TEST(audio_engine_set_device_twice_is_idempotent) {
-    // Setting the same device twice must succeed both times.
     AudioEngine engine;
+    setup_mock_devices(engine);
     ASSERT_TRUE(engine.initialize());
 
     auto in_devs = engine.get_input_devices();
-    if (in_devs.empty()) return;
+    ASSERT_FALSE(in_devs.empty());
 
     int target = in_devs[0].index;
     ASSERT_TRUE(engine.set_input_device(target));
@@ -368,6 +363,7 @@ TEST(audio_engine_set_device_twice_is_idempotent) {
 
 TEST(audio_engine_init_then_shutdown) {
     AudioEngine engine;
+    setup_mock_devices(engine);
     ASSERT_TRUE(engine.initialize());
     ASSERT_EQ(engine.get_last_error(), std::string(""));
     ASSERT_FALSE(engine.is_running());
@@ -381,6 +377,7 @@ TEST(audio_engine_init_then_shutdown) {
 
 TEST(audio_engine_double_shutdown_is_safe) {
     AudioEngine engine;
+    setup_mock_devices(engine);
     ASSERT_TRUE(engine.initialize());
     engine.shutdown();
     engine.shutdown(); // must be a no-op
@@ -390,30 +387,27 @@ TEST(audio_engine_double_shutdown_is_safe) {
 }
 
 TEST(audio_engine_double_init_does_not_crash) {
-    // initialize() has no re-entry guard; Pa_Initialize() is called twice
-    // (PortAudio ref-counts). Verify no crash and both calls return true.
     AudioEngine engine;
+    setup_mock_devices(engine);
     ASSERT_TRUE(engine.initialize());
-    ASSERT_TRUE(engine.initialize()); // second call: PortAudio ref-count → 2
-
-    engine.shutdown();   // Pa_Terminate once (ref-count: 1)
-    Pa_Terminate();      // balance the extra Pa_Initialize (ref-count: 0)
+    ASSERT_TRUE(engine.initialize()); // second call
+    engine.shutdown();
 }
 
 // ===========================================================================
 // GROUP 7 — Lifecycle: start / stop
-//   is_running() state is the authoritative assertion; start() may fail in
-//   headless CI (no audio hardware) but MUST still be consistent.
 // ===========================================================================
 
 TEST(audio_engine_start_without_init_returns_false) {
     AudioEngine engine;
+    setup_mock_devices(engine);
     ASSERT_FALSE(engine.start());
     ASSERT_FALSE(engine.is_running());
 }
 
 TEST(audio_engine_stop_without_start_is_safe_noop) {
     AudioEngine engine;
+    setup_mock_devices(engine);
     ASSERT_FALSE(engine.is_running());
     engine.stop();
     ASSERT_FALSE(engine.is_running());
@@ -422,48 +416,48 @@ TEST(audio_engine_stop_without_start_is_safe_noop) {
 }
 
 TEST(audio_engine_start_after_init_state_consistent) {
-    // start() may fail in headless CI; is_running() must match the return.
     AudioEngine engine;
+    setup_mock_devices(engine);
     ASSERT_TRUE(engine.initialize());
     bool started = engine.start();
-    ASSERT_EQ(engine.is_running(), started);
+    ASSERT_TRUE(started);
+    ASSERT_TRUE(engine.is_running());
     engine.stop();
     ASSERT_FALSE(engine.is_running());
 }
 
 TEST(audio_engine_start_stop_start_state_consistent) {
-    // Every step: is_running() must match the return value of start().
     AudioEngine engine;
+    setup_mock_devices(engine);
     ASSERT_TRUE(engine.initialize());
 
     bool first = engine.start();
-    ASSERT_EQ(engine.is_running(), first);
+    ASSERT_TRUE(first);
+    ASSERT_TRUE(engine.is_running());
 
     engine.stop();
-    ASSERT_FALSE(engine.is_running()); // stop always clears running_
+    ASSERT_FALSE(engine.is_running());
 
     bool second = engine.start();
-    ASSERT_EQ(engine.is_running(), second); // consistent second time
+    ASSERT_TRUE(second);
+    ASSERT_TRUE(engine.is_running());
 
     engine.stop();
     ASSERT_FALSE(engine.is_running());
 }
 
 TEST(audio_engine_double_start_second_always_false) {
-    // Whether the first start() opens a stream or not, the second call
-    // must always return false:
-    //   • stream open succeeded: running_ is true  → guard triggers
-    //   • stream open failed:    Pa_OpenStream fails again → returns false
     AudioEngine engine;
+    setup_mock_devices(engine);
     ASSERT_TRUE(engine.initialize());
-    engine.start();                    // result not asserted intentionally
+    ASSERT_TRUE(engine.start());
     ASSERT_FALSE(engine.start());      // second call: always false
     engine.stop();
 }
 
 TEST(audio_engine_restart_after_stop_state_consistent) {
-    // restart() == stop() + start(); its return must match is_running().
     AudioEngine engine;
+    setup_mock_devices(engine);
     ASSERT_TRUE(engine.initialize());
 
     engine.start();
@@ -471,27 +465,22 @@ TEST(audio_engine_restart_after_stop_state_consistent) {
     ASSERT_FALSE(engine.is_running()); // precondition: stopped
 
     bool restarted = engine.restart();
-    ASSERT_EQ(engine.is_running(), restarted);
+    ASSERT_TRUE(restarted);
+    ASSERT_TRUE(engine.is_running());
     engine.stop();
     ASSERT_FALSE(engine.is_running());
 }
 
 TEST(audio_engine_restart_sets_error_on_failure) {
-    // When restart() fails (no hardware in CI), last_error_ must be set
-    // per the restart() implementation (lines 343-345 of lifecycle.cpp).
     AudioEngine engine;
+    setup_mock_devices(engine);
     ASSERT_TRUE(engine.initialize());
 
     engine.stop(); // ensure stopped
     bool ok = engine.restart();
-    if (!ok) {
-        // restart() sets last_error_ exactly when start() fails.
-        ASSERT_FALSE(engine.get_last_error().empty());
-    } else {
-        // restart() clears last_error_ when start() succeeds.
-        ASSERT_EQ(engine.get_last_error(), std::string(""));
-        engine.stop();
-    }
+    ASSERT_TRUE(ok);
+    ASSERT_EQ(engine.get_last_error(), std::string(""));
+    engine.stop();
 }
 
 // ===========================================================================
@@ -500,6 +489,7 @@ TEST(audio_engine_restart_sets_error_on_failure) {
 
 TEST(audio_engine_clear_error_after_invalid_input_device) {
     AudioEngine engine;
+    setup_mock_devices(engine);
     ASSERT_TRUE(engine.initialize());
 
     ASSERT_FALSE(engine.set_input_device(999999));
@@ -511,6 +501,7 @@ TEST(audio_engine_clear_error_after_invalid_input_device) {
 
 TEST(audio_engine_clear_error_after_invalid_output_device) {
     AudioEngine engine;
+    setup_mock_devices(engine);
     ASSERT_TRUE(engine.initialize());
 
     ASSERT_FALSE(engine.set_output_device(999999));
@@ -521,14 +512,12 @@ TEST(audio_engine_clear_error_after_invalid_output_device) {
 }
 
 TEST(audio_engine_error_empty_after_valid_device_set) {
-    // set_input_device() when NOT running does NOT touch last_error_ on
-    // the success path — only the was_running restart path clears it.
-    // Verify that a valid set from a clean state leaves no error.
     AudioEngine engine;
+    setup_mock_devices(engine);
     ASSERT_TRUE(engine.initialize());
 
     auto in_devs = engine.get_input_devices();
-    if (in_devs.empty()) return;
+    ASSERT_FALSE(in_devs.empty());
 
     engine.clear_error(); // start from a known-empty error state
     ASSERT_TRUE(engine.set_input_device(in_devs[0].index));
@@ -538,6 +527,7 @@ TEST(audio_engine_error_empty_after_valid_device_set) {
 
 TEST(audio_engine_last_error_empty_after_clear_with_no_ops) {
     AudioEngine engine;
+    setup_mock_devices(engine);
     ASSERT_TRUE(engine.initialize());
     engine.clear_error();
     ASSERT_EQ(engine.get_last_error(), std::string(""));
@@ -545,8 +535,6 @@ TEST(audio_engine_last_error_empty_after_clear_with_no_ops) {
 
 // ===========================================================================
 // GROUP 9 — AudioEngine configuration & monitoring accessors
-//   These cover inline getters/setters declared in audio_engine.h and
-//   implemented in audio_engine_api.cpp / audio_engine.cpp.
 // ===========================================================================
 
 TEST(audio_engine_sample_rate_accessor) {

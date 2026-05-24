@@ -13,6 +13,12 @@
 namespace Amplitron {
 
 std::string AudioEngine::get_input_device_name() const {
+    if (mock_devices_enabled_) {
+        for (const auto& dev : mock_input_devices_) {
+            if (dev.index == input_device_) return dev.name;
+        }
+        return "None";
+    }
     if (input_device_ >= 0) {
         const PaDeviceInfo* info = Pa_GetDeviceInfo(input_device_);
         if (info) return info->name;
@@ -21,6 +27,12 @@ std::string AudioEngine::get_input_device_name() const {
 }
 
 std::string AudioEngine::get_output_device_name() const {
+    if (mock_devices_enabled_) {
+        for (const auto& dev : mock_output_devices_) {
+            if (dev.index == output_device_) return dev.name;
+        }
+        return "None";
+    }
     if (output_device_ >= 0) {
         const PaDeviceInfo* info = Pa_GetDeviceInfo(output_device_);
         if (info) return info->name;
@@ -29,6 +41,9 @@ std::string AudioEngine::get_output_device_name() const {
 }
 
 std::vector<AudioDeviceInfo> AudioEngine::get_input_devices() const {
+    if (mock_devices_enabled_) {
+        return mock_input_devices_;
+    }
     std::vector<AudioDeviceInfo> devices;
     int count = Pa_GetDeviceCount();
     for (int i = 0; i < count; ++i) {
@@ -46,6 +61,9 @@ std::vector<AudioDeviceInfo> AudioEngine::get_input_devices() const {
 }
 
 std::vector<AudioDeviceInfo> AudioEngine::get_output_devices() const {
+    if (mock_devices_enabled_) {
+        return mock_output_devices_;
+    }
     std::vector<AudioDeviceInfo> devices;
     int count = Pa_GetDeviceCount();
     for (int i = 0; i < count; ++i) {
@@ -63,6 +81,35 @@ std::vector<AudioDeviceInfo> AudioEngine::get_output_devices() const {
 }
 
 bool AudioEngine::set_input_device(int device_index) {
+    if (mock_devices_enabled_) {
+        bool found = false;
+        for (const auto& dev : mock_input_devices_) {
+            if (dev.index == device_index) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            last_error_ = "Invalid input device.";
+            return false;
+        }
+        int prev_device = input_device_;
+        bool was_running = running_;
+        if (was_running) stop();
+        input_device_ = device_index;
+        if (was_running) {
+            if (!start()) {
+                last_error_ = "Failed to start with new input device. Reverting.";
+                input_device_ = prev_device;
+                if (!start()) {
+                    last_error_ = "Failed to revert to previous input device. Engine stopped.";
+                }
+                return false;
+            }
+            last_error_.clear();
+        }
+        return true;
+    }
     const PaDeviceInfo* info = Pa_GetDeviceInfo(device_index);
     if (!info || info->maxInputChannels < 1) {
         last_error_ = "Invalid input device.";
@@ -99,6 +146,35 @@ bool AudioEngine::set_input_device(int device_index) {
 }
 
 bool AudioEngine::set_output_device(int device_index) {
+    if (mock_devices_enabled_) {
+        bool found = false;
+        for (const auto& dev : mock_output_devices_) {
+            if (dev.index == device_index) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            last_error_ = "Invalid output device.";
+            return false;
+        }
+        int prev_device = output_device_;
+        bool was_running = running_;
+        if (was_running) stop();
+        output_device_ = device_index;
+        if (was_running) {
+            if (!start()) {
+                last_error_ = "Failed to start with new output device. Reverting.";
+                output_device_ = prev_device;
+                if (!start()) {
+                    last_error_ = "Failed to revert to previous output device. Engine stopped.";
+                }
+                return false;
+            }
+            last_error_.clear();
+        }
+        return true;
+    }
     const PaDeviceInfo* info = Pa_GetDeviceInfo(device_index);
     if (!info || info->maxOutputChannels < 1) {
         last_error_ = "Invalid output device.";

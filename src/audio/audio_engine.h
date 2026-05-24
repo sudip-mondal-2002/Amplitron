@@ -109,6 +109,35 @@ public:
     /** @brief Return the human-readable output device name. */
     std::string get_output_device_name() const;
 
+    /** @brief Mock devices support for testing in headless/CI environments */
+    void enable_mock_devices(const std::vector<AudioDeviceInfo>& inputs, const std::vector<AudioDeviceInfo>& outputs) {
+        mock_devices_enabled_ = true;
+        mock_input_devices_ = inputs;
+        mock_output_devices_ = outputs;
+        
+        // Auto-select first devices if available
+        if (!mock_input_devices_.empty()) {
+            input_device_ = mock_input_devices_[0].index;
+        } else {
+            input_device_ = -1;
+        }
+        if (!mock_output_devices_.empty()) {
+            output_device_ = mock_output_devices_[0].index;
+        } else {
+            output_device_ = -1;
+        }
+    }
+    
+    void disable_mock_devices() {
+        mock_devices_enabled_ = false;
+        mock_input_devices_.clear();
+        mock_output_devices_.clear();
+        input_device_ = -1;
+        output_device_ = -1;
+    }
+    
+    bool is_mock_devices_enabled() const { return mock_devices_enabled_; }
+
 
 
     /** @brief Direct access to the effect chain vector (GUI thread only). */
@@ -310,6 +339,10 @@ private:
 
     bool initialized_ = false;
     bool running_ = false;
+
+    bool mock_devices_enabled_ = false;
+    std::vector<AudioDeviceInfo> mock_input_devices_;
+    std::vector<AudioDeviceInfo> mock_output_devices_;
 
     int input_device_ = -1;
     int output_device_ = -1;
