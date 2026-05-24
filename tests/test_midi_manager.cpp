@@ -339,45 +339,84 @@ TEST(midi_learn_cancel) {
 // REQUIRED COVERAGE EXTENSIONS FOR TARGET REQUIREMENTS
 // ===========================================================================
 
+// --- RAII Cleanup Guard for Test Isolation ---
+struct ConfigBackupGuard {
+    std::string config_file = "midi_config.json";
+    std::string backup_file = "midi_config.json.bak";
+    bool backed_up = false;
+
+    ConfigBackupGuard() {
+        // If a real config exists, back it up safely so tests don't overwrite user data
+        if (fs::exists(config_file)) {
+            fs::rename(config_file, backup_file);
+            backed_up = true;
+        }
+    }
+
+    ~ConfigBackupGuard() {
+        // Guarantees test file removal even if an assertion fails midway
+        if (fs::exists(config_file)) {
+            fs::remove(config_file);
+        }
+        // Restore the original user config if one was backed up
+        if (backed_up && fs::exists(backup_file)) {
+            fs::rename(backup_file, config_file);
+        }
+    }
+};
+
 TEST(MidiPersist_SaveAndLoadRoundtrip) {
+    // This RAII guard automates setup and teardown securely
+    ConfigBackupGuard guard;
+
     MidiManager mgr;
     MidiMapping m1{7, -1, MidiTargetType::EffectParam, MidiMappingMode::Continuous, "effect_0", "drive"};
     MidiMapping m2{11, -1, MidiTargetType::EffectParam, MidiMappingMode::Continuous, "effect_1", "level"};
     mgr.add_mapping(m1);
     mgr.add_mapping(m2);
     
-    // Safety Fallback: Check if a local config already exists and back it up
-    std::string config_file = "midi_config.json"; 
-    std::string backup_file = "midi_config.json.bak";
-    bool backed_up = false;
-    if (fs::exists(config_file)) {
-        fs::rename(config_file, backup_file);
-        backed_up = true;
-    }
-
-    // Run the persistence endpoints natively
+    // Call endpoints natively (they return void, so we just call them directly)
     mgr.save_config();
 
     MidiManager mgr2;
     mgr2.load_config();
     
-    // Assert roundtrip integrity
+    // Hardened Assertions: Ensure every field maintains exact integrity over the roundtrip
     ASSERT_EQ(static_cast<int>(mgr2.mappings().size()), 2);
 
-    // Clean up the test file generated
-    if (fs::exists(config_file)) {
-        fs::remove(config_file);
+    ASSERT_EQ(mgr2.mappings()[0].cc_number, 7);
+    ASSERT_EQ(mgr2.mappings()[0].midi_channel, -1);
+    ASSERT_EQ(static_cast<int>(mgr2.mappings()[0].target_type), static_cast<int>(MidiTargetType::EffectParam));
+    ASSERT_EQ(mgr2.mappings()[0].effect_name, std::string("effect_0"));
+    ASSERT_EQ(mgr2.mappings()[0].param_name, std::string("drive"));
+
+    ASSERT_EQ(mgr2.mappings()[1].cc_number, 11);
+    ASSERT_EQ(mgr2.mappings()[1].midi_channel, -1);
+    ASSERT_EQ(static_cast<int>(mgr2.mappings()[1].target_type), static_cast<int>(MidiTargetType::EffectParam));
+    ASSERT_EQ(mgr2.mappings()[1].effect_name, std::string("effect_1"));
+    ASSERT_EQ(mgr2.mappings()[1].param_name, std::string("level"));
+}
+
+TEST(MidiPersist_LoadMissingFileGraceful) {
+    ConfigBackupGuard guard;
+
+    // Forcefully ensure the file is absent so we aren't testing false positives
+    if (fs::exists("midi_config.json")) {
+        fs::remove("midi_config.json");
     }
 
-    // Restore your original configuration if it was backed up
-    if (backed_up) {
-        fs::rename(backup_file, config_file);
-    }
-}
-TEST(MidiPersist_LoadMissingFileGraceful) {
     MidiManager mgr;
+    
+    // Clear mappings first so we can verify if the fallback restores defaults
+    mgr.clear_mappings();
+    
+    // Call load_config directly (since it returns void)
     mgr.load_config();
-    ASSERT_TRUE(true);
+    
+    // Verify that the missing file fallback gracefully triggers and loads 
+    // the 2 default configuration mappings instead of leaving it completely broken.
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
+    ASSERT_EQ(mgr.mappings()[0].cc_number, 7);
 }
 
 TEST(MidiMapping_ClearAllMappingsWhenEmpty) {
@@ -410,6 +449,7 @@ TEST(MidiMapping_OverrideSameCCWithNewParam) {
     int count_after_override = static_cast<int>(mgr.mappings().size());
     
     ASSERT_EQ(count_after_override, 1);
+    ASSERT_EQ(mgr.mappings()[0].param_name, std::string("level"));
 }
 
 TEST(MidiMapping_GetActiveMappingCountAfterBulkOps) {
