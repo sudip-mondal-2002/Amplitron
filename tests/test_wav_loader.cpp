@@ -8,6 +8,8 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <filesystem>
+
 using namespace Amplitron;
 using namespace TestFramework;
 static void wle16(std::ofstream& f, uint16_t v) {
@@ -23,6 +25,7 @@ static bool write_pcm16_wav(const std::string& path,
                              uint16_t num_channels,
                              uint32_t sample_rate,
                              const std::vector<int16_t>& samples) {
+    std::filesystem::create_directories("tests/assets");                           
     std::ofstream f(path, std::ios::binary);
     if (!f.is_open()) return false;
     const uint16_t bits        = 16;
@@ -45,6 +48,7 @@ static bool write_pcm16_wav(const std::string& path,
 }
 static bool write_zero_frame_wav(const std::string& path,
                                   uint32_t sample_rate = 44100) {
+    std::filesystem::create_directories("tests/assets");                               
     std::ofstream f(path, std::ios::binary);
     if (!f.is_open()) return false;
     const uint32_t riff_size = 36;
@@ -83,6 +87,7 @@ TEST(WavLoader_EmptyFrames_NonStandardRate_ReturnsEmpty) {
 static bool write_header_only_wav(const std::string& path,
                                    uint32_t claimed_frames = 64,
                                    uint32_t sample_rate    = 44100) {
+    std::filesystem::create_directories("tests/assets");                                
     std::ofstream f(path, std::ios::binary);
     if (!f.is_open()) return false;
     const uint32_t fake_data_bytes = claimed_frames * 2; 
