@@ -83,6 +83,23 @@ jobs:
           test ! -e "$INSTALL_PREFIX/share/amplitron"
           test ! -e "$INSTALL_PREFIX/bin/assets"
 
+      - name: Install Smoke Test
+        env:
+          INSTALL_PREFIX: ${{ runner.temp }}/amplitron-install
+        run: |
+          make PREFIX="$INSTALL_PREFIX" install
+          test -x "$INSTALL_PREFIX/bin/Amplitron"
+          "$INSTALL_PREFIX/bin/Amplitron" --version | grep -q "Amplitron v1.0"
+
+      - name: Uninstall Smoke Test
+        env:
+          INSTALL_PREFIX: ${{ runner.temp }}/amplitron-install
+        run: |
+          make PREFIX="$INSTALL_PREFIX" uninstall
+          test ! -e "$INSTALL_PREFIX/bin/Amplitron"
+          test ! -e "$INSTALL_PREFIX/share/amplitron"
+          test ! -e "$INSTALL_PREFIX/bin/assets"
+
       - name: Package Build Data for Coverage
         run: tar -czf build-coverage.tar.gz build/
 
@@ -477,6 +494,25 @@ jobs:
       - name: Run Tests
         shell: msys2 {0}
         run: cd build && ./amplitron-tests.exe
+
+      - name: Install Smoke Test
+        shell: msys2 {0}
+        env:
+          INSTALL_PREFIX: ${{ runner.temp }}\amplitron-install
+        run: |
+          make PREFIX="$INSTALL_PREFIX" install
+          test -x "$INSTALL_PREFIX/bin/Amplitron.exe"
+          "$INSTALL_PREFIX/bin/Amplitron.exe" --version | grep -q "Amplitron v1.0"
+
+      - name: Uninstall Smoke Test
+        shell: msys2 {0}
+        env:
+          INSTALL_PREFIX: ${{ runner.temp }}\amplitron-install
+        run: |
+          make PREFIX="$INSTALL_PREFIX" uninstall
+          test ! -e "$INSTALL_PREFIX/bin/Amplitron.exe"
+          test ! -e "$INSTALL_PREFIX/share/amplitron"
+          test ! -e "$INSTALL_PREFIX/bin/assets"
 
       - name: Collect Binaries
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
