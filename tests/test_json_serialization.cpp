@@ -5,13 +5,13 @@
  * Acceptance criteria from issue #96
  * -----------------------------------
  * [AC1] A chosen C++ JSON library is successfully added to the project's
- *       build system.                         → verified by compilation
+ * build system.                                  → verified by compilation
  * [AC2] Core data structures (effect parameters) have basic serialization
- *       methods.                              → test_effect_data_roundtrip
+ * methods.                                       → test_effect_data_roundtrip
  * [AC3] A unit test or console output confirms that the application state can
- *       be reliably converted to JSON and parsed back into C++ objects
- *       without data loss.                   → test_preset_full_roundtrip,
- *                                               test_preset_signal_chain_dump
+ * be reliably converted to JSON and parsed back into C++ objects
+ * without data loss.                             → test_preset_full_roundtrip,
+ * test_preset_signal_chain_dump
  */
 
 #include "test_framework.h"
@@ -24,6 +24,7 @@
 #include "audio/effects/reverb.h"
 #include "audio/effects/compressor.h"
 #include "audio/effects/delay.h"
+#include "audio/effects/distortion.h" // Added for autosave test
 #include "midi/midi_manager.h"
 
 #include <nlohmann/json.hpp>
@@ -233,6 +234,13 @@ TEST(json_roundtrip_via_file)
     ASSERT_NEAR(engine.get_input_gain(), 0.75f, 0.01f);
     ASSERT_NEAR(engine.get_output_gain(), 0.85f, 0.01f);
 
+    // Verify the legacy linear preset correctly wired the AudioGraph!
+    const auto& graph = engine.graph();
+    ASSERT_EQ(graph.get_nodes().size(), 3u); // Input -> Noise Gate -> Overdrive
+    ASSERT_EQ(graph.get_links().size(), 2u);
+    ASSERT_TRUE(graph.get_nodes().front().is_graph_input);
+    ASSERT_TRUE(graph.get_nodes().back().is_graph_output);
+
     std::remove(path.c_str());
     engine.shutdown();
 }
@@ -379,4 +387,45 @@ TEST(json_can_load_existing_factory_presets)
     // FIX: prevent vacuous pass — if all files are missing the loop skips
     // everything and the test proves nothing (CodeRabbit issue #4).
     ASSERT_GT(loaded_count, 0);
+}
+
+// -----------------------------------------------------------------------
+// [NEW] Autosave and Crash Recovery Engine State Roundtrip
+// -----------------------------------------------------------------------
+
+TEST(json_audio_engine_autosave_roundtrip) {
+    AudioEngine engine;
+    engine.initialize();
+    
+    // 1. Setup a specific chain state
+    auto distortion = std::make_shared<Distortion>();
+    distortion->set_enabled(true);
+    distortion->set_mix(0.85f);
+    engine.add_effect(distortion);
+
+    auto reverb = std::make_shared<Reverb>();
+    reverb->set_enabled(false);
+    reverb->set_mix(0.2f);
+    engine.add_effect(reverb);
+
+    // 2. Serialize the state to JSON using the new Autosave hooks
+    nlohmann::json saved_state = engine.serialize();
+
+    // 3. Deliberately ruin the current state (simulate user messing it up before crash)
+    distortion->set_enabled(false);
+    distortion->set_mix(0.0f);
+    reverb->set_enabled(true);
+    reverb->set_mix(1.0f);
+
+    // 4. Trigger Crash Recovery (Deserialize)
+    engine.deserialize(saved_state);
+
+    // 5. Assert that everything was restored perfectly
+    ASSERT_TRUE(distortion->is_enabled());
+    ASSERT_NEAR(distortion->get_mix(), 0.85f, 0.001f); 
+
+    ASSERT_FALSE(reverb->is_enabled());
+    ASSERT_NEAR(reverb->get_mix(), 0.2f, 0.001f);
+    
+    engine.shutdown();
 }

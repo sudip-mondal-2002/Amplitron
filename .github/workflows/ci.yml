@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [develop, main]
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 jobs:
   test-linux:
     name: Test on Linux
@@ -39,16 +44,7 @@ jobs:
 
       - name: Setup External Dependencies
         run: |
-          mkdir -p external external/kiss_fft
-          git clone --depth 1 --branch v1.90.1 https://github.com/ocornut/imgui.git external/imgui &
-          curl -fsSL -o external/nanosvg.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h &
-          curl -fsSL -o external/nanosvgrast.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h &
-          curl -fsSL -o external/dr_wav.h https://raw.githubusercontent.com/mackron/dr_libs/master/dr_wav.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.c https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.c &
-          curl -fsSL -o external/kiss_fft/_kiss_fft_guts.h https://raw.githubusercontent.com/mborgerding/kissfft/master/_kiss_fft_guts.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft_log.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft_log.h &
-          wait
+          bash ./scripts/setup_dependencies.sh
 
       - name: Generate Version
         id: version
@@ -59,11 +55,26 @@ jobs:
       - name: Build
         run: |
           mkdir -p build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Release -DAMPLITRON_VERSION="${{ steps.version.outputs.version }}" ..
+          cmake -DCMAKE_BUILD_TYPE=Debug \
+            -DAMPLITRON_VERSION="${{ steps.version.outputs.version }}" \
+            -DCMAKE_C_FLAGS="--coverage -O0 -g" \
+            -DCMAKE_CXX_FLAGS="--coverage -O0 -g" \
+            -DCMAKE_EXE_LINKER_FLAGS="--coverage" \
+            ..
           make -j$(nproc)
 
       - name: Run Tests
         run: cd build && ./amplitron-tests
+
+      - name: Package Build Data for Coverage
+        run: tar -czf build-coverage.tar.gz build/
+
+      - name: Upload Build Artifact for Coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-coverage
+          path: build-coverage.tar.gz
+          retention-days: 1
 
       - name: Upload Build
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -72,6 +83,105 @@ jobs:
           name: linux-build
           path: build/Amplitron
           retention-days: 1
+
+  coverage-linux:
+    name: Coverage Report on Linux
+    needs: test-linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install lcov
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends lcov
+
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-coverage
+          path: .
+
+      - name: Extract Build Data
+        run: tar -xzf build-coverage.tar.gz
+
+      - name: Generate Coverage Report
+        run: |
+          lcov --capture --directory build --output-file coverage.info --ignore-errors mismatch,gcov,source
+          lcov --remove coverage.info \
+            '/usr/*' \
+            '*/external/*' \
+            '*/tests/*' \
+            '*/build/*' \
+            --output-file coverage.filtered.info \
+            --ignore-errors unused
+          genhtml coverage.filtered.info --output-directory coverage-report
+          lcov --summary coverage.filtered.info | tee coverage-summary.txt
+
+      - name: Enforce Coverage Threshold and Generate Markdown
+        run: |
+          COVERAGE=$(lcov --summary coverage.filtered.info 2>&1 | awk '/lines......:/ {print $2}' | sed 's/%//')
+          echo "Line coverage: $COVERAGE%"
+
+          THRESHOLD=60
+
+          echo "### Code Coverage Report 📊" > coverage_comment.md
+          echo "**Line Coverage:** ${COVERAGE}%" >> coverage_comment.md
+          echo "" >> coverage_comment.md
+
+          if awk "BEGIN {exit !($COVERAGE >= $THRESHOLD)}"; then
+            echo "✅ Coverage meets threshold: $COVERAGE% >= $THRESHOLD%"
+            echo "✅ Coverage meets threshold: $COVERAGE% >= $THRESHOLD%" >> coverage_comment.md
+          else
+            echo "⚠️ Coverage is below threshold: $COVERAGE% < $THRESHOLD%"
+            echo "⚠️ Coverage is below threshold: $COVERAGE% < $THRESHOLD%" >> coverage_comment.md
+            echo "This PR adds coverage reporting, so low coverage is reported as a warning."
+            echo "CI will continue and upload the coverage report."
+          fi
+
+          echo "" >> coverage_comment.md
+          echo "<details>" >> coverage_comment.md
+          echo "<summary>Full Coverage Summary</summary>" >> coverage_comment.md
+          echo "" >> coverage_comment.md
+          echo '```text' >> coverage_comment.md
+          cat coverage-summary.txt >> coverage_comment.md
+          echo '```' >> coverage_comment.md
+          echo "</details>" >> coverage_comment.md
+
+          cat coverage_comment.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Save PR Number and Coverage Comment
+        if: github.event_name == 'pull_request'
+        run: |
+          mkdir -p pr_coverage
+          echo "${{ github.event.pull_request.number }}" > pr_coverage/pr_number.txt
+          cp coverage_comment.md pr_coverage/coverage_comment.md
+
+      - name: Upload PR Coverage Artifact
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-coverage-comment
+          path: pr_coverage/
+          retention-days: 1
+
+      - name: Upload Coverage HTML Report
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-report
+          path: coverage-report/
+          retention-days: 7
+
+      - name: Upload Coverage Summary
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-summary
+          path: |
+            coverage.filtered.info
+            coverage-summary.txt
+          retention-days: 7
 
   test-macos:
     name: Test on macOS
@@ -86,16 +196,7 @@ jobs:
 
       - name: Setup External Dependencies
         run: |
-          mkdir -p external external/kiss_fft
-          git clone --depth 1 --branch v1.90.1 https://github.com/ocornut/imgui.git external/imgui &
-          curl -fsSL -o external/nanosvg.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h &
-          curl -fsSL -o external/nanosvgrast.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h &
-          curl -fsSL -o external/dr_wav.h https://raw.githubusercontent.com/mackron/dr_libs/master/dr_wav.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.c https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.c &
-          curl -fsSL -o external/kiss_fft/_kiss_fft_guts.h https://raw.githubusercontent.com/mborgerding/kissfft/master/_kiss_fft_guts.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft_log.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft_log.h &
-          wait
+          bash ./scripts/setup_dependencies.sh
 
       - name: Generate Version
         id: version
@@ -131,11 +232,9 @@ jobs:
           echo "=== Original linked libraries ==="
           otool -L staging/Amplitron
 
-          # Step 1: Find all non-system dylibs the binary links to (file-based, no pipe subshell)
           otool -L staging/Amplitron | tail -n +2 | awk '{print $1}' > /tmp/deps.txt
           cat /tmp/deps.txt
 
-          # Step 2: Copy each non-system dylib and fix the reference in the binary
           while IFS= read -r lib; do
             case "$lib" in
               /usr/lib/*|/System/*|@executable_path/*|@rpath/*|@loader_path/*) continue ;;
@@ -148,7 +247,6 @@ jobs:
             install_name_tool -change "$lib" "@executable_path/$libname" staging/Amplitron
           done < /tmp/deps.txt
 
-          # Step 3: For each bundled dylib, fix ITS non-system dependencies too
           for dylib in staging/*.dylib; do
             [ -f "$dylib" ] || continue
             libname=$(basename "$dylib")
@@ -233,16 +331,7 @@ jobs:
 
       - name: Setup External Dependencies
         run: |
-          mkdir -p external external/kiss_fft
-          git clone --depth 1 --branch v1.90.1 https://github.com/ocornut/imgui.git external/imgui &
-          curl -fsSL -o external/nanosvg.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h &
-          curl -fsSL -o external/nanosvgrast.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h &
-          curl -fsSL -o external/dr_wav.h https://raw.githubusercontent.com/mackron/dr_libs/master/dr_wav.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.c https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.c &
-          curl -fsSL -o external/kiss_fft/_kiss_fft_guts.h https://raw.githubusercontent.com/mborgerding/kissfft/master/_kiss_fft_guts.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft_log.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft_log.h &
-          wait
+          bash ./scripts/setup_dependencies.sh
 
       - name: Generate Version
         id: version
@@ -262,7 +351,6 @@ jobs:
         with:
           name: web-build
           path: build-web/
-          # Keep for 1 day on feature branches; test-web always downloads it
           retention-days: 1
 
   test-web:
@@ -345,16 +433,7 @@ jobs:
       - name: Setup External Dependencies
         shell: msys2 {0}
         run: |
-          mkdir -p external external/kiss_fft
-          git clone --depth 1 --branch v1.90.1 https://github.com/ocornut/imgui.git external/imgui &
-          curl -fsSL -o external/nanosvg.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h &
-          curl -fsSL -o external/nanosvgrast.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h &
-          curl -fsSL -o external/dr_wav.h https://raw.githubusercontent.com/mackron/dr_libs/master/dr_wav.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.c https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.c &
-          curl -fsSL -o external/kiss_fft/_kiss_fft_guts.h https://raw.githubusercontent.com/mborgerding/kissfft/master/_kiss_fft_guts.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft_log.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft_log.h &
-          wait
+          bash ./scripts/setup_dependencies.sh
 
       - name: Generate Version
         shell: msys2 {0}
@@ -428,16 +507,7 @@ jobs:
 
       - name: Setup External Dependencies
         run: |
-          mkdir -p external external/kiss_fft
-          git clone --depth 1 --branch v1.90.1 https://github.com/ocornut/imgui.git external/imgui &
-          curl -fsSL -o external/nanosvg.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h &
-          curl -fsSL -o external/nanosvgrast.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h &
-          curl -fsSL -o external/dr_wav.h https://raw.githubusercontent.com/mackron/dr_libs/master/dr_wav.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.c https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.c &
-          curl -fsSL -o external/kiss_fft/_kiss_fft_guts.h https://raw.githubusercontent.com/mborgerding/kissfft/master/_kiss_fft_guts.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft_log.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft_log.h &
-          wait
+          bash ./scripts/setup_dependencies.sh
 
       - name: Fetch SDL2 Java bridge
         run: |
@@ -465,11 +535,9 @@ jobs:
           APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
           echo "APK: $APK  ($(du -sh "$APK" | cut -f1))"
 
-          # Dump manifest metadata — catches missing permissions, bad package name, etc.
           $ANDROID_HOME/build-tools/34.0.0/aapt2 dump badging "$APK" \
             | grep -E "^(package|sdkVersion|targetSdkVersion|uses-permission|native-code)"
 
-          # Confirm libmain.so is present and is a valid ARM64 ELF shared library
           unzip -p "$APK" lib/arm64-v8a/libmain.so | file - \
             | grep -i "ELF.*aarch64" \
             || { echo "ARM64 libmain.so not found or invalid"; exit 1; }
@@ -494,16 +562,7 @@ jobs:
 
       - name: Setup External Dependencies
         run: |
-          mkdir -p external external/kiss_fft
-          git clone --depth 1 --branch v1.90.1 https://github.com/ocornut/imgui.git external/imgui &
-          curl -fsSL -o external/nanosvg.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h &
-          curl -fsSL -o external/nanosvgrast.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h &
-          curl -fsSL -o external/dr_wav.h https://raw.githubusercontent.com/mackron/dr_libs/master/dr_wav.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.c https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.c &
-          curl -fsSL -o external/kiss_fft/_kiss_fft_guts.h https://raw.githubusercontent.com/mborgerding/kissfft/master/_kiss_fft_guts.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft_log.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft_log.h &
-          wait
+          bash ./scripts/setup_dependencies.sh
 
       - name: Generate Version
         id: version
@@ -533,7 +592,7 @@ jobs:
           cmake --build sdl2-build -j$(sysctl -n hw.ncpu)
           cmake --install sdl2-build
 
-      - name: Cache CMake configure output (Xcode project)
+      - name: Cache CMake configure output
         id: cmake-cache
         uses: actions/cache@v5
         with:
@@ -542,7 +601,7 @@ jobs:
           restore-keys: |
             ios-cmake-${{ runner.os }}-
 
-      - name: Configure (CMake → Xcode)
+      - name: Configure
         if: steps.cmake-cache.outputs.cache-hit != 'true'
         run: |
           cmake \
@@ -564,7 +623,7 @@ jobs:
           echo "products_dir=$PRODUCTS_DIR" >> $GITHUB_OUTPUT
           echo "Build products dir: $PRODUCTS_DIR"
 
-      - name: Build (iOS Device, no codesign)
+      - name: Build iOS Device
         run: |
           set -o pipefail
           xcodebuild \
@@ -590,13 +649,11 @@ jobs:
           fi
           echo "App bundle: $APP"
 
-          # Binary must exist and be a valid Mach-O arm64 device binary
           BINARY="$APP/Amplitron"
           file "$BINARY"
           lipo -info "$BINARY" | grep -E "arm64" \
             || { echo "Expected arm64 slice not found"; exit 1; }
 
-          # Info.plist must be valid and have the correct bundle ID
           plutil -lint "$APP/Info.plist"
           BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$APP/Info.plist")
           [ "$BUNDLE_ID" = "com.amplitron.app" ] \

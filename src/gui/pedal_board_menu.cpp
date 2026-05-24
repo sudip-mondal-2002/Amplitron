@@ -5,6 +5,7 @@
 
 #include "audio/effects/noise_gate.h"
 #include "audio/effects/compressor.h"
+#include "audio/effects/multiband_compressor.h"
 #include "audio/effects/overdrive.h"
 #include "audio/effects/distortion.h"
 #include "audio/effects/equalizer.h"
@@ -46,6 +47,9 @@ void PedalBoard::render_add_pedal_menu() {
         }
         if (ImGui::MenuItem("Compressor")) {
             add_effect_and_show(std::make_shared<Compressor>());
+        }
+        if (ImGui::MenuItem("MultiBand Compressor")) {
+            add_effect_and_show(std::make_shared<MultiBandCompressor>());
         }
 
         ImGui::Separator();
@@ -94,6 +98,19 @@ void PedalBoard::render_add_pedal_menu() {
         }
         if (ImGui::MenuItem("Cabinet Sim")) {
             add_effect_and_show(std::make_shared<CabinetSim>());
+        }
+
+        ImGui::Separator();
+        ImGui::TextDisabled("Routing Utility Blocks");
+    
+        // --- NEW MODULAR DAG INSTANTIATION ENTRIES ---
+        if (ImGui::MenuItem("+ Signal Splitter Node (1 In -> 2 Out)")) {
+            engine_.graph().add_node("Splitter", NodeRoutingType::Splitter, nullptr);
+            engine_.commit_graph_changes();
+        }
+        if (ImGui::MenuItem("+ Signal Mixer Node (2 In -> 1 Out)")) {
+            engine_.graph().add_node("Mixer", NodeRoutingType::Mixer, nullptr);
+            engine_.commit_graph_changes();
         }
 
         ImGui::EndPopup();

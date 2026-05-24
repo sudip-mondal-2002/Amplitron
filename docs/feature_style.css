@@ -1,0 +1,156 @@
+.features-section {
+    width: 100%;
+    min-height: 100vh;
+    max-width: 1200px;
+
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-bottom: 64px;
+    padding-top: 48px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* HEADER */
+.section-header h1 {
+    text-align: center;
+    font-size: 3rem;
+    color: var(--gold);
+
+    font-family: "Cinzel",serif;
+}
+
+/* GRID */
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit,minmax(300px,1fr));
+    gap: 24px;
+    padding-top: 24px;
+}
+
+/* CARD */
+.features-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(200, 162, 77, 0.2);
+    border-radius: 24px;
+
+    padding: 24px;
+    transition: 0.35s ease;
+    min-height: 240px;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(12px);
+}
+
+.features-card:hover {
+    transform: translateY(-8px);
+    border-color: var(--gold);
+    box-shadow: 0 15px 35px rgba(200, 162, 77, 0.12);
+}
+
+.features-card:hover .icon-box{
+    border-color: var(--gold);
+    box-shadow: 0 15px 35px rgba(200, 162, 77, 0.12);
+}
+
+/* ICON */
+.icon-box {
+    width: 62px;
+    height: 62px;
+
+    margin-bottom: 16px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    color: var(--gold);
+
+    border: 2px solid rgba(200, 162, 77, 0.2);
+    border-radius: 16px;
+    background: rgba(200, 162, 77, 0.08);
+    transition: all 0.3sec ease;
+}
+
+.icon-box span{
+    font-size: 2rem;
+}
+
+/* TEXT */
+.features-card h3{
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+
+    color: var(--gold);
+    font-family: "Cinzel", serif;
+}
+
+.features-card p{
+    font-size: 0.92rem;
+    line-height: 1.6;
+
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 900px) {
+
+    .section-header h1{
+        font-size: 2.5rem;
+        
+    }
+
+    .icon-box{
+        width: 62px;
+        height: 62px;
+
+        border-radius: 16px;
+    }
+
+    .icon-box span{
+        font-size: 1.7rem;
+    }
+
+    .features-section {
+    flex-direction: column;
+    }
+
+    .feature-card h3{
+        font-size: 1rem;
+    }
+
+}
+
+@media (max-width: 600px) {
+    .section-header h1 {
+        font-size: 1.8rem;
+        text-align: left;
+    }
+
+    .feature-card {
+        flex-direction: column;
+        padding: 20px;
+        min-height: auto;
+    }
+
+    .icon-box {
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+    }
+
+    .icon-box span{
+        font-size: 1.5rem;
+    }
+
+    .feature-card h3{
+        font-size: 0.92rem;
+    }
+
+    .feature-card p{
+        font-size: 0.62rem;
+    }
+}

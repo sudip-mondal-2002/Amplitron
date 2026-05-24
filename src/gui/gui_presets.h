@@ -46,6 +46,7 @@ public:
     bool save_named_preset(const std::string& preset_name,
                            const std::string& description);
     bool load_preset_by_index(int index);
+    bool load_preset_by_path(const std::string& path);
     bool delete_preset_by_index(int index);
     void ensure_factory_presets();
 

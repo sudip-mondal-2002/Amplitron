@@ -6,35 +6,145 @@
 #include "audio/spsc_queue.h"
 #include <chrono>
 
-#ifdef WITH_JACK
-#include <jack/jack.h>
+#include "audio/audio_graph.h"
+#include "audio/audio_graph_executor.h"
+#include <memory>
+
+#include <nlohmann/json.hpp>
+// FORWARD DECLARATIONS
+namespace Amplitron {
+
+struct AudioDeviceInfo {
+    int index;
+    std::string name;
+    int max_input_channels;
+    int max_output_channels;
+    double default_sample_rate;
+    bool is_usb_device;
+};
+
+struct AudioBackendState;
+
+/**
+ * @brief Core audio processing engine.
+ *
+ * Manages the audio stream (via a platform backend), the effect chain,
+ * master gain controls, CPU load monitoring, and a lock-free SPSC command
+ * queue for thread-safe GUI-to-audio parameter updates.
+ *
+ * All platform-specific code (PortAudio / SDL) lives in separate
+ * compilation units; the engine itself is platform-agnostic.
+ */
+class AudioEngine {
+public:
+    /** @brief Construct the engine with default settings. */
+    AudioEngine();
+
+    /** @brief Destructor — shuts down the audio stream if still running. */
+    ~AudioEngine();
+
+    void commit_graph_changes();
+
+    /** @brief serialize and deserialize method signatures to AudioEngine class definition */
+    
+    nlohmann::json serialize();
+    void deserialize(const nlohmann::json& j);
+    /** @brief Initialize the audio back-end. @return true on success. */
+    bool initialize();
+
+    /** @brief Release audio back-end resources. */
+    void shutdown();
+
+    /** @brief Open and start the audio stream. @return true on success. */
+    bool start();
+
+    /** @brief Stop the audio stream. */
+    void stop();
+
+    /** @brief Stop and restart the stream (manual recovery). @return true on success. */
+    bool restart();
+
+    /** @brief Return the last error message, or empty string. */
+    std::string get_last_error() const { return last_error_; }
+
+    /** @brief Clear the stored error message. */
+    void clear_error() { last_error_.clear(); }
+
+#ifdef AMPLITRON_ANDROID_OBOE
+    /**
+     * @brief Return a human-readable label for the Oboe sharing mode negotiated at runtime.
+     * "AAudio exclusive mode" when AAudio exclusive path is active; "OpenSL ES (shared)" otherwise.
+     * Used by the Android settings UI to display the actual backend, not a hardcoded string.
+     */
+    const char* get_oboe_sharing_mode_label() const;
 #endif
 
-// FORWARD DECLARATIONS
-namespace Amplitron
-{
+    /** @brief Enumerate available audio input devices. */
+    std::vector<AudioDeviceInfo> get_input_devices() const;
 
-    struct AudioDeviceInfo
-    {
-        int index;
-        std::string name;
-        int max_input_channels;
-        int max_output_channels;
-        double default_sample_rate;
-        bool is_usb_device;
-    };
-
-    struct AudioBackendState;
+    /** @brief Enumerate available audio output devices. */
+    std::vector<AudioDeviceInfo> get_output_devices() const;
 
     /**
-     * @brief Core audio processing engine.
-     *
-     * Manages the audio stream (via a platform backend), the effect chain,
-     * master gain controls, CPU load monitoring, and a lock-free SPSC command
-     * queue for thread-safe GUI-to-audio parameter updates.
-     *
-     * All platform-specific code (PortAudio / SDL) lives in separate
-     * compilation units; the engine itself is platform-agnostic.
+     * @brief Select the input device by index.
+     * @return true if the device was set successfully.
+     */
+    bool set_input_device(int device_index);
+
+    /**
+     * @brief Select the output device by index.
+     * @return true if the device was set successfully.
+     */
+    bool set_output_device(int device_index);
+
+    /** @brief Return the current input device index. */
+    int get_input_device() const { return input_device_; }
+
+    /** @brief Return the current output device index. */
+    int get_output_device() const { return output_device_; }
+
+    /** @brief Return the human-readable input device name. */
+    std::string get_input_device_name() const;
+
+    /** @brief Return the human-readable output device name. */
+    std::string get_output_device_name() const;
+
+
+
+    /** @brief Direct access to the effect chain vector (GUI thread only). */
+    AudioGraph& graph() { return main_graph_; }
+    const AudioGraph& graph() const { return main_graph_; }
+
+    // =========================================================================
+    // TEMPORARY COMPILER BRIDGE 
+    // (Keeps the Undo/Redo & Snapshot systems quiet while we build the DAG UI)
+    // =========================================================================
+    std::vector<std::shared_ptr<Effect>> dummy_effects_;
+    std::vector<std::shared_ptr<Effect>>& effects() { return dummy_effects_; }
+    // void remove_effect(int index) { 
+    //     if (index >= 0 && index < static_cast<int>(dummy_effects_.size())) {
+    //         dummy_effects_.erase(dummy_effects_.begin() + index);
+    //     }
+    // }
+
+    void add_effect(std::shared_ptr<Effect> fx);
+    void add_initial_effects(const std::vector<std::shared_ptr<Effect>>& fxs) {
+        dummy_effects_.clear();
+        for (const auto& fx : fxs) {
+            dummy_effects_.push_back(fx);
+        }
+        sync_graph_with_dummy_effects(true);
+    }
+    void insert_effect(int index, std::shared_ptr<Effect> fx);
+    void remove_effect(int index);
+    void clear_effects();
+    void move_effect(int from, int to);
+    void restore_effects_state(std::vector<std::shared_ptr<Effect>> state);
+
+
+    /**
+     * @brief Set the audio buffer size (takes effect on next stream restart).
+     * @param size Buffer size in samples.
      */
     class AudioEngine
     {
@@ -290,71 +400,113 @@ namespace Amplitron
         friend int jack_process(jack_nframes_t nframes, void *arg);
 #endif
 
-        // MIDI instance is managed by the GUI thread's MidiManager.
+    /**
+     * @brief Run the DSP pipeline on a block of audio samples.
+     *
+     * Called by the platform backend's audio callback. Public so that
+     * backend compilation units (which are not class members) can invoke it.
+     */
+    void process_audio(const float* input, float* output, int frame_count);
 
-    private:
-        // Platform backend state (defined in the backend .cpp that is compiled)
-        AudioBackendState *backend_ = nullptr;
+    // MIDI instance is managed by the GUI thread's MidiManager.
 
-        bool initialized_ = false;
-        bool running_ = false;
+private:
+    // Platform backend state (defined in the backend .cpp that is compiled)
+    AudioBackendState* backend_ = nullptr;
 
-        int input_device_ = -1;
-        int output_device_ = -1;
-        int sample_rate_ = DEFAULT_SAMPLE_RATE;
-        int buffer_size_ = DEFAULT_BUFFER_SIZE;
+    bool initialized_ = false;
+    bool running_ = false;
 
-        std::atomic<float> input_gain_{1.0f};
-        std::atomic<float> output_gain_{0.8f};
+    int input_device_ = -1;
+    int output_device_ = -1;
+    int sample_rate_ = DEFAULT_SAMPLE_RATE;
+    int buffer_size_ = DEFAULT_BUFFER_SIZE;
+    //global transport
+    std::atomic<float> input_gain_{1.0f};
+    std::atomic<float> output_gain_{0.8f};
+    std::atomic<bool> metronome_enabled_state_{false};
+    std::atomic<int> metronome_bpm_state_{120};
+    std::atomic<float> metronome_volume_state_{0.5f};
 
-        std::atomic<float> input_level_{0.0f};
-        std::atomic<float> output_level_{0.0f};
-        std::atomic<float> input_rms_{0.0f};
-        std::atomic<float> output_rms_{0.0f};
-        std::atomic<bool> input_clipped_{false};
-        std::atomic<bool> output_clipped_{false};
-        std::atomic<bool> analyzer_enabled_{false};
+    std::atomic<float> input_level_{0.0f};
+    std::atomic<float> output_level_{0.0f};
+    std::atomic<float> input_rms_{0.0f};
+    std::atomic<float> output_rms_{0.0f};
+    std::atomic<bool> input_clipped_{false};
+    std::atomic<bool> output_clipped_{false};
+    std::atomic<bool> analyzer_enabled_{false};
 
-        std::vector<std::shared_ptr<Effect>> effects_;
-        std::vector<float> process_buffer_;
-        std::vector<float> process_buffer_right_;
-        std::mutex effect_mutex_;
-        Recorder recorder_;
-        std::shared_ptr<Effect> tuner_tap_;
-        std::string last_error_;
+    // std::vector<std::shared_ptr<Effect>> effects_;
+    std::vector<float> process_buffer_;
+    std::vector<float> process_buffer_right_;
+    std::mutex effect_mutex_;
+    Recorder recorder_;
+    std::shared_ptr<Effect> tuner_tap_;
+    std::string last_error_;
 
-        // Audio-thread-private shadow of the effect chain.
-        // Copied from effects_ / tuner_tap_ whenever effect_mutex_ is acquired
-        // and topology_dirty_ is set, avoiding unnecessary shared_ptr churn on
-        // every callback when the chain is stable.
-        std::vector<std::shared_ptr<Effect>> audio_shadow_effects_;
-        std::shared_ptr<Effect> audio_shadow_tuner_;
-        std::atomic<bool> topology_dirty_{true};
+    // Audio-thread-private shadow of the effect chain.
+    // Copied from effects_ / tuner_tap_ whenever effect_mutex_ is acquired
+    // and topology_dirty_ is set, avoiding unnecessary shared_ptr churn on
+    // every callback when the chain is stable.
+    // std::vector<std::shared_ptr<Effect>> audio_shadow_effects_;
+    std::shared_ptr<Effect> audio_shadow_tuner_;
+    std::atomic<bool> topology_dirty_{true};
 
-        // Lock-free GUI -> Audio command queue (256 slots)
-        SPSCQueue<AudioCommand, 256> command_queue_;
-        void drain_commands();      // Must be called while holding effect_mutex_
-        void drain_gain_commands(); // Safe to call without effect_mutex_
+    // The main graph data model (Edited by the GUI/Main thread)
+    AudioGraph main_graph_;
+    
+    // The compiled executor (Built by the GUI thread)
+    std::shared_ptr<AudioGraphExecutor> main_executor_;
+    
+    // The shadow executor (Safely copied by the Audio thread)
+    std::shared_ptr<AudioGraphExecutor> audio_shadow_executor_;
 
-        // CPU load watchdog for buffer auto-tuning
-        std::atomic<float> cpu_load_{0.0f};
-        std::atomic<float> callback_duration_us_{0.0f};
-        bool auto_buffer_enabled_ = false;
+    void sync_graph_with_dummy_effects(bool reset_graph = false);
 
-        // Audio-thread capture for GUI analyzer snapshots.
-        static constexpr int ANALYZER_HOP_SIZE = 1024;
-        std::array<float, ANALYZER_FFT_SIZE> analyzer_capture_input_{};
-        std::array<float, ANALYZER_FFT_SIZE> analyzer_capture_output_{};
-        int analyzer_capture_index_ = 0;
-        int analyzer_samples_since_publish_ = 0;
+    // Lock-free GUI -> Audio command queue (256 slots)
+    SPSCQueue<AudioCommand, 256> command_queue_;
+    void drain_commands();        // Must be called while holding effect_mutex_
+    void drain_gain_commands();   // Safe to call without effect_mutex_
+    void update_metronome_timing();
 
-        // Shared snapshot buffers (audio thread writes with try_lock, GUI reads with lock).
-        mutable std::mutex analyzer_mutex_;
-        std::array<float, ANALYZER_FFT_SIZE> analyzer_snapshot_input_{};
-        std::array<float, ANALYZER_FFT_SIZE> analyzer_snapshot_output_{};
-        std::atomic<uint64_t> analyzer_sequence_{0};
+    // CPU load watchdog for buffer auto-tuning
+    std::atomic<float> cpu_load_{0.0f};
+    std::atomic<float> callback_duration_us_{0.0f};
+    bool auto_buffer_enabled_ = false;
 
-        // (MIDI instance removed - use MidiManager)
-    };
+    // Audio-thread capture for GUI analyzer snapshots.
+    static constexpr int ANALYZER_HOP_SIZE = 1024;
+    std::array<float, ANALYZER_FFT_SIZE> analyzer_capture_input_{};
+    std::array<float, ANALYZER_FFT_SIZE> analyzer_capture_output_{};
+    int analyzer_capture_index_ = 0;
+    int analyzer_samples_since_publish_ = 0;
+
+    // Shared snapshot buffers (audio thread writes with try_lock, GUI reads with lock).
+    mutable std::mutex analyzer_mutex_;
+    std::array<float, ANALYZER_FFT_SIZE> analyzer_snapshot_input_{};
+    std::array<float, ANALYZER_FFT_SIZE> analyzer_snapshot_output_{};
+    std::atomic<uint64_t> analyzer_sequence_{0};
+
+    // Metronome state (audio thread only)
+    bool metronome_enabled_ = false;
+    int metronome_bpm_ = 120;
+    float metronome_volume_ = 0.5f;
+
+    float metronome_volume_smoothed_ = 0.0f;
+    float metronome_volume_smooth_alpha_ = 0.05f;
+    float metronome_bpm_smoothed_ = 120.0f;
+    float metronome_bpm_smooth_alpha_ = 0.05f;
+
+    int metronome_sample_rate_ = 0;
+    double metronome_samples_per_beat_ = 0.0;
+    double metronome_sample_counter_ = 0.0;
+    int metronome_click_samples_total_ = 0;
+    int metronome_click_samples_remaining_ = 0;
+    float metronome_click_phase_ = 0.0f;
+    float metronome_click_phase_inc_ = 0.0f;
+    float metronome_click_env_ = 0.0f;
+    float metronome_click_decay_ = 0.0f;
+    // (MIDI instance removed - use MidiManager)
+};
 
 } // namespace Amplitron

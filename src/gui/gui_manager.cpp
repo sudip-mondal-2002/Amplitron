@@ -14,6 +14,7 @@
 #include <cmath>
 #include <algorithm>
 #include <cstdio>
+#include <SDL2/SDL.h>
 #if defined(__APPLE__)
 #  include <TargetConditionals.h>
 #endif
@@ -38,13 +39,21 @@ namespace Amplitron {
 
 GuiManager::GuiManager(AudioEngine& engine)
     : engine_(engine),
+      command_history_(),
       gui_settings_(engine),
       gui_presets_(engine, command_history_),
       gui_recording_(engine),
       gui_tuner_(engine, std::make_shared<TunerPedal>()),
       gui_analyzer_(engine),
-      gui_snapshots_(engine, command_history_),
-      gui_midi_(midi_manager_) {}
+      gui_snapshots_(engine, command_history_), // <-- UNCOMMENT THIS FIELD HERE!
+      gui_midi_(midi_manager_) 
+{
+    pedal_board_ = std::make_unique<PedalBoard>(engine_, command_history_, &gui_midi_);
+    gui_presets_.set_pedal_board(pedal_board_.get());
+    gui_presets_.set_midi_manager(&midi_manager_);
+    
+    gui_snapshots_.set_pedal_board(pedal_board_.get()); // <-- UNCOMMENT THIS ACTION TOO!
+}
 
 GuiManager::~GuiManager() {
     shutdown();
