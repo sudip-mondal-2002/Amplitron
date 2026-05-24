@@ -27,6 +27,7 @@ public:
     void set_sample_rate(int sample_rate) override;
     void reset() override;
     const char* name() const override { return "Pitch Shifter"; }
+    const char* type_id() const override { return "Pitch Shifter"; }
     std::vector<EffectParam>& params() override { return params_; }
 
 private:

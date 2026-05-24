@@ -53,7 +53,7 @@ bool PresetManager::save_preset(const std::string& filepath,
 
     for (auto& fx : engine.effects()) {
         PresetData::EffectData fd;
-        fd.type = fx->name();
+        fd.type = fx->type_id();
         fd.enabled = fx->is_enabled();
         fd.mix = fx->get_mix();
         for (auto& p : fx->params()) {

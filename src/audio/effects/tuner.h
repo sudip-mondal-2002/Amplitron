@@ -17,6 +17,7 @@ public:
     void set_sample_rate(int sample_rate) override;
     void reset() override;
     const char* name() const override { return "Tuner"; }
+    const char* type_id() const override { return "Tuner"; }
     std::vector<EffectParam>& params() override { return params_; }
 
     // Tuner detection results (audio thread writes, UI thread reads)
