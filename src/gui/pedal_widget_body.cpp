@@ -15,6 +15,18 @@
 
 namespace Amplitron {
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+extern "C" {
+EMSCRIPTEN_KEEPALIVE void load_ir_callback(uintptr_t cab_ptr, const char* path) {
+    if (cab_ptr && path) {
+        auto* cab = reinterpret_cast<Amplitron::CabinetSim*>(cab_ptr);
+        cab->load_ir(path);
+    }
+}
+}
+#endif
+
 void PedalWidget::render_amp_cabinet(ImDrawList* dl, ImVec2 p0, ImVec2 p1, float pedal_width, float pedal_height, float zoom) {
     ImU32 cab_body = IM_COL32(30, 22, 16, 255);
     ImU32 cab_border = IM_COL32(90, 70, 40, 255);
@@ -219,11 +231,32 @@ void PedalWidget::render_ir_cabinet_display(ImVec2 p0, float pedal_width, float 
         char load_id[64];
         snprintf(load_id, sizeof(load_id), "Load IR##ir_load_%d", index_);
         if (ImGui::Button(load_id, ImVec2(btn_w, 22 * zoom))) {
+#ifdef __EMSCRIPTEN__
+            EM_ASM({
+                var cab_ptr = $0;
+                var input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.wav';
+                input.onchange = function(e) {
+                    var file = e.target.files[0];
+                    var reader = new FileReader();
+                    reader.onload = function(re) {
+                        var data = new Uint8Array(re.target.result);
+                        var path = "/ir_" + file.name;
+                        FS.writeFile(path, data);
+                        Module.ccall('load_ir_callback', 'v', ['number', 'string'], [cab_ptr, path]);
+                    };
+                    reader.readAsArrayBuffer(file);
+                };
+                input.click();
+            }, (uintptr_t)ir_cab);
+#else
             std::string path = show_open_dialog("Load Impulse Response",
                                                "WAV Audio", "wav");
             if (!path.empty()) {
                 ir_cab->load_ir(path);
             }
+#endif
         }
         ImGui::PopStyleColor(3);
 
