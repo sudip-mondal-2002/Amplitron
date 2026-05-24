@@ -8,6 +8,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Option to enable JACK backend on Linux
+if(UNIX AND NOT APPLE)
+    set(DEFAULT_WITH_JACK ON)
+else()
+    set(DEFAULT_WITH_JACK OFF)
+endif()
+option(WITH_JACK "Enable JACK audio backend (Linux only)" ${DEFAULT_WITH_JACK})
+
 # Build type
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
@@ -82,6 +90,22 @@ if(NOT PORTAUDIO_FOUND)
               "C:/Program Files/portaudio/lib"
               "${CMAKE_SOURCE_DIR}/external/portaudio/lib")
 endif()
+
+    # JACK (optional, Linux only)
+    if(NOT JACK_LIBRARIES)
+        if(PkgConfig_FOUND)
+            pkg_check_modules(JACK jack)
+        endif()
+        if(NOT JACK_FOUND)
+            find_path(JACK_INCLUDE_DIRS jack/jack.h
+                PATHS /usr/include /usr/local/include)
+            find_library(JACK_LIBRARIES NAMES jack jackserver
+                PATHS /usr/lib /usr/local/lib)
+        endif()
+    endif()
+    if(JACK_LIBRARY_DIRS)
+        link_directories(${JACK_LIBRARY_DIRS})
+    endif()
 
 # SDL2
 if(PkgConfig_FOUND)
@@ -238,11 +262,17 @@ elseif(ANDROID)
     set(BACKEND_SOURCES src/audio/audio_backend_oboe.cpp)
     set(DIALOG_SOURCES  src/gui/file_dialog_web.cpp)
 else()
-    set(BACKEND_SOURCES
-        src/audio/audio_backend_portaudio.cpp
-        src/audio/audio_backend_portaudio_lifecycle.cpp
-        src/audio/audio_backend_portaudio_devices.cpp
-    )
+    if(WITH_JACK AND UNIX AND NOT APPLE)
+        set(BACKEND_SOURCES
+            src/audio/audio_backend_jack.cpp
+        )
+    else()
+        set(BACKEND_SOURCES
+            src/audio/audio_backend_portaudio.cpp
+            src/audio/audio_backend_portaudio_lifecycle.cpp
+            src/audio/audio_backend_portaudio_devices.cpp
+        )
+    endif()
     set(DIALOG_SOURCES
         src/gui/file_dialog_native.cpp
         src/gui/file_dialog_native_open.cpp
@@ -477,6 +507,10 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         AMPLITRON_HAS_MIDI
     )
 
+    if(WITH_JACK AND UNIX AND NOT APPLE)
+        target_compile_definitions(Amplitron PRIVATE WITH_JACK)
+    endif()
+
     target_link_libraries(Amplitron PRIVATE
         nlohmann_json::nlohmann_json
         ${PORTAUDIO_LIBRARIES}
@@ -484,6 +518,10 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${OPENGL_LIBRARIES}
         ${RTMIDI_LIBRARIES}
     )
+
+    if(WITH_JACK AND UNIX AND NOT APPLE)
+        target_link_libraries(Amplitron PRIVATE ${JACK_LIBRARIES})
+    endif()
 
     if(WIN32)
         target_link_libraries(Amplitron PRIVATE winmm ole32 setupapi comdlg32 shell32)
@@ -518,6 +556,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/test_metronome.cpp
         tests/test_gui_manager.cpp
         tests/test_clipboard_preset.cpp
+        tests/test_audio_backend_jack.cpp
     )
 
     # Effect + core sources needed by tests (no GUI, no main)
@@ -589,6 +628,10 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
     # ============================================================
     target_compile_definitions(amplitron-tests PRIVATE AMPLITRON_HAS_MIDI)
 
+    if(WITH_JACK AND UNIX AND NOT APPLE)
+        target_compile_definitions(amplitron-tests PRIVATE WITH_JACK)
+    endif()
+
     target_link_libraries(amplitron-tests PRIVATE
         nlohmann_json::nlohmann_json
         ${PORTAUDIO_LIBRARIES}
@@ -596,6 +639,10 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${OPENGL_LIBRARIES}
         ${RTMIDI_LIBRARIES}
     )
+
+    if(WITH_JACK AND UNIX AND NOT APPLE)
+        target_link_libraries(amplitron-tests PRIVATE ${JACK_LIBRARIES})
+    endif()
 
     if(WIN32)
         target_link_libraries(amplitron-tests PRIVATE winmm ole32 setupapi)
