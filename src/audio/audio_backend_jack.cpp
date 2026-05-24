@@ -50,12 +50,7 @@ namespace Amplitron
     AudioBackendState *create_audio_backend()
     {
         AudioBackendState *s = new AudioBackendState();
-
-<<<<<<< HEAD
         jack_status_t status = static_cast<jack_status_t>(0);
-=======
-        jack_status_t status = static_cast<jack_status_t>(0);
->>>>>>> 302bd88 (fixed the failing linux test)
         s->client = jack_client_open("Amplitron", JackNoStartServer, &status);
         if (!s->client)
         {
