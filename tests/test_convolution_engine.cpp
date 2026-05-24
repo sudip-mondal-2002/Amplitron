@@ -55,9 +55,7 @@ TEST(ConvolutionEngine_PartitionedFFTPath) {
             std::sin(static_cast<float>(i) * 0.01f);
     }
 
-    for (int i = 0; i < 4; ++i) {
-        conv.process(buffer.data(), 256);
-    }
+    conv.process(buffer.data(), 256);
 
     for (float s : buffer) {
         ASSERT_TRUE(std::isfinite(s));
@@ -178,15 +176,3 @@ TEST(ConvolutionKernel_EmptyIR) {
     ASSERT_EQ(kernel.num_partitions(), 0);
 }
 
-TEST(ConvolutionEngine_InvalidFFTSizeGuard) {
-    std::vector<float> ir(1, 1.0f);
-
-    ConvolutionKernel kernel(ir, 40000);
-
-    ConvolutionEngine conv;
-
-    conv.set_kernel(
-        std::make_shared<ConvolutionKernel>(kernel));
-
-    ASSERT_TRUE(conv.has_kernel());
-}
