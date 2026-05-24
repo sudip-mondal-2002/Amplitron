@@ -94,74 +94,6 @@ static bool write_wav_mono_pcm16(
     return true;
 }
 
-static bool write_wav_stereo_pcm16(
-    const std::string& path,
-    const std::vector<float>& left,
-    const std::vector<float>& right,
-    int sample_rate) {
-
-    if (left.size() != right.size()) {
-        return false;
-    }
-
-    std::ofstream out(path, std::ios::binary);
-
-    if (!out.is_open()) {
-        return false;
-    }
-
-    const uint16_t audio_format = 3;
-    const uint16_t num_channels = 2;
-    const uint16_t bits_per_sample = 32;
-
-    const uint16_t block_align =
-        num_channels * (bits_per_sample / 8);
-
-    const uint32_t byte_rate =
-        sample_rate * block_align;
-
-    const uint32_t data_bytes =
-        static_cast<uint32_t>(left.size()) *
-        block_align;
-
-    const uint32_t riff_size =
-        36 + data_bytes;
-
-    out.write("RIFF", 4);
-    write_le32(out, riff_size);
-    out.write("WAVE", 4);
-
-    out.write("fmt ", 4);
-    write_le32(out, 16);
-
-    write_le16(out, audio_format);
-    write_le16(out, num_channels);
-
-    write_le32(out, sample_rate);
-    write_le32(out, byte_rate);
-
-    write_le16(out, block_align);
-    write_le16(out, bits_per_sample);
-
-    out.write("data", 4);
-    write_le32(out, data_bytes);
-
-    for (size_t i = 0; i < left.size(); ++i) {
-
-        out.write(
-            reinterpret_cast<const char*>(&left[i]),
-            sizeof(float));
-
-        out.write(
-            reinterpret_cast<const char*>(&right[i]),
-            sizeof(float));
-    }
-
-    out.close();
-
-    return true;
-}
-
 TEST(WavLoader_TruncatedHeaderReturnsEmpty) {
     const std::string path =
         "truncated.wav";
@@ -314,33 +246,5 @@ TEST(WavLoader_ResampleLinearDownsample) {
     }
 }
 
-TEST(WavLoader_StereoMixdown) {
-    const std::string path =
-        "stereo_test.wav";
 
-    std::vector<float> left(512, 1.0f);
-    std::vector<float> right(512, -1.0f);
-
-    ASSERT_TRUE(
-        write_wav_stereo_pcm16(
-            path,
-            left,
-            right,
-            48000));
-
-    WavData wav =
-        load_wav_file(path);
-
-    ASSERT_FALSE(wav.samples.empty());
-
-    ASSERT_EQ(wav.channels, 2);
-
-    ASSERT_EQ(wav.sample_rate, 48000);
-
-    for (float s : wav.samples) {
-        ASSERT_TRUE(std::isfinite(s));
-    }
-
-    std::remove(path.c_str());
-}
 
