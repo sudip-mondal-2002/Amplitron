@@ -171,6 +171,33 @@
         console.log('[Amplitron] WASM runtime ready.');
       }
     };
+    window.amplitronPickDirectory = async function () {
+      try {
+        const dir = await window.showDirectoryPicker();
+        window._amplitronPresetDir = dir.name;
+        return dir.name;
+
+      } catch(e) {
+        console.log('Directory picker cancelled');
+        return '';
+      }
+      
+    };
+
+    window.amplitronSaveFile = async function(filename, dataPtr, dataLen){
+      try{
+        const data = Module.HEAPU8.slice(dataPtr, dataPtr + dataLen);
+        const blob = new Blob([data], {type: 'audio/wav'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url); 
+      } catch(e) {
+        console.log('Save failed:', e);
+      }
+    };
 
   // ==========================================
   // Web MIDI API Bridge
