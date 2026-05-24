@@ -17,6 +17,8 @@ int AudioGraph::add_node(const std::string &name, NodeRoutingType type,
   if (type == NodeRoutingType::Mixer || type == NodeRoutingType::MergeSum) {
     node.input_pin_ids.push_back(next_id_++);  // Input Pin Branch A
     node.input_pin_ids.push_back(next_id_++);  // Input Pin Branch B
+    node.input_gains.push_back(0.5f);
+    node.input_gains.push_back(0.5f);
     node.output_pin_ids.push_back(next_id_++); // 1 Output Pin
   } else if (type == NodeRoutingType::Splitter) {
     node.input_pin_ids.push_back(next_id_++);  // 1 Input Pin
@@ -115,6 +117,16 @@ void AudioGraph::set_node_position(int node_id, float x, float y) {
     if (node.id == node_id) {
       node.x = x;
       node.y = y;
+      break;
+    }
+  }
+}
+
+void AudioGraph::set_node_input_gain(int node_id, size_t input_index,
+                                     float gain) {
+  for (auto &node : nodes_) {
+    if (node.id == node_id && input_index < node.input_gains.size()) {
+      node.input_gains[input_index] = std::clamp(gain, 0.0f, 1.0f);
       break;
     }
   }

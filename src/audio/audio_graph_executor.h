@@ -34,6 +34,7 @@ private:
 
     struct InputSource {
         int buffer_index; // The pool index to read from
+        float gain = 1.0f;
     };
 
     struct NodeExecutionStep {

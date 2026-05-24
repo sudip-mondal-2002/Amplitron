@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <nlohmann/json.hpp>
 
 using namespace Amplitron;
 
@@ -133,6 +134,127 @@ TEST(preset_save_and_load_roundtrip) {
     std::remove(path.c_str());
     engine.shutdown();
     engine2.shutdown();
+}
+
+TEST(preset_load_graph_preserves_parallel_mixer_gains) {
+    const std::string path = "presets/test_graph_parallel_load.json";
+    nlohmann::json graph_preset = {
+        {"format_version", 2},
+        {"name", "Graph Load Test"},
+        {"input_gain", 0.6f},
+        {"output_gain", 0.7f},
+        {"nodes", nlohmann::json::array({
+            {
+                {"id", 1},
+                {"name", "Input"},
+                {"routing_type", static_cast<int>(NodeRoutingType::StandardEffect)},
+                {"is_graph_input", true},
+                {"is_graph_output", false},
+                {"x", 40.0f},
+                {"y", 120.0f},
+                {"input_pin_ids", nlohmann::json::array({2})},
+                {"output_pin_ids", nlohmann::json::array({3})},
+            },
+            {
+                {"id", 4},
+                {"name", "Splitter"},
+                {"routing_type", static_cast<int>(NodeRoutingType::Splitter)},
+                {"is_graph_input", false},
+                {"is_graph_output", false},
+                {"x", 240.0f},
+                {"y", 120.0f},
+                {"input_pin_ids", nlohmann::json::array({5})},
+                {"output_pin_ids", nlohmann::json::array({6, 7})},
+            },
+            {
+                {"id", 8},
+                {"name", "Mixer"},
+                {"routing_type", static_cast<int>(NodeRoutingType::Mixer)},
+                {"is_graph_input", false},
+                {"is_graph_output", true},
+                {"x", 440.0f},
+                {"y", 120.0f},
+                {"input_pin_ids", nlohmann::json::array({9, 10})},
+                {"output_pin_ids", nlohmann::json::array({11})},
+                {"input_gains", nlohmann::json::array({0.5f, 0.5f})},
+            },
+        })},
+        {"links", nlohmann::json::array({
+            {{"id", 12}, {"source_pin_id", 3}, {"dest_pin_id", 5}},
+            {{"id", 13}, {"source_pin_id", 6}, {"dest_pin_id", 9}},
+            {{"id", 14}, {"source_pin_id", 7}, {"dest_pin_id", 10}},
+        })},
+    };
+
+    {
+        std::ofstream out(path);
+        out << graph_preset.dump(2);
+    }
+
+    AudioEngine engine;
+    engine.initialize();
+    ASSERT_TRUE(PresetManager::load_preset(path, engine));
+    ASSERT_NEAR(engine.get_input_gain(), 0.6f, 0.01f);
+    ASSERT_NEAR(engine.get_output_gain(), 0.7f, 0.01f);
+
+    const auto& nodes = engine.graph().get_nodes();
+    ASSERT_EQ(nodes.size(), 3u);
+    ASSERT_EQ(engine.graph().get_links().size(), 3u);
+
+    const DSPNode* mixer = nullptr;
+    for (const auto& node : nodes) {
+        if (node.name == "Mixer") {
+            mixer = &node;
+            break;
+        }
+    }
+
+    ASSERT_TRUE(mixer != nullptr);
+    ASSERT_EQ(mixer->input_gains.size(), 2u);
+    ASSERT_NEAR(mixer->input_gains[0], 0.5f, 0.001f);
+    ASSERT_NEAR(mixer->input_gains[1], 0.5f, 0.001f);
+
+    std::remove(path.c_str());
+    engine.shutdown();
+}
+
+TEST(preset_parallel_amp_blend_example_loads) {
+    AudioEngine engine;
+    engine.initialize();
+
+    ASSERT_TRUE(PresetManager::load_preset("presets/06_Parallel_Amp_Blend.json", engine));
+    ASSERT_EQ(engine.effects().size(), 8u);
+    ASSERT_TRUE(engine.graph().get_nodes().size() >= 12u);
+    ASSERT_EQ(engine.graph().get_links().size(), 12u);
+
+    const DSPNode* mixer = nullptr;
+    const DSPNode* reverb = nullptr;
+    for (const auto& node : engine.graph().get_nodes()) {
+        if (node.name == "Mixer") {
+            mixer = &node;
+        } else if (node.name == "Reverb") {
+            reverb = &node;
+        }
+    }
+
+    ASSERT_TRUE(mixer != nullptr);
+    ASSERT_EQ(mixer->input_gains.size(), 2u);
+    ASSERT_NEAR(mixer->input_gains[0], 0.5f, 0.001f);
+    ASSERT_NEAR(mixer->input_gains[1], 0.5f, 0.001f);
+
+    ASSERT_TRUE(reverb != nullptr);
+    bool mixer_feeds_reverb = false;
+    for (const auto& link : engine.graph().get_links()) {
+        if (!mixer->output_pin_ids.empty() && !reverb->input_pin_ids.empty() &&
+            link.source_pin_id == mixer->output_pin_ids[0] &&
+            link.dest_pin_id == reverb->input_pin_ids[0]) {
+            mixer_feeds_reverb = true;
+            break;
+        }
+    }
+    ASSERT_TRUE(mixer_feeds_reverb);
+
+    engine.shutdown();
 }
 
 TEST(preset_load_nonexistent_fails) {

@@ -24,6 +24,7 @@ struct DSPNode {
 
   std::vector<int> input_pin_ids;
   std::vector<int> output_pin_ids;
+  std::vector<float> input_gains;
 
   bool is_graph_input = false;
   bool is_graph_output = false;
@@ -54,6 +55,7 @@ public:
   void set_node_as_input(int node_id, bool is_input);
   void set_node_as_output(int node_id, bool is_output);
   void set_node_position(int node_id, float x, float y);
+  void set_node_input_gain(int node_id, size_t input_index, float gain);
 
   // Topological Order & Loop Validation Core
   bool rebuild_topology();

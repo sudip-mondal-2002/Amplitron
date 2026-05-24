@@ -24,6 +24,9 @@ std::string mock_save_graph(const AudioGraph &graph) {
     node_j["is_graph_output"] = node.is_graph_output;
     node_j["x"] = node.x;
     node_j["y"] = node.y;
+    if (!node.input_gains.empty()) {
+      node_j["input_gains"] = node.input_gains;
+    }
 
     if (node.pedal) {
       node_j["effect"] = node.pedal->get_params();
@@ -115,6 +118,14 @@ bool mock_load_graph(const std::string &json_str, AudioGraph &graph) {
     graph.set_node_as_output(new_id, node_j["is_graph_output"]);
     if (node_j.contains("x") && node_j.contains("y")) {
       graph.set_node_position(new_id, node_j["x"], node_j["y"]);
+    }
+    if (node_j.contains("input_gains") && node_j["input_gains"].is_array()) {
+      for (size_t i = 0; i < node_j["input_gains"].size(); ++i) {
+        if (node_j["input_gains"][i].is_number()) {
+          graph.set_node_input_gain(new_id, i,
+                                    node_j["input_gains"][i].get<float>());
+        }
+      }
     }
 
     const auto *new_node = graph.find_node(new_id);
@@ -243,6 +254,8 @@ TEST(audio_graph_dsp_processing) {
 
   graph.set_node_as_input(p1, true);
   graph.set_node_as_output(m4, true);
+  graph.set_node_input_gain(m4, 0, 1.0f);
+  graph.set_node_input_gain(m4, 1, 1.0f);
 
   auto nodes = graph.get_nodes();
   // P1 -> P2 & P3 (Split)
@@ -271,6 +284,39 @@ TEST(audio_graph_dsp_processing) {
   // M4 receives (P2 + P3) -> (1.0f + 1.0f) = 2.0f.
   // The final output should be strictly 2.0f.
   ASSERT_TRUE(output_audio[0] == 2.0f);
+}
+
+TEST(audio_graph_mixer_input_gains_control_blend) {
+  AudioGraph graph;
+  AudioGraphExecutor executor;
+  executor.prepare(48000, 128);
+
+  int splitter = graph.add_node("Splitter", NodeRoutingType::Splitter);
+  graph.add_node("Path A", NodeRoutingType::StandardEffect);
+  graph.add_node("Path B", NodeRoutingType::StandardEffect);
+  int mixer = graph.add_node("Mixer", NodeRoutingType::Mixer);
+
+  graph.set_node_as_input(splitter, true);
+  graph.set_node_as_output(mixer, true);
+  graph.set_node_input_gain(mixer, 0, 0.25f);
+  graph.set_node_input_gain(mixer, 1, 0.5f);
+
+  auto nodes = graph.get_nodes();
+  graph.add_link(nodes[0].output_pin_ids[0], nodes[1].input_pin_ids[0]);
+  graph.add_link(nodes[0].output_pin_ids[1], nodes[2].input_pin_ids[0]);
+
+  nodes = graph.get_nodes();
+  graph.add_link(nodes[1].output_pin_ids[0], nodes[3].input_pin_ids[0]);
+  graph.add_link(nodes[2].output_pin_ids[0], nodes[3].input_pin_ids[1]);
+
+  ASSERT_TRUE(graph.rebuild_topology());
+  executor.compile(graph);
+
+  std::vector<float> input_audio(64, 1.0f);
+  std::vector<float> output_audio(64, 0.0f);
+  executor.process(input_audio.data(), output_audio.data(), 64);
+
+  ASSERT_TRUE(std::abs(output_audio[0] - 0.75f) < 0.0001f);
 }
 
 // 5. Test Explicit Inputs, Outputs/Sinks, and Silence of Unwired Nodes

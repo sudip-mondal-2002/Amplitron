@@ -7,6 +7,7 @@
 #include <imgui.h>
 #include <unordered_map>
 #include <cmath>
+#include <cstdio>
 
 namespace Amplitron {
 
@@ -94,6 +95,11 @@ void PedalBoard::render_signal_chain() {
     // Give all new nodes a default position at the end of the chain without shifting existing nodes
     for (const auto& node : audio_graph.get_nodes()) {
         if (ui_state.node_positions.find(node.id) == ui_state.node_positions.end()) {
+            if (node.x != 0.0f || node.y != 0.0f) {
+                ui_state.node_positions[node.id] = { ImVec2(node.x, node.y), false };
+                continue;
+            }
+
             float max_right = 40.0f;
             for (const auto& existing_node : audio_graph.get_nodes()) {
                 auto pos_it = ui_state.node_positions.find(existing_node.id);
@@ -138,8 +144,11 @@ void PedalBoard::render_signal_chain() {
         if (target_widget && std::strcmp(target_widget->get_effect()->name(), "MultiBand Compressor") == 0) {
             is_mb_comp = true;
         }
-        float node_width = (target_widget ? (is_mb_comp ? 190.0f * 2.2f : 190.0f) : 110.0f) * ui_state.zoom;
-        float node_height = (target_widget ? 360.0f : 70.0f) * ui_state.zoom;
+        bool is_mixer_node = node.routing_type == NodeRoutingType::Mixer;
+        float utility_width = is_mixer_node ? 155.0f : 110.0f;
+        float utility_height = is_mixer_node ? 120.0f : 70.0f;
+        float node_width = (target_widget ? (is_mb_comp ? 190.0f * 2.2f : 190.0f) : utility_width) * ui_state.zoom;
+        float node_height = (target_widget ? 360.0f : utility_height) * ui_state.zoom;
 
         ImGui::PushID(node.id);
 
@@ -166,7 +175,8 @@ void PedalBoard::render_signal_chain() {
 
             ImGui::SetCursorScreenPos(node_screen_pos);
             ImGui::SetNextItemAllowOverlap();
-            ImGui::InvisibleButton("util_drag_handle", ImVec2(node_width - 25.0f * ui_state.zoom, node_height));
+            float drag_height = is_mixer_node ? 32.0f * ui_state.zoom : node_height;
+            ImGui::InvisibleButton("util_drag_handle", ImVec2(node_width - 25.0f * ui_state.zoom, drag_height));
             if (!ui_state.hand_tool_active && ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
                 node_layout.position.x += ImGui::GetIO().MouseDelta.x / ui_state.zoom;
                 node_layout.position.y += ImGui::GetIO().MouseDelta.y / ui_state.zoom;
@@ -175,6 +185,30 @@ void PedalBoard::render_signal_chain() {
             ImGui::SetWindowFontScale(ui_state.zoom);
             draw_list->AddText(text_pos, IM_COL32(255, 255, 255, 255), node.name.c_str());
             ImGui::SetWindowFontScale(1.0f);
+
+            if (is_mixer_node) {
+                for (size_t gain_index = 0; gain_index < node.input_pin_ids.size() &&
+                                            gain_index < node.input_gains.size();
+                     ++gain_index) {
+                    float gain = node.input_gains[gain_index];
+                    float row_y = node_screen_pos.y + (50.0f + gain_index * 30.0f) * ui_state.zoom;
+                    ImVec2 label_pos(node_screen_pos.x + 12.0f * ui_state.zoom, row_y + 4.0f * ui_state.zoom);
+                    char label[8];
+                    std::snprintf(label, sizeof(label), "%c", static_cast<char>('A' + gain_index));
+                    draw_list->AddText(label_pos, IM_COL32(220, 220, 220, 255), label);
+
+                    ImGui::SetCursorScreenPos(ImVec2(node_screen_pos.x + 32.0f * ui_state.zoom, row_y));
+                    ImGui::SetNextItemWidth(105.0f * ui_state.zoom);
+                    std::string slider_id = "##mixer_gain_" + std::to_string(node.id) + "_" + std::to_string(gain_index);
+                    if (ImGui::SliderFloat(slider_id.c_str(), &gain, 0.0f, 1.0f, "%.2f")) {
+                        audio_graph.set_node_input_gain(node.id, gain_index, gain);
+                        engine_.commit_graph_changes();
+                    }
+                    if (ImGui::IsItemHovered()) {
+                        ImGui::SetTooltip("Mixer input %c gain", static_cast<char>('A' + gain_index));
+                    }
+                }
+            }
         }
 
         if (!node.is_reachable) {
@@ -347,7 +381,7 @@ void PedalBoard::render_signal_chain() {
         // ====================================================================
         // FIX: THE WIRE DRAG START (Output Pins)
         // ====================================================================
-        if (!is_amp) {
+        if (!node.output_pin_ids.empty() && !node.is_graph_output) {
             for (size_t idx = 0; idx < node.output_pin_ids.size(); ++idx) {
                 int pin_id = node.output_pin_ids[idx];
                 float pin_y = node_screen_pos.y + (node_height * (idx + 1.0f) / (node.output_pin_ids.size() + 1.0f));

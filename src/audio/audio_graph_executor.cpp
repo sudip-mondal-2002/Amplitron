@@ -78,12 +78,19 @@ void AudioGraphExecutor::compile(const AudioGraph& graph) {
         }
 
         // Trace upstream connections to find which buffers to read from
-        for (int in_pin : it->input_pin_ids) {
+        for (size_t input_index = 0; input_index < it->input_pin_ids.size();
+             ++input_index) {
+            int in_pin = it->input_pin_ids[input_index];
             for (const auto& link : links) {
                 if (link.dest_pin_id == in_pin) {
                     int src_node_id = graph.get_node_from_pin(link.source_pin_id);
                     if (src_node_id != -1 && node_to_buffer.count(src_node_id)) {
-                        step.input_sources.push_back({ node_to_buffer[src_node_id] });
+                        float gain = 1.0f;
+                        if (it->routing_type == NodeRoutingType::Mixer &&
+                            input_index < it->input_gains.size()) {
+                            gain = it->input_gains[input_index];
+                        }
+                        step.input_sources.push_back({ node_to_buffer[src_node_id], gain });
                     }
                 }
             }
@@ -129,7 +136,7 @@ void AudioGraphExecutor::process(const float* input, float* output, int num_samp
             for (const auto& src : step.input_sources) {
                 const float* src_buf = buffer_pool_[src.buffer_index].data();
                 for (int i = 0; i < num_samples; ++i) {
-                    node_input[i] += src_buf[i];
+                    node_input[i] += src_buf[i] * src.gain;
                 }
             }
         }

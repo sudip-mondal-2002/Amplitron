@@ -38,6 +38,25 @@ You can load these presets directly from the "Presets" menu in the GUI.
 * **Active Effects:** Noise Gate, Compressor, Equalizer, Phaser, Delay, Reverb, Amp Sim
 * **Use Case:** Classic rock solos, funky chords, and psychedelic textures. Inspired by the legendary MXR Phase 90 in 4-stage mode. Subtle delay adds depth to the sweep.
 
+### `06 Parallel Amp Blend`
+* **Style:** Two-amp studio rig with dirty British crunch blended against clean American sparkle
+* **Amp Models:** British Crunch (Marshall JCM800) and Clean American (Fender Twin)
+* **Active Effects:** Noise Gate, Compressor, Splitter, Overdrive, two Amp Sims, two Cabinets, Mixer, Reverb
+* **Use Case:** Big rhythm parts, layered lead tones, and session-style clean/dirty blending. The Splitter sends the compressed guitar to both amp paths, the Mixer starts at a 50/50 blend, and the Reverb sits after the Mixer so both amps share the same ambience.
+
+```text
+Input
+  -> Noise Gate -> Compressor
+       -> Splitter
+            -> Path A: Overdrive -> Amp Sim (British Crunch) -> Cabinet
+            -> Path B:             Amp Sim (Clean American)  -> Cabinet
+       -> Mixer (A 0.50 / B 0.50)
+       -> Reverb -> Output
+```
+
+* **Blend Tip:** Raise Mixer input A for more overdriven Marshall bite, or raise Mixer input B for a cleaner Fender foundation. Keep both near 0.5 for the default balanced blend.
+* **Gain Tip:** If the preset clips after changing the blend, lower the louder Amp Sim `Level` first, then fine-tune `Output Gain`.
+
 ### `06 Jet Flanger`
 * **Style:** Dramatic jet-plane flanger sweep with strong resonance
 * **Amp Model:** Jazz Warm (Roland JC-120)
@@ -51,3 +70,4 @@ The provided presets sound great, but their response depends heavily on your spe
 * **Noise Gate Threshold:** If you're using single-coil pickups, you may hear a 60-cycle hum on the high-gain patches (`03 Modern Metal Lead`). Try lowering the `Threshold` knob on the Noise Gate until the hum disappears while you aren't playing.
 * **Input Gain/Amp Gain:** If your guitar uses high-output active pickups (like EMGs), the clean presets might distort slightly. You can counter this by slightly lowering the `Input Gain` in the main UI, or lowering the `Gain` knob directly on the `Amp Sim` effect block.
 * **EQ Balancing:** Different woods and pickup styles impart different EQ curves. Use the `Equalizer` effect block to shape the sound. If a tone sounds muddy on your neck pickup, try cutting `Bass` or slightly boosting `Presence`.
+* **Parallel Blend:** On `06 Parallel Amp Blend`, the Mixer's A and B sliders control the dirty and clean paths. Small changes go a long way; try A 0.65 / B 0.35 for a rock-forward tone, or A 0.35 / B 0.65 for clearer chords.

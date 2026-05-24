@@ -1,0 +1,227 @@
+{
+  "format_version": 2,
+  "name": "06 Parallel Amp Blend",
+  "description": "Parallel clean American and dirty British amp paths blended at a 50/50 Mixer, with shared reverb after the merge.",
+  "saved_at": "2026-05-24T12:00:00",
+  "input_gain": 0.75,
+  "output_gain": 0.8,
+  "nodes": [
+    {
+      "id": 1,
+      "name": "Input",
+      "routing_type": 0,
+      "is_graph_input": true,
+      "is_graph_output": false,
+      "x": 40.0,
+      "y": 220.0,
+      "input_pin_ids": [2],
+      "output_pin_ids": [3]
+    },
+    {
+      "id": 4,
+      "name": "Noise Gate",
+      "routing_type": 0,
+      "is_graph_input": false,
+      "is_graph_output": false,
+      "x": 230.0,
+      "y": 220.0,
+      "effect": {
+        "type": "Noise Gate",
+        "enabled": true,
+        "mix": 1.0,
+        "Threshold": -55.0,
+        "Attack": 0.5,
+        "Release": 60.0
+      },
+      "input_pin_ids": [5],
+      "output_pin_ids": [6]
+    },
+    {
+      "id": 7,
+      "name": "Compressor",
+      "routing_type": 0,
+      "is_graph_input": false,
+      "is_graph_output": false,
+      "x": 450.0,
+      "y": 220.0,
+      "effect": {
+        "type": "Compressor",
+        "enabled": true,
+        "mix": 1.0,
+        "Threshold": -22.0,
+        "Ratio": 3.0,
+        "Attack": 8.0,
+        "Release": 140.0,
+        "Makeup": 2.0
+      },
+      "input_pin_ids": [8],
+      "output_pin_ids": [9]
+    },
+    {
+      "id": 10,
+      "name": "Splitter",
+      "routing_type": 1,
+      "is_graph_input": false,
+      "is_graph_output": false,
+      "x": 680.0,
+      "y": 245.0,
+      "input_pin_ids": [11],
+      "output_pin_ids": [12, 13]
+    },
+    {
+      "id": 14,
+      "name": "Overdrive",
+      "routing_type": 0,
+      "is_graph_input": false,
+      "is_graph_output": false,
+      "x": 900.0,
+      "y": 40.0,
+      "effect": {
+        "type": "Overdrive",
+        "enabled": true,
+        "mix": 1.0,
+        "Drive": 4.2,
+        "Tone": 0.68,
+        "Level": 0.78
+      },
+      "input_pin_ids": [15],
+      "output_pin_ids": [16]
+    },
+    {
+      "id": 17,
+      "name": "Amp Sim",
+      "routing_type": 0,
+      "is_graph_input": false,
+      "is_graph_output": false,
+      "x": 1120.0,
+      "y": 40.0,
+      "effect": {
+        "type": "Amp Sim",
+        "enabled": true,
+        "mix": 1.0,
+        "Model": 1.0,
+        "Gain": 0.68,
+        "Bass": -0.5,
+        "Mid": 2.0,
+        "Treble": 1.0,
+        "Level": 0.72
+      },
+      "input_pin_ids": [18],
+      "output_pin_ids": [19]
+    },
+    {
+      "id": 20,
+      "name": "Cabinet",
+      "routing_type": 0,
+      "is_graph_input": false,
+      "is_graph_output": false,
+      "x": 1340.0,
+      "y": 40.0,
+      "effect": {
+        "type": "Cabinet",
+        "enabled": true,
+        "mix": 1.0,
+        "Type": 2.0,
+        "Bright": 0.55
+      },
+      "input_pin_ids": [21],
+      "output_pin_ids": [22]
+    },
+    {
+      "id": 23,
+      "name": "Amp Sim",
+      "routing_type": 0,
+      "is_graph_input": false,
+      "is_graph_output": false,
+      "x": 900.0,
+      "y": 430.0,
+      "effect": {
+        "type": "Amp Sim",
+        "enabled": true,
+        "mix": 1.0,
+        "Model": 0.0,
+        "Gain": 0.35,
+        "Bass": 0.8,
+        "Mid": -1.5,
+        "Treble": 1.6,
+        "Level": 0.78
+      },
+      "input_pin_ids": [24],
+      "output_pin_ids": [25]
+    },
+    {
+      "id": 26,
+      "name": "Cabinet",
+      "routing_type": 0,
+      "is_graph_input": false,
+      "is_graph_output": false,
+      "x": 1120.0,
+      "y": 430.0,
+      "effect": {
+        "type": "Cabinet",
+        "enabled": true,
+        "mix": 1.0,
+        "Type": 1.0,
+        "Bright": 0.6
+      },
+      "input_pin_ids": [27],
+      "output_pin_ids": [28]
+    },
+    {
+      "id": 29,
+      "name": "Mixer",
+      "routing_type": 2,
+      "is_graph_input": false,
+      "is_graph_output": false,
+      "x": 1560.0,
+      "y": 255.0,
+      "input_pin_ids": [30, 31],
+      "output_pin_ids": [32],
+      "input_gains": [0.5, 0.5]
+    },
+    {
+      "id": 33,
+      "name": "Reverb",
+      "routing_type": 0,
+      "is_graph_input": false,
+      "is_graph_output": false,
+      "x": 1780.0,
+      "y": 220.0,
+      "effect": {
+        "type": "Reverb",
+        "enabled": true,
+        "mix": 1.0,
+        "Decay": 0.48,
+        "Damp": 0.42,
+        "Level": 0.28
+      },
+      "input_pin_ids": [34],
+      "output_pin_ids": [35]
+    },
+    {
+      "id": 36,
+      "name": "Output",
+      "routing_type": 0,
+      "is_graph_input": false,
+      "is_graph_output": true,
+      "x": 2000.0,
+      "y": 220.0,
+      "input_pin_ids": [37],
+      "output_pin_ids": [38]
+    }
+  ],
+  "links": [
+    { "id": 39, "source_pin_id": 3, "dest_pin_id": 5 },
+    { "id": 40, "source_pin_id": 6, "dest_pin_id": 8 },
+    { "id": 41, "source_pin_id": 9, "dest_pin_id": 11 },
+    { "id": 42, "source_pin_id": 12, "dest_pin_id": 15 },
+    { "id": 43, "source_pin_id": 16, "dest_pin_id": 18 },
+    { "id": 44, "source_pin_id": 19, "dest_pin_id": 21 },
+    { "id": 45, "source_pin_id": 13, "dest_pin_id": 24 },
+    { "id": 46, "source_pin_id": 25, "dest_pin_id": 27 },
+    { "id": 47, "source_pin_id": 22, "dest_pin_id": 30 },
+    { "id": 48, "source_pin_id": 28, "dest_pin_id": 31 },
+    { "id": 49, "source_pin_id": 32, "dest_pin_id": 34 },
+    { "id": 50, "source_pin_id": 35, "dest_pin_id": 37 }
+  ]
+}

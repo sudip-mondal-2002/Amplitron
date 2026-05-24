@@ -1,5 +1,6 @@
 #include "audio/audio_engine.h"
 #include <algorithm>
+#include <utility>
 
 namespace Amplitron {
 
@@ -97,6 +98,22 @@ void AudioEngine::sync_graph_with_dummy_effects(bool reset_graph) {
 void AudioEngine::add_effect(std::shared_ptr<Effect> fx) {
     dummy_effects_.push_back(fx);
     sync_graph_with_dummy_effects();
+}
+
+void AudioEngine::replace_graph(AudioGraph graph, std::vector<std::shared_ptr<Effect>> effects) {
+    {
+        std::lock_guard<std::mutex> lock(effect_mutex_);
+        for (const auto& fx : effects) {
+            if (fx) {
+                fx->set_sample_rate(sample_rate_);
+                fx->reset();
+            }
+        }
+        dummy_effects_ = std::move(effects);
+        main_graph_ = std::move(graph);
+    }
+
+    commit_graph_changes();
 }
 
 void AudioEngine::insert_effect(int index, std::shared_ptr<Effect> fx) {

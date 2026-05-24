@@ -114,6 +114,7 @@ public:
     /** @brief Direct access to the effect chain vector (GUI thread only). */
     AudioGraph& graph() { return main_graph_; }
     const AudioGraph& graph() const { return main_graph_; }
+    void replace_graph(AudioGraph graph, std::vector<std::shared_ptr<Effect>> effects);
 
     // =========================================================================
     // TEMPORARY COMPILER BRIDGE 
