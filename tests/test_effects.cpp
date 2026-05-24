@@ -2080,6 +2080,7 @@ TEST(looper_crossfade_wraparound_executes_crossfade_branch) {
     // eventually lands inside the crossfade region.
     constexpr int LOOP = 5000;
     constexpr int N = 256;
+    constexpr int XF = 240; // 5 ms at 48 kHz
 
     lp.request_record_toggle();
 
@@ -2096,7 +2097,11 @@ TEST(looper_crossfade_wraparound_executes_crossfade_branch) {
 
     // Process enough blocks to guarantee entry into:
     // pos >= loop_length_ - xf
+    bool entered_crossfade_region = false;
     for (int i = 0; i < 40; ++i) {
+        if (lp.playhead_samples() >= (LOOP - XF)) {
+            entered_crossfade_region = true;
+        }
         float buf[N];
         fill_sine(buf, N, 440.0f, 48000);
 
@@ -2104,52 +2109,49 @@ TEST(looper_crossfade_wraparound_executes_crossfade_branch) {
 
         ASSERT_TRUE(buffer_is_finite(buf, N));
     }
+    ASSERT_TRUE(entered_crossfade_region);
 }
 
 TEST(looper_stereo_overdub_executes_right_channel_write_path) {
     Looper lp;
     lp.set_sample_rate(48000);
     lp.reset();
-
     lp.params()[0].value = 1.0f;
 
     constexpr int LOOP = 5000;
     constexpr int N = 256;
 
-    // Record silent stereo loop.
     lp.request_record_toggle();
-
     float left[LOOP] = {};
     float right[LOOP] = {};
-
     lp.process_stereo(left, right, LOOP);
 
     lp.request_record_toggle();
-
     float dl[N] = {}, dr[N] = {};
     lp.process_stereo(dl, dr, N);
-
     ASSERT_EQ(lp.state(), Looper::State::Playing);
-    ASSERT_TRUE(lp.has_loop());
 
-    // Enter overdub.
     lp.request_overdub_toggle();
 
-    // Two blocks guarantees we execute the actual overdub write path
-    // after the state transition.
-    for (int i = 0; i < 2; ++i) {
-        float ol[N], or_[N];
-
-        fill_sine(ol,  N, 440.0f, 48000);
+    // ceil(5000/256) = 20 blocks covers the full loop.
+    // Left channel stays silent; right channel gets a sine.
+    // After 20 blocks every position in buffer_r_ has been written.
+    for (int i = 0; i < 20; ++i) {
+        float ol[N] = {};
+        float or_[N];
         fill_sine(or_, N, 880.0f, 48000);
-
         lp.process_stereo(ol, or_, N);
-
-        ASSERT_TRUE(buffer_is_finite(ol, N));
         ASSERT_TRUE(buffer_is_finite(or_, N));
     }
-
     ASSERT_EQ(lp.state(), Looper::State::Overdubbing);
+
+    // Exit overdub and play back silence — right channel should have
+    // loop content, left should not.
+    lp.request_overdub_toggle();
+    float pl[N] = {}, pr[N] = {};
+    lp.process_stereo(pl, pr, N);
+
+    ASSERT_GT(rms(pr, N), rms(pl, N) * 2.0f);
 }
 
 TEST(looper_state_stream_operator_outputs_expected_strings) {
