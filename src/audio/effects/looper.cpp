@@ -1,6 +1,7 @@
 #include "audio/effects/looper.h"
 #include "audio/effect_factory.h"
 
+#include <ostream>
 #include <algorithm>
 #include <cmath>
 
@@ -249,5 +250,30 @@ void Looper::process_core(float* left, float* right, int num_samples, bool stere
 
     publish_ui_snapshot();
 }
+
+std::ostream& operator<<(std::ostream& os, Looper::State s)
+{
+    switch (s)
+    {
+        case Looper::State::Empty:
+            return os << "Empty";
+
+        case Looper::State::Idle:
+            return os << "Idle";
+
+        case Looper::State::Recording:
+            return os << "Recording";
+
+        case Looper::State::Playing:
+            return os << "Playing";
+
+        case Looper::State::Overdubbing:
+            return os << "Overdubbing";
+
+        default:
+            return os << "Unknown";
+    }
+}
+
 
 } // namespace Amplitron
