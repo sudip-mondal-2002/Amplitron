@@ -90,6 +90,12 @@ if(NOT PORTAUDIO_FOUND)
               "C:/Program Files/portaudio/lib"
               "${CMAKE_SOURCE_DIR}/external/portaudio/lib")
 endif()
+# pkg_check_modules can populate PORTAUDIO_LIBRARIES with just the library
+# name and PORTAUDIO_LIBRARY_DIRS with the matching prefix path.  Add the
+# directory explicitly so macOS / Homebrew links resolve correctly.
+if(PORTAUDIO_LIBRARY_DIRS)
+    link_directories(${PORTAUDIO_LIBRARY_DIRS})
+endif()
 
     # JACK (optional, Linux only)
     if(NOT JACK_LIBRARIES)
@@ -127,6 +133,11 @@ if(NOT SDL2_FOUND)
                   "C:/Program Files/SDL2/lib"
                   "${CMAKE_SOURCE_DIR}/external/SDL2/lib")
     endif()
+endif()
+# pkg_check_modules may provide a bare library name and a matching library
+# directory; add the path explicitly so macOS/Homebrew links resolve.
+if(SDL2_LIBRARY_DIRS)
+    link_directories(${SDL2_LIBRARY_DIRS})
 endif()
 
 # RtMidi (MIDI input)
