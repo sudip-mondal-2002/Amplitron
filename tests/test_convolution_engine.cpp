@@ -34,6 +34,36 @@ TEST(ConvolutionEngine_ResetClearsState) {
     }
 }
 
+TEST(ConvolutionEngine_PartitionedFFTPath) {
+    std::vector<float> ir(1024, 0.0f);
+
+    // simple impulse-like IR
+    ir[0] = 1.0f;
+    ir[128] = 0.5f;
+    ir[512] = 0.25f;
+
+    auto kernel =
+        std::make_shared<ConvolutionKernel>(ir, 256);
+
+    ConvolutionEngine conv;
+    conv.set_kernel(kernel);
+
+    std::vector<float> buffer(256);
+
+    for (size_t i = 0; i < buffer.size(); ++i) {
+        buffer[i] =
+            std::sin(static_cast<float>(i) * 0.01f);
+    }
+
+    for (int i = 0; i < 4; ++i) {
+        conv.process(buffer.data(), 256);
+    }
+
+    for (float s : buffer) {
+        ASSERT_TRUE(std::isfinite(s));
+    }
+}
+
 TEST(ConvolutionEngine_HasKernelAfterSetKernel) {
     std::vector<float> ir = {1.0f};
 
@@ -128,4 +158,35 @@ TEST(ConvolutionEngine_ZeroInputRemainsSilent) {
     for (float s : buffer) {
         ASSERT_NEAR(s, 0.0f, 1e-5f);
     }
+}
+
+TEST(ConvolutionKernel_PartitionFreqBounds) {
+    std::vector<float> ir(512, 0.5f);
+
+    ConvolutionKernel kernel(ir, 256);
+
+    ASSERT_TRUE(kernel.partition_freq(0) != nullptr);
+    ASSERT_TRUE(kernel.partition_freq(-1) == nullptr);
+    ASSERT_TRUE(kernel.partition_freq(999) == nullptr);
+}
+
+TEST(ConvolutionKernel_EmptyIR) {
+    std::vector<float> ir;
+
+    ConvolutionKernel kernel(ir, 256);
+
+    ASSERT_EQ(kernel.num_partitions(), 0);
+}
+
+TEST(ConvolutionEngine_InvalidFFTSizeGuard) {
+    std::vector<float> ir(1, 1.0f);
+
+    ConvolutionKernel kernel(ir, 40000);
+
+    ConvolutionEngine conv;
+
+    conv.set_kernel(
+        std::make_shared<ConvolutionKernel>(kernel));
+
+    ASSERT_TRUE(conv.has_kernel());
 }
