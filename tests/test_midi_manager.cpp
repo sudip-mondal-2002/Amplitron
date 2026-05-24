@@ -394,7 +394,7 @@ struct ConfigBackupGuard {
  * @brief Verifies that MIDI configuration mappings can be successfully 
  * serialized to disk and deserialized back with complete field-level integrity.
  */
-TEST(MidiPersist_SaveAndLoadRoundtrip) {
+TEST(midi_persist_save_and_load_roundtrip) {
     ConfigBackupGuard guard;
 
     MidiManager mgr;
@@ -427,7 +427,7 @@ TEST(MidiPersist_SaveAndLoadRoundtrip) {
  * @brief Ensures that when the midi_config.json file is completely missing, 
  * the manager handles the error gracefully and triggers its default fallback baseline.
  */
-TEST(MidiPersist_LoadMissingFileGraceful) {
+TEST(midi_persist_load_missing_file_graceful) {
     ConfigBackupGuard guard;
 
     if (fs::exists("midi_config.json")) {
@@ -446,7 +446,7 @@ TEST(MidiPersist_LoadMissingFileGraceful) {
  * @brief Validates that clear_mappings() executes safely on an empty manager 
  * instance without causing any undefined behavior or crashing.
  */
-TEST(MidiMapping_ClearAllMappingsWhenEmpty) {
+TEST(midi_mapping_clear_all_mappings_when_empty) {
     MidiManager mgr;
     mgr.clear_mappings();
     ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 0);
@@ -456,7 +456,7 @@ TEST(MidiMapping_ClearAllMappingsWhenEmpty) {
  * @brief Verifies that clearing mappings effectively resets the internal state 
  * and drops the active mapping count to zero after items are populated.
  */
-TEST(MidiMapping_ClearAllMappingsAfterAdding) {
+TEST(midi_mapping_clear_all_mappings_after_adding) {
     MidiManager mgr;
     MidiMapping m1{7, -1, MidiTargetType::EffectParam, MidiMappingMode::Continuous, "effect_0", "drive"};
     MidiMapping m2{11, -1, MidiTargetType::EffectParam, MidiMappingMode::Continuous, "effect_1", "level"};
@@ -472,7 +472,7 @@ TEST(MidiMapping_ClearAllMappingsAfterAdding) {
  * @brief Confirms that adding a new configuration layout mapping with an identical 
  * CC value correctly overrides and replaces the pre-existing parameter configuration.
  */
-TEST(MidiMapping_OverrideSameCCWithNewParam) {
+TEST(midi_mapping_override_same_CC_with_new_param) {
     MidiManager mgr;
     MidiMapping m1{7, -1, MidiTargetType::EffectParam, MidiMappingMode::Continuous, "effect_0", "drive"};
     mgr.add_mapping(m1);
@@ -491,7 +491,7 @@ TEST(MidiMapping_OverrideSameCCWithNewParam) {
  * @brief Checks tracking accuracy and baseline states of the active mapping count 
  * across rapid bulk configuration additions and subsequent full resets.
  */
-TEST(MidiMapping_GetActiveMappingCountAfterBulkOps) {
+TEST(midi_mapping_get_active_mapping_count_after_bulk_ops) {
     MidiManager mgr;
     for (int i = 0; i < 5; i++) {
         MidiMapping m{static_cast<uint8_t>(i), -1, MidiTargetType::EffectParam, MidiMappingMode::Continuous, "effect_" + std::to_string(i), "param"};
