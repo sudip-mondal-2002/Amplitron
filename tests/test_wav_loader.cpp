@@ -1,5 +1,6 @@
 #include "test_framework.h"
 #include "audio/dsp/wav_loader.h"
+#include "common.h"
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -98,14 +99,14 @@ static bool write_header_only_wav(const std::string& path,
     return f.good();
 }
 TEST(WavLoader_TruncatedData_FramesReadZero_ReturnsEmpty) {
-    const std::string path = "wl_test_hdr_only.wav";
+    const std::string path = "tests/assets/wl_test_hdr_only.wav";
     TempFile guard(path);
     ASSERT_TRUE(write_header_only_wav(path, 64, 44100));
     WavData wav = load_wav_file(path);
     ASSERT_TRUE(wav.samples.empty());
 }
 TEST(WavLoader_TruncatedData_WithResampleTarget_ReturnsEmpty) {
-    const std::string path = "wl_test_hdr_only_48k.wav";
+    const std::string path = "tests/assets/wl_test_hdr_only_48k.wav";
     TempFile guard(path);
     ASSERT_TRUE(write_header_only_wav(path, 128, 22050));
     WavData wav = load_wav_file(path, 48000);
@@ -123,7 +124,7 @@ static bool write_constant_mono_wav(const std::string& path,
     return write_pcm16_wav(path, 1, sample_rate, s);
 }
 TEST(WavLoader_Truncation_ExactLength) {
-    const std::string path = "wl_test_truncation_exact.wav";
+    const std::string path = "tests/assets/wl_test_truncation_exact.wav";
     TempFile guard(path);
     ASSERT_TRUE(write_constant_mono_wav(path, 0.5f, 2048, 48000));
     const int limit = 256;
@@ -131,13 +132,13 @@ TEST(WavLoader_Truncation_ExactLength) {
     ASSERT_EQ(static_cast<int>(wav.samples.size()), limit);
 }
 TEST(WavLoader_Truncation_PrefixContentPreserved) {
-    const std::string path = "wl_test_truncation_content.wav";
+    const std::string path = "tests/assets/wl_test_truncation_content.wav";
     TempFile guard(path);
     const int N = 1024;
     std::vector<int16_t> pcm(N);
     for (int i = 0; i < N; ++i)
         pcm[i] = static_cast<int16_t>(
-            std::lrint(0.7f * std::sin(2.f * M_PI * i / 64.f) * 32767.f));
+            std::lrint(0.7f * std::sin(Amplitron::TWO_PI * i / 64.f) * 32767.f));
     ASSERT_TRUE(write_pcm16_wav(path, 1, 44100, pcm));
     const int limit = 64;
     WavData wav = load_wav_file(path, 44100, limit);
@@ -145,7 +146,7 @@ TEST(WavLoader_Truncation_PrefixContentPreserved) {
     ASSERT_NEAR(wav.samples[16], 0.7f, 5e-3f);
 }
 TEST(WavLoader_Truncation_AfterResample) {
-    const std::string path = "wl_test_truncation_resample.wav";
+    const std::string path = "tests/assets/wl_test_truncation_resample.wav";
     TempFile guard(path);
     ASSERT_TRUE(write_constant_mono_wav(path, 0.3f, 1024, 22050));
     const int limit = 256;
@@ -156,7 +157,7 @@ TEST(WavLoader_Truncation_AfterResample) {
         ASSERT_NEAR(s, 0.3f, 5e-3f);
 }
 TEST(WavLoader_Truncation_LimitEqualsLength_NoTruncation) {
-    const std::string path = "wl_test_truncation_exact_match.wav";
+    const std::string path = "tests/assets/wl_test_truncation_exact_match.wav";
     TempFile guard(path);
     const int N = 128;
     ASSERT_TRUE(write_constant_mono_wav(path, 0.2f, N, 44100));
@@ -164,7 +165,7 @@ TEST(WavLoader_Truncation_LimitEqualsLength_NoTruncation) {
     ASSERT_EQ(static_cast<int>(wav.samples.size()), N);
 }
 TEST(WavLoader_Truncation_LimitOfOne) {
-    const std::string path = "wl_test_truncation_one.wav";
+    const std::string path = "tests/assets/wl_test_truncation_one.wav";
     TempFile guard(path);
     ASSERT_TRUE(write_constant_mono_wav(path, 0.9f, 512, 48000));
     WavData wav = load_wav_file(path, 48000, 1);
