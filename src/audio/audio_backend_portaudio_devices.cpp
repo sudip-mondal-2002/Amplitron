@@ -106,8 +106,8 @@ bool AudioEngine::set_input_device(int device_index) {
                 }
                 return false;
             }
-            last_error_.clear();
         }
+        last_error_.clear();
         return true;
     }
     const PaDeviceInfo* info = Pa_GetDeviceInfo(device_index);
@@ -171,8 +171,8 @@ bool AudioEngine::set_output_device(int device_index) {
                 }
                 return false;
             }
-            last_error_.clear();
         }
+        last_error_.clear();
         return true;
     }
     const PaDeviceInfo* info = Pa_GetDeviceInfo(device_index);

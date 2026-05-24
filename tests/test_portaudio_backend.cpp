@@ -149,20 +149,26 @@ TEST(devices_share_host_api_same_device_shares_with_itself) {
     // Invalid index never shares with itself (no PaDeviceInfo available).
     ASSERT_FALSE(devices_share_host_api(-1, -1));
 
-    // A valid device must share its own host API with itself.
-    ASSERT_TRUE(devices_share_host_api(0, 0));
+    int count = Pa_GetDeviceCount();
+    if (count > 0) {
+        // A valid device must share its own host API with itself.
+        ASSERT_TRUE(devices_share_host_api(0, 0));
+    }
 }
 
 TEST(devices_share_host_api_two_real_devices) {
     PaGuard pa;
     ASSERT_TRUE(pa.ok);
 
-    // Comparing device 0 with itself: must be true.
-    ASSERT_TRUE(devices_share_host_api(0, 0));
-    // Comparing device 0 with device 1: result is API-specific, but the
-    // call must not crash and must return a valid bool.
-    bool result = devices_share_host_api(0, 1);
-    ASSERT_TRUE(result == true || result == false); // always valid bool
+    int count = Pa_GetDeviceCount();
+    if (count >= 2) {
+        // Comparing device 0 with itself: must be true.
+        ASSERT_TRUE(devices_share_host_api(0, 0));
+        // Comparing device 0 with device 1: result is API-specific, but the
+        // call must not crash and must return a valid bool.
+        bool result = devices_share_host_api(0, 1);
+        ASSERT_TRUE(result == true || result == false); // always valid bool
+    }
 }
 
 // ===========================================================================

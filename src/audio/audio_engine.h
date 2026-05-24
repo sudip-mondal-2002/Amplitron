@@ -341,6 +341,7 @@ private:
     bool running_ = false;
 
     bool mock_devices_enabled_ = false;
+    bool pa_initialized_ = false;
     std::vector<AudioDeviceInfo> mock_input_devices_;
     std::vector<AudioDeviceInfo> mock_output_devices_;
 
