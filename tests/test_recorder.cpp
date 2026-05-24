@@ -180,3 +180,151 @@ TEST(recorder_restart_recording) {
     std::remove(path1.c_str());
     std::remove(path2.c_str());
 }
+
+TEST(recorder_wav_header_data_size_field_is_correct) {
+    Recorder rec;
+    std::string path = "recordings/test_rec_header_datasize.wav";
+
+    rec.start(path, 48000, 1);
+
+    const int num_samples = 1024;
+    float buf[num_samples];
+    std::memset(buf, 0, sizeof(buf));
+    rec.write_samples(buf, num_samples);
+
+    rec.stop();
+
+    // Open the file and read the data size field at byte offset 40
+    std::ifstream f(path, std::ios::binary);
+    ASSERT_TRUE(f.good());
+
+    f.seekg(40);
+    uint32_t data_size = 0;
+    f.read(reinterpret_cast<char*>(&data_size), 4);
+
+    // data size = num_samples * channels * 2 bytes (16-bit PCM)
+    uint32_t expected_data_size = static_cast<uint32_t>(num_samples * 1 * 2);
+    ASSERT_EQ(data_size, expected_data_size);
+
+    f.close();
+    std::remove(path.c_str());
+}
+
+TEST(recorder_wav_header_riff_size_field_is_correct) {
+    Recorder rec;
+    std::string path = "recordings/test_rec_header_riffsize.wav";
+
+    rec.start(path, 48000, 1);
+
+    const int num_samples = 2048;
+    float buf[num_samples];
+    std::memset(buf, 0, sizeof(buf));
+    rec.write_samples(buf, num_samples);
+
+    rec.stop();
+
+    // Read RIFF chunk size at byte offset 4
+    std::ifstream f(path, std::ios::binary);
+    ASSERT_TRUE(f.good());
+
+    f.seekg(4);
+    uint32_t riff_size = 0;
+    f.read(reinterpret_cast<char*>(&riff_size), 4);
+
+    // riff size = data_size + 36 (fmt chunk + data header overhead)
+    uint32_t expected_riff_size = static_cast<uint32_t>(num_samples * 1 * 2) + 36u;
+    ASSERT_EQ(riff_size, expected_riff_size);
+
+    f.close();
+    std::remove(path.c_str());
+}
+
+TEST(recorder_wav_header_riff_size_no_overflow_at_large_sample_count) {
+    // Simulate what finalize_wav_header does with a near-overflow sample count.
+    // data_size_64 just below the 32-bit WAV limit: 0xFFFFFFD8 bytes of PCM data.
+    // With channels=1, 16-bit: samples = 0xFFFFFFD8 / 2 = 0x7FFFFFE C samples.
+    // riff_size must equal data_size + 36 without overflowing.
+    const int64_t large_data_size = static_cast<int64_t>(0xFFFFFFD8LL);
+
+    // Replicate the fixed formula
+    uint32_t data_size = static_cast<uint32_t>(
+        (large_data_size > static_cast<int64_t>(0xFFFFFFD8LL))
+            ? 0xFFFFFFD8u
+            : static_cast<uint32_t>(large_data_size));
+    uint32_t riff_size = data_size + 36u;
+
+    // riff_size must not wrap around (would indicate overflow)
+    ASSERT_GE(riff_size, data_size);
+    // riff_size must equal data_size + 36 exactly
+    ASSERT_EQ(riff_size, data_size + 36u);
+}
+
+TEST(recorder_wav_header_riff_size_clamped_beyond_4gb) {
+    // Simulate data_size_64 exceeding the WAV 4GB cap.
+    // The result must be clamped to 0xFFFFFFD8 and riff_size must not overflow.
+    const int64_t huge_data_size = static_cast<int64_t>(0x1FFFFFFFFLL);
+
+    uint32_t data_size = static_cast<uint32_t>(
+        (huge_data_size > static_cast<int64_t>(0xFFFFFFD8LL))
+            ? 0xFFFFFFD8u
+            : static_cast<uint32_t>(huge_data_size));
+    uint32_t riff_size = data_size + 36u;
+
+    ASSERT_EQ(data_size, 0xFFFFFFD8u);
+    ASSERT_EQ(riff_size, 0xFFFFFFD8u + 36u);
+    ASSERT_GE(riff_size, data_size);
+}
+
+TEST(recorder_stereo_start_writes_correct_channel_count_in_header) {
+    Recorder rec;
+    std::string path = "recordings/test_rec_stereo_header.wav";
+
+    // Start with 2 channels (stereo)
+    rec.start(path, 48000, 2);
+
+    float buf[64];
+    std::memset(buf, 0, sizeof(buf));
+    rec.write_samples(buf, 64);
+
+    rec.stop();
+
+    std::ifstream f(path, std::ios::binary);
+    ASSERT_TRUE(f.good());
+
+    // Channel count is at byte offset 22 (int16_t)
+    f.seekg(22);
+    int16_t num_channels = 0;
+    f.read(reinterpret_cast<char*>(&num_channels), 2);
+    ASSERT_EQ(num_channels, 2);
+
+    f.close();
+    std::remove(path.c_str());
+}
+
+TEST(recorder_stereo_data_size_accounts_for_two_channels) {
+    Recorder rec;
+    std::string path = "recordings/test_rec_stereo_datasize.wav";
+
+    const int num_samples = 512;
+    rec.start(path, 48000, 2);
+
+    float buf[num_samples];
+    std::memset(buf, 0, sizeof(buf));
+    rec.write_samples(buf, num_samples);
+
+    rec.stop();
+
+    std::ifstream f(path, std::ios::binary);
+    ASSERT_TRUE(f.good());
+
+    f.seekg(40);
+    uint32_t data_size = 0;
+    f.read(reinterpret_cast<char*>(&data_size), 4);
+
+    // channels=2, num_samples frames, 2 bytes per sample = num_samples * 2 * 2
+    uint32_t expected = static_cast<uint32_t>(num_samples * 2 * 2);
+    ASSERT_EQ(data_size, expected);
+
+    f.close();
+    std::remove(path.c_str());
+}

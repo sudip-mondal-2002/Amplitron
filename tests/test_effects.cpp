@@ -8,6 +8,7 @@
 #include "audio/effects/chorus.h"
 #include "audio/effects/delay.h"
 #include "audio/effects/reverb.h"
+#include "audio/effects/looper.h"
 #include "audio/effects/cabinet_sim.h"
 #include "audio/effects/amp_simulator.h"
 #include "audio/effects/tuner.h"
@@ -16,6 +17,7 @@
 #include "audio/effects/flanger.h"
 #include "audio/effects/octaver.h"
 #include "audio/effects/pitch_shifter.h"
+#include <sstream>
 #include <cstring>
 #include <cmath>
 
@@ -1679,5 +1681,528 @@ TEST(effect_base_apply_mix_direct) {
     ASSERT_NEAR(buffer2[3], 6.0f, 1e-6f);
 }
 
+TEST(reverb_bypass_passes_signal_unchanged) {
+    Reverb rv;
+    rv.set_sample_rate(48000);
+    rv.reset();
+    rv.set_enabled(false);
 
+    float buf[512], orig[512];
+    fill_sine(buf, 512, 440.0f, 48000);
+    std::memcpy(orig, buf, sizeof(buf));
 
+    rv.process(buf, 512);
+
+    for (int i = 0; i < 512; ++i)
+        ASSERT_NEAR(buf[i], orig[i], 1e-6f);
+}
+
+TEST(reverb_reset_clears_tail) {
+    Reverb rv;
+    rv.set_sample_rate(48000);
+
+    float buf[2048];
+    fill_sine(buf, 2048, 440.0f, 48000);
+    rv.process(buf, 2048);   
+
+    rv.reset();
+
+    float silence[2048];
+    std::memset(silence, 0, sizeof(silence));
+    rv.process(silence, 2048);
+
+    ASSERT_NEAR(rms(silence, 2048), 0.0f, 1e-5f);
+}
+
+TEST(reverb_low_decay_shorter_tail_than_high_decay) {
+    auto measure_tail_rms = [](float decay_val) {
+        Reverb rv;
+        rv.set_sample_rate(48000);
+        rv.reset();
+        rv.params()[0].value = decay_val;
+
+        float buf[2048];
+        fill_sine(buf, 2048, 440.0f, 48000);
+        rv.process(buf, 2048);  
+        float silence[2048];
+        std::memset(silence, 0, sizeof(silence));
+        rv.process(silence, 2048);
+        return rms(silence, 2048);
+    };
+
+    float tail_low  = measure_tail_rms(0.1f);
+    float tail_high = measure_tail_rms(0.99f);
+    ASSERT_LT(tail_low, tail_high);
+}
+
+TEST(reverb_high_decay_produces_audible_tail) {
+    Reverb rv;
+    rv.set_sample_rate(48000);
+    rv.reset();
+    rv.params()[0].value = 0.99f;
+
+    float buf[2048];
+    fill_sine(buf, 2048, 440.0f, 48000);
+    rv.process(buf, 2048); 
+
+    float silence[2048];
+    std::memset(silence, 0, sizeof(silence));
+    rv.process(silence, 2048);
+
+    ASSERT_GT(rms(silence, 2048), 0.001f);
+    ASSERT_TRUE(buffer_is_finite(silence, 2048));
+}
+
+TEST(reverb_zero_decay_does_not_generate_signal) {
+    Reverb rv;
+    rv.set_sample_rate(48000);
+    rv.reset();
+    rv.params()[0].value = 0.0f;
+    float buf[2048];
+    std::memset(buf, 0, sizeof(buf));
+    rv.process(buf, 2048);
+
+    ASSERT_NEAR(rms(buf, 2048), 0.0f, 1e-6f);
+    ASSERT_TRUE(buffer_is_finite(buf, 2048));
+}
+
+TEST(reverb_high_damp_reduces_high_freq_content) {
+    auto measure_hf_tail = [](float damp_val) {
+        Reverb rv;
+        rv.set_sample_rate(48000);
+        rv.reset();
+        rv.params()[0].value = 0.8f;      // decay
+        rv.params()[1].value = damp_val;  // damp
+        rv.params()[2].value = 1.0f;      // wet only, if Level is wet mix
+
+        constexpr int N = 2048;
+        constexpr int PRIME = 8192;
+        float prime[PRIME];
+        fill_sine(prime, PRIME, 4000.0f, 48000);
+        rv.process(prime, PRIME);
+
+        float silence[N];
+        float mag = 0.0f;
+
+        for (int b = 0; b < 6; ++b) {
+            std::memset(silence, 0, sizeof(silence));
+            rv.process(silence, N);
+
+            if (b >= 2) { // skip early tail
+                mag += dft_magnitude_at(silence, N, 4000.0f, 48000);
+            }
+        }
+
+        return mag / 4.0f;
+    };
+
+    float hf_undamped = measure_hf_tail(0.0f);
+    float hf_damped   = measure_hf_tail(1.0f);
+    ASSERT_GT(hf_undamped, hf_damped);
+}
+
+TEST(reverb_stereo_produces_finite_decorrelated_output) {
+    Reverb rv;
+    rv.set_sample_rate(48000);
+    rv.reset();
+
+    // Process enough samples for comb filters to fill and diverge between channels.
+    float left[2048], right[2048];
+    fill_sine(left,  2048, 440.0f, 48000);
+    fill_sine(right, 2048, 440.0f, 48000);
+    rv.process_stereo(left, right, 2048);
+
+    ASSERT_TRUE(buffer_is_finite(left,  2048));
+    ASSERT_TRUE(buffer_is_finite(right, 2048));
+    ASSERT_GT(rms(left,  2048), 0.001f);
+    ASSERT_GT(rms(right, 2048), 0.001f);
+
+    float diff = 0.0f;
+    for (int i = 0; i < 2048; ++i) diff += std::fabs(left[i] - right[i]);
+    ASSERT_GT(diff, 1e-3f);
+}
+
+// Looper tests
+
+TEST(looper_initial_state_is_empty) {
+    Looper lp;
+    lp.set_sample_rate(48000);
+    lp.reset();
+    ASSERT_EQ(lp.state(), Looper::State::Empty);
+    ASSERT_FALSE(lp.has_loop());
+    ASSERT_EQ(lp.loop_length_samples(), 0);
+}
+
+TEST(looper_record_then_play) {
+    Looper lp;
+    lp.set_sample_rate(48000);
+    lp.reset();
+
+    // Start recording (command consumed on first process call).
+    lp.request_record_toggle();
+    std::vector<float> rec(9600, 0.0f);  // 0.2 s > kMinLoopSeconds (0.1 s)
+    fill_sine(rec.data(), 9600, 440.0f, 48000);
+    lp.process(rec.data(), 9600);
+    ASSERT_EQ(lp.state(), Looper::State::Recording);
+
+    // Stop recording — looper should auto-switch to Playing.
+    lp.request_record_toggle();
+    float dummy[256] = {};
+    lp.process(dummy, 256);
+    ASSERT_EQ(lp.state(), Looper::State::Playing);
+    ASSERT_TRUE(lp.has_loop());
+    ASSERT_GT(lp.loop_length_samples(), 0);
+}
+
+TEST(looper_short_recording_is_discarded) {
+    // kMinLoopSeconds = 0.10 s → 4800 samples at 48 kHz. 100 samples is far below.
+    Looper lp;
+    lp.set_sample_rate(48000);
+    lp.reset();
+
+    lp.request_record_toggle();
+    float tiny[100] = {};
+    lp.process(tiny, 100);
+
+    lp.request_record_toggle();
+    float dummy[256] = {};
+    lp.process(dummy, 256);
+
+    ASSERT_EQ(lp.state(), Looper::State::Empty);
+    ASSERT_FALSE(lp.has_loop());
+}
+
+TEST(looper_bypass_passes_signal_unchanged) {
+    Looper lp;
+    lp.set_sample_rate(48000);
+    lp.reset();
+    lp.set_enabled(false);
+
+    float buf[512], orig[512];
+    fill_sine(buf, 512, 440.0f, 48000);
+    std::memcpy(orig, buf, sizeof(buf));
+
+    lp.process(buf, 512);
+
+    for (int i = 0; i < 512; ++i)
+        ASSERT_NEAR(buf[i], orig[i], 1e-6f);
+}
+
+TEST(looper_play_toggle_pauses_and_resumes) {
+    Looper lp;
+    lp.set_sample_rate(48000);
+    lp.reset();
+
+    // Build a loop.
+    lp.request_record_toggle();
+    std::vector<float> rec(9600, 0.0f);
+    lp.process(rec.data(), 9600);
+    lp.request_record_toggle();
+    float dummy[256] = {};
+    lp.process(dummy, 256);
+    ASSERT_EQ(lp.state(), Looper::State::Playing);
+
+    // Pause.
+    lp.request_play_toggle();
+    lp.process(dummy, 256);
+    ASSERT_EQ(lp.state(), Looper::State::Idle);
+
+    // Resume.
+    lp.request_play_toggle();
+    lp.process(dummy, 256);
+    ASSERT_EQ(lp.state(), Looper::State::Playing);
+}
+
+TEST(looper_overdub_transition_preserves_loop) {
+    Looper lp;
+    lp.set_sample_rate(48000);
+    lp.reset();
+
+    // Record a silent loop.
+    lp.request_record_toggle();
+    float silence[9600] = {};
+    lp.process(silence, 9600);
+    lp.request_record_toggle();
+    float dummy[256] = {};
+    lp.process(dummy, 256);
+    ASSERT_EQ(lp.state(), Looper::State::Playing);
+
+    // Enter overdub.
+    lp.request_overdub_toggle();
+    float overdub_buf[256];
+    fill_sine(overdub_buf, 256, 440.0f, 48000);
+    lp.process(overdub_buf, 256);
+    ASSERT_EQ(lp.state(), Looper::State::Overdubbing);
+
+    // Exit overdub.
+    lp.request_overdub_toggle();
+    std::memset(dummy, 0, sizeof(dummy));
+    lp.process(dummy, 256);
+    ASSERT_EQ(lp.state(), Looper::State::Playing);
+    ASSERT_TRUE(lp.has_loop());
+}
+
+TEST(looper_overdub_output_is_finite) {
+    Looper lp;
+    lp.set_sample_rate(48000);
+    lp.reset();
+
+    lp.request_record_toggle();
+    float rec[9600];
+    fill_sine(rec, 9600, 440.0f, 48000);
+    lp.process(rec, 9600);
+
+    lp.request_record_toggle();
+    float dummy[256] = {};
+    lp.process(dummy, 256);
+
+    lp.request_overdub_toggle();
+    for (int block = 0; block < 10; ++block) {
+        float buf[256];
+        fill_sine(buf, 256, 880.0f, 48000);
+        lp.process(buf, 256);
+        ASSERT_TRUE(buffer_is_finite(buf, 256));
+    }
+}
+
+TEST(looper_clear_resets_to_empty) {
+    Looper lp;
+    lp.set_sample_rate(48000);
+    lp.reset();
+
+    lp.request_record_toggle();
+    float rec[9600] = {};
+    lp.process(rec, 9600);
+    lp.request_record_toggle();
+    float dummy[256] = {};
+    lp.process(dummy, 256);
+    ASSERT_TRUE(lp.has_loop());
+
+    lp.request_clear();
+    lp.process(dummy, 256);
+
+    ASSERT_EQ(lp.state(), Looper::State::Empty);
+    ASSERT_FALSE(lp.has_loop());
+    ASSERT_EQ(lp.loop_length_samples(), 0);
+}
+
+TEST(looper_stereo_playback_is_finite) {
+    Looper lp;
+    lp.set_sample_rate(48000);
+    lp.reset();
+
+    // Record stereo.
+    lp.request_record_toggle();
+    float left[9600], right[9600];
+    fill_sine(left,  9600, 440.0f, 48000);
+    fill_sine(right, 9600, 880.0f, 48000);
+    lp.process_stereo(left, right, 9600);
+
+    lp.request_record_toggle();
+    float dl[256] = {}, dr[256] = {};
+    lp.process_stereo(dl, dr, 256);
+    ASSERT_EQ(lp.state(), Looper::State::Playing);
+
+    for (int block = 0; block < 5; ++block) {
+        fill_sine(dl, 256, 440.0f, 48000);
+        fill_sine(dr, 256, 880.0f, 48000);
+        lp.process_stereo(dl, dr, 256);
+        ASSERT_TRUE(buffer_is_finite(dl, 256));
+        ASSERT_TRUE(buffer_is_finite(dr, 256));
+    }
+}
+TEST(looper_play_toggle_while_recording_stops_and_enters_playing) {
+    Looper lp;
+    lp.set_sample_rate(48000);
+    lp.reset();
+
+    lp.request_record_toggle();
+    float rec[9600] = {};
+    lp.process(rec, 9600);
+    ASSERT_EQ(lp.state(), Looper::State::Recording);
+
+    lp.request_play_toggle();
+    float dummy[256] = {};
+    lp.process(dummy, 256);
+
+    ASSERT_EQ(lp.state(), Looper::State::Playing);
+    ASSERT_TRUE(lp.has_loop());
+}
+
+// implementation-dependent behaviour, change later if design changes
+TEST(looper_overdub_toggle_from_idle_enters_overdubbing) {
+    Looper lp;
+    lp.set_sample_rate(48000);
+    lp.reset();
+
+    lp.request_record_toggle();
+    float rec[9600] = {};
+    lp.process(rec, 9600);
+    lp.request_record_toggle();
+    float dummy[256] = {};
+    lp.process(dummy, 256);
+
+    lp.request_play_toggle();
+    lp.process(dummy, 256);
+    ASSERT_EQ(lp.state(), Looper::State::Idle);
+
+    lp.request_overdub_toggle();
+    lp.process(dummy, 256);
+    ASSERT_EQ(lp.state(), Looper::State::Overdubbing);
+}
+
+TEST(looper_overdub_toggle_during_recording_is_ignored) {
+    Looper lp;
+    lp.set_sample_rate(48000);
+    lp.reset();
+
+    lp.request_record_toggle();
+    float rec[512] = {};
+    lp.process(rec, 512);
+    ASSERT_EQ(lp.state(), Looper::State::Recording);
+
+    lp.request_overdub_toggle();
+    lp.process(rec, 512);
+
+    ASSERT_EQ(lp.state(), Looper::State::Recording);
+}
+
+TEST(looper_crossfade_wraparound_executes_crossfade_branch) {
+    Looper lp;
+    lp.set_sample_rate(48000);
+    lp.reset();
+
+    // 5 ms -> ~240 samples crossfade.
+    lp.params()[1].value = 5.0f;
+
+    // IMPORTANT:
+    // Use a loop length NOT divisible by block size so playback
+    // eventually lands inside the crossfade region.
+    constexpr int LOOP = 5000;
+    constexpr int N = 256;
+    constexpr int XF = 240; // 5 ms at 48 kHz
+
+    lp.request_record_toggle();
+
+    float rec[LOOP];
+    fill_sine(rec, LOOP, 440.0f, 48000);
+    lp.process(rec, LOOP);
+
+    lp.request_record_toggle();
+
+    float dummy[N] = {};
+    lp.process(dummy, N);
+
+    ASSERT_EQ(lp.state(), Looper::State::Playing);
+
+    // Process enough blocks to guarantee entry into:
+    // pos >= loop_length_ - xf
+    bool entered_crossfade_region = false;
+    for (int i = 0; i < 40; ++i) {
+        if (lp.playhead_samples() >= (LOOP - XF)) {
+            entered_crossfade_region = true;
+        }
+        float buf[N];
+        fill_sine(buf, N, 440.0f, 48000);
+
+        lp.process(buf, N);
+
+        ASSERT_TRUE(buffer_is_finite(buf, N));
+    }
+    ASSERT_TRUE(entered_crossfade_region);
+}
+
+TEST(looper_stereo_overdub_executes_right_channel_write_path) {
+    Looper lp;
+    lp.set_sample_rate(48000);
+    lp.reset();
+    lp.params()[0].value = 1.0f;
+
+    constexpr int LOOP = 5000;
+    constexpr int N = 256;
+
+    lp.request_record_toggle();
+    float left[LOOP] = {};
+    float right[LOOP] = {};
+    lp.process_stereo(left, right, LOOP);
+
+    lp.request_record_toggle();
+    float dl[N] = {}, dr[N] = {};
+    lp.process_stereo(dl, dr, N);
+    ASSERT_EQ(lp.state(), Looper::State::Playing);
+
+    lp.request_overdub_toggle();
+
+    // ceil(5000/256) = 20 blocks covers the full loop.
+    // Left channel stays silent; right channel gets a sine.
+    // After 20 blocks every position in buffer_r_ has been written.
+    for (int i = 0; i < 20; ++i) {
+        float ol[N] = {};
+        float or_[N];
+        fill_sine(or_, N, 880.0f, 48000);
+        lp.process_stereo(ol, or_, N);
+        ASSERT_TRUE(buffer_is_finite(or_, N));
+    }
+    ASSERT_EQ(lp.state(), Looper::State::Overdubbing);
+
+    // Exit overdub and play back silence — right channel should have
+    // loop content, left should not.
+    lp.request_overdub_toggle();
+    float pl[N] = {}, pr[N] = {};
+    lp.process_stereo(pl, pr, N);
+
+    ASSERT_GT(rms(pr, N), rms(pl, N) * 2.0f);
+}
+
+TEST(looper_state_stream_operator_outputs_expected_strings) {
+    std::ostringstream os;
+
+    os << Looper::State::Empty << " "
+       << Looper::State::Idle << " "
+       << Looper::State::Recording << " "
+       << Looper::State::Playing << " "
+       << Looper::State::Overdubbing;
+
+    ASSERT_EQ(
+        os.str(),
+        "Empty Idle Recording Playing Overdubbing"
+    );
+}
+
+TEST(looper_state_stream_operator_handles_unknown_value) {
+    std::ostringstream os;
+
+    auto invalid =
+        static_cast<Looper::State>(999);
+
+    os << invalid;
+
+    ASSERT_EQ(os.str(), "Unknown");
+}
+
+TEST(looper_metadata_accessors_return_expected_values) {
+    Looper lp;
+
+    ASSERT_EQ(std::string(lp.name()), "Looper");
+    ASSERT_EQ(std::string(lp.type_id()), "Looper");
+
+    auto& p = lp.params();
+
+    ASSERT_FALSE(p.empty());
+    ASSERT_GE(p.size(), 2u);
+}
+
+TEST(looper_recording_auto_stops_at_buffer_limit) {
+    // sr=100 gives max_samples_=6000; feeding 7000 samples triggers the cap.
+    Looper lp;
+    lp.set_sample_rate(100);
+    lp.reset();
+
+    lp.request_record_toggle();
+    std::vector<float> rec(7000, 0.5f);
+    lp.process(rec.data(), 7000);
+
+    ASSERT_EQ(lp.state(), Looper::State::Playing);
+    ASSERT_TRUE(lp.has_loop());
+    ASSERT_EQ(lp.loop_length_samples(), 6000);
+}
