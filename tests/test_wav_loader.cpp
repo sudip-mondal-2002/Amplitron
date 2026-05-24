@@ -4,7 +4,7 @@
 #include <fstream>
 #include <cmath>
 #include <cstdio>
-#include <cstdint>
+#include <vector>
 
 using namespace Amplitron;
 using namespace TestFramework;
@@ -65,6 +65,108 @@ static bool write_wav_mono_pcm16(const std::string& path,
     }
     out.close();
     return true;
+}
+static bool write_wav_stereo_pcm16(
+    const std::string& path,
+    const std::vector<float>& left,
+    const std::vector<float>& right,
+    int sample_rate) {
+
+    if (left.size() != right.size()) {
+        return false;
+    }
+
+    std::ofstream out(path, std::ios::binary);
+
+    if (!out.is_open()) {
+        return false;
+    }
+
+    const uint16_t num_channels = 2;
+    const uint16_t bits_per_sample = 16;
+
+    const uint16_t block_align =
+        num_channels * (bits_per_sample / 8);
+
+    const uint32_t byte_rate =
+        sample_rate * block_align;
+
+    const uint32_t data_bytes =
+        static_cast<uint32_t>(left.size()) *
+        block_align;
+
+    const uint32_t riff_size =
+        36 + data_bytes;
+
+    out.write("RIFF", 4);
+    write_le32(out, riff_size);
+    out.write("WAVE", 4);
+
+    out.write("fmt ", 4);
+    write_le32(out, 16);
+
+    write_le16(out, 1);
+    write_le16(out, num_channels);
+
+    write_le32(out, sample_rate);
+    write_le32(out, byte_rate);
+
+    write_le16(out, block_align);
+    write_le16(out, bits_per_sample);
+
+    out.write("data", 4);
+    write_le32(out, data_bytes);
+
+    for (size_t i = 0; i < left.size(); ++i) {
+
+        int16_t l =
+            static_cast<int16_t>(
+                left[i] * 32767.0f);
+
+        int16_t r =
+            static_cast<int16_t>(
+                right[i] * 32767.0f);
+
+        write_le16(out,
+            static_cast<uint16_t>(l));
+
+        write_le16(out,
+            static_cast<uint16_t>(r));
+    }
+
+    out.close();
+
+    return true;
+}
+
+TEST(WavLoader_TruncatedHeaderReturnsEmpty) {
+    const std::string path =
+        "truncated.wav";
+
+    {
+        std::ofstream out(path,
+            std::ios::binary);
+
+        out.write("RIFF", 4);
+    }
+
+    WavData wav =
+        load_wav_file(path);
+
+    ASSERT_TRUE(wav.samples.empty());
+
+    std::remove(path.c_str());
+}
+
+TEST(WavLoader_InvalidResampleRate) {
+    std::vector<float> input(128, 0.5f);
+
+    auto output =
+        resample_linear(input, 48000, 0);
+
+    for (float s : output) {
+        ASSERT_TRUE(std::isfinite(s));
+    }
 }
 
 TEST(WavLoader_LoadMissingFileReturnsEmpty) {
@@ -188,3 +290,4 @@ TEST(WavLoader_ResampleLinearDownsample) {
         ASSERT_TRUE(std::isfinite(s));
     }
 }
+
