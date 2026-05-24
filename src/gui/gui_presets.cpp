@@ -9,6 +9,19 @@
 #include <cstdio>
 #include <algorithm>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+
+extern "C" {
+EMSCRIPTEN_KEEPALIVE void load_preset_callback(uintptr_t gui_ptr, const char* path) {
+    if (gui_ptr && path) {
+        auto* gui = reinterpret_cast<Amplitron::GuiPresets*>(gui_ptr);
+        gui->load_preset_by_path(path);
+    }
+}
+}
+#endif
+
 namespace Amplitron {
 
 /**
@@ -173,6 +186,24 @@ bool GuiPresets::save_named_preset(const std::string& preset_name,
         }
         if (pedal_board_) pedal_board_->rebuild_widgets();
         mark_clean();
+
+#ifdef __EMSCRIPTEN__
+        std::string json_content = serialise_current_preset_to_json();
+        EM_ASM({
+            var filename = UTF8ToString($0);
+            var content = UTF8ToString($1);
+            var blob = new Blob([content], {type: "application/json"});
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, (preset_name + ".json").c_str(), json_content.c_str());
+#endif
+
         return true;
     }
 
@@ -228,6 +259,22 @@ bool GuiPresets::load_preset_by_index(int index) {
     }
 
     preset_status_msg_ = "Error: " + PresetManager::last_error();
+    return false;
+}
+
+bool GuiPresets::load_preset_by_path(const std::string& path) {
+    refresh_presets(false);
+    int found_idx = -1;
+    for (int i = 0; i < static_cast<int>(preset_files_.size()); ++i) {
+        if (preset_files_[i] == path) {
+            found_idx = i;
+            break;
+        }
+    }
+    if (found_idx != -1) {
+        return load_preset_by_index(found_idx);
+    }
+    preset_status_msg_ = "Error: Preset not found after upload.";
     return false;
 }
 
@@ -386,6 +433,31 @@ void GuiPresets::render_load_popup(bool& show) {
     if (ImGui::Button("Refresh List")) {
         refresh_presets(true);
     }
+
+#ifdef __EMSCRIPTEN__
+    ImGui::SameLine();
+    if (ImGui::Button("Upload from Computer...")) {
+        EM_ASM({
+            var gui_ptr = $0;
+            var input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function(e) {
+                var file = e.target.files[0];
+                var reader = new FileReader();
+                reader.onload = function(re) {
+                    var content = re.target.result;
+                    var path = "presets/" + file.name;
+                    FS.writeFile(path, content);
+                    Module.ccall('load_preset_callback', 'v', ['number', 'string'], [gui_ptr, path]);
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }, (uintptr_t)this);
+        show = false;
+    }
+#endif
 
     ImGui::Spacing();
     ImGui::BeginChild("PresetList", ImVec2(0, -70), true);

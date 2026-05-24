@@ -86,9 +86,6 @@ bool PedalWidget::render(float zoom) {
 
     render_footswitch_and_extras(dl, p0, p1, pedal_width, pedal_height, is_amp, enabled, should_remove, zoom);
 
-    // Advance cursor for next pedal
-    ImGui::SetCursorScreenPos(ImVec2(p0.x + pedal_width + 15 * zoom, cursor.y));
-
     ImGui::PopID();
     return should_remove;
 }
