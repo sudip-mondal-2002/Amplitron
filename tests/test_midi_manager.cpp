@@ -280,9 +280,19 @@ TEST(midi_json_roundtrip) {
 
     ASSERT_EQ(static_cast<int>(midi.mappings().size()), 3);
 
+    // Verify m1 mapping layout details
     ASSERT_EQ(midi.mappings()[0].cc_number, 7);
     ASSERT_EQ(static_cast<int>(midi.mappings()[0].target_type),
               static_cast<int>(MidiTargetType::OutputGain));
+
+    // Restored exact field assertions matching repository requirements
+    ASSERT_EQ(midi.mappings()[1].cc_number, 74);
+    ASSERT_EQ(midi.mappings()[1].effect_name, std::string("WahPedal"));
+    ASSERT_EQ(midi.mappings()[1].param_name, std::string("Sweep"));
+
+    ASSERT_EQ(midi.mappings()[2].cc_number, 64);
+    ASSERT_EQ(static_cast<int>(midi.mappings()[2].mode),
+              static_cast<int>(MidiMappingMode::Toggle));
 
     midi.remove_mapping(1);
     ASSERT_EQ(static_cast<int>(midi.mappings().size()), 2);
@@ -296,7 +306,25 @@ TEST(midi_default_mappings) {
     midi.install_default_mappings();
 
     ASSERT_EQ(static_cast<int>(midi.mappings().size()), 4);
+    
+    // Restored exhaustive layout validation properties for repository owner
     ASSERT_EQ(midi.mappings()[0].cc_number, 7);
+    ASSERT_EQ(static_cast<int>(midi.mappings()[0].target_type),
+              static_cast<int>(MidiTargetType::OutputGain));
+
+    ASSERT_EQ(midi.mappings()[1].cc_number, 11);
+    ASSERT_EQ(static_cast<int>(midi.mappings()[1].target_type),
+              static_cast<int>(MidiTargetType::InputGain));
+
+    ASSERT_EQ(midi.mappings()[2].cc_number, 64);
+    ASSERT_EQ(static_cast<int>(midi.mappings()[2].target_type),
+              static_cast<int>(MidiTargetType::EffectBypass));
+    ASSERT_EQ(static_cast<int>(midi.mappings()[2].mode),
+              static_cast<int>(MidiMappingMode::Toggle));
+
+    ASSERT_EQ(midi.mappings()[3].cc_number, 74);
+    ASSERT_EQ(midi.mappings()[3].effect_name, std::string("WahPedal"));
+    ASSERT_EQ(midi.mappings()[3].param_name, std::string("Sweep"));
 }
 
 TEST(midi_duplicate_cc_replaces) {
@@ -346,7 +374,6 @@ struct ConfigBackupGuard {
     bool backed_up = false;
 
     ConfigBackupGuard() {
-        // If a real config exists, back it up safely so tests don't overwrite user data
         if (fs::exists(config_file)) {
             fs::rename(config_file, backup_file);
             backed_up = true;
@@ -354,19 +381,20 @@ struct ConfigBackupGuard {
     }
 
     ~ConfigBackupGuard() {
-        // Guarantees test file removal even if an assertion fails midway
         if (fs::exists(config_file)) {
             fs::remove(config_file);
         }
-        // Restore the original user config if one was backed up
         if (backed_up && fs::exists(backup_file)) {
             fs::rename(backup_file, config_file);
         }
     }
 };
 
+/**
+ * @brief Verifies that MIDI configuration mappings can be successfully 
+ * serialized to disk and deserialized back with complete field-level integrity.
+ */
 TEST(MidiPersist_SaveAndLoadRoundtrip) {
-    // This RAII guard automates setup and teardown securely
     ConfigBackupGuard guard;
 
     MidiManager mgr;
@@ -375,13 +403,11 @@ TEST(MidiPersist_SaveAndLoadRoundtrip) {
     mgr.add_mapping(m1);
     mgr.add_mapping(m2);
     
-    // Call endpoints natively (they return void, so we just call them directly)
     mgr.save_config();
 
     MidiManager mgr2;
     mgr2.load_config();
     
-    // Hardened Assertions: Ensure every field maintains exact integrity over the roundtrip
     ASSERT_EQ(static_cast<int>(mgr2.mappings().size()), 2);
 
     ASSERT_EQ(mgr2.mappings()[0].cc_number, 7);
@@ -397,34 +423,39 @@ TEST(MidiPersist_SaveAndLoadRoundtrip) {
     ASSERT_EQ(mgr2.mappings()[1].param_name, std::string("level"));
 }
 
+/**
+ * @brief Ensures that when the midi_config.json file is completely missing, 
+ * the manager handles the error gracefully and triggers its default fallback baseline.
+ */
 TEST(MidiPersist_LoadMissingFileGraceful) {
     ConfigBackupGuard guard;
 
-    // Forcefully ensure the file is absent so we aren't testing false positives
     if (fs::exists("midi_config.json")) {
         fs::remove("midi_config.json");
     }
 
     MidiManager mgr;
-    
-    // Clear mappings first so we can verify if the fallback restores defaults
     mgr.clear_mappings();
-    
-    // Call load_config directly (since it returns void)
     mgr.load_config();
     
-    // Verify that the missing file fallback gracefully triggers and loads 
-    // the 2 default configuration mappings instead of leaving it completely broken.
     ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
     ASSERT_EQ(mgr.mappings()[0].cc_number, 7);
 }
 
+/**
+ * @brief Validates that clear_mappings() executes safely on an empty manager 
+ * instance without causing any undefined behavior or crashing.
+ */
 TEST(MidiMapping_ClearAllMappingsWhenEmpty) {
     MidiManager mgr;
     mgr.clear_mappings();
     ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 0);
 }
 
+/**
+ * @brief Verifies that clearing mappings effectively resets the internal state 
+ * and drops the active mapping count to zero after items are populated.
+ */
 TEST(MidiMapping_ClearAllMappingsAfterAdding) {
     MidiManager mgr;
     MidiMapping m1{7, -1, MidiTargetType::EffectParam, MidiMappingMode::Continuous, "effect_0", "drive"};
@@ -437,6 +468,10 @@ TEST(MidiMapping_ClearAllMappingsAfterAdding) {
     ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 0);
 }
 
+/**
+ * @brief Confirms that adding a new configuration layout mapping with an identical 
+ * CC value correctly overrides and replaces the pre-existing parameter configuration.
+ */
 TEST(MidiMapping_OverrideSameCCWithNewParam) {
     MidiManager mgr;
     MidiMapping m1{7, -1, MidiTargetType::EffectParam, MidiMappingMode::Continuous, "effect_0", "drive"};
@@ -452,6 +487,10 @@ TEST(MidiMapping_OverrideSameCCWithNewParam) {
     ASSERT_EQ(mgr.mappings()[0].param_name, std::string("level"));
 }
 
+/**
+ * @brief Checks tracking accuracy and baseline states of the active mapping count 
+ * across rapid bulk configuration additions and subsequent full resets.
+ */
 TEST(MidiMapping_GetActiveMappingCountAfterBulkOps) {
     MidiManager mgr;
     for (int i = 0; i < 5; i++) {
