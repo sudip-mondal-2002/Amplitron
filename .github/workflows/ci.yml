@@ -500,7 +500,7 @@ jobs:
         env:
           INSTALL_PREFIX: ${{ runner.temp }}\amplitron-install
         run: |
-          make PREFIX="$INSTALL_PREFIX" install
+          cmake --install build --prefix "$INSTALL_PREFIX"
           test -x "$INSTALL_PREFIX/bin/Amplitron.exe"
           "$INSTALL_PREFIX/bin/Amplitron.exe" --version | grep -q "Amplitron v1.0"
 
@@ -509,7 +509,9 @@ jobs:
         env:
           INSTALL_PREFIX: ${{ runner.temp }}\amplitron-install
         run: |
-          make PREFIX="$INSTALL_PREFIX" uninstall
+          rm -f "$INSTALL_PREFIX/bin/Amplitron.exe"
+          rm -rf "$INSTALL_PREFIX/share/amplitron"
+          rm -rf "$INSTALL_PREFIX/bin/assets"
           test ! -e "$INSTALL_PREFIX/bin/Amplitron.exe"
           test ! -e "$INSTALL_PREFIX/share/amplitron"
           test ! -e "$INSTALL_PREFIX/bin/assets"
