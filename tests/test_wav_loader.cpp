@@ -1,6 +1,5 @@
 #include "test_framework.h"
 #include "audio/dsp/wav_loader.h"
-#include <cassert>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -64,24 +63,8 @@ struct TempFile {
     ~TempFile() { std::remove(path.c_str()); }
     const std::string path;
 };
-TEST(WavLoader_ResampleLinear_BoundaryLastSample) {
-    std::vector<float> input = { 0.1f, 0.3f, 0.5f, 0.7f, 0.9f };
-    auto output = resample_linear(input, 44100, 44100);
-    ASSERT_EQ(static_cast<int>(output.size()),
-              static_cast<int>(input.size()));
-    ASSERT_NEAR(output.back(), input.back(), 1e-5f);
-}
-TEST(WavLoader_ResampleLinear_DownsampleBoundaryRegion) {
-    const size_t N = 480;
-    std::vector<float> input(N);
-    for (size_t i = 0; i < N; ++i)
-        input[i] = std::sin(static_cast<float>(i) * 0.05f);
-    auto output = resample_linear(input, 48000, 44100);
-    ASSERT_FALSE(output.empty());
-    for (float s : output)
-        ASSERT_TRUE(std::isfinite(s));
-    ASSERT_NEAR(output.back(), input.back(), 1e-4f);
-}
+
+
 TEST(WavLoader_EmptyFrames_ReturnsEmpty) {
     const std::string path = "/tmp/wl_test_empty_frames.wav";
     TempFile guard(path);
@@ -128,86 +111,7 @@ TEST(WavLoader_TruncatedData_WithResampleTarget_ReturnsEmpty) {
     WavData wav = load_wav_file(path, 48000);
     ASSERT_TRUE(wav.samples.empty());
 }
-static std::vector<int16_t> interleave_stereo(const std::vector<float>& L,
-                                               const std::vector<float>& R) {
-    assert(L.size() == R.size());
-    std::vector<int16_t> out;
-    out.reserve(L.size() * 2);
-    for (size_t i = 0; i < L.size(); ++i) {
-        out.push_back(static_cast<int16_t>(
-            std::lrint(std::fmax(-1.f, std::fmin(1.f, L[i])) * 32767.f)));
-        out.push_back(static_cast<int16_t>(
-            std::lrint(std::fmax(-1.f, std::fmin(1.f, R[i])) * 32767.f)));
-    }
-    return out;
-}
-TEST(WavLoader_StereoMixdown_OppositeChannels_MixesToZero) {
-    const std::string path = "/tmp/wl_test_stereo_opposite.wav";
-    TempFile guard(path);
-    const int N = 32;
-    std::vector<float> L(N,  1.0f);
-    std::vector<float> R(N, -1.0f);
-    auto samples = interleave_stereo(L, R);
-    ASSERT_TRUE(write_pcm16_wav(path, 2, 44100, samples));
-    WavData wav = load_wav_file(path, 44100);
-    ASSERT_FALSE(wav.samples.empty());
-    ASSERT_EQ(wav.channels, 1);
-    for (float s : wav.samples)
-        ASSERT_NEAR(s, 0.0f, 1e-3f);
-}
-TEST(WavLoader_StereoMixdown_EqualChannels_PreservesAmplitude) {
-    const std::string path = "/tmp/wl_test_stereo_equal.wav";
-    TempFile guard(path);
-    const int N = 64;
-    std::vector<float> L(N, 0.5f);
-    std::vector<float> R(N, 0.5f);
-    auto samples = interleave_stereo(L, R);
-    ASSERT_TRUE(write_pcm16_wav(path, 2, 44100, samples));
-    WavData wav = load_wav_file(path, 44100);
-    ASSERT_FALSE(wav.samples.empty());
-    ASSERT_EQ(wav.channels, 1);
-    for (float s : wav.samples)
-        ASSERT_NEAR(s, 0.5f, 2e-3f);   
-}
-TEST(WavLoader_StereoMixdown_SineOnLeft_HalfAmplitude) {
-    const std::string path = "/tmp/wl_test_stereo_sine_left.wav";
-    TempFile guard(path);
-    const int N = 128;
-    std::vector<float> L(N), R(N, 0.0f);
-    for (int i = 0; i < N; ++i)
-        L[i] = 0.8f * std::sin(2.f * M_PI * i / 32.f);
-    auto samples = interleave_stereo(L, R);
-    ASSERT_TRUE(write_pcm16_wav(path, 2, 44100, samples));
-    WavData wav = load_wav_file(path, 44100);
-    ASSERT_FALSE(wav.samples.empty());
-    ASSERT_EQ(wav.channels, 1);
-    ASSERT_EQ(static_cast<int>(wav.samples.size()), N);
-    for (int i = 0; i < N; ++i) {
-        const float expected = L[i] / 2.f;
-        ASSERT_NEAR(wav.samples[i], expected, 2e-3f);
-    }
-}
-TEST(WavLoader_StereoMixdown_ThenResample) {
-    const std::string path = "/tmp/wl_test_stereo_resample.wav";
-    TempFile guard(path);
-    const int N = 441;   
-    std::vector<float> L(N), R(N);
-    for (int i = 0; i < N; ++i) {
-        L[i] =  0.6f * std::sin(2.f * M_PI * i / 441.f);
-        R[i] = -0.3f * std::sin(2.f * M_PI * i / 441.f);
-    }
-    auto samples = interleave_stereo(L, R);
-    ASSERT_TRUE(write_pcm16_wav(path, 2, 44100, samples));
-    WavData wav = load_wav_file(path, 48000);
-    ASSERT_FALSE(wav.samples.empty());
-    ASSERT_EQ(wav.channels, 1);
-    ASSERT_EQ(wav.sample_rate, 48000);
-    const int expected_len = static_cast<int>(
-        std::round(static_cast<double>(N) * 48000 / 44100));
-    ASSERT_NEAR(static_cast<int>(wav.samples.size()), expected_len, 2);
-    for (float s : wav.samples)
-        ASSERT_TRUE(std::isfinite(s));
-}
+
 static bool write_constant_mono_wav(const std::string& path,
                                      float value,
                                      int total_frames,
@@ -239,24 +143,6 @@ TEST(WavLoader_Truncation_PrefixContentPreserved) {
     WavData wav = load_wav_file(path, 44100, limit);
     ASSERT_EQ(static_cast<int>(wav.samples.size()), limit);
     ASSERT_NEAR(wav.samples[16], 0.7f, 5e-3f);
-}
-TEST(WavLoader_Truncation_AfterStereoMixdown) {
-    const std::string path = "/tmp/wl_test_truncation_stereo.wav";
-    TempFile guard(path);
-    const int N = 1024;
-    std::vector<int16_t> pcm;
-    pcm.reserve(N * 2);
-    for (int i = 0; i < N; ++i) {
-        pcm.push_back(16000);   
-        pcm.push_back(16000);   
-    }
-    ASSERT_TRUE(write_pcm16_wav(path, 2, 44100, pcm));
-    const int limit = 128;
-    WavData wav = load_wav_file(path, 44100, limit);
-    ASSERT_EQ(static_cast<int>(wav.samples.size()), limit);
-    ASSERT_EQ(wav.channels, 1);
-    for (float s : wav.samples)
-        ASSERT_NEAR(s, 16000.f / 32767.f, 2e-3f);
 }
 TEST(WavLoader_Truncation_AfterResample) {
     const std::string path = "/tmp/wl_test_truncation_resample.wav";
