@@ -66,14 +66,14 @@ struct TempFile {
 
 
 TEST(WavLoader_EmptyFrames_ReturnsEmpty) {
-    const std::string path = "wl_test_empty_frames.wav";
+    const std::string path = "tests/assets/wl_test_empty_frames.wav";
     TempFile guard(path);
     ASSERT_TRUE(write_zero_frame_wav(path, 44100));
     WavData wav = load_wav_file(path);
     ASSERT_TRUE(wav.samples.empty());
 }
 TEST(WavLoader_EmptyFrames_NonStandardRate_ReturnsEmpty) {
-    const std::string path = "wl_test_empty_frames_22k.wav";
+    const std::string path = "tests/assets/wl_test_empty_frames_22k.wav";
     TempFile guard(path);
     ASSERT_TRUE(write_zero_frame_wav(path, 22050));
     WavData wav = load_wav_file(path, 48000);
