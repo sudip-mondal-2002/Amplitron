@@ -17,6 +17,7 @@
 #include "audio/effects/flanger.h"
 #include "audio/effects/octaver.h"
 #include "audio/effects/pitch_shifter.h"
+#include <sstream>
 #include <cstring>
 #include <cmath>
 
@@ -2064,4 +2065,142 @@ TEST(looper_overdub_toggle_during_recording_is_ignored) {
     lp.process(rec, 512);
 
     ASSERT_EQ(lp.state(), Looper::State::Recording);
+}
+
+TEST(looper_crossfade_wraparound_executes_crossfade_branch) {
+    Looper lp;
+    lp.set_sample_rate(48000);
+    lp.reset();
+
+    // 5 ms -> ~240 samples crossfade.
+    lp.params()[1].value = 5.0f;
+
+    // IMPORTANT:
+    // Use a loop length NOT divisible by block size so playback
+    // eventually lands inside the crossfade region.
+    constexpr int LOOP = 5000;
+    constexpr int N = 256;
+
+    lp.request_record_toggle();
+
+    float rec[LOOP];
+    fill_sine(rec, LOOP, 440.0f, 48000);
+    lp.process(rec, LOOP);
+
+    lp.request_record_toggle();
+
+    float dummy[N] = {};
+    lp.process(dummy, N);
+
+    ASSERT_EQ(lp.state(), Looper::State::Playing);
+
+    // Process enough blocks to guarantee entry into:
+    // pos >= loop_length_ - xf
+    for (int i = 0; i < 40; ++i) {
+        float buf[N];
+        fill_sine(buf, N, 440.0f, 48000);
+
+        lp.process(buf, N);
+
+        ASSERT_TRUE(buffer_is_finite(buf, N));
+    }
+}
+
+TEST(looper_stereo_overdub_executes_right_channel_write_path) {
+    Looper lp;
+    lp.set_sample_rate(48000);
+    lp.reset();
+
+    lp.params()[0].value = 1.0f;
+
+    constexpr int LOOP = 5000;
+    constexpr int N = 256;
+
+    // Record silent stereo loop.
+    lp.request_record_toggle();
+
+    float left[LOOP] = {};
+    float right[LOOP] = {};
+
+    lp.process_stereo(left, right, LOOP);
+
+    lp.request_record_toggle();
+
+    float dl[N] = {}, dr[N] = {};
+    lp.process_stereo(dl, dr, N);
+
+    ASSERT_EQ(lp.state(), Looper::State::Playing);
+    ASSERT_TRUE(lp.has_loop());
+
+    // Enter overdub.
+    lp.request_overdub_toggle();
+
+    // Two blocks guarantees we execute the actual overdub write path
+    // after the state transition.
+    for (int i = 0; i < 2; ++i) {
+        float ol[N], or_[N];
+
+        fill_sine(ol,  N, 440.0f, 48000);
+        fill_sine(or_, N, 880.0f, 48000);
+
+        lp.process_stereo(ol, or_, N);
+
+        ASSERT_TRUE(buffer_is_finite(ol, N));
+        ASSERT_TRUE(buffer_is_finite(or_, N));
+    }
+
+    ASSERT_EQ(lp.state(), Looper::State::Overdubbing);
+}
+
+TEST(looper_state_stream_operator_outputs_expected_strings) {
+    std::ostringstream os;
+
+    os << Looper::State::Empty << " "
+       << Looper::State::Idle << " "
+       << Looper::State::Recording << " "
+       << Looper::State::Playing << " "
+       << Looper::State::Overdubbing;
+
+    ASSERT_EQ(
+        os.str(),
+        "Empty Idle Recording Playing Overdubbing"
+    );
+}
+
+TEST(looper_state_stream_operator_handles_unknown_value) {
+    std::ostringstream os;
+
+    auto invalid =
+        static_cast<Looper::State>(999);
+
+    os << invalid;
+
+    ASSERT_EQ(os.str(), "Unknown");
+}
+
+TEST(looper_metadata_accessors_return_expected_values) {
+    Looper lp;
+
+    ASSERT_EQ(std::string(lp.name()), "Looper");
+    ASSERT_EQ(std::string(lp.type_id()), "Looper");
+
+    auto& p = lp.params();
+
+    ASSERT_FALSE(p.empty());
+    ASSERT_GE(p.size(), 2u);
+}
+
+TEST(looper_recording_auto_stops_at_buffer_limit) {
+    // sr=100 gives max_samples_=6000; feeding 7000 samples triggers the cap.
+    Looper lp;
+    lp.set_sample_rate(100);
+    lp.reset();
+
+    lp.request_record_toggle();
+    std::vector<float> rec(7000, 0.5f);
+    lp.process(rec.data(), 7000);
+
+    ASSERT_EQ(lp.state(), Looper::State::Playing);
+    ASSERT_TRUE(lp.has_loop());
+    ASSERT_EQ(lp.loop_length_samples(), 6000);
 }
