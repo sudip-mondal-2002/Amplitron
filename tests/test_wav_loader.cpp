@@ -4,6 +4,7 @@
 #include <fstream>
 #include <cmath>
 #include <cstdio>
+#include <cstdint>
 #include <vector>
 
 using namespace Amplitron;
