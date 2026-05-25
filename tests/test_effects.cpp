@@ -325,6 +325,34 @@ TEST(cabinet_sim_filters_signal) {
     ASSERT_GT(rms(buf, 512), 0.001f);
 }
 
+TEST(cabinet_sim_silence_remains_silent) {
+    CabinetSim cab;
+    cab.set_sample_rate(48000);
+    cab.reset();
+
+    float buf[512] = {0.0f};
+
+    cab.process(buf, 512);
+
+    ASSERT_TRUE(buffer_is_finite(buf, 512));
+    ASSERT_LT(rms(buf, 512), 0.000001f);
+}
+TEST(cabinet_sim_long_run_stability) {
+    CabinetSim cab;
+    cab.set_sample_rate(48000);
+    cab.reset();
+
+    float buf[512];
+
+    for (int i = 0; i < 1000; ++i) {
+        fill_sine(buf, 512, 440.0f, 48000);
+        cab.process(buf, 512);
+
+        ASSERT_TRUE(buffer_is_finite(buf, 512));
+        ASSERT_GT(rms(buf, 512), 0.0001f);
+    }
+}
+
 TEST(amp_simulator_processes_without_nan) {
     AmpSimulator amp;
     amp.set_sample_rate(48000);

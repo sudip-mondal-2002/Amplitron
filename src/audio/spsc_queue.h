@@ -91,9 +91,6 @@ struct AudioCommand {
         SetEffectMix,        // Change effect wet/dry mix
         SetInputGain,        // Change master input gain
         SetOutputGain,       // Change master output gain
-        ToggleMetronome,     // Toggle metronome on/off
-        SetMetronomeBpm,     // Change metronome BPM
-        SetMetronomeVolume,  // Change metronome click level
         AddEffect,           // Signal that effect list changed (swap pointer)
         RemoveEffect,        // Signal that effect list changed
         MoveEffect,          // Signal that effect list changed
