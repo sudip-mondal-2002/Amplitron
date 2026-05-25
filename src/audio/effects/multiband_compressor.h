@@ -92,6 +92,7 @@ public:
     void process(float* buffer, int num_samples) override;
     void reset() override;
     const char* name() const override { return "MultiBand Compressor"; }
+    const char* type_id() const override { return "MultiBand Compressor"; }
     std::vector<EffectParam>& params() override { return params_; }
     void set_sample_rate(int sample_rate) override;
 

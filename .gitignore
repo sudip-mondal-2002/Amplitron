@@ -35,7 +35,13 @@ desktop.ini
 external/
 node_modules/
 package-lock.json
+# Playwright test results & reports
 test-results/
+playwright-report/
+blob-report/
+tests/web/test-results/
+tests/web/playwright-report/
+tests/web/blob-report/
 
 # Compiled
 *.o

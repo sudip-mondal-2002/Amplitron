@@ -2,6 +2,7 @@
 
 #include "audio/effect.h"
 
+#include<ostream>
 #include <atomic>
 #include <cmath>
 #include <cstdint>
@@ -34,6 +35,7 @@ public:
     void set_sample_rate(int sample_rate) override;
     void reset() override;
     const char* name() const override { return "Looper"; }
+    const char* type_id() const override { return "Looper"; }
     std::vector<EffectParam>& params() override { return params_; }
 
     // --- UI control (thread-safe) ---
@@ -107,5 +109,6 @@ private:
     inline void process_core(float* left, float* right, int num_samples, bool stereo);
 };
 
+std::ostream& operator<<(std::ostream& os, Looper::State s);
 } // namespace Amplitron
 

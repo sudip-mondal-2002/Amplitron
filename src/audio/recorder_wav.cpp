@@ -48,19 +48,29 @@ void Recorder::finalize_wav_header() {
     if (!file_.is_open()) return;
 
     int64_t total_samples = samples_written_.load();
-    // Compute data size in 64-bit to avoid overflow
-    int64_t data_size_64 = total_samples * static_cast<int64_t>(channels_) * 2;
+// Clamp channels_ to a safe positive value before multiplication to prevent
+// signed overflow or negative data_size_64 if channels_ is zero or negative.
+int64_t safe_channels = (channels_ > 0 && channels_ <= 8)
+                        ? static_cast<int64_t>(channels_)
+                        : 1LL;
+// Compute data size in 64-bit to avoid overflow
+int64_t data_size_64 = total_samples * safe_channels * 2LL;
     // WAV format uses 32-bit sizes; clamp to max int32
-    int data_size = static_cast<int>(
-        (data_size_64 > 0x7FFFFFFF) ? 0x7FFFFFFF : data_size_64);
-    int riff_size = data_size + 36;
+    // Use uint32_t to match the WAV spec (unsigned 32-bit chunk sizes)
+// and avoid signed integer overflow when data_size approaches INT32_MAX.
+// Cap at 0xFFFFFFD8 to leave room for the 36-byte RIFF overhead.
+uint32_t data_size = static_cast<uint32_t>(
+    (data_size_64 > static_cast<int64_t>(0xFFFFFFD8LL))
+        ? 0xFFFFFFD8u
+        : static_cast<uint32_t>(data_size_64));
+uint32_t riff_size = data_size + 36u;
 
-    // Seek back and write correct sizes
-    file_.seekp(4, std::ios::beg);
-    file_.write(reinterpret_cast<const char*>(&riff_size), 4);
+// Seek back and write correct sizes
+file_.seekp(4, std::ios::beg);
+file_.write(reinterpret_cast<const char*>(&riff_size), 4);
 
-    file_.seekp(40, std::ios::beg);
-    file_.write(reinterpret_cast<const char*>(&data_size), 4);
+file_.seekp(40, std::ios::beg);
+file_.write(reinterpret_cast<const char*>(&data_size), 4);
 
     // Seek to end
     file_.seekp(0, std::ios::end);

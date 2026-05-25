@@ -16,6 +16,7 @@ public:
     void process(float* buffer, int num_samples) override;
     void reset() override;
     const char* name() const override { return "Noise Gate"; }
+    const char* type_id() const override { return "Noise Gate"; }
     std::vector<EffectParam>& params() override { return params_; }
 
 private:

@@ -27,7 +27,7 @@ std::string mock_save_graph(const AudioGraph &graph) {
 
     if (node.pedal) {
       node_j["effect"] = node.pedal->get_params();
-      node_j["effect"]["type"] = node.pedal->name();
+      node_j["effect"]["type"] = node.pedal->type_id();
     }
 
     node_j["input_pin_ids"] = node.input_pin_ids;
