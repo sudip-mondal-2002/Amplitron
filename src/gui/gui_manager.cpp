@@ -3,6 +3,7 @@
 #include "gui/theme.h"
 #include "gui/file_dialog.h"
 #include "gui/command.h"
+#include "gui/gui_graph_state.h"
 #include "preset_manager.h"
 
 #include "gui/gl_setup.h"
@@ -122,6 +123,8 @@ bool GuiManager::initialize(int width, int height) {
         if (dpi_scale <= 0.0f) dpi_scale = 1.0f;
     }
 #endif
+
+    GuiGraphState::get_instance().dpi_scale = dpi_scale;
 
     {
         const float base_font_size = 14.0f;

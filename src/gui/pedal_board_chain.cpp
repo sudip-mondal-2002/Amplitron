@@ -7,18 +7,44 @@
 #include <imgui.h>
 #include <unordered_map>
 #include <cmath>
-
 namespace Amplitron {
-
 void PedalBoard::render_signal_chain() {
     auto& ui_state = GuiGraphState::get_instance();
+    // canvas_hovered is updated after the InvisibleButton is drawn (see below)
+    float dt = ImGui::GetIO().DeltaTime;
+    float lerp_factor = 1.0f - std::exp(-30.0f * dt);
+    if (lerp_factor < 0.0f) lerp_factor = 0.0f;
+    if (lerp_factor > 1.0f) lerp_factor = 1.0f;
+    float old_zoom = ui_state.zoom;
+    if (std::abs(ui_state.target_zoom - ui_state.zoom) > 0.0001f) {
+        ui_state.zoom += (ui_state.target_zoom - ui_state.zoom) * lerp_factor;
+    } else {
+        ui_state.zoom = ui_state.target_zoom;
+    }
+    if (old_zoom != ui_state.zoom) {
+        // Use canvas-local mouse coords to avoid drift when canvas is not at screen origin
+        float actual_factor = ui_state.zoom / old_zoom;
+        ImVec2 mouse_pos = ImGui::GetMousePos();
+        ImVec2 canvas_pos_now = ui_state.last_canvas_pos;
+        float local_x = mouse_pos.x - canvas_pos_now.x;
+        float local_y = mouse_pos.y - canvas_pos_now.y;
+        ui_state.scrolling.x = local_x - (local_x - ui_state.scrolling.x) * actual_factor;
+        ui_state.scrolling.y = local_y - (local_y - ui_state.scrolling.y) * actual_factor;
+        ui_state.target_scrolling = ui_state.scrolling;
+    }
+    if (std::abs(ui_state.target_scrolling.x - ui_state.scrolling.x) > 0.01f ||
+        std::abs(ui_state.target_scrolling.y - ui_state.scrolling.y) > 0.01f) {
+        ui_state.scrolling.x += (ui_state.target_scrolling.x - ui_state.scrolling.x) * lerp_factor;
+        ui_state.scrolling.y += (ui_state.target_scrolling.y - ui_state.scrolling.y) * lerp_factor;
+    } else {
+        ui_state.scrolling = ui_state.target_scrolling;
+    }
     auto& audio_graph = engine_.graph(); 
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
-
     ImVec2 canvas_pos = ImGui::GetCursorScreenPos();
     ImVec2 canvas_size = ImGui::GetContentRegionAvail();
     ImVec2 canvas_end = ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y);
-
+    ui_state.last_canvas_pos = canvas_pos;
     ImGui::SetCursorScreenPos(canvas_pos);
     ImGuiButtonFlags btn_flags = ImGuiButtonFlags_MouseButtonRight | ImGuiButtonFlags_MouseButtonMiddle;
     if (ui_state.hand_tool_active) {
@@ -27,6 +53,9 @@ void PedalBoard::render_signal_chain() {
     
     ImGui::SetNextItemAllowOverlap();
     ImGui::InvisibleButton("canvas_panning_hotspot", canvas_size, btn_flags);
+    ImGui::SetItemAllowOverlap();
+    // Update canvas_hovered here — after InvisibleButton — so it reflects the actual canvas item
+    ui_state.canvas_hovered = ImGui::IsItemHovered();
     
     if (ui_state.hand_tool_active && ImGui::IsItemHovered()) {
         ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
@@ -37,31 +66,41 @@ void PedalBoard::render_signal_chain() {
                                   (ui_state.hand_tool_active && ImGui::IsMouseDragging(ImGuiMouseButton_Left)))) {
         ui_state.scrolling.x += ImGui::GetIO().MouseDelta.x;
         ui_state.scrolling.y += ImGui::GetIO().MouseDelta.y;
+        ui_state.target_scrolling = ui_state.scrolling;
     }
-
     // Zooming is now allowed in both fullscreen and normal modes
     if (ImGui::IsItemHovered()) {
+        float scroll_x = ImGui::GetIO().MouseWheelH;
         float scroll_y = ImGui::GetIO().MouseWheel;
-        if (scroll_y != 0.0f) {
-            float zoom_factor = (scroll_y > 0) ? 1.1f : (1.0f / 1.1f);
-            ImVec2 mouse_pos = ImGui::GetMousePos();
-            ImVec2 mouse_in_canvas = ImVec2(mouse_pos.x - canvas_pos.x, mouse_pos.y - canvas_pos.y);
-            ui_state.scrolling.x = mouse_in_canvas.x - (mouse_in_canvas.x - ui_state.scrolling.x) * zoom_factor;
-            ui_state.scrolling.y = mouse_in_canvas.y - (mouse_in_canvas.y - ui_state.scrolling.y) * zoom_factor;
-            ui_state.zoom *= zoom_factor;
-            if (ui_state.zoom < 0.2f) ui_state.zoom = 0.2f;
-            if (ui_state.zoom > 5.0f) ui_state.zoom = 5.0f;
+        if (scroll_x != 0.0f || scroll_y != 0.0f) {
+            if (ImGui::GetIO().KeyCtrl) {
+                float zoom_factor = std::pow(1.1f, scroll_y);
+                ImVec2 mouse_pos = ImGui::GetMousePos();
+                ImVec2 mouse_in_canvas = ImVec2(mouse_pos.x - canvas_pos.x, mouse_pos.y - canvas_pos.y);
+                float old_zoom = ui_state.target_zoom;
+                float new_zoom = old_zoom * zoom_factor;
+                if (new_zoom < 0.2f) new_zoom = 0.2f;
+                if (new_zoom > 5.0f) new_zoom = 5.0f;
+                float actual_factor = new_zoom / old_zoom;
+                ui_state.target_scrolling.x = mouse_in_canvas.x - (mouse_in_canvas.x - ui_state.target_scrolling.x) * actual_factor;
+                ui_state.target_scrolling.y = mouse_in_canvas.y - (mouse_in_canvas.y - ui_state.target_scrolling.y) * actual_factor;
+                ui_state.target_zoom = new_zoom;
+            } else {
+                ui_state.target_scrolling.x += scroll_x * 20.0f;
+                ui_state.target_scrolling.y += scroll_y * 20.0f;
+            }
         }
     }
-
     // Draw fullscreen button at top right
     ImGui::SetCursorScreenPos(ImVec2(canvas_pos.x + canvas_size.x - 70, canvas_pos.y + 10));
     ImGui::SetNextItemAllowOverlap();
     if (ImGui::Button(ui_state.is_fullscreen ? "Exit FS" : "Full Screen")) {
         ui_state.is_fullscreen = !ui_state.is_fullscreen;
-        if (!ui_state.is_fullscreen) ui_state.zoom = 1.0f;
+        if (!ui_state.is_fullscreen) {
+            ui_state.zoom = 1.0f;
+            ui_state.target_zoom = 1.0f;
+        }
     }
-
     if (ui_state.show_grid) {
         float GRID_SZ = 32.0f * ui_state.zoom;
         ImU32 GRID_COLOR = IM_COL32(36, 34, 30, 255);
@@ -72,14 +111,10 @@ void PedalBoard::render_signal_chain() {
             draw_list->AddLine(ImVec2(canvas_pos.x, canvas_pos.y + y), ImVec2(canvas_end.x, canvas_pos.y + y), GRID_COLOR);
         }
     }
-
     draw_list->PushClipRect(canvas_pos, canvas_end, true);
-
     ImVec2 offset = ImVec2(canvas_pos.x + ui_state.scrolling.x, canvas_pos.y + ui_state.scrolling.y);
     std::unordered_map<int, ImVec2> pin_positions_cache;
-
     int node_to_delete = -1; // Safely track deletions outside the render loop
-
     // Prune stale nodes from the UI state if the backend graph was reset or rebuilt
     std::vector<int> stale_ids;
     for (auto& pair : ui_state.node_positions) {
@@ -90,7 +125,6 @@ void PedalBoard::render_signal_chain() {
     for (int id : stale_ids) {
         ui_state.node_positions.erase(id);
     }
-
     // Give all new nodes a default position at the end of the chain without shifting existing nodes
     for (const auto& node : audio_graph.get_nodes()) {
         if (ui_state.node_positions.find(node.id) == ui_state.node_positions.end()) {
@@ -116,41 +150,37 @@ void PedalBoard::render_signal_chain() {
             ui_state.node_positions[node.id] = { ImVec2(insert_x, 60.0f), false };
         }
     }
-
     // Animation pulse based on time and audio level
     float level = engine_.get_output_level();
     float time = (float)ImGui::GetTime();
     bool is_running = engine_.is_running();
-
     for (const auto& node : audio_graph.get_nodes()) {
-
         auto& node_layout = ui_state.node_positions[node.id];
         ImVec2 node_screen_pos = ImVec2(offset.x + node_layout.position.x * ui_state.zoom, offset.y + node_layout.position.y * ui_state.zoom);
-
         PedalWidget* target_widget = nullptr;
         if (node.routing_type == NodeRoutingType::StandardEffect) {
             for (auto& w : widgets_) {
                 if (w->get_effect() == node.pedal) { target_widget = w.get(); break; }
             }
         }
-
         bool is_mb_comp = false;
         if (target_widget && std::strcmp(target_widget->get_effect()->name(), "MultiBand Compressor") == 0) {
             is_mb_comp = true;
         }
         float node_width = (target_widget ? (is_mb_comp ? 190.0f * 2.2f : 190.0f) : 110.0f) * ui_state.zoom;
         float node_height = (target_widget ? 360.0f : 70.0f) * ui_state.zoom;
-
         ImGui::PushID(node.id);
-
         if (target_widget) {
             ImGui::SetCursorScreenPos(node_screen_pos);
             ImGui::BeginGroup();
+#ifdef __EMSCRIPTEN__
+            ImGui::SetWindowFontScale(ui_state.zoom / ui_state.dpi_scale);
+#else
             ImGui::SetWindowFontScale(ui_state.zoom);
+#endif
             target_widget->render(ui_state.zoom); 
             ImGui::SetWindowFontScale(1.0f);
             ImGui::EndGroup();
-
             ImGui::SetCursorScreenPos(node_screen_pos);
             ImGui::SetNextItemAllowOverlap(); 
             ImGui::InvisibleButton("native_drag_handle", ImVec2(node_width - 25.0f * ui_state.zoom, 30.0f * ui_state.zoom));
@@ -163,7 +193,6 @@ void PedalBoard::render_signal_chain() {
             ImU32 bg_color = IM_COL32(50, 35, 60, 255);
             draw_list->AddRectFilled(node_screen_pos, node_end, bg_color, Theme::ROUNDING_MD * ui_state.zoom);
             draw_list->AddRect(node_screen_pos, node_end, IM_COL32(180, 140, 80, 180), Theme::ROUNDING_MD * ui_state.zoom, 0, 1.5f * ui_state.zoom);
-
             ImGui::SetCursorScreenPos(node_screen_pos);
             ImGui::SetNextItemAllowOverlap();
             ImGui::InvisibleButton("util_drag_handle", ImVec2(node_width - 25.0f * ui_state.zoom, node_height));
@@ -172,28 +201,33 @@ void PedalBoard::render_signal_chain() {
                 node_layout.position.y += ImGui::GetIO().MouseDelta.y / ui_state.zoom;
             }
             ImVec2 text_pos = ImVec2(node_screen_pos.x + 12.0f * ui_state.zoom, node_screen_pos.y + 25.0f * ui_state.zoom);
+#ifdef __EMSCRIPTEN__
+            ImGui::SetWindowFontScale(ui_state.zoom / ui_state.dpi_scale);
+#else
             ImGui::SetWindowFontScale(ui_state.zoom);
+#endif
             draw_list->AddText(text_pos, IM_COL32(255, 255, 255, 255), node.name.c_str());
             ImGui::SetWindowFontScale(1.0f);
         }
-
         if (!node.is_reachable) {
             ImVec2 node_end = ImVec2(node_screen_pos.x + node_width, node_screen_pos.y + node_height);
             draw_list->AddRectFilled(node_screen_pos, node_end, IM_COL32(0, 0, 0, 180), Theme::ROUNDING_MD * ui_state.zoom);
             
             ImVec2 text_pos = ImVec2(node_screen_pos.x + 10.0f * ui_state.zoom, node_screen_pos.y + node_height - 25.0f * ui_state.zoom);
+#ifdef __EMSCRIPTEN__
+            ImGui::SetWindowFontScale(ui_state.zoom * 0.9f / ui_state.dpi_scale);
+#else
             ImGui::SetWindowFontScale(ui_state.zoom * 0.9f);
+#endif
             draw_list->AddText(text_pos, IM_COL32(255, 60, 60, 255), "DISCONNECTED");
             ImGui::SetWindowFontScale(1.0f);
         }
-
         // --- INTERNAL SIGNAL FLOW / ELECTRICITY EFFECT ---
         if (node.is_reachable && (!node.input_pin_ids.empty() || !node.output_pin_ids.empty())) {
             bool enabled = true;
             if (target_widget) {
                 enabled = target_widget->get_effect()->is_enabled();
             }
-
             // Align with pins
             float in_y = node_screen_pos.y + node_height * 0.5f;
             if (!node.input_pin_ids.empty()) {
@@ -206,7 +240,6 @@ void PedalBoard::render_signal_chain() {
             
             ImVec2 flow_p1(node_screen_pos.x, in_y);
             ImVec2 flow_p2(node_screen_pos.x + node_width, out_y);
-
             // --- COLOR & PULSE CALCULATIONS (SHARED) ---
             ImU32 flow_col = IM_COL32(200, 230, 255, 255);
             if (target_widget) {
@@ -217,10 +250,8 @@ void PedalBoard::render_signal_chain() {
             ImU32 r = (flow_col >> 0) & 0xFF;
             ImU32 g = (flow_col >> 8) & 0xFF;
             ImU32 b = (flow_col >> 16) & 0xFF;
-
             float pulse = 0.6f + 0.4f * std::sin(time * 8.0f) * (0.5f + level * 2.0f);
             float jitter = std::sin(time * 40.0f) * 1.5f * ui_state.zoom;
-
             if (enabled) {
                 // --- ELECTRICITY PASSING THROUGH (ACTIVE) ---
                 // No internal line, only glowing edges
@@ -237,19 +268,16 @@ void PedalBoard::render_signal_chain() {
                 
                 ImVec2 p_rail_in(flow_p1.x, rail_y);
                 ImVec2 p_rail_out(flow_p2.x, rail_y);
-
                 auto draw_consistent_glow_line = [&](ImVec2 p1, ImVec2 p2) {
                     ImVec2 p1j(p1.x, p1.y + jitter);
                     ImVec2 p2j(p2.x, p2.y + jitter);
                     draw_list->AddLine(p1j, p2j, IM_COL32(r, g, b, (int)(180 * pulse)), 4.0f * ui_state.zoom);
                     draw_list->AddLine(p1j, p2j, IM_COL32(255, 255, 255, (int)(220 * pulse)), 1.5f * ui_state.zoom);
                 };
-
                 // Bridge segments
                 draw_consistent_glow_line(flow_p1, p_rail_in);
                 draw_consistent_glow_line(p_rail_in, p_rail_out);
                 draw_consistent_glow_line(p_rail_out, flow_p2);
-
                 // --- MOVING ELECTRONS (PULSES) ---
                 // Electrons travel along the bridge path: Up -> Across -> Down
                 float electron_time = std::fmod(time * 2.5f, 1.0f);
@@ -271,24 +299,20 @@ void PedalBoard::render_signal_chain() {
                     draw_list->AddCircleFilled(electron_pos, 3.5f * ui_state.zoom, IM_COL32(255, 255, 255, (int)(220 * pulse)));
                     draw_list->AddCircle(electron_pos, 7.0f * ui_state.zoom, IM_COL32(r, g, b, (int)(180 * pulse)), 0, 2.0f * ui_state.zoom);
                 }
-
                 if (ImGui::IsMouseHoveringRect(ImVec2(node_screen_pos.x, rail_y - 10), flow_p2)) {
                     ImGui::SetTooltip("%s (Bypassed - High Rail Signal Path)", target_widget->get_effect()->name());
                 }
             }
-
             if (ImGui::IsMouseHoveringRect(flow_p1, flow_p2) && (target_widget || !node.name.empty())) {
                 const char* name = target_widget ? target_widget->get_effect()->name() : node.name.c_str();
                 ImGui::SetTooltip("%s (%s)", name, enabled ? "Active" : "Bypassed");
             }
         }
-
         // ====================================================================
         // THE DELETION [X] BUTTON
         // ====================================================================
         bool is_amp = (node.name == "Amp Sim"); 
         bool is_input_node = (node.name == "Input");
-
         if (!is_amp && !is_input_node) {
             ImVec2 cross_pos = ImVec2(node_screen_pos.x + node_width - 24.0f * ui_state.zoom, node_screen_pos.y + 4.0f * ui_state.zoom);
             ImGui::SetCursorScreenPos(cross_pos);
@@ -309,7 +333,6 @@ void PedalBoard::render_signal_chain() {
             
             ImGui::PopStyleColor(2);
         }
-
         // ====================================================================
         // FIX: THE WIRE DROP ZONE (Input Pins)
         // ====================================================================
@@ -319,10 +342,8 @@ void PedalBoard::render_signal_chain() {
                 float pin_y = node_screen_pos.y + (node_height * (idx + 1.0f) / (node.input_pin_ids.size() + 1.0f));
                 ImVec2 pin_pos(node_screen_pos.x - 2.0f * ui_state.zoom, pin_y); 
                 pin_positions_cache[pin_id] = pin_pos;
-
                 draw_list->AddCircleFilled(pin_pos, 5.0f * ui_state.zoom, IM_COL32(46, 204, 113, 255)); 
                 draw_list->AddCircle(pin_pos, 6.5f * ui_state.zoom, IM_COL32(255, 255, 255, 200));
-
                 ImGui::SetCursorScreenPos(ImVec2(pin_pos.x - 10.0f * ui_state.zoom, pin_pos.y - 10.0f * ui_state.zoom));
                 ImGui::PushID(pin_id);
                 ImGui::SetNextItemAllowOverlap();
@@ -343,7 +364,6 @@ void PedalBoard::render_signal_chain() {
                 ImGui::PopID();
             }
         }
-
         // ====================================================================
         // FIX: THE WIRE DRAG START (Output Pins)
         // ====================================================================
@@ -353,13 +373,10 @@ void PedalBoard::render_signal_chain() {
                 float pin_y = node_screen_pos.y + (node_height * (idx + 1.0f) / (node.output_pin_ids.size() + 1.0f));
                 ImVec2 pin_pos(node_screen_pos.x + node_width + 2.0f * ui_state.zoom, pin_y);
                 pin_positions_cache[pin_id] = pin_pos;
-
                 // Track active wire position to snap to the pin perfectly
                 if (ui_state.active_src_pin_id == pin_id) ui_state.active_src_pin_pos = pin_pos;
-
                 draw_list->AddCircleFilled(pin_pos, 5.0f * ui_state.zoom, IM_COL32(231, 76, 60, 255)); 
                 draw_list->AddCircle(pin_pos, 6.5f * ui_state.zoom, IM_COL32(255, 255, 255, 200));
-
                 ImGui::SetCursorScreenPos(ImVec2(pin_pos.x - 10.0f * ui_state.zoom, pin_pos.y - 10.0f * ui_state.zoom));
                 ImGui::PushID(pin_id);
                 ImGui::SetNextItemAllowOverlap();
@@ -385,10 +402,8 @@ void PedalBoard::render_signal_chain() {
                 ImGui::PopID();
             }
         }
-
         ImGui::PopID();
     }
-
     // Process Deletions safely after iterating
     if (node_to_delete != -1) {
         auto* node_ptr = audio_graph.find_node(node_to_delete);
@@ -408,7 +423,6 @@ void PedalBoard::render_signal_chain() {
         ui_state.node_positions.erase(node_to_delete);
         ui_state.active_src_pin_id = -1; // avoid stale pin state after topology change
     }
-
     // Draw Patch Cables
     int link_to_delete = -1;
     for (const auto& link : audio_graph.get_links()) {
@@ -418,7 +432,6 @@ void PedalBoard::render_signal_chain() {
             
             ImVec2 cp1 = ImVec2(p1.x + 45.0f * ui_state.zoom, p1.y);
             ImVec2 cp2 = ImVec2(p2.x - 45.0f * ui_state.zoom, p2.y);
-
             // Distance detection for hovering/clicking
             bool hovered = false;
             ImVec2 mouse_pos = ImGui::GetMousePos();
@@ -433,10 +446,8 @@ void PedalBoard::render_signal_chain() {
                     break;
                 }
             }
-
             ImU32 color = hovered ? IM_COL32(255, 100, 100, 255) : IM_COL32(212, 175, 55, 255);
             draw_list->AddBezierCubic(p1, cp1, cp2, p2, color, hovered ? 5.0f * ui_state.zoom : 3.0f * ui_state.zoom);
-
             // --- Signal Pulse Animation on Cables ---
             if (is_running) {
                 float t_off = std::fmod(time * 2.0f, 1.0f); // Slightly faster
@@ -452,7 +463,6 @@ void PedalBoard::render_signal_chain() {
                     draw_list->AddCircle(ImVec2(hx, hy), pulse_size + 1.0f * ui_state.zoom, IM_COL32(255, 255, 255, 150));
                 }
             }
-
             if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
                 link_to_delete = link.id;
             }
@@ -463,7 +473,6 @@ void PedalBoard::render_signal_chain() {
         audio_graph.remove_link(link_to_delete);
         engine_.commit_graph_changes();
     }
-
     // Draw Wire Spline Drafting
     if (ui_state.active_src_pin_id != -1) {
         ImVec2 mouse_pos = ImGui::GetMousePos();
@@ -471,17 +480,13 @@ void PedalBoard::render_signal_chain() {
         ImVec2 cp1 = ImVec2(p1.x + 45.0f, p1.y);
         ImVec2 cp2 = ImVec2(mouse_pos.x - 45.0f, mouse_pos.y);
         draw_list->AddBezierCubic(p1, cp1, cp2, mouse_pos, IM_COL32(255, 255, 255, 160), 2.0f, 0);
-
         if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
             ui_state.active_src_pin_id = -1; // Snap cable back if dropped in empty space
         }
     }
-
     // Fix ImGui cursor bounds warnings after free panning
     ImGui::SetCursorPos(ImVec2(0, 0));
     ImGui::Dummy(canvas_size);
-
     draw_list->PopClipRect();
 }
-
 } // namespace Amplitron
