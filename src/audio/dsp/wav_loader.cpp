@@ -4,6 +4,7 @@
 #include "audio/dsp/wav_loader.h"
 #include <iostream>
 #include <cmath>
+#include <filesystem>
 
 namespace Amplitron {
 
@@ -106,6 +107,60 @@ WavData load_wav_file(const std::string& filepath,
     }
 
     return result;
+}
+
+bool is_safe_ir_path(const std::string& path, const std::string& allowed_dir) {
+    if (path.empty()) return false;
+
+    // Reject UNC paths — on Windows these trigger an outbound SMB connection
+    // that leaks the user's NTLM credential hash to an attacker-controlled server.
+    if (path.size() >= 2 &&
+        ((path[0] == '\\' && path[1] == '\\') ||
+         (path[0] == '/' && path[1] == '/'))) {
+        std::cerr << "Cabinet IR: rejected UNC path: " << path << std::endl;
+        return false;
+    }
+
+    try {
+        const std::filesystem::path p(path);
+
+        // Reject any component that is a parent-directory traversal.
+        for (const auto& component : p) {
+            if (component == "..") {
+                std::cerr << "Cabinet IR: rejected path with traversal component: "
+                          << path << std::endl;
+                return false;
+            }
+        }
+
+        if (!allowed_dir.empty()) {
+            // Resolve both paths to their canonical (symlink-free, absolute) forms
+            // and confirm the IR path is a descendant of the allowed directory.
+            const std::filesystem::path canon_path =
+                std::filesystem::weakly_canonical(p);
+            const std::filesystem::path canon_allowed =
+                std::filesystem::weakly_canonical(std::filesystem::path(allowed_dir));
+
+            auto it_path    = canon_path.begin();
+            auto it_allowed = canon_allowed.begin();
+
+            while (it_allowed != canon_allowed.end()) {
+                if (it_path == canon_path.end() || *it_path != *it_allowed) {
+                    std::cerr << "Cabinet IR: rejected path outside allowed directory ("
+                              << allowed_dir << "): " << path << std::endl;
+                    return false;
+                }
+                ++it_path;
+                ++it_allowed;
+            }
+        }
+    } catch (const std::filesystem::filesystem_error& e) {
+        std::cerr << "Cabinet IR: filesystem error validating path (" << path
+                  << "): " << e.what() << std::endl;
+        return false;
+    }
+
+    return true;
 }
 
 } // namespace Amplitron

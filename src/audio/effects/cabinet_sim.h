@@ -34,6 +34,14 @@ public:
     const std::string& ir_name() const { return ir_name_; }
     float ir_duration_ms() const { return ir_duration_ms_; }
 
+    // When set, load_ir() rejects any path that is not a descendant of this
+    // directory. Leave empty to allow any path (e.g. user-picked via file dialog).
+    void set_allowed_ir_dir(const std::string& dir) { allowed_ir_dir_ = dir; }
+    const std::string& allowed_ir_dir() const { return allowed_ir_dir_; }
+
+    // Human-readable description of the last load_ir() failure, or empty on success.
+    const std::string& ir_load_error() const { return ir_load_error_; }
+
 private:
     std::vector<EffectParam> params_;
 
@@ -58,6 +66,10 @@ private:
     std::string ir_path_;
     std::string ir_name_;
     float ir_duration_ms_ = 0.0f;
+
+    // Path validation — set before calling load_ir() for untrusted sources.
+    std::string allowed_ir_dir_;
+    std::string ir_load_error_;
 
     // Brightness one-pole smoother
     float bright_smooth_ = 0.5f;

@@ -177,3 +177,78 @@ TEST(WavLoader_Truncation_LimitOfOne) {
     ASSERT_EQ(static_cast<int>(wav.samples.size()), 1);
     ASSERT_NEAR(wav.samples[0], 0.9f, 5e-3f);
 }
+
+// ============================================================
+// is_safe_ir_path — path validation security tests
+// ============================================================
+
+TEST(IrPath_Empty_Rejected) {
+    ASSERT_FALSE(is_safe_ir_path(""));
+}
+
+TEST(IrPath_UNC_Backslash_Rejected) {
+    // Windows SMB UNC path — would leak NTLM credentials on Windows
+    ASSERT_FALSE(is_safe_ir_path("\\\\attacker.example.com\\share\\evil.wav"));
+}
+
+TEST(IrPath_UNC_ForwardSlash_Rejected) {
+    // Normalised UNC form that works on some POSIX implementations via Samba
+    ASSERT_FALSE(is_safe_ir_path("//attacker.example.com/share/evil.wav"));
+}
+
+TEST(IrPath_TraversalRelative_Rejected) {
+    ASSERT_FALSE(is_safe_ir_path("../../etc/passwd"));
+}
+
+TEST(IrPath_TraversalAbsolute_Rejected) {
+    ASSERT_FALSE(is_safe_ir_path("/safe/dir/../../etc/passwd"));
+}
+
+TEST(IrPath_TraversalMiddle_Rejected) {
+    ASSERT_FALSE(is_safe_ir_path("/home/user/irs/../../../etc/shadow"));
+}
+
+TEST(IrPath_TraversalWindowsStyle_Rejected) {
+    // Drive-relative traversal on Windows-style paths
+    ASSERT_FALSE(is_safe_ir_path("C:\\Users\\user\\..\\..\\Windows\\System32\\evil"));
+}
+
+TEST(IrPath_NormalAbsolute_NoAllowedDir_Accepted) {
+    // An ordinary absolute path with no allowed_dir restriction should pass
+    // the UNC + traversal checks even if the file does not exist yet.
+    ASSERT_TRUE(is_safe_ir_path("/home/user/irs/cabinet.wav"));
+}
+
+TEST(IrPath_NormalRelative_NoAllowedDir_Accepted) {
+    ASSERT_TRUE(is_safe_ir_path("irs/cabinet.wav"));
+}
+
+TEST(IrPath_WithinAllowedDir_Accepted) {
+    // Create a real directory so weakly_canonical can resolve it.
+    const std::string allowed = "tests/assets";
+    std::filesystem::create_directories(allowed);
+    const std::string path = "tests/assets/cabinet.wav";
+    ASSERT_TRUE(is_safe_ir_path(path, allowed));
+}
+
+TEST(IrPath_OutsideAllowedDir_Rejected) {
+    const std::string allowed = "tests/assets";
+    std::filesystem::create_directories(allowed);
+    // Path is valid but lives outside the allowed directory
+    ASSERT_FALSE(is_safe_ir_path("/tmp/malicious.wav", allowed));
+}
+
+TEST(IrPath_AllowedDirSubdirectory_Accepted) {
+    // A file nested deeper inside the allowed directory is fine
+    const std::string allowed = "tests";
+    std::filesystem::create_directories("tests/assets/sub");
+    ASSERT_TRUE(is_safe_ir_path("tests/assets/sub/ir.wav", allowed));
+}
+
+TEST(IrPath_AllowedDir_TraversalEscapes_Rejected) {
+    // Even with an allowed_dir set, a traversal that escapes it is rejected
+    // before weakly_canonical ever sees it (the ".." component check fires first).
+    const std::string allowed = "tests/assets";
+    std::filesystem::create_directories(allowed);
+    ASSERT_FALSE(is_safe_ir_path("tests/assets/../../../etc/passwd", allowed));
+}

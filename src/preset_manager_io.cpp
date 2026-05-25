@@ -2,6 +2,7 @@
 #include "preset_json.h"
 #include "audio/effect_factory.h"
 #include "audio/effects/cabinet_sim.h"
+#include "audio/dsp/wav_loader.h"
 #include "preset_manager_impl.h"
 #include <iostream>
 #include <cstring>
@@ -146,9 +147,19 @@ bool PresetManager::load_preset(const std::string& filepath,
         if (it != fd.metadata.end() && !it->second.empty()) {
             auto* cab = dynamic_cast<CabinetSim*>(fx.get());
             if (cab) {
-                if (!cab->load_ir(it->second)) {
+                const std::string& ir_path = it->second;
+                // Validate the path before opening it. Preset files can be
+                // shared or downloaded, so we treat ir_path as untrusted input.
+                // UNC paths are unconditionally rejected (Windows NTLM leak).
+                // Traversal sequences ("..") are also unconditionally rejected.
+                if (!is_safe_ir_path(ir_path)) {
+                    std::cerr << "Cabinet: preset contains unsafe IR path, "
+                                 "skipping IR load (preset still applied): "
+                              << ir_path << std::endl;
+                    last_error_ = "IR path in preset was rejected for safety reasons.";
+                } else if (!cab->load_ir(ir_path)) {
                     std::cerr << "Cabinet: could not load IR file: "
-                              << it->second << std::endl;
+                              << ir_path << std::endl;
                 }
             }
         }

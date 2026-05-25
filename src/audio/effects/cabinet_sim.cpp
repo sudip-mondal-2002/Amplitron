@@ -2,6 +2,7 @@
 #include "audio/effect_factory.h"
 #include "audio/dsp/wav_loader.h"
 #include <algorithm>
+#include <iostream>
 
 namespace Amplitron {
 
@@ -43,6 +44,14 @@ int CabinetSim::max_ir_samples() const {
 }
 
 bool CabinetSim::load_ir(const std::string& filepath) {
+    ir_load_error_.clear();
+
+    if (!is_safe_ir_path(filepath, allowed_ir_dir_)) {
+        ir_load_error_ = "Unsafe IR path rejected: " + filepath;
+        std::cerr << "Cabinet IR: " << ir_load_error_ << std::endl;
+        return false;
+    }
+
     WavData wav = load_wav_file(filepath, sample_rate_, max_ir_samples());
     if (wav.samples.empty()) return false;
 
