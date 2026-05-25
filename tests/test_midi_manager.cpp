@@ -783,3 +783,97 @@ TEST(midi_non_cc_events_are_ignored) {
     ASSERT_NEAR(fx->params()[0].value, original_value, 0.001f);
     engine.shutdown();
 }
+
+// ===========================================================================
+// PATCHED MIDI CORE TESTING EXTENSIONS
+// ===========================================================================
+
+/**
+ * @brief Tests continuous mapping behavior when scaling exact intermediate data boundaries, 
+ * verifying field transformation precision at the strict quarter-scale mark.
+ */
+TEST(midi_continuous_quarter_scale_precision) {
+    MidiManager midi;
+    AudioEngine engine;
+    engine.initialize();
+
+    auto fx = std::make_shared<TestEffect>();
+    engine.add_effect(fx);
+
+    MidiMapping m;
+    m.cc_number = 30;
+    m.midi_channel = -1;
+    m.target_type = MidiTargetType::EffectParam;
+    m.mode = MidiMappingMode::Continuous;
+    m.effect_name = "TestEffect";
+    m.param_name = "Drive";
+    midi.add_mapping(m);
+
+    // Inject value 32 (roughly 25% of 127)
+    midi.inject_event(make_cc(30, 32));
+    midi.poll(engine);
+
+    // Field-level assertion checking the exact continuous scaling math path
+    float expected = (32.0f / 127.0f) * 1.0f; 
+    ASSERT_NEAR(fx->params()[0].value, expected, 0.01f);
+    engine.shutdown();
+}
+
+/**
+ * @brief Assures that toggle state evaluations flip-flop repeatedly and reliably 
+ * when alternating boundary control change values are processed sequentially.
+ */
+TEST(midi_toggle_mode_repeated_execution_flip_flop) {
+    MidiManager midi;
+    AudioEngine engine;
+    engine.initialize();
+
+    auto fx = std::make_shared<TestEffect>();
+    fx->set_enabled(true);
+    engine.add_effect(fx);
+
+    MidiMapping m;
+    m.cc_number = 45;
+    m.midi_channel = -1;
+    m.target_type = MidiTargetType::EffectBypass;
+    m.mode = MidiMappingMode::Toggle;
+    m.effect_name = "TestEffect";
+    midi.add_mapping(m);
+
+    // First toggle event: high value (127) triggers state change to disabled
+    midi.inject_event(make_cc(45, 127));
+    midi.poll(engine);
+    ASSERT_FALSE(fx->is_enabled());
+
+    // Second toggle event: alternating low value (0) triggers state change back to enabled
+    midi.inject_event(make_cc(45, 0));
+    midi.poll(engine);
+    ASSERT_TRUE(fx->is_enabled());
+
+    engine.shutdown();
+}
+
+/**
+ * @brief Validates the hardware learning engine state immediately after activation, 
+ * verifying field properties before any external message processing occurs.
+ */
+TEST(midi_learn_activation_state_bounds) {
+    MidiManager midi;
+    AudioEngine engine;
+    engine.initialize();
+
+    // Verify system is idle initially
+    ASSERT_FALSE(midi.is_learning());
+
+    // Begin learning tracking loop
+    midi.start_learn(MidiTargetType::EffectParam, "TestEffect", "Drive");
+    
+    // Field-level assertion confirming explicit retention of the learning flag
+    ASSERT_TRUE(midi.is_learning());
+
+    // Cancel and clean up state safely
+    midi.cancel_learn();
+    ASSERT_FALSE(midi.is_learning());
+    
+    engine.shutdown();
+}
