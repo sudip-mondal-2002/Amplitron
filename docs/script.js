@@ -58,7 +58,7 @@
         (e.__SV = 1))
 })(document, window.posthog || [])
 
-posthog.init("phc_ecTrgEi1Wfx1rgTVwSZxCWt9swjuWiKaXAYssHhHLNr", {
+posthog.init(window.POSTHOG_API_KEY || '', {
     api_host: "https://t.amplitron.sudipmondal.co.in",
     ui_host: "https://us.posthog.com",
     person_profiles: "identified_only",
