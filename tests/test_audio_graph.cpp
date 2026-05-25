@@ -606,48 +606,37 @@ TEST(audio_graph_dynamic_topology_mutation) {
     ASSERT_TRUE(std::isfinite(sample));
   }
 
-  // Dynamically insert a new node into the topology
+    // Dynamically mutate the SAME graph topology
   int inserted =
       graph.add_node("InsertedEffect",
                      NodeRoutingType::StandardEffect);
 
   nodes = graph.get_nodes();
 
-  AudioGraph rebuilt_graph;
+  auto links = graph.get_links();
 
-  int new_input =
-      rebuilt_graph.add_node("Input", NodeRoutingType::Splitter);
+  ASSERT_TRUE(!links.empty());
 
-  int effect =
-      rebuilt_graph.add_node("InsertedEffect",
-                             NodeRoutingType::StandardEffect);
+  // Remove original direct connection
+  ASSERT_TRUE(graph.remove_link(links[0].id));
 
-  int new_output =
-      rebuilt_graph.add_node("Output", NodeRoutingType::MergeSum);
-
-  rebuilt_graph.set_node_as_input(new_input, true);
-  rebuilt_graph.set_node_as_output(new_output, true);
-
-  auto rebuilt_nodes = rebuilt_graph.get_nodes();
+  // Rewire through inserted node
+  ASSERT_TRUE(
+      graph.add_link(nodes[0].output_pin_ids[0],
+                     nodes[2].input_pin_ids[0]) != -1);
 
   ASSERT_TRUE(
-      rebuilt_graph.add_link(
-          rebuilt_nodes[0].output_pin_ids[0],
-          rebuilt_nodes[1].input_pin_ids[0]) != -1);
+      graph.add_link(nodes[2].output_pin_ids[0],
+                     nodes[1].input_pin_ids[0]) != -1);
 
-  ASSERT_TRUE(
-      rebuilt_graph.add_link(
-          rebuilt_nodes[1].output_pin_ids[0],
-          rebuilt_nodes[2].input_pin_ids[0]) != -1);
+  ASSERT_TRUE(graph.rebuild_topology());
 
-  ASSERT_TRUE(rebuilt_graph.rebuild_topology());
-
-  executor.compile(rebuilt_graph);
+  executor.compile(graph);
 
   std::fill(output.begin(), output.end(), 0.0f);
 
   executor.process(input.data(), output.data(), 128);
-
+  
   for (float sample : output) {
     ASSERT_TRUE(std::isfinite(sample));
     ASSERT_TRUE(sample >= -10.0f);

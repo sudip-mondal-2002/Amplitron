@@ -389,18 +389,22 @@ TEST(audio_engine_set_buffer_size_clamps_values) {
   AudioEngine engine;
 
   engine.set_buffer_size(-1);
-  engine.set_buffer_size(999999);
+  ASSERT_TRUE(engine.get_buffer_size() > 0);
 
-  ASSERT_TRUE(true);
+  engine.set_buffer_size(999999);
+  ASSERT_TRUE(engine.get_buffer_size() <= 8192);
 }
 TEST(audio_engine_set_sample_rate_updates_state) {
   AudioEngine engine;
 
   engine.set_sample_rate(44100);
-  engine.set_sample_rate(48000);
-  engine.set_sample_rate(96000);
+  ASSERT_TRUE(engine.get_sample_rate() == 44100);
 
-  ASSERT_TRUE(true);
+  engine.set_sample_rate(48000);
+  ASSERT_TRUE(engine.get_sample_rate() == 48000);
+
+  engine.set_sample_rate(96000);
+  ASSERT_TRUE(engine.get_sample_rate() == 96000);
 }
 TEST(audio_engine_commit_graph_changes_with_empty_graph) {
   AudioEngine engine;
@@ -443,16 +447,19 @@ TEST(audio_engine_graph_commit_after_node_removal) {
 TEST(audio_engine_serialize_deserialize_roundtrip) {
   AudioEngine engine;
 
+  engine.set_input_gain(0.42f);
+  engine.set_output_gain(0.73f);
+
   auto serialized = engine.serialize();
 
   AudioEngine loaded;
 
-  loaded.deserialize(serialized);
+  ASSERT_TRUE(loaded.deserialize(serialized));
 
   auto reserialized = loaded.serialize();
 
-  ASSERT_TRUE(serialized.contains("input_gain"));
-  ASSERT_TRUE(reserialized.contains("input_gain"));
+  ASSERT_TRUE(reserialized.contains("\"input_gain\":0.42"));
+  ASSERT_TRUE(reserialized.contains("\"output_gain\":0.73"));
 }
 TEST(audio_engine_multiple_sample_rate_changes) {
   AudioEngine engine;
