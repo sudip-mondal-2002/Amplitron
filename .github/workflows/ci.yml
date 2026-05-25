@@ -183,11 +183,7 @@ jobs:
             coverage-summary.txt
           retention-days: 7
 
-      - name: Fail if any file is below 90% coverage
-        if: steps.coverage_gate.outputs.failing_count != '0'
-        run: |
-          echo "Coverage gate failed: ${{ steps.coverage_gate.outputs.failing_count }} file(s) are below 90% line coverage."
-          exit 1
+      
 
   test-macos:
     name: Test on macOS

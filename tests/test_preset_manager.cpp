@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <cstdlib>
 
 using namespace Amplitron;
 
@@ -362,4 +363,150 @@ TEST(PresetManagerMigration, ApplyMigrationsAddsVersion) {
     std::string raw = "{}"; // legacy unversioned format
     std::string patched = PresetManager::apply_migrations(raw);
     ASSERT_TRUE(patched.find("\"version\":") != std::string::npos);
+}
+
+TEST(PresetJson, InvalidJsonReturnsFalseAndLeavesPresetUnchanged) {
+    PresetData preset;
+    preset.name = "unchanged";
+    bool ok = from_json_ext("this is not json", preset);
+    ASSERT_FALSE(ok);
+    ASSERT_EQ(preset.name, std::string("unchanged"));
+}
+
+TEST(PresetJson, RoundtripWithMidiAndMetadata) {
+    PresetData preset;
+    preset.name = "RoundtripFull";
+    PresetData::EffectData fx;
+    fx.type = "Overdrive";
+    fx.enabled = true;
+    fx.mix = 0.5f;
+    fx.params.push_back({"Drive", 2.0f});
+    fx.metadata["ir_path"] = "path/to/ir.wav";
+    preset.effects.push_back(fx);
+
+    MidiMapping mm;
+    mm.cc_number = 10;
+    mm.midi_channel = 1;
+    mm.target_type = MidiTargetType::EffectParam;
+    mm.mode = MidiMappingMode::Continuous;
+    mm.effect_name = "Overdrive";
+    mm.param_name = "Drive";
+    preset.midi_mappings.push_back(mm);
+
+    std::string json = to_json_ext(preset);
+
+    PresetData loaded;
+    bool ok = from_json_ext(json, loaded);
+    ASSERT_TRUE(ok);
+    ASSERT_EQ(loaded.name, preset.name);
+    ASSERT_EQ(loaded.effects.size(), 1u);
+    ASSERT_EQ(loaded.effects[0].type, std::string("Overdrive"));
+    ASSERT_EQ(loaded.effects[0].metadata["ir_path"], std::string("path/to/ir.wav"));
+    ASSERT_EQ(loaded.midi_mappings.size(), 1u);
+    ASSERT_EQ(loaded.midi_mappings[0].cc_number, 10);
+}
+
+TEST(PresetManagerMigration, NoBraceReturnsOriginal) {
+    std::string raw = "no braces here";
+    std::string patched = PresetManager::apply_migrations(raw);
+    ASSERT_EQ(patched, raw);
+}
+
+TEST(PresetManagerConfig, SaveAndLoadConfigRoundtripUsesConfigPath) {
+    // Use a temporary test root so we don't touch real user config
+    std::string test_root = "test_temp_config_root";
+    std::filesystem::remove_all(test_root);
+    std::filesystem::create_directories(test_root);
+
+#ifdef _WIN32
+    // On Windows PresetManager reads APPDATA
+    _putenv_s("APPDATA", test_root.c_str());
+    std::string config_dir = test_root + "\\Amplitron";
+    std::filesystem::create_directories(config_dir);
+    std::string config_path = config_dir + "\\config.json";
+    std::string presets_value = test_root + "\\my_presets";
+    std::filesystem::create_directories(presets_value);
+#else
+    setenv("HOME", test_root.c_str(), 1);
+    std::string config_dir = test_root + "/.config/amplitron";
+    std::filesystem::create_directories(config_dir);
+    std::string config_path = config_dir + "/config.json";
+    std::string presets_value = test_root + "/my_presets";
+    std::filesystem::create_directories(presets_value);
+#endif
+
+    // Write explicit config file that the loader will read
+    std::ofstream f(config_path);
+    ASSERT_TRUE(f.is_open());
+    f << "{\n  \"presets_dir\": \"" << presets_value << "\"\n}\n";
+    f.close();
+
+    // Ensure no custom dir set initially
+    PresetManager::set_presets_dir("");
+    // Now load config and verify it picks up our value
+    PresetManager::load_config();
+    // If the value points at an existing dir, PresetManager should set it
+    ASSERT_EQ(PresetManager::custom_presets_dir(), presets_value);
+
+    // Cleanup
+    PresetManager::set_presets_dir("");
+    std::filesystem::remove_all(test_root);
+}
+
+TEST(PresetJson, EffectDataJsonADL) {
+    PresetData::EffectData fx;
+    fx.type = "TestFX";
+    fx.enabled = true;
+    fx.mix = 0.25f;
+    fx.params.push_back({"ParamA", 1.5f});
+    fx.metadata["k"] = "v";
+
+    nlohmann::json j = fx;
+    ASSERT_TRUE(j.contains("type"));
+    ASSERT_EQ(j["type"], "TestFX");
+
+    PresetData::EffectData fx2;
+    from_json(j, fx2);
+    ASSERT_EQ(fx2.type, fx.type);
+    ASSERT_EQ(fx2.enabled, fx.enabled);
+    ASSERT_EQ(fx2.mix, fx.mix);
+    ASSERT_EQ(fx2.params.size(), 1u);
+    ASSERT_EQ(fx2.metadata.at("k"), std::string("v"));
+}
+
+TEST(PresetManagerIO, SavePresetDataToDirectoryFails) {
+    // Ensure the presets directory exists
+    std::string dir = "presets";
+    std::filesystem::create_directories(dir);
+
+    PresetData p;
+    p.name = "ShouldFail";
+
+    // Attempt to write to a directory path (should fail)
+    bool ok = PresetManager::save_preset_data(dir, p);
+    ASSERT_FALSE(ok);
+    ASSERT_TRUE(PresetManager::last_error().find("Could not open file for writing") != std::string::npos);
+}
+
+TEST(PresetManagerIO, LoadPresetWithUnknownEffectTypeSkipsEffect) {
+    // Create a preset containing an unknown effect type
+    PresetData p;
+    p.name = "UnknownEffectPreset";
+    PresetData::EffectData fx;
+    fx.type = "DoesNotExistEffect";
+    fx.enabled = true;
+    p.effects.push_back(fx);
+
+    std::string path = "presets/test_unknown_effect.json";
+    PresetManager::save_preset_data(path, p);
+
+    AudioEngine engine;
+    engine.initialize();
+    bool loaded = PresetManager::load_preset(path, engine);
+    ASSERT_TRUE(loaded);
+    // Since effect type was unknown, engine should have zero effects
+    ASSERT_EQ(engine.effects().size(), 0u);
+
+    std::remove(path.c_str());
+    engine.shutdown();
 }
