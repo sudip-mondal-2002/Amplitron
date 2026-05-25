@@ -431,27 +431,26 @@ TEST(midi_learn_cancel) {
 // ===========================================================================
 
 /**
- * @brief RAII Cleanup Guard structure ensuring strict test isolation by backing up 
- * and recovering local disk configuration payloads automatically.
+ * @brief RAII Cleanup Guard ensuring strict test isolation by forcing file operations
+ * into a unique temporary workspace directory across all development platforms.
  */
 struct config_backup_guard {
+    std::filesystem::path original_cwd;
+    std::filesystem::path temp_dir;
     std::string config_file = "midi_config.json";
-    std::string backup_file = "midi_config.json.bak";
-    bool backed_up = false;
 
     config_backup_guard() {
-        if (fs::exists(config_file)) {
-            fs::rename(config_file, backup_file);
-            backed_up = true;
-        }
+        original_cwd = std::filesystem::current_path();
+        // Generate a unique directory name using random tokens
+        temp_dir = std::filesystem::temp_directory_path() / std::filesystem::path("midi_test_" + std::to_string(std::rand()));
+        std::filesystem::create_directories(temp_dir);
+        std::filesystem::current_path(temp_dir);
     }
 
     ~config_backup_guard() {
-        if (fs::exists(config_file)) {
-            fs::remove(config_file);
-        }
-        if (backed_up && fs::exists(backup_file)) {
-            fs::rename(backup_file, config_file);
+        std::filesystem::current_path(original_cwd);
+        if (!temp_dir.empty() && std::filesystem::exists(temp_dir)) {
+            std::filesystem::remove_all(temp_dir);
         }
     }
 };
