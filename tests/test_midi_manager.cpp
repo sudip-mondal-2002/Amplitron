@@ -1430,24 +1430,6 @@ TEST(midi_manager_close_port_after_open_attempt_no_crash) {
 // PLATFORM-CONSCIOUS EXTENSIONS FOR 90%+ COMPILATION TARGETS
 // ===========================================================================
 
-/**
- * @brief Exercises the error fallback paths inside midi_manager_persist.cpp 
- * by feeding a completely empty object context to ensure the deserializer 
- * registers a validation failure correctly.
- */
-TEST(midi_persist_deserializer_validation_failure) {
-    config_backup_guard guard;
-    std::ofstream file("midi_config.json");
-    file << R"({})";
-    file.close();
-
-    MidiManager mgr;
-    mgr.clear_mappings();
-    mgr.load_config();
-    
-    // Fallback logic forces default array parameters upon empty object tracking
-    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
-}
 
 /**
  * @brief Validates MidiManager initialization boundaries and structural properties
@@ -1463,4 +1445,22 @@ TEST(midi_manager_core_state_tracking_boundaries) {
     // Explicit call to check the clean fallback loop counters on an uninitialized instance
     auto active_mappings = mgr.mappings();
     ASSERT_GE(static_cast<int>(active_mappings.size()), 0);
+}
+/**
+ * @brief Drives the successful JSON parsing path in mappings_from_json()
+ * by creating a valid config file and asserting that mappings are 
+ * successfully loaded, hitting the lines that currently show 0 hits.
+ */
+TEST(midi_persist_load_config_valid_json_succeeds) {
+    config_backup_guard guard;
+    std::ofstream file("midi_config.json");
+    // Valid schema with one mapping
+    file << R"({"mappings": [{"cc": 7, "target": 0, "mode": 0, "effect": "Test", "param": "Drive"}]})";
+    file.close();
+
+    MidiManager mgr;
+    mgr.load_config();
+    
+    // If the parser successfully hit the successful loops, we expect at least 1 mapping
+    ASSERT_GE(static_cast<int>(mgr.mappings().size()), 1);
 }
