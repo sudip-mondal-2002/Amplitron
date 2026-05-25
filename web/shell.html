@@ -318,6 +318,89 @@
       }, 100);
     });
   }
+  (function() {
+    var prevDist = 0;
+    var prevMidX = 0;
+    var prevMidY = 0;
+    var tracking = false;
+
+    var c = document.getElementById('canvas');
+    if (!c) return;
+
+    function dist(t) {
+      var dx = t[1].clientX - t[0].clientX;
+      var dy = t[1].clientY - t[0].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    c.addEventListener('touchstart', function(e) {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        tracking = true;
+        prevDist = dist(e.touches);
+        prevMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        prevMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      }
+    }, { passive: false });
+
+    c.addEventListener('touchmove', function(e) {
+      if (!tracking || e.touches.length !== 2) return;
+      e.preventDefault();
+      var d = dist(e.touches);
+      var mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      var my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      var dscale = prevDist > 0 ? (d - prevDist) / prevDist : 0;
+      var dx = mx - prevMidX;
+      var dy = my - prevMidY;
+      prevDist = d;
+      prevMidX = mx;
+      prevMidY = my;
+      var rect = c.getBoundingClientRect();
+      var localX = mx - rect.left;
+      var localY = my - rect.top;
+      if (Module && Module.ccall) {
+        Module.ccall('on_canvas_touch_gesture', null, ['number','number','number','number','number'], [dx, dy, dscale, localX, localY]);
+      }
+    }, { passive: false });
+
+    c.addEventListener('touchend', function(e) {
+      if (e.touches.length < 2) tracking = false;
+    });
+
+    c.addEventListener('touchcancel', function() {
+      tracking = false;
+    });
+
+    c.addEventListener('wheel', function(e) {
+      var canvasHovered = false;
+      if (Module && Module.ccall) {
+        try {
+          canvasHovered = Module.ccall('is_canvas_hovered', 'boolean');
+        } catch (err) {
+          console.warn('[Amplitron] is_canvas_hovered bridge error:', err);
+        }
+      }
+      if (e.ctrlKey) {
+        e.preventDefault();
+        var dscale = -e.deltaY * 0.005;
+        if (dscale < -0.08) dscale = -0.08;
+        if (dscale > 0.08) dscale = 0.08;
+        var rect = c.getBoundingClientRect();
+        var localX = e.clientX - rect.left;
+        var localY = e.clientY - rect.top;
+        if (Module && Module.ccall) {
+          Module.ccall('on_canvas_touch_gesture', null, ['number','number','number','number','number'], [0, 0, dscale, localX, localY]);
+        }
+      } else if (canvasHovered) {
+        e.preventDefault();
+        var dx = -e.deltaX;
+        var dy = -e.deltaY;
+        if (Module && Module.ccall) {
+          Module.ccall('on_canvas_touch_gesture', null, ['number','number','number','number','number'], [dx, dy, 0.0, 0, 0]);
+        }
+      }
+    }, { passive: false });
+  })();
   </script>
   {{{ SCRIPT }}}
 </body>
