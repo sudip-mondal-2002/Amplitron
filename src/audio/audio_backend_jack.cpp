@@ -25,6 +25,11 @@ namespace Amplitron
         AudioEngine *engine = nullptr;
     };
 
+    static bool has_active_client(const AudioBackendState *state)
+    {
+        return state && state->client;
+    }
+
     static int jack_process(jack_nframes_t nframes, void *arg)
     {
         auto *state = static_cast<AudioBackendState *>(arg);
@@ -75,22 +80,20 @@ namespace Amplitron
             return s;
         }
 
-        s->in_port = jack_port_register(s->client, "in_1", JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
-        s->out_port = jack_port_register(s->client, "out_1", JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
-
-        jack_set_process_callback(s->client, jack_process, s);
-
-        if (jack_activate(s->client))
-        {
-            std::cerr << "[Amplitron] JACK: failed to activate client." << std::endl;
-        }
-        else
-        {
-            std::cerr << "[Amplitron] JACK backend initialised." << std::endl;
-        }
-
         return s;
     }
+
+#ifdef AMPLITRON_TESTS
+    AudioBackendState *create_disconnected_audio_backend_for_test()
+    {
+        return new AudioBackendState();
+    }
+
+    bool jack_backend_has_active_client_for_test(const AudioBackendState *state)
+    {
+        return has_active_client(state);
+    }
+#endif
 
     void destroy_audio_backend(AudioBackendState *state)
     {
@@ -141,18 +144,21 @@ namespace Amplitron
             return false;
 
         auto *state = static_cast<AudioBackendState *>(backend_);
-        if (state && state->client)
+        if (!has_active_client(state))
         {
-            if (!ensure_ports_registered(state, this))
-            {
-                last_error_ = "Failed to initialise JACK ports.";
-                return false;
-            }
-            if (jack_activate(state->client))
-            {
-                last_error_ = "Failed to activate JACK client.";
-                return false;
-            }
+            last_error_ = "JACK backend is not connected.";
+            return false;
+        }
+
+        if (!ensure_ports_registered(state, this))
+        {
+            last_error_ = "Failed to initialise JACK ports.";
+            return false;
+        }
+        if (jack_activate(state->client))
+        {
+            last_error_ = "Failed to activate JACK client.";
+            return false;
         }
 
         running_ = true;

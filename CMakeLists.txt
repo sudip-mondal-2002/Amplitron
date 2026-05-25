@@ -505,6 +505,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${IMGUI_DIR}
         ${IMGUI_DIR}/backends
         ${PORTAUDIO_INCLUDE_DIRS}
+        ${JACK_INCLUDE_DIRS}
         ${SDL2_INCLUDE_DIRS}
         ${OPENGL_INCLUDE_DIR}
         ${RTMIDI_INCLUDE_DIRS}
@@ -583,9 +584,6 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         src/audio/audio_engine_chain.cpp
         src/audio/audio_engine_process.cpp
         src/audio/audio_engine_api.cpp
-        src/audio/audio_backend_portaudio.cpp
-        src/audio/audio_backend_portaudio_lifecycle.cpp
-        src/audio/audio_backend_portaudio_devices.cpp
         src/audio/recorder.cpp
         src/audio/recorder_session.cpp
         src/audio/recorder_io.cpp
@@ -615,6 +613,18 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         src/audio/audio_graph_executor.cpp
     )
 
+    if(WITH_JACK AND UNIX AND NOT APPLE)
+        list(APPEND CORE_SOURCES
+            src/audio/audio_backend_jack.cpp
+        )
+    else()
+        list(APPEND CORE_SOURCES
+            src/audio/audio_backend_portaudio.cpp
+            src/audio/audio_backend_portaudio_lifecycle.cpp
+            src/audio/audio_backend_portaudio_devices.cpp
+        )
+    endif()
+
     # Desktop-only MIDI support for tests
     list(APPEND CORE_SOURCES
         src/midi/midi_manager.cpp
@@ -632,6 +642,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${IMGUI_DIR}
         ${IMGUI_DIR}/backends
         ${PORTAUDIO_INCLUDE_DIRS}
+        ${JACK_INCLUDE_DIRS}
         ${SDL2_INCLUDE_DIRS}
         ${OPENGL_INCLUDE_DIR}
         ${RTMIDI_INCLUDE_DIRS}
@@ -641,6 +652,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
     # DEFINE AMPLITRON_HAS_MIDI FOR TEST BUILDS
     # ============================================================
     target_compile_definitions(amplitron-tests PRIVATE AMPLITRON_HAS_MIDI)
+    target_compile_definitions(amplitron-tests PRIVATE AMPLITRON_TESTS)
 
     if(WITH_JACK AND UNIX AND NOT APPLE)
         target_compile_definitions(amplitron-tests PRIVATE WITH_JACK)
@@ -648,7 +660,6 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
 
     target_link_libraries(amplitron-tests PRIVATE
         nlohmann_json::nlohmann_json
-        ${PORTAUDIO_LIBRARIES}
         ${SDL2_LIBRARIES}
         ${OPENGL_LIBRARIES}
         ${RTMIDI_LIBRARIES}
@@ -656,6 +667,8 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
 
     if(WITH_JACK AND UNIX AND NOT APPLE)
         target_link_libraries(amplitron-tests PRIVATE ${JACK_LIBRARIES})
+    else()
+        target_link_libraries(amplitron-tests PRIVATE ${PORTAUDIO_LIBRARIES})
     endif()
 
     if(WIN32)
