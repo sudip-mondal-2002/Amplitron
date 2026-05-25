@@ -636,7 +636,7 @@ TEST(audio_graph_dynamic_topology_mutation) {
   std::fill(output.begin(), output.end(), 0.0f);
 
   executor.process(input.data(), output.data(), 128);
-  
+
   for (float sample : output) {
     ASSERT_TRUE(std::isfinite(sample));
     ASSERT_TRUE(sample >= -10.0f);
@@ -880,4 +880,40 @@ TEST(audio_graph_find_invalid_node) {
   AudioGraph graph;
 
   ASSERT_TRUE(graph.find_node(99999) == nullptr);
+}
+TEST(audio_graph_executor_implicit_input_output_paths) {
+  AudioGraphExecutor executor;
+  executor.prepare(48000, 128);
+
+  AudioGraph graph;
+
+  // No explicit graph input/output nodes
+  int node_a =
+      graph.add_node("A",
+                     NodeRoutingType::StandardEffect);
+
+  int node_b =
+      graph.add_node("B",
+                     NodeRoutingType::StandardEffect);
+
+  auto nodes = graph.get_nodes();
+
+  ASSERT_TRUE(
+      graph.add_link(nodes[0].output_pin_ids[0],
+                     nodes[1].input_pin_ids[0]) != -1);
+
+  ASSERT_TRUE(graph.rebuild_topology());
+
+  executor.compile(graph);
+
+  std::vector<float> input(128, 0.5f);
+  std::vector<float> output(128, 0.0f);
+
+  executor.process(input.data(),
+                   output.data(),
+                   128);
+
+  for (float sample : output) {
+    ASSERT_TRUE(std::isfinite(sample));
+  }
 }
