@@ -505,11 +505,14 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${IMGUI_DIR}
         ${IMGUI_DIR}/backends
         ${PORTAUDIO_INCLUDE_DIRS}
-        ${JACK_INCLUDE_DIRS}
         ${SDL2_INCLUDE_DIRS}
         ${OPENGL_INCLUDE_DIR}
         ${RTMIDI_INCLUDE_DIRS}
     )
+
+    if(WITH_JACK AND UNIX AND NOT APPLE AND JACK_INCLUDE_DIRS)
+        target_include_directories(Amplitron PRIVATE ${JACK_INCLUDE_DIRS})
+    endif()
 
     # ============================================================
     # DEFINE AMPLITRON_HAS_MIDI FOR DESKTOP BUILDS
@@ -642,11 +645,14 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${IMGUI_DIR}
         ${IMGUI_DIR}/backends
         ${PORTAUDIO_INCLUDE_DIRS}
-        ${JACK_INCLUDE_DIRS}
         ${SDL2_INCLUDE_DIRS}
         ${OPENGL_INCLUDE_DIR}
         ${RTMIDI_INCLUDE_DIRS}
     )
+
+    if(WITH_JACK AND UNIX AND NOT APPLE AND JACK_INCLUDE_DIRS)
+        target_include_directories(amplitron-tests PRIVATE ${JACK_INCLUDE_DIRS})
+    endif()
 
     # ============================================================
     # DEFINE AMPLITRON_HAS_MIDI FOR TEST BUILDS
