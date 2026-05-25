@@ -430,19 +430,17 @@ TEST(midi_learn_cancel) {
 // COVERAGE EXTENSIONS WITH SCOPED CLEANUP AND HERMETIC DATA VALIDATION
 // ===========================================================================
 
-/**
+ /**
  * @brief RAII Cleanup Guard ensuring strict test isolation by forcing file operations
  * into a unique temporary workspace directory across all development platforms.
  */
 struct config_backup_guard {
     std::filesystem::path original_cwd;
     std::filesystem::path temp_dir;
-    std::string config_file = "midi_config.json";
 
     config_backup_guard() {
         original_cwd = std::filesystem::current_path();
-        // Generate a unique directory name using random tokens
-        temp_dir = std::filesystem::temp_directory_path() / std::filesystem::path("midi_test_" + std::to_string(std::rand()));
+        temp_dir = std::filesystem::temp_directory_path() / ("midi_test_" + std::to_string(std::rand()));
         std::filesystem::create_directories(temp_dir);
         std::filesystem::current_path(temp_dir);
     }
@@ -1198,7 +1196,6 @@ TEST(midi_apply_mapping_input_gain_cc127_sets_maximum) {
  */
 TEST(midi_persist_load_config_missing_key_uses_fallback) {
     config_backup_guard guard;
-
     std::ofstream file("midi_config.json");
     file << R"({"configuration": []})";
     file.close();
@@ -1206,9 +1203,9 @@ TEST(midi_persist_load_config_missing_key_uses_fallback) {
     MidiManager mgr;
     mgr.clear_mappings();
     mgr.load_config();
-
-    // When JSON lacks "mappings" key, load_config falls back to defaults
-    ASSERT_GE(static_cast<int>(mgr.mappings().size()), 1);
+    
+    // Aligns with logic: Missing schema root keys deploy 2 default mappings
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
 }
 
 /**
@@ -1220,7 +1217,6 @@ TEST(midi_persist_load_config_missing_key_uses_fallback) {
  */
 TEST(midi_persist_load_config_non_array_mappings_uses_fallback) {
     config_backup_guard guard;
-
     std::ofstream file("midi_config.json");
     file << R"({"mappings": "not_an_array"})";
     file.close();
@@ -1228,9 +1224,9 @@ TEST(midi_persist_load_config_non_array_mappings_uses_fallback) {
     MidiManager mgr;
     mgr.clear_mappings();
     mgr.load_config();
-
-    // Non-array "mappings" triggers fallback to defaults
-    ASSERT_GE(static_cast<int>(mgr.mappings().size()), 1);
+    
+    // Aligns with logic: Non-array mapping nodes deploy 2 default mappings
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
 }
 
 /**
@@ -1242,7 +1238,6 @@ TEST(midi_persist_load_config_non_array_mappings_uses_fallback) {
  */
 TEST(midi_persist_load_config_parse_exception_uses_fallback) {
     config_backup_guard guard;
-
     std::ofstream file("midi_config.json");
     file << "{ !!! totally invalid json !!! }";
     file.close();
@@ -1250,9 +1245,9 @@ TEST(midi_persist_load_config_parse_exception_uses_fallback) {
     MidiManager mgr;
     mgr.clear_mappings();
     mgr.load_config();
-
-    // JSON parse exception triggers fallback to defaults
-    ASSERT_GE(static_cast<int>(mgr.mappings().size()), 1);
+    
+    // Aligns with logic: Parser exceptions deploy 2 default mappings
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
 }
 
 /**
@@ -1263,7 +1258,6 @@ TEST(midi_persist_load_config_parse_exception_uses_fallback) {
  */
 TEST(midi_persist_load_config_truncated_json_uses_fallback) {
     config_backup_guard guard;
-
     std::ofstream file("midi_config.json");
     file << R"({"mappings": [{"cc": 7)";
     file.close();
@@ -1271,11 +1265,10 @@ TEST(midi_persist_load_config_truncated_json_uses_fallback) {
     MidiManager mgr;
     mgr.clear_mappings();
     mgr.load_config();
-
-    // Truncated JSON triggers exception catch and fallback
-    ASSERT_GE(static_cast<int>(mgr.mappings().size()), 1);
+    
+    // Aligns with logic: Truncated syntax exceptions deploy 2 default mappings
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
 }
-
 /**
  * @brief Exercises the empty-array path by writing a JSON file with
  * a syntactically correct "mappings" key holding an empty array,
