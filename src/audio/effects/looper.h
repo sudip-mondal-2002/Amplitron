@@ -2,6 +2,7 @@
 
 #include "audio/effect.h"
 
+#include<ostream>
 #include <atomic>
 #include <cmath>
 #include <cstdint>
@@ -108,5 +109,6 @@ private:
     inline void process_core(float* left, float* right, int num_samples, bool stereo);
 };
 
+std::ostream& operator<<(std::ostream& os, Looper::State s);
 } // namespace Amplitron
 
