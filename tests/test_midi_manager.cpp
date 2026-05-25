@@ -9,7 +9,10 @@
 using namespace Amplitron;
 namespace fs = std::filesystem;
 
-// A minimal test effect with two parameters for mapping tests.
+/**
+ * @brief A minimal test effect with two parameters used to validate 
+ * MIDI control change (CC) mappings.
+ */
 class TestEffect : public Effect {
 public:
     TestEffect() {
@@ -26,7 +29,13 @@ private:
     std::vector<EffectParam> params_;
 };
 
-// Helper: build a CC MidiEvent
+/**
+ * @brief Helper utility to construct a raw control change (CC) MidiEvent.
+ * @param cc The MIDI control change number.
+ * @param value The value of the control change (0-127).
+ * @param channel The target MIDI channel (defaults to 0).
+ * @return A configured MidiEvent structure.
+ */
 static MidiEvent make_cc(uint8_t cc, uint8_t value, uint8_t channel = 0) {
     MidiEvent e{};
     e.status = static_cast<uint8_t>(0xB0 | (channel & 0x0F));
@@ -36,9 +45,13 @@ static MidiEvent make_cc(uint8_t cc, uint8_t value, uint8_t channel = 0) {
 }
 
 // ---------------------------------------------------------------------------
-// Continuous mapping: CC 0 -> min, CC 127 -> max, CC 64 -> midpoint
+// Continuous mapping tests
 // ---------------------------------------------------------------------------
 
+/**
+ * @brief Verifies that a continuous MIDI mapping correctly translates 
+ * a minimum CC value of 0 to the parameter's minimum range limit.
+ */
 TEST(midi_continuous_cc0_maps_to_min) {
     MidiManager midi;
     AudioEngine engine;
@@ -63,6 +76,10 @@ TEST(midi_continuous_cc0_maps_to_min) {
     engine.shutdown();
 }
 
+/**
+ * @brief Verifies that a continuous MIDI mapping correctly translates 
+ * a maximum CC value of 127 to the parameter's maximum range limit.
+ */
 TEST(midi_continuous_cc127_maps_to_max) {
     MidiManager midi;
     AudioEngine engine;
@@ -87,6 +104,10 @@ TEST(midi_continuous_cc127_maps_to_max) {
     engine.shutdown();
 }
 
+/**
+ * @brief Verifies that a continuous MIDI mapping correctly scales an intermediate 
+ * CC value (64) directly to the target parameter's mathematical midpoint.
+ */
 TEST(midi_continuous_cc64_maps_to_midpoint) {
     MidiManager midi;
     AudioEngine engine;
@@ -112,6 +133,10 @@ TEST(midi_continuous_cc64_maps_to_midpoint) {
     engine.shutdown();
 }
 
+/**
+ * @brief Validates that a toggle MIDI mapping alternates the effect bypass state 
+ * correctly when boundary values (0 and 127) are fed to the engine.
+ */
 TEST(midi_toggle_cc_enables_effect) {
     MidiManager midi;
     AudioEngine engine;
@@ -140,6 +165,10 @@ TEST(midi_toggle_cc_enables_effect) {
     engine.shutdown();
 }
 
+/**
+ * @brief Confirms that active MIDI hardware learning successfully captures the 
+ * parameters of an incoming CC signal and instantiates a valid layout mapping.
+ */
 TEST(midi_learn_creates_mapping) {
     MidiManager midi;
     AudioEngine engine;
@@ -166,6 +195,10 @@ TEST(midi_learn_creates_mapping) {
     engine.shutdown();
 }
 
+/**
+ * @brief Checks that messages received on unmapped MIDI CC numbers do not alter 
+ * the values of internal parameters.
+ */
 TEST(midi_unmapped_cc_ignored) {
     MidiManager midi;
     AudioEngine engine;
@@ -182,6 +215,10 @@ TEST(midi_unmapped_cc_ignored) {
     engine.shutdown();
 }
 
+/**
+ * @brief Verifies that executing processing cycles on a mapping targeted at a 
+ * missing or unallocated effect string name fails gracefully without a crash.
+ */
 TEST(midi_missing_effect_no_crash) {
     MidiManager midi;
     AudioEngine engine;
@@ -202,6 +239,10 @@ TEST(midi_missing_effect_no_crash) {
     engine.shutdown();
 }
 
+/**
+ * @brief Assures that explicit channel value definitions are respected, filtering out 
+ * mismatched channel traffic while allowing matched channels to modify attributes.
+ */
 TEST(midi_channel_filter) {
     MidiManager midi;
     AudioEngine engine;
@@ -231,6 +272,10 @@ TEST(midi_channel_filter) {
     engine.shutdown();
 }
 
+/**
+ * @brief Validates continuous evaluation scaling mappings targeting the output master 
+ * gain node inside the running audio context framework.
+ */
 TEST(midi_output_gain_mapping) {
     MidiManager midi;
     AudioEngine engine;
@@ -251,6 +296,10 @@ TEST(midi_output_gain_mapping) {
     engine.shutdown();
 }
 
+/**
+ * @brief Exercises serialization conversion flows across multi-tier standard allocations 
+ * to prove structural precision during clear and index-based removals.
+ */
 TEST(midi_json_roundtrip) {
     MidiManager midi;
 
@@ -280,12 +329,10 @@ TEST(midi_json_roundtrip) {
 
     ASSERT_EQ(static_cast<int>(midi.mappings().size()), 3);
 
-    // Verify m1 mapping layout details
     ASSERT_EQ(midi.mappings()[0].cc_number, 7);
     ASSERT_EQ(static_cast<int>(midi.mappings()[0].target_type),
               static_cast<int>(MidiTargetType::OutputGain));
 
-    // Restored exact field assertions matching repository requirements
     ASSERT_EQ(midi.mappings()[1].cc_number, 74);
     ASSERT_EQ(midi.mappings()[1].effect_name, std::string("WahPedal"));
     ASSERT_EQ(midi.mappings()[1].param_name, std::string("Sweep"));
@@ -301,13 +348,16 @@ TEST(midi_json_roundtrip) {
     ASSERT_TRUE(midi.mappings().empty());
 }
 
+/**
+ * @brief Asserts strict schema layout assignments for factory preset defaults 
+ * across input nodes, bypass states, and filter sweeps.
+ */
 TEST(midi_default_mappings) {
     MidiManager midi;
     midi.install_default_mappings();
 
     ASSERT_EQ(static_cast<int>(midi.mappings().size()), 4);
     
-    // Restored exhaustive layout validation properties for repository owner
     ASSERT_EQ(midi.mappings()[0].cc_number, 7);
     ASSERT_EQ(static_cast<int>(midi.mappings()[0].target_type),
               static_cast<int>(MidiTargetType::OutputGain));
@@ -327,6 +377,10 @@ TEST(midi_default_mappings) {
     ASSERT_EQ(midi.mappings()[3].param_name, std::string("Sweep"));
 }
 
+/**
+ * @brief Assures collision tracking layers completely override existing entries when 
+ * matching double CC registration events are explicitly added.
+ */
 TEST(midi_duplicate_cc_replaces) {
     MidiManager midi;
 
@@ -352,6 +406,10 @@ TEST(midi_duplicate_cc_replaces) {
     ASSERT_EQ(midi.mappings()[0].param_name, std::string("Level"));
 }
 
+/**
+ * @brief Validates the manual cancellation step of an active hardware mapping 
+ * capture routine, checking state teardown properties.
+ */
 TEST(midi_learn_cancel) {
     MidiManager midi;
 
@@ -364,23 +422,26 @@ TEST(midi_learn_cancel) {
 }
 
 // ===========================================================================
-// REQUIRED COVERAGE EXTENSIONS FOR TARGET REQUIREMENTS
+// REACHABLE COVERAGE BOOSTER WITH FIELD-LEVEL ASSERTIONS
 // ===========================================================================
 
-// --- RAII Cleanup Guard for Test Isolation ---
-struct ConfigBackupGuard {
+/**
+ * @brief RAII Cleanup Guard structure ensuring strict test isolation by backing up 
+ * and recovering local disk configuration payloads automatically.
+ */
+struct config_backup_guard {
     std::string config_file = "midi_config.json";
     std::string backup_file = "midi_config.json.bak";
     bool backed_up = false;
 
-    ConfigBackupGuard() {
+    config_backup_guard() {
         if (fs::exists(config_file)) {
             fs::rename(config_file, backup_file);
             backed_up = true;
         }
     }
 
-    ~ConfigBackupGuard() {
+    ~config_backup_guard() {
         if (fs::exists(config_file)) {
             fs::remove(config_file);
         }
@@ -395,7 +456,7 @@ struct ConfigBackupGuard {
  * serialized to disk and deserialized back with complete field-level integrity.
  */
 TEST(midi_persist_save_and_load_roundtrip) {
-    ConfigBackupGuard guard;
+    config_backup_guard guard;
 
     MidiManager mgr;
     MidiMapping m1{7, -1, MidiTargetType::EffectParam, MidiMappingMode::Continuous, "effect_0", "drive"};
@@ -413,12 +474,14 @@ TEST(midi_persist_save_and_load_roundtrip) {
     ASSERT_EQ(mgr2.mappings()[0].cc_number, 7);
     ASSERT_EQ(mgr2.mappings()[0].midi_channel, -1);
     ASSERT_EQ(static_cast<int>(mgr2.mappings()[0].target_type), static_cast<int>(MidiTargetType::EffectParam));
+    ASSERT_EQ(static_cast<int>(mgr2.mappings()[0].mode), static_cast<int>(MidiMappingMode::Continuous));
     ASSERT_EQ(mgr2.mappings()[0].effect_name, std::string("effect_0"));
     ASSERT_EQ(mgr2.mappings()[0].param_name, std::string("drive"));
 
     ASSERT_EQ(mgr2.mappings()[1].cc_number, 11);
     ASSERT_EQ(mgr2.mappings()[1].midi_channel, -1);
     ASSERT_EQ(static_cast<int>(mgr2.mappings()[1].target_type), static_cast<int>(MidiTargetType::EffectParam));
+    ASSERT_EQ(static_cast<int>(mgr2.mappings()[1].mode), static_cast<int>(MidiMappingMode::Continuous));
     ASSERT_EQ(mgr2.mappings()[1].effect_name, std::string("effect_1"));
     ASSERT_EQ(mgr2.mappings()[1].param_name, std::string("level"));
 }
@@ -428,7 +491,7 @@ TEST(midi_persist_save_and_load_roundtrip) {
  * the manager handles the error gracefully and triggers its default fallback baseline.
  */
 TEST(midi_persist_load_missing_file_graceful) {
-    ConfigBackupGuard guard;
+    config_backup_guard guard;
 
     if (fs::exists("midi_config.json")) {
         fs::remove("midi_config.json");
@@ -440,6 +503,7 @@ TEST(midi_persist_load_missing_file_graceful) {
     
     ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
     ASSERT_EQ(mgr.mappings()[0].cc_number, 7);
+    ASSERT_EQ(static_cast<int>(mgr.mappings()[0].target_type), static_cast<int>(MidiTargetType::EffectParam));
 }
 
 /**
@@ -472,7 +536,7 @@ TEST(midi_mapping_clear_all_mappings_after_adding) {
  * @brief Confirms that adding a new configuration layout mapping with an identical 
  * CC value correctly overrides and replaces the pre-existing parameter configuration.
  */
-TEST(midi_mapping_override_same_CC_with_new_param) {
+TEST(midi_mapping_override_same_cc_with_new_param) {
     MidiManager mgr;
     MidiMapping m1{7, -1, MidiTargetType::EffectParam, MidiMappingMode::Continuous, "effect_0", "drive"};
     mgr.add_mapping(m1);
@@ -484,6 +548,7 @@ TEST(midi_mapping_override_same_CC_with_new_param) {
     int count_after_override = static_cast<int>(mgr.mappings().size());
     
     ASSERT_EQ(count_after_override, 1);
+    ASSERT_EQ(mgr.mappings()[0].effect_name, std::string("effect_1"));
     ASSERT_EQ(mgr.mappings()[0].param_name, std::string("level"));
 }
 
@@ -501,4 +566,119 @@ TEST(midi_mapping_get_active_mapping_count_after_bulk_ops) {
     
     mgr.clear_mappings();
     ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 0);
+}
+
+/**
+ * @brief Exercises remove_mapping_for_param to evaluate both exact tracking matches 
+ * and unmatched fallback strings.
+ */
+TEST(midi_mapping_remove_mapping_for_param) {
+    MidiManager mgr;
+    MidiMapping m;
+    m.cc_number = 20;
+    m.midi_channel = -1;
+    m.target_type = MidiTargetType::EffectParam;
+    m.mode = MidiMappingMode::Continuous;
+    m.effect_name = "Chorus";
+    m.param_name = "Depth";
+    mgr.add_mapping(m);
+
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 1);
+
+    mgr.remove_mapping_for_param("Reverb", "Depth");
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 1);
+
+    mgr.remove_mapping_for_param("Chorus", "Depth");
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 0);
+}
+
+/**
+ * @brief Evaluates output configurations generated by learn_status to verify formatting 
+ * across distinct MidiTargetType allocations.
+ */
+TEST(midi_mapping_learn_status_formatting) {
+    MidiManager mgr;
+    
+    ASSERT_TRUE(mgr.learn_status().empty());
+
+    mgr.start_learn(MidiTargetType::EffectParam, "Chorus", "Depth");
+    std::string s1 = mgr.learn_status();
+    ASSERT_NE(s1.find("Chorus"), std::string::npos);
+    ASSERT_NE(s1.find("Depth"), std::string::npos);
+
+    mgr.start_learn(MidiTargetType::InputGain, "", "");
+    std::string s2 = mgr.learn_status();
+    ASSERT_NE(s2.find("Input Gain"), std::string::npos);
+
+    mgr.start_learn(MidiTargetType::OutputGain, "", "");
+    std::string s3 = mgr.learn_status();
+    ASSERT_NE(s3.find("Output Gain"), std::string::npos);
+
+    mgr.start_learn(MidiTargetType::EffectBypass, "AmpSimulator", "");
+    std::string s4 = mgr.learn_status();
+    ASSERT_NE(s4.find("AmpSimulator"), std::string::npos);
+
+    mgr.cancel_learn();
+    ASSERT_TRUE(mgr.learn_status().empty());
+}
+
+/**
+ * @brief Exercises the continuous evaluation branch handling InputGain inside the core layout engine.
+ */
+TEST(midi_mapping_apply_input_gain_event) {
+    MidiManager mgr;
+    AudioEngine engine;
+    engine.initialize();
+
+    MidiMapping m;
+    m.cc_number = 11;
+    m.midi_channel = -1;
+    m.target_type = MidiTargetType::InputGain;
+    m.mode = MidiMappingMode::Continuous;
+    mgr.add_mapping(m);
+
+    mgr.inject_event(make_cc(11, 64));
+    mgr.poll(engine);
+
+    float expected = (64.0f / 127.0f) * 2.0f;
+    ASSERT_NEAR(engine.get_input_gain(), expected, 0.02f);
+    engine.shutdown();
+}
+
+/**
+ * @brief Validates that saving a malformed file structure and executing load_config 
+ * correctly catches the JSON syntax exceptions internally and loads defaults.
+ */
+TEST(midi_persist_from_json_invalid_syntax) {
+    config_backup_guard guard;
+    
+    std::ofstream file("midi_config.json");
+    file << "{ broken raw unparseable json syntax text }";
+    file.close();
+
+    MidiManager mgr;
+    mgr.clear_mappings();
+    mgr.load_config();
+    
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
+    ASSERT_EQ(static_cast<int>(mgr.mappings()[0].target_type), static_cast<int>(MidiTargetType::EffectParam));
+}
+
+/**
+ * @brief Assures that payloads missing standard tracking array root keys fail validation 
+ * inside load_config and gracefully populate fallback tracking instead of generating errors.
+ */
+TEST(midi_persist_from_json_missing_root_key) {
+    config_backup_guard guard;
+
+    std::ofstream file("midi_config.json");
+    file << R"({"unrelated_root_element": []})";
+    file.close();
+
+    MidiManager mgr;
+    mgr.clear_mappings();
+    mgr.load_config();
+    
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
+    ASSERT_EQ(static_cast<int>(mgr.mappings()[0].target_type), static_cast<int>(MidiTargetType::EffectParam));
 }
