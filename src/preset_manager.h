@@ -26,6 +26,27 @@ struct PresetData {
     };
     std::vector<EffectData> effects;
     std::vector<MidiMapping> midi_mappings;
+
+    std::string routing = "linear";
+
+    struct NodeData {
+        std::string id;
+        std::string type;
+        float x = 0.0f;
+        float y = 0.0f;
+        bool enabled = true;
+        float mix = 1.0f;
+        int num_inputs = 0;
+        std::vector<std::pair<std::string, float>> params;
+        std::map<std::string, std::string> metadata;
+    };
+    std::vector<NodeData> nodes;
+
+    struct LinkData {
+        std::string src_pin;
+        std::string dst_pin;
+    };
+    std::vector<LinkData> links;
 };
 
 class PresetManager {
@@ -45,6 +66,12 @@ public:
     static bool load_preset(const std::string& filepath,
                             AudioEngine& engine,
                             MidiManager* midi_manager = nullptr);
+
+    // Serialize current graph to JSON
+    static std::string graph_to_json(const AudioGraph& graph);
+
+    // Load graph from JSON
+    static bool graph_from_json(const std::string& json, AudioGraph& graph);
 
     static std::string get_presets_dir();
     static void set_presets_dir(const std::string& dir);
