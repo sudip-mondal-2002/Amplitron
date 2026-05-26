@@ -23,6 +23,11 @@ elseif(MSVC)
     endif()
 else()
     add_compile_options(-Wall -Wextra -ffast-math)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        # nlohmann/json intentionally uses infinity for some binary parsing paths;
+        # with -ffast-math Clang warns in external headers.
+        add_compile_options(-Wno-nan-infinity-disabled)
+    endif()
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
         add_compile_options(-O3 -ftree-vectorize)
         # -march=native is only valid for native (non-cross) builds

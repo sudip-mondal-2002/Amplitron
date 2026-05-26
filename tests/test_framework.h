@@ -6,8 +6,18 @@
 #include <functional>
 #include <cmath>
 #include <sstream>
+#include <type_traits>
 
 namespace TestFramework {
+
+template <typename A, typename B>
+inline bool assert_eq_values(const A& a, const B& b) {
+    if constexpr (std::is_arithmetic_v<A> && std::is_arithmetic_v<B>) {
+        using Common = std::common_type_t<A, B>;
+        return static_cast<Common>(a) == static_cast<Common>(b);
+    }
+    return a == b;
+}
 
 struct TestResult {
     std::string name;
@@ -116,7 +126,7 @@ private:
     }} while(0)
 
 #define ASSERT_EQ(a, b) \
-    do { auto _a = (a); auto _b = (b); if (_a != _b) { \
+    do { auto _a = (a); auto _b = (b); if (!TestFramework::assert_eq_values(_a, _b)) { \
         std::ostringstream ss; ss << "ASSERT_EQ failed: " #a " == " #b " (" << _a << " != " << _b << ") (line " << __LINE__ << ")"; \
         TestFramework::TestSuite::instance().fail(ss.str()); return; \
     }} while(0)

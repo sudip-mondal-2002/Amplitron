@@ -18,6 +18,13 @@
 
 using namespace Amplitron;
 
+// Keep these declarations visible in tests even if older headers omit them.
+namespace Amplitron {
+std::string to_json_ext(const PresetData& preset);
+bool from_json_ext(const std::string& json_str, PresetData& preset);
+std::string get_user_presets_dir();
+}
+
 namespace {
 
 class ScopedEnvVar {
@@ -187,7 +194,7 @@ TEST(preset_save_and_load_roundtrip) {
     float orig_output_gain = engine.get_output_gain();
     int orig_effects_count = static_cast<int>(engine.effects().size());
     std::string orig_effect0_name = engine.effects()[0]->name();
-    bool orig_effect0_enabled = engine.effects()[0]->is_enabled();
+    [[maybe_unused]] bool orig_effect0_enabled = engine.effects()[0]->is_enabled();
 
     // Clear and reload
     // Load into a fresh engine
@@ -353,7 +360,7 @@ TEST(preset_midi_mappings_roundtrip) {
     ASSERT_TRUE(loaded);
 
     const auto& loaded_mappings = midi_manager.mappings();
-    ASSERT_EQ(loaded_mappings.size(), 2);
+    ASSERT_EQ(loaded_mappings.size(), 2u);
     
     ASSERT_EQ(loaded_mappings[0].cc_number, 74);
     ASSERT_EQ(loaded_mappings[0].midi_channel, 0);
@@ -687,25 +694,28 @@ TEST(PresetManagerConfig, SaveAndLoadConfigFailWhenBasePathIsFile) {
     std::filesystem::remove(base_path);
 }
 
-TEST(PresetJson, EffectDataJsonADL) {
+TEST(PresetJson, EffectDataRoundtripViaExtHelpers) {
+    PresetData preset;
+    preset.name = "EffectDataRT";
     PresetData::EffectData fx;
     fx.type = "TestFX";
     fx.enabled = true;
     fx.mix = 0.25f;
     fx.params.push_back({"ParamA", 1.5f});
     fx.metadata["k"] = "v";
+    preset.effects.push_back(fx);
 
-    nlohmann::json j = fx;
-    ASSERT_TRUE(j.contains("type"));
-    ASSERT_EQ(j["type"], "TestFX");
-
-    PresetData::EffectData fx2;
-    from_json(j, fx2);
-    ASSERT_EQ(fx2.type, fx.type);
-    ASSERT_EQ(fx2.enabled, fx.enabled);
-    ASSERT_EQ(fx2.mix, fx.mix);
-    ASSERT_EQ(fx2.params.size(), 1u);
-    ASSERT_EQ(fx2.metadata.at("k"), std::string("v"));
+    std::string json = to_json_ext(preset);
+    PresetData parsed;
+    ASSERT_TRUE(from_json_ext(json, parsed));
+    ASSERT_EQ(parsed.effects.size(), 1u);
+    ASSERT_EQ(parsed.effects[0].type, std::string("TestFX"));
+    ASSERT_EQ(parsed.effects[0].enabled, true);
+    ASSERT_NEAR(parsed.effects[0].mix, 0.25f, 1e-6f);
+    ASSERT_EQ(parsed.effects[0].params.size(), 1u);
+    ASSERT_EQ(parsed.effects[0].params[0].first, std::string("ParamA"));
+    ASSERT_NEAR(parsed.effects[0].params[0].second, 1.5f, 1e-6f);
+    ASSERT_EQ(parsed.effects[0].metadata.at("k"), std::string("v"));
 }
 
 TEST(PresetManagerIO, SavePresetDataToDirectoryFails) {

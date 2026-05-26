@@ -28,6 +28,7 @@ EMSCRIPTEN_KEEPALIVE void load_ir_callback(uintptr_t cab_ptr, const char* path) 
 #endif
 
 void PedalWidget::render_amp_cabinet(ImDrawList* dl, ImVec2 p0, ImVec2 p1, float pedal_width, float pedal_height, float zoom) {
+    (void)pedal_height;
     ImU32 cab_body = IM_COL32(30, 22, 16, 255);
     ImU32 cab_border = IM_COL32(90, 70, 40, 255);
     ImU32 cab_grille = IM_COL32(18, 14, 10, 255);
@@ -657,6 +658,7 @@ void PedalWidget::render_multiband_compressor_display(ImDrawList* dl, ImVec2 p0,
 
     // --- REUSABLE SLIDER HELPER (LAMBDA) ---
     auto render_xover_slider = [&](ImDrawList* dl, float track_x, int pi, const char* label_prefix, bool ticks_on_left) {
+        (void)ticks_on_left;
         auto& param = params[pi];
         char label[64];
         std::snprintf(label, sizeof(label), "##slider_%s_%d_%d_%s", effect_->name(), index_, pi, label_prefix);

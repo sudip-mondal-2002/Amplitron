@@ -133,6 +133,8 @@ void PedalWidget::render_standard_pedal(ImDrawList* dl, ImVec2 p0, ImVec2 p1, fl
 
 
 void PedalWidget::render_footswitch_and_extras(ImDrawList* dl, ImVec2 p0, ImVec2 p1, float pedal_width, float pedal_height, bool is_amp, bool enabled, bool& should_remove, float zoom) {
+    (void)p1;
+    (void)should_remove;
     bool is_looper = !is_amp && (std::strcmp(effect_->name(), "Looper") == 0);
     // LED tooltip — hover area over the LED indicator
     if (!is_amp && !is_looper) {

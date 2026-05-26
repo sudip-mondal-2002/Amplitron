@@ -142,7 +142,7 @@ void AudioEngine::process_audio(const float* input, float* output, int frame_cou
     float out_gain = output_gain_.load(std::memory_order_relaxed);
     float peak_out = 0.0f;
     constexpr float kTwoPi = 6.28318530718f;
-    auto next_metronome_sample = [this, kTwoPi]() -> float {
+    auto next_metronome_sample = [this]() -> float {
         
         metronome_bpm_smoothed_ += metronome_bpm_smooth_alpha_ * (metronome_bpm_ - metronome_bpm_smoothed_);
         metronome_volume_smoothed_ += metronome_volume_smooth_alpha_ * (metronome_volume_ - metronome_volume_smoothed_);
