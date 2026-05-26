@@ -63,7 +63,7 @@ static bool write_wav_mono_pcm16(const std::string& path,
         int16_t v = static_cast<int16_t>(std::lrint(x * 32767.0f));
         write_le16(out, static_cast<uint16_t>(v));
     }
-
+    out.close();
     return true;
 }
 
@@ -90,6 +90,92 @@ TEST(CabinetSim_IR_UnitImpulse_Identity) {
 
     for (int i = 0; i < block_size; ++i) {
         ASSERT_NEAR(buf[i], expected[i], 1e-4f);
+    }
+
+    std::remove(path.c_str());
+}
+
+TEST(CabinetSim_IR_MissingFileReturnsFalse) {
+    std::string valid = "valid_ir.wav";
+
+    ASSERT_TRUE(write_wav_mono_pcm16(valid, {1.0f}, 48000));
+
+    CabinetSim cab;
+    cab.set_sample_rate(48000);
+
+    ASSERT_TRUE(cab.load_ir(valid));
+    ASSERT_TRUE(cab.has_ir());
+
+    ASSERT_FALSE(cab.load_ir("definitely_missing_ir.wav"));
+
+    // Ensure failed load clears previous state
+    ASSERT_TRUE(cab.has_ir());
+
+    std::remove(valid.c_str());
+}
+
+TEST(CabinetSim_IR_MalformedFileReturnsFalse) {
+    const std::string path = "bad_ir.wav";
+
+    {
+        std::ofstream out(path, std::ios::binary);
+        out << "this is not a wav";
+    }
+
+    CabinetSim cab;
+    cab.set_sample_rate(48000);
+
+    ASSERT_FALSE(cab.load_ir(path));
+    ASSERT_FALSE(cab.has_ir());
+
+    std::remove(path.c_str());
+}
+
+TEST(CabinetSim_IR_LongRunStability) {
+    const int block_size = 256;
+
+    std::string path = "test_longrun_ir.wav";
+    ASSERT_TRUE(write_wav_mono_pcm16(path, {1.0f, 0.5f, 0.25f}, 48000));
+
+    CabinetSim cab;
+    cab.set_sample_rate(48000);
+
+    ASSERT_TRUE(cab.load_ir(path));
+
+    std::vector<float> buf(block_size);
+
+    for (int iter = 0; iter < 1000; ++iter) {
+        for (int i = 0; i < block_size; ++i) {
+            buf[i] = std::sin(0.01f * static_cast<float>(i));
+        }
+
+        cab.process(buf.data(), block_size);
+
+        for (float s : buf) {
+            ASSERT_TRUE(std::isfinite(s));
+        }
+    }
+
+    std::remove(path.c_str());
+}
+
+TEST(CabinetSim_IR_SilenceRemainsSilent) {
+    const int block_size = 256;
+
+    std::string path = "test_silence_ir.wav";
+    ASSERT_TRUE(write_wav_mono_pcm16(path, {1.0f}, 48000));
+
+    CabinetSim cab;
+    cab.set_sample_rate(48000);
+
+    ASSERT_TRUE(cab.load_ir(path));
+
+    std::vector<float> buf(block_size, 0.0f);
+
+    cab.process(buf.data(), block_size);
+
+    for (float s : buf) {
+        ASSERT_NEAR(s, 0.0f, 1e-6f);
     }
 
     std::remove(path.c_str());
@@ -122,3 +208,101 @@ TEST(CabinetSim_IR_DelayedImpulse) {
     std::remove(path.c_str());
 }
 
+TEST(CabinetSim_IR_MetadataQueries) {
+    std::string path = "metadata_ir.wav";
+
+    ASSERT_TRUE(write_wav_mono_pcm16(path, {1.0f, 0.5f}, 48000));
+
+    CabinetSim cab;
+    cab.set_sample_rate(48000);
+
+    ASSERT_TRUE(cab.load_ir(path));
+
+    ASSERT_TRUE(cab.has_ir());
+    ASSERT_EQ(cab.ir_name(), "metadata_ir.wav");
+    ASSERT_EQ(cab.ir_path(), path);
+    ASSERT_GT(cab.ir_duration_ms(), 0.0f);
+
+    std::remove(path.c_str());
+}
+
+TEST(CabinetSim_ClearIR_ResetsState) {
+    std::string path = "clear_ir.wav";
+
+    ASSERT_TRUE(write_wav_mono_pcm16(path, {1.0f}, 48000));
+
+    CabinetSim cab;
+    cab.set_sample_rate(48000);
+
+    ASSERT_TRUE(cab.load_ir(path));
+    ASSERT_TRUE(cab.has_ir());
+
+    cab.clear_ir();
+
+    ASSERT_FALSE(cab.has_ir());
+    ASSERT_TRUE(cab.ir_name().empty());
+    ASSERT_TRUE(cab.ir_path().empty());
+    ASSERT_NEAR(cab.ir_duration_ms(), 0.0f, 1e-6f);
+
+    std::remove(path.c_str());
+}
+
+TEST(CabinetSim_SetSampleRate_ReloadsIR) {
+    std::string path = "reload_ir.wav";
+
+    ASSERT_TRUE(write_wav_mono_pcm16(path, {1.0f, 0.5f}, 44100));
+
+    CabinetSim cab;
+    cab.set_sample_rate(44100);
+
+    ASSERT_TRUE(cab.load_ir(path));
+
+    float before = cab.ir_duration_ms();
+
+    cab.set_sample_rate(48000);
+
+    ASSERT_TRUE(cab.has_ir());
+    ASSERT_GT(cab.ir_duration_ms(), 0.0f);
+    ASSERT_NEAR(before, cab.ir_duration_ms(), 5.0f);
+
+    std::remove(path.c_str());
+}
+
+TEST(CabinetSim_ClearIRRemovesState) {
+    std::string path = "clear_ir.wav";
+
+    ASSERT_TRUE(
+        write_wav_mono_pcm16(path, {1.0f}, 48000));
+
+    CabinetSim cab;
+
+    cab.set_sample_rate(48000);
+
+    ASSERT_TRUE(cab.load_ir(path));
+
+    ASSERT_TRUE(cab.has_ir());
+
+    cab.clear_ir();
+
+    ASSERT_FALSE(cab.has_ir());
+
+    std::remove(path.c_str());
+}
+
+TEST(CabinetSim_DisabledProcessPassthrough) {
+    CabinetSim cab;
+
+    cab.set_enabled(false);
+
+    float buf[128];
+
+    for (int i = 0; i < 128; ++i) {
+        buf[i] = 0.25f;
+    }
+
+    cab.process(buf, 128);
+
+    for (float s : buf) {
+        ASSERT_NEAR(s, 0.25f, 1e-6f);
+    }
+}

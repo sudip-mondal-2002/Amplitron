@@ -46,6 +46,7 @@ public:
     bool run_frame();
 
     MidiManager& midi_manager() { return midi_manager_; }
+    AudioEngine& audio_engine() { return engine_; }
 
 private:
     void render_menu_bar();
