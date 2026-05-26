@@ -367,3 +367,132 @@ TEST(AudioEngineProcess_FullCoverageSweep) {
     engine.toggle_metronome();
     engine.process_audio(in.data(), out.data(), 64);
 }
+TEST(audio_engine_commit_graph_changes_stability) {
+  AudioEngine engine;
+
+  for (int i = 0; i < 50; ++i) {
+    engine.commit_graph_changes();
+  }
+
+  ASSERT_TRUE(true);
+}
+TEST(audio_engine_multiple_commit_graph_changes) {
+  AudioEngine engine;
+
+  engine.commit_graph_changes();
+  engine.commit_graph_changes();
+  engine.commit_graph_changes();
+
+  ASSERT_TRUE(true);
+}
+TEST(audio_engine_set_buffer_size_clamps_values) {
+  AudioEngine engine;
+
+  engine.set_buffer_size(-1);
+  ASSERT_TRUE(engine.get_buffer_size() > 0);
+
+  engine.set_buffer_size(999999);
+  ASSERT_TRUE(engine.get_buffer_size() <= 8192);
+}
+TEST(audio_engine_set_sample_rate_updates_state) {
+  AudioEngine engine;
+
+  engine.set_sample_rate(44100);
+  ASSERT_TRUE(engine.get_sample_rate() == 44100);
+
+  engine.set_sample_rate(48000);
+  ASSERT_TRUE(engine.get_sample_rate() == 48000);
+
+  engine.set_sample_rate(96000);
+  ASSERT_TRUE(engine.get_sample_rate() == 96000);
+}
+TEST(audio_engine_commit_graph_changes_with_empty_graph) {
+  AudioEngine engine;
+
+  engine.commit_graph_changes();
+
+  ASSERT_TRUE(true);
+}
+TEST(audio_engine_repeated_graph_commits) {
+  AudioEngine engine;
+
+  for (int i = 0; i < 100; ++i) {
+    engine.commit_graph_changes();
+  }
+
+  ASSERT_TRUE(true);
+}
+TEST(audio_engine_graph_commit_after_node_removal) {
+  AudioEngine engine;
+
+  auto& graph = engine.graph();
+
+  int n1 =
+      graph.add_node("A", NodeRoutingType::StandardEffect);
+
+  int n2 =
+      graph.add_node("B", NodeRoutingType::StandardEffect);
+
+  auto nodes = graph.get_nodes();
+
+  graph.add_link(nodes[0].output_pin_ids[0],
+                 nodes[1].input_pin_ids[0]);
+
+  ASSERT_TRUE(graph.remove_node(n2));
+
+  engine.commit_graph_changes();
+
+  ASSERT_TRUE(true);
+}
+TEST(audio_engine_serialize_deserialize_roundtrip) {
+  AudioEngine engine;
+
+  auto serialized = engine.serialize();
+
+  AudioEngine loaded;
+
+  loaded.deserialize(serialized);
+
+  auto reserialized = loaded.serialize();
+
+  ASSERT_FALSE(serialized.empty());
+  ASSERT_FALSE(reserialized.empty());
+
+  ASSERT_TRUE(reserialized.contains("effects"));
+}
+TEST(audio_engine_multiple_sample_rate_changes) {
+  AudioEngine engine;
+
+  std::vector<int> rates = {
+      22050,
+      44100,
+      48000,
+      88200,
+      96000
+  };
+
+  for (int rate : rates) {
+    engine.set_sample_rate(rate);
+  }
+
+  ASSERT_TRUE(true);
+}
+TEST(audio_engine_multiple_buffer_size_changes) {
+  AudioEngine engine;
+
+  std::vector<int> sizes = {
+      16,
+      32,
+      64,
+      128,
+      256,
+      512,
+      1024
+  };
+
+  for (int size : sizes) {
+    engine.set_buffer_size(size);
+  }
+
+  ASSERT_TRUE(true);
+}

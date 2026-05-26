@@ -1,0 +1,96 @@
+---
+name: Label PR from Linked Issues
+
+# Trigger whenever a PR is opened, reopened, or its body is edited.
+on:
+  pull_request:
+    types: [opened, reopened, edited]
+
+# Minimal permissions: read issues to get their labels, write PR labels.
+permissions:
+  contents: read
+  issues: read
+  pull-requests: write
+
+jobs:
+  label-pr:
+    name: Copy labels from linked issues to PR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply issue labels to PR
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const body = context.payload.pull_request.body || '';
+            const prNumber = context.payload.pull_request.number;
+            const { owner, repo } = context.repo;
+
+            // Collect issue numbers from
+            // "Fixes/Closes/Resolves #NNN" (case-insensitive).
+            const pattern = /(?:fixes|closes|resolves)\s+#(\d+)/gi;
+            const issueNumbers = [];
+            let match;
+            while ((match = pattern.exec(body)) !== null) {
+              issueNumbers.push(parseInt(match[1], 10));
+            }
+
+            if (issueNumbers.length === 0) {
+              core.info('No linked issues found in PR body — nothing to do.');
+              return;
+            }
+
+            core.info(`Linked issues: ${issueNumbers.join(', ')}`);
+
+            // Fetch labels from every referenced issue;
+            // ignore missing/invalid ones.
+            const labelSet = new Set();
+            for (const issueNumber of issueNumbers) {
+              try {
+                const { data: issue } = await github.rest.issues.get({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                });
+                for (const label of issue.labels) {
+                  labelSet.add(typeof label === 'string' ? label : label.name);
+                }
+              } catch (err) {
+                // Non-existent or inaccessible issue — skip gracefully.
+                core.warning(
+                  `Could not fetch issue #${issueNumber}: ${err.message}`
+                );
+              }
+            }
+
+            if (labelSet.size === 0) {
+              core.info(
+                'Referenced issues carry no labels — nothing to apply.'
+              );
+              return;
+            }
+
+            // Determine which labels the PR does not already have.
+            const { data: prData } = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: prNumber,
+            });
+            const existingLabels = new Set(
+              prData.labels.map((l) => (typeof l === 'string' ? l : l.name))
+            );
+            const toAdd = [...labelSet].filter((l) => !existingLabels.has(l));
+
+            if (toAdd.length === 0) {
+              core.info('PR already has all issue labels — nothing to add.');
+              return;
+            }
+
+            core.info(
+              `Adding labels to PR #${prNumber}: ${toAdd.join(', ')}`
+            );
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number: prNumber,
+              labels: toAdd,
+            });

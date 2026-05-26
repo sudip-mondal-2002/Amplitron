@@ -1365,6 +1365,23 @@ TEST(pitch_shifter_with_mix_and_shift_differs_from_dry) {
     ASSERT_GT(mag_shifted, mag_440 * 0.5f);
 }
 
+TEST(pitch_shifter_extreme_shift_wraps_phase_without_instability) {
+    PitchShifter ps;
+    ps.set_sample_rate(48000);
+    ps.params()[0].value = 120.0f;
+    ps.params()[1].value = 500.0f;
+    ps.params()[2].value = 1.0f;
+    ps.reset();
+
+    std::vector<float> buf(4096);
+    fill_sine(buf.data(), static_cast<int>(buf.size()), 440.0f, 48000);
+
+    ps.process(buf.data(), static_cast<int>(buf.size()));
+
+    ASSERT_TRUE(buffer_is_finite(buf.data(), static_cast<int>(buf.size())));
+    ASSERT_GT(rms(buf.data(), static_cast<int>(buf.size())), 0.001f);
+}
+
 // ============================================================
 // MultiBandCompressor tests
 // ============================================================
