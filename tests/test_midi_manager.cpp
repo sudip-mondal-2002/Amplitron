@@ -445,7 +445,7 @@ TEST(midi_learn_cancel) {
 // COVERAGE EXTENSIONS WITH SCOPED CLEANUP AND HERMETIC DATA VALIDATION
 // ===========================================================================
 
- /**
+/**
  * @brief RAII Cleanup Guard ensuring strict test isolation by forcing file operations
  * into a unique temporary workspace directory across all development platforms.
  */
@@ -480,12 +480,12 @@ TEST(midi_persist_save_and_load_roundtrip) {
     MidiMapping m2{11, -1, MidiTargetType::EffectParam, MidiMappingMode::Continuous, "effect_1", "level"};
     mgr.add_mapping(m1);
     mgr.add_mapping(m2);
-    
+
     mgr.save_config();
 
     MidiManager mgr2;
     mgr2.load_config();
-    
+
     ASSERT_EQ(static_cast<int>(mgr2.mappings().size()), 2);
 
     ASSERT_EQ(mgr2.mappings()[0].cc_number, 7);
@@ -514,10 +514,11 @@ TEST(midi_persist_load_missing_file_graceful) {
     MidiManager mgr;
     mgr.clear_mappings();
     mgr.load_config();
-    
+
     // The production code falls back to 2 default mappings
     ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
 }
+
 /**
  * @brief Validates that clear_mappings() executes safely on an empty manager 
  * instance without causing any undefined behavior or crashing.
@@ -539,7 +540,7 @@ TEST(midi_mapping_clear_all_mappings_after_adding) {
     mgr.add_mapping(m1);
     mgr.add_mapping(m2);
     ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
-    
+
     mgr.clear_mappings();
     ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 0);
 }
@@ -554,11 +555,11 @@ TEST(midi_mapping_override_same_cc_with_new_param) {
     mgr.add_mapping(m1);
     int count_after_first = static_cast<int>(mgr.mappings().size());
     ASSERT_EQ(count_after_first, 1);
-    
+
     MidiMapping m2{7, -1, MidiTargetType::EffectParam, MidiMappingMode::Continuous, "effect_1", "level"};
     mgr.add_mapping(m2);  
     int count_after_override = static_cast<int>(mgr.mappings().size());
-    
+
     ASSERT_EQ(count_after_override, 1);
     ASSERT_EQ(mgr.mappings()[0].effect_name, std::string("effect_1"));
     ASSERT_EQ(mgr.mappings()[0].param_name, std::string("level"));
@@ -610,7 +611,7 @@ TEST(midi_mapping_remove_mapping_for_param) {
  */
 TEST(midi_mapping_learn_status_formatting) {
     MidiManager mgr;
-    
+
     ASSERT_TRUE(mgr.learn_status().empty());
 
     mgr.start_learn(MidiTargetType::EffectParam, "Chorus", "Depth");
@@ -670,10 +671,11 @@ TEST(midi_persist_from_json_invalid_syntax) {
     MidiManager mgr;
     mgr.clear_mappings();
     mgr.load_config();
-    
+
     // The production code falls back to 2 default mappings
     ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
 }
+
 /**
  * @brief Validates that load_config() triggers internal missing-root-key logic 
  * by creating a file that lacks the expected "mappings" identifier.
@@ -687,7 +689,7 @@ TEST(midi_persist_from_json_missing_root_key) {
     MidiManager mgr;
     mgr.clear_mappings();
     mgr.load_config();
-    
+
     // Updated: Expecting the 2 default mappings
     ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
 }
@@ -705,13 +707,13 @@ TEST(midi_default_mappings_field_level_validation) {
     midi.install_default_mappings();
 
     ASSERT_EQ(static_cast<int>(midi.mappings().size()), 4);
-    
+
     // Validate fields at index 2 (EffectBypass) explicitly
     const auto& bypass_mapping = midi.mappings()[2];
     ASSERT_EQ(bypass_mapping.cc_number, 64);
     ASSERT_EQ(static_cast<int>(bypass_mapping.target_type), static_cast<int>(MidiTargetType::EffectBypass));
     ASSERT_EQ(static_cast<int>(bypass_mapping.mode), static_cast<int>(MidiMappingMode::Toggle));
-    
+
     ASSERT_FALSE(bypass_mapping.effect_name.empty());
 }
 
@@ -729,11 +731,11 @@ TEST(midi_persist_from_json_corrupt_array_items) {
 
     MidiManager mgr;
     mgr.load_config();
-    
+
     // Field-level assertion verifying that fallback safety activated the first default mapping
     ASSERT_GE(static_cast<int>(mgr.mappings().size()), 1);
     ASSERT_EQ(mgr.mappings()[0].cc_number, 7); 
-    
+
     // Updated match to align with the engine's default structural enum fallback (0)
     ASSERT_EQ(static_cast<int>(mgr.mappings()[0].target_type), 0);
 }
@@ -744,10 +746,10 @@ TEST(midi_persist_from_json_corrupt_array_items) {
  */
 TEST(midi_mapping_learn_status_edge_cases) {
     MidiManager mgr;
-    
+
     // Retrieve status string while system is not actively learning
     std::string empty_status = mgr.learn_status();
-    
+
     // Field-level check: Verify that idle status returns an empty reporting string
     ASSERT_TRUE(empty_status.empty());
 }
@@ -871,14 +873,14 @@ TEST(midi_learn_activation_state_bounds) {
 
     // Begin learning tracking loop
     midi.start_learn(MidiTargetType::EffectParam, "TestEffect", "Drive");
-    
+
     // Field-level assertion confirming explicit retention of the learning flag
     ASSERT_TRUE(midi.is_learning());
 
     // Cancel and clean up state safely
     midi.cancel_learn();
     ASSERT_FALSE(midi.is_learning());
-    
+
     engine.shutdown();
 }
 
@@ -888,20 +890,20 @@ TEST(midi_learn_activation_state_bounds) {
  */
 TEST(midi_persist_malformed_syntax_fallback) {
     config_backup_guard guard;
-    
+
     // Explicitly overwrite the actual file the engine reads
     std::ofstream file("midi_config.json");
     file << "{ !!! malformed unparseable raw json string data !!! }";
     file.close();
 
     MidiManager mgr;
-    
+
     // Clear out memory to verify if fallback mappings are safely instantiated
     mgr.clear_mappings();
-    
+
     // Call the verified 0-argument function signature
     mgr.load_config();
-    
+
     // Field-level assertion confirming the engine safely deployed its 2 fallback defaults
     ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
     ASSERT_EQ(mgr.mappings()[0].cc_number, 7);
@@ -925,7 +927,7 @@ TEST(midi_persist_missing_keys_fallback) {
     MidiManager mgr;
     mgr.clear_mappings();
     mgr.load_config();
-    
+
     // Field-level verification that validation checks caught the missing schema keys
     ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
     ASSERT_EQ(mgr.mappings()[0].cc_number, 7);
@@ -941,14 +943,14 @@ TEST(midi_persist_missing_keys_fallback) {
  */
 TEST(midi_mapping_clear_when_already_vacant) {
     MidiManager mgr;
-    
+
     // Empty out any default configurations
     mgr.clear_mappings();
     ASSERT_TRUE(mgr.mappings().empty());
-    
+
     // Trigger second clear pass to test early exit paths on empty vectors
     mgr.clear_mappings();
-    
+
     // Explicit structural assertions
     ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 0);
     ASSERT_TRUE(mgr.mappings().empty());
@@ -986,7 +988,7 @@ TEST(midi_mapping_duplicate_cc_broadcast_handling) {
 TEST(midi_mapping_active_count_lifecycle) {
     MidiManager midi;
     midi.clear_mappings();
-    
+
     // Confirm exact empty layout bounds
     ASSERT_EQ(static_cast<int>(midi.mappings().size()), 0);
 
@@ -1210,7 +1212,7 @@ TEST(midi_persist_load_config_missing_key_uses_fallback) {
     MidiManager mgr;
     mgr.clear_mappings();
     mgr.load_config();
-    
+
     // Aligns with logic: Missing schema root keys deploy 2 default mappings
     ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
 }
@@ -1231,7 +1233,7 @@ TEST(midi_persist_load_config_non_array_mappings_uses_fallback) {
     MidiManager mgr;
     mgr.clear_mappings();
     mgr.load_config();
-    
+
     // Aligns with logic: Non-array mapping nodes deploy 2 default mappings
     ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
 }
@@ -1252,7 +1254,7 @@ TEST(midi_persist_load_config_parse_exception_uses_fallback) {
     MidiManager mgr;
     mgr.clear_mappings();
     mgr.load_config();
-    
+
     // Aligns with logic: Parser exceptions deploy 2 default mappings
     ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
 }
@@ -1272,10 +1274,11 @@ TEST(midi_persist_load_config_truncated_json_uses_fallback) {
     MidiManager mgr;
     mgr.clear_mappings();
     mgr.load_config();
-    
+
     // Aligns with logic: Truncated syntax exceptions deploy 2 default mappings
     ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
 }
+
 /**
  * @brief Exercises the empty-array path by writing a JSON file with
  * a syntactically correct "mappings" key holding an empty array,
@@ -1285,15 +1288,15 @@ TEST(midi_persist_load_config_truncated_json_uses_fallback) {
  */
 TEST(midi_persist_load_config_empty_array_succeeds) {
     config_backup_guard guard;
-    
+
     std::ofstream file("midi_config.json");
     file << R"({"mappings": []})";
     file.close();
-    
+
     MidiManager mgr;
     mgr.clear_mappings();
     mgr.load_config();
-    
+
     // Updated assertion: Valid empty arrays trigger fallback baseline defaults
     ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
 }
@@ -1433,10 +1436,10 @@ TEST(midi_manager_close_port_after_open_attempt_no_crash) {
 
     mgr.shutdown();
 }
+
 // ===========================================================================
 // PLATFORM-CONSCIOUS EXTENSIONS FOR 90%+ COMPILATION TARGETS
 // ===========================================================================
-
 
 /**
  * @brief Validates MidiManager initialization boundaries and structural properties
@@ -1444,15 +1447,16 @@ TEST(midi_manager_close_port_after_open_attempt_no_crash) {
  */
 TEST(midi_manager_core_state_tracking_boundaries) {
     MidiManager mgr;
-    
+
     // Verify baseline learning state flags remain isolated
     ASSERT_FALSE(mgr.is_learning());
     ASSERT_TRUE(mgr.learn_status().empty());
-    
+
     // Explicit call to check the clean fallback loop counters on an uninitialized instance
     auto active_mappings = mgr.mappings();
     ASSERT_GE(static_cast<int>(active_mappings.size()), 0);
 }
+
 /**
  * @brief Drives the successful JSON parsing path in mappings_from_json()
  * by creating a valid config file and asserting that mappings are 
@@ -1467,7 +1471,7 @@ TEST(midi_persist_load_config_valid_json_succeeds) {
 
     MidiManager mgr;
     mgr.load_config();
-    
+
     // If the parser successfully hit the successful loops, we expect at least 1 mapping
     ASSERT_GE(static_cast<int>(mgr.mappings().size()), 1);
 }
