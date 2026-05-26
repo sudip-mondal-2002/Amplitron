@@ -362,17 +362,39 @@ TEST(midi_default_mappings) {
     midi.install_default_mappings();
     const auto& maps = midi.mappings();
 
-    auto has_mapping = [&](uint8_t cc, MidiTargetType target) {
+    // 1. Maintain the strict count requirement
+    ASSERT_EQ(static_cast<int>(maps.size()), 4);
+
+    // 2. Helper to find a mapping and return a pointer to it
+    auto find_mapping = [&](uint8_t cc, MidiTargetType target) -> const MidiMapping* {
         for (const auto& m : maps) {
-            if (m.cc_number == cc && m.target_type == target) return true;
+            if (m.cc_number == cc && m.target_type == target) return &m;
         }
-        return false;
+        return nullptr;
     };
 
-    // Assert specific expected mappings exist, regardless of total count or order
-    ASSERT_TRUE(has_mapping(7,  MidiTargetType::OutputGain));
-    ASSERT_TRUE(has_mapping(64, MidiTargetType::EffectBypass));
-    ASSERT_TRUE(has_mapping(74, MidiTargetType::EffectParam));
+    // 3. Perform strict field-level validation for each expected mapping
+    
+    // Validate CC 7 (Output Gain)
+    const auto* m1 = find_mapping(7, MidiTargetType::OutputGain);
+    ASSERT_NE(m1, nullptr);
+    ASSERT_EQ(static_cast<int>(m1->mode), static_cast<int>(MidiMappingMode::Continuous));
+
+    // Validate CC 11 (Input Gain)
+    const auto* m2 = find_mapping(11, MidiTargetType::InputGain);
+    ASSERT_NE(m2, nullptr);
+    ASSERT_EQ(static_cast<int>(m2->mode), static_cast<int>(MidiMappingMode::Continuous));
+
+    // Validate CC 64 (Effect Bypass)
+    const auto* m3 = find_mapping(64, MidiTargetType::EffectBypass);
+    ASSERT_NE(m3, nullptr);
+    ASSERT_EQ(static_cast<int>(m3->mode), static_cast<int>(MidiMappingMode::Toggle));
+    ASSERT_FALSE(m3->effect_name.empty()); // Ensure effect is assigned
+
+    // Validate CC 74 (Effect Param)
+    const auto* m4 = find_mapping(74, MidiTargetType::EffectParam);
+    ASSERT_NE(m4, nullptr);
+    ASSERT_EQ(static_cast<int>(m4->mode), static_cast<int>(MidiMappingMode::Continuous));
 }
 
 /**
