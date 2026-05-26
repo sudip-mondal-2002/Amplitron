@@ -43,9 +43,7 @@ export default defineConfig({
         '--use-fake-audio-capture',
         '--use-fake-device-for-media-stream',
         '--use-fake-ui-for-media-stream',
-        // SwiftShader software rasteriser for WebGL in CI (no GPU)
-        '--use-gl=swiftshader',
-        '--disable-gpu',
+        ...(process.env.CI ? ['--use-gl=swiftshader', '--disable-gpu'] : ['--use-gl=angle']),
         '--no-sandbox',
       ],
     },

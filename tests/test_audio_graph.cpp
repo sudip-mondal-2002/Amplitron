@@ -27,7 +27,7 @@ std::string mock_save_graph(const AudioGraph &graph) {
 
     if (node.pedal) {
       node_j["effect"] = node.pedal->get_params();
-      node_j["effect"]["type"] = node.pedal->type_id();
+      node_j["effect"]["type"] = node.pedal->name();
     }
 
     node_j["input_pin_ids"] = node.input_pin_ids;
@@ -56,8 +56,7 @@ bool mock_load_graph(const std::string &json_str, AudioGraph &graph) {
     return false;
 
   // Handle Legacy Linear Preset Format
-  if (j.contains("format_version") && j["format_version"] == 1 &&
-      !j.contains("nodes")) {
+  if (!j.contains("nodes")) {
     PresetData legacy;
     if (!from_json_ext(json_str, legacy))
       return false;
@@ -346,6 +345,60 @@ TEST(graph_preset_roundtrip_single_chain) {
   ASSERT_TRUE(loaded.get_nodes().size() == 4);
   ASSERT_TRUE(loaded.get_links().size() == 3);
 }
+TEST(audio_graph_rapid_graph_rebuild_stress) {
+  AudioGraphExecutor executor;
+  executor.prepare(48000, 128);
+
+  std::vector<float> input(128, 0.25f);
+  std::vector<float> output(128, 0.0f);
+
+  for (int iteration = 0; iteration < 100; ++iteration) {
+    AudioGraph graph;
+
+    int splitter =
+        graph.add_node("Splitter", NodeRoutingType::Splitter);
+
+    int path_a =
+        graph.add_node("PathA", NodeRoutingType::StandardEffect);
+
+    int path_b =
+        graph.add_node("PathB", NodeRoutingType::StandardEffect);
+
+    int merge =
+        graph.add_node("Merge", NodeRoutingType::MergeSum);
+
+    graph.set_node_as_input(splitter, true);
+    graph.set_node_as_output(merge, true);
+
+    auto nodes = graph.get_nodes();
+
+    ASSERT_TRUE(
+        graph.add_link(nodes[0].output_pin_ids[0],
+                       nodes[1].input_pin_ids[0]) != -1);
+
+    ASSERT_TRUE(
+        graph.add_link(nodes[0].output_pin_ids[1],
+                       nodes[2].input_pin_ids[0]) != -1);
+
+    ASSERT_TRUE(
+        graph.add_link(nodes[1].output_pin_ids[0],
+                       nodes[3].input_pin_ids[0]) != -1);
+
+    ASSERT_TRUE(
+        graph.add_link(nodes[2].output_pin_ids[0],
+                       nodes[3].input_pin_ids[1]) != -1);
+
+    ASSERT_TRUE(graph.rebuild_topology());
+
+    executor.compile(graph);
+
+    executor.process(input.data(), output.data(), 128);
+
+    for (float sample : output) {
+      ASSERT_TRUE(std::isfinite(sample));
+    }
+  }
+}
 
 TEST(graph_preset_roundtrip_parallel_amps) {
   AudioGraph graph;
@@ -469,4 +522,464 @@ TEST(graph_preset_missing_node_handled_gracefully) {
 
   AudioGraph loaded;
   ASSERT_FALSE(mock_load_graph(j.dump(), loaded));
+}
+
+TEST(audio_graph_link_enforcement) {
+  AudioGraph graph;
+  int n1 = graph.add_node("A", NodeRoutingType::StandardEffect);
+  int n2 = graph.add_node("B", NodeRoutingType::StandardEffect);
+  int n3 = graph.add_node("C", NodeRoutingType::StandardEffect);
+  
+  auto nodes = graph.get_nodes();
+  int l1 = graph.add_link(nodes[0].output_pin_ids[0], nodes[1].input_pin_ids[0]);
+  ASSERT_TRUE(l1 != -1);
+  
+  // Duplicate link -> returns existing ID
+  int l2 = graph.add_link(nodes[0].output_pin_ids[0], nodes[1].input_pin_ids[0]);
+  ASSERT_TRUE(l2 == l1);
+  
+  // Same output, different input -> fails (output already in use)
+  int l3 = graph.add_link(nodes[0].output_pin_ids[0], nodes[2].input_pin_ids[0]);
+  ASSERT_TRUE(l3 == -1);
+  
+  // Same input, different output -> fails (input already in use)
+  int l4 = graph.add_link(nodes[2].output_pin_ids[0], nodes[1].input_pin_ids[0]);
+  ASSERT_TRUE(l4 == -1);
+}
+
+TEST(audio_graph_remove_node_and_link) {
+  AudioGraph graph;
+  int n1 = graph.add_node("A", NodeRoutingType::StandardEffect);
+  int n2 = graph.add_node("B", NodeRoutingType::StandardEffect);
+  int n3 = graph.add_node("C", NodeRoutingType::StandardEffect);
+  
+  auto nodes = graph.get_nodes();
+  int l1 = graph.add_link(nodes[0].output_pin_ids[0], nodes[1].input_pin_ids[0]);
+  int l2 = graph.add_link(nodes[1].output_pin_ids[0], nodes[2].input_pin_ids[0]);
+  
+  // Remove non-existent node
+  ASSERT_FALSE(graph.remove_node(999));
+  
+  // Remove non-existent link
+  ASSERT_FALSE(graph.remove_link(999));
+  
+  // Remove link
+  ASSERT_TRUE(graph.remove_link(l1));
+  ASSERT_TRUE(graph.get_links().size() == 1);
+  
+  // Remove node
+  ASSERT_TRUE(graph.remove_node(n2));
+  ASSERT_TRUE(graph.get_nodes().size() == 2);
+  ASSERT_TRUE(graph.get_links().size() == 0); // Link connected to n2 should be removed
+}
+
+TEST(audio_graph_mixer_inputs) {
+  AudioGraph graph;
+  // Test num_inputs > 0 case
+  int n1 = graph.add_node("Mixer", NodeRoutingType::Mixer, nullptr, 4);
+  auto nodes = graph.get_nodes();
+  ASSERT_TRUE(nodes[0].input_pin_ids.size() == 4);
+}
+
+TEST(audio_graph_find_node_invalid) {
+  AudioGraph graph;
+  ASSERT_TRUE(graph.find_node(999) == nullptr);
+}
+
+TEST(audio_graph_get_node_from_pin_invalid) {
+  AudioGraph graph;
+  ASSERT_TRUE(graph.get_node_from_pin(999) == -1);
+}
+TEST(audio_graph_repeated_executor_recompile_processing) {
+  AudioGraphExecutor executor;
+  executor.prepare(48000, 128);
+
+  std::vector<float> input(128, 1.0f);
+  std::vector<float> output(128, 0.0f);
+
+  for (int iteration = 0; iteration < 200; ++iteration) {
+    AudioGraph graph;
+
+    int input_node =
+        graph.add_node("Input", NodeRoutingType::Splitter);
+
+    int effect_node =
+        graph.add_node("Effect", NodeRoutingType::StandardEffect);
+
+    int output_node =
+        graph.add_node("Output", NodeRoutingType::MergeSum);
+
+    graph.set_node_as_input(input_node, true);
+    graph.set_node_as_output(output_node, true);
+
+    auto nodes = graph.get_nodes();
+
+    ASSERT_TRUE(
+        graph.add_link(nodes[0].output_pin_ids[0],
+                       nodes[1].input_pin_ids[0]) != -1);
+
+    ASSERT_TRUE(
+        graph.add_link(nodes[1].output_pin_ids[0],
+                       nodes[2].input_pin_ids[0]) != -1);
+
+    ASSERT_TRUE(graph.rebuild_topology());
+
+    executor.compile(graph);
+
+    std::fill(output.begin(), output.end(), 0.0f);
+
+    executor.process(input.data(), output.data(), 128);
+
+    for (float sample : output) {
+      ASSERT_TRUE(std::isfinite(sample));
+      ASSERT_TRUE(sample >= -10.0f);
+      ASSERT_TRUE(sample <= 10.0f);
+    }
+  }
+}
+
+TEST(audio_graph_dynamic_topology_mutation) {
+  AudioGraphExecutor executor;
+  executor.prepare(48000, 128);
+
+  std::vector<float> input(128, 1.0f);
+  std::vector<float> output(128, 0.0f);
+
+  AudioGraph graph;
+
+  int input_node =
+      graph.add_node("Input", NodeRoutingType::Splitter);
+
+  int output_node =
+      graph.add_node("Output", NodeRoutingType::MergeSum);
+
+  graph.set_node_as_input(input_node, true);
+  graph.set_node_as_output(output_node, true);
+
+  auto nodes = graph.get_nodes();
+
+  ASSERT_TRUE(
+      graph.add_link(nodes[0].output_pin_ids[0],
+                     nodes[1].input_pin_ids[0]) != -1);
+
+  ASSERT_TRUE(graph.rebuild_topology());
+
+  executor.compile(graph);
+
+  executor.process(input.data(), output.data(), 128);
+
+  for (float sample : output) {
+    ASSERT_TRUE(std::isfinite(sample));
+  }
+
+    // Dynamically mutate the SAME graph topology
+  int inserted =
+      graph.add_node("InsertedEffect",
+                     NodeRoutingType::StandardEffect);
+
+  nodes = graph.get_nodes();
+
+  auto links = graph.get_links();
+
+  ASSERT_TRUE(!links.empty());
+
+  // Remove original direct connection
+  ASSERT_TRUE(graph.remove_link(links[0].id));
+
+  // Rewire through inserted node
+  ASSERT_TRUE(
+      graph.add_link(nodes[0].output_pin_ids[0],
+                     nodes[2].input_pin_ids[0]) != -1);
+
+  ASSERT_TRUE(
+      graph.add_link(nodes[2].output_pin_ids[0],
+                     nodes[1].input_pin_ids[0]) != -1);
+
+  ASSERT_TRUE(graph.rebuild_topology());
+
+  executor.compile(graph);
+
+  std::fill(output.begin(), output.end(), 0.0f);
+
+  executor.process(input.data(), output.data(), 128);
+
+  for (float sample : output) {
+    ASSERT_TRUE(std::isfinite(sample));
+    ASSERT_TRUE(sample >= -10.0f);
+    ASSERT_TRUE(sample <= 10.0f);
+  }
+}
+TEST(audio_graph_executor_process_without_compile) {
+  AudioGraphExecutor executor;
+  executor.prepare(48000, 128);
+
+  std::vector<float> input(64, 0.75f);
+  std::vector<float> output(64, 0.0f);
+
+  executor.process(input.data(), output.data(), 64);
+
+  for (size_t i = 0; i < input.size(); ++i) {
+    ASSERT_TRUE(output[i] == input[i]);
+  }
+}
+TEST(audio_graph_executor_oversized_block_passthrough) {
+  AudioGraphExecutor executor;
+  executor.prepare(48000, 64);
+
+  std::vector<float> input(128, 0.5f);
+  std::vector<float> output(128, 0.0f);
+
+  executor.process(input.data(), output.data(), 128);
+
+  for (int i = 0; i < 64; ++i) {
+    ASSERT_TRUE(output[i] == input[i]);
+  }
+}
+TEST(audio_graph_duplicate_link_rejection) {
+  AudioGraph graph;
+
+  graph.add_node("A", NodeRoutingType::StandardEffect);
+  graph.add_node("B", NodeRoutingType::StandardEffect);
+
+  auto nodes = graph.get_nodes();
+
+  int first =
+      graph.add_link(nodes[0].output_pin_ids[0],
+                     nodes[1].input_pin_ids[0]);
+
+  int second =
+      graph.add_link(nodes[0].output_pin_ids[0],
+                     nodes[1].input_pin_ids[0]);
+
+  ASSERT_TRUE(first != -1);
+  ASSERT_TRUE(second == first);
+}
+TEST(audio_graph_input_pin_already_used_rejection) {
+  AudioGraph graph;
+
+  graph.add_node("A", NodeRoutingType::Splitter);
+  graph.add_node("B", NodeRoutingType::StandardEffect);
+  graph.add_node("C", NodeRoutingType::StandardEffect);
+
+  auto nodes = graph.get_nodes();
+
+  ASSERT_TRUE(
+      graph.add_link(nodes[0].output_pin_ids[0],
+                     nodes[1].input_pin_ids[0]) != -1);
+
+  int invalid =
+      graph.add_link(nodes[0].output_pin_ids[1],
+                     nodes[1].input_pin_ids[0]);
+
+  ASSERT_TRUE(invalid == -1);
+}
+
+TEST(audio_graph_remove_link_success) {
+  AudioGraph graph;
+
+  graph.add_node("A", NodeRoutingType::StandardEffect);
+  graph.add_node("B", NodeRoutingType::StandardEffect);
+
+  auto nodes = graph.get_nodes();
+
+  int link_id =
+      graph.add_link(nodes[0].output_pin_ids[0],
+                     nodes[1].input_pin_ids[0]);
+
+  ASSERT_TRUE(link_id != -1);
+
+  ASSERT_TRUE(graph.remove_link(link_id));
+
+  ASSERT_TRUE(graph.get_links().empty());
+}
+TEST(audio_graph_remove_invalid_node) {
+  AudioGraph graph;
+
+  ASSERT_FALSE(graph.remove_node(99999));
+}
+TEST(audio_graph_invalid_pin_lookup) {
+  AudioGraph graph;
+
+  ASSERT_TRUE(graph.get_node_from_pin(99999) == -1);
+}
+TEST(audio_graph_implicit_input_fallback) {
+  AudioGraph graph;
+  AudioGraphExecutor executor;
+
+  executor.prepare(48000, 128);
+
+  int node =
+      graph.add_node("FallbackInput",
+                     NodeRoutingType::StandardEffect);
+
+  graph.set_node_as_output(node, true);
+
+  ASSERT_TRUE(graph.rebuild_topology());
+
+  executor.compile(graph);
+
+  std::vector<float> input(64, 1.0f);
+  std::vector<float> output(64, 0.0f);
+
+  executor.process(input.data(), output.data(), 64);
+
+  ASSERT_TRUE(output[0] == 1.0f);
+}
+TEST(audio_graph_implicit_sink_detection) {
+  AudioGraph graph;
+  AudioGraphExecutor executor;
+
+  executor.prepare(48000, 128);
+
+  int node =
+      graph.add_node("ImplicitSink",
+                     NodeRoutingType::StandardEffect);
+
+  graph.set_node_as_input(node, true);
+
+  ASSERT_TRUE(graph.rebuild_topology());
+
+  executor.compile(graph);
+
+  std::vector<float> input(64, 0.25f);
+  std::vector<float> output(64, 0.0f);
+
+  executor.process(input.data(), output.data(), 64);
+
+  ASSERT_TRUE(output[0] == 0.25f);
+}
+TEST(audio_graph_unreachable_node_excluded) {
+  AudioGraph graph;
+  AudioGraphExecutor executor;
+
+  executor.prepare(48000, 128);
+
+  int input =
+      graph.add_node("Input", NodeRoutingType::Splitter);
+
+  int output =
+      graph.add_node("Output", NodeRoutingType::MergeSum);
+
+  graph.add_node("Unreachable",
+                 NodeRoutingType::StandardEffect);
+
+  graph.set_node_as_input(input, true);
+  graph.set_node_as_output(output, true);
+
+  auto nodes = graph.get_nodes();
+
+  ASSERT_TRUE(
+      graph.add_link(nodes[0].output_pin_ids[0],
+                     nodes[1].input_pin_ids[0]) != -1);
+
+  ASSERT_TRUE(graph.rebuild_topology());
+
+  executor.compile(graph);
+
+  std::vector<float> input_audio(64, 1.0f);
+  std::vector<float> output_audio(64, 0.0f);
+
+  executor.process(input_audio.data(),
+                   output_audio.data(),
+                   64);
+
+  ASSERT_TRUE(output_audio[0] == 1.0f);
+}
+
+TEST(audio_graph_executor_fallback_input_and_sink_paths) {
+  AudioGraph graph;
+  AudioGraphExecutor executor;
+
+  executor.prepare(48000, 128);
+
+  // No explicit input/output nodes on purpose
+  int node_a =
+      graph.add_node("A", NodeRoutingType::StandardEffect);
+
+  int node_b =
+      graph.add_node("B", NodeRoutingType::StandardEffect);
+
+  auto nodes = graph.get_nodes();
+
+  ASSERT_TRUE(
+      graph.add_link(nodes[0].output_pin_ids[0],
+                     nodes[1].input_pin_ids[0]) != -1);
+
+  ASSERT_TRUE(graph.rebuild_topology());
+
+  executor.compile(graph);
+
+  std::vector<float> input(64, 0.5f);
+  std::vector<float> output(64, 0.0f);
+
+  executor.process(input.data(), output.data(), 64);
+
+  for (float sample : output) {
+    ASSERT_TRUE(std::isfinite(sample));
+  }
+}
+TEST(audio_graph_output_pin_already_used_rejection) {
+  AudioGraph graph;
+
+  graph.add_node("A", NodeRoutingType::StandardEffect);
+  graph.add_node("B", NodeRoutingType::StandardEffect);
+  graph.add_node("C", NodeRoutingType::StandardEffect);
+
+  auto nodes = graph.get_nodes();
+
+  ASSERT_TRUE(
+      graph.add_link(nodes[0].output_pin_ids[0],
+                     nodes[1].input_pin_ids[0]) != -1);
+
+  int result =
+      graph.add_link(nodes[0].output_pin_ids[0],
+                     nodes[2].input_pin_ids[0]);
+
+  ASSERT_TRUE(result == -1);
+}
+TEST(audio_graph_remove_invalid_link) {
+  AudioGraph graph;
+
+  ASSERT_FALSE(graph.remove_link(99999));
+}
+TEST(audio_graph_find_invalid_node) {
+  AudioGraph graph;
+
+  ASSERT_TRUE(graph.find_node(99999) == nullptr);
+}
+TEST(audio_graph_executor_implicit_input_output_paths) {
+  AudioGraphExecutor executor;
+  executor.prepare(48000, 128);
+
+  AudioGraph graph;
+
+  // No explicit graph input/output nodes
+  int node_a =
+      graph.add_node("A",
+                     NodeRoutingType::StandardEffect);
+
+  int node_b =
+      graph.add_node("B",
+                     NodeRoutingType::StandardEffect);
+
+  auto nodes = graph.get_nodes();
+
+  ASSERT_TRUE(
+      graph.add_link(nodes[0].output_pin_ids[0],
+                     nodes[1].input_pin_ids[0]) != -1);
+
+  ASSERT_TRUE(graph.rebuild_topology());
+
+  executor.compile(graph);
+
+  std::vector<float> input(128, 0.5f);
+  std::vector<float> output(128, 0.0f);
+
+  executor.process(input.data(),
+                   output.data(),
+                   128);
+
+  for (float sample : output) {
+    ASSERT_TRUE(std::isfinite(sample));
+  }
 }

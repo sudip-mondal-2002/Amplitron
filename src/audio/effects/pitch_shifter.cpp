@@ -14,6 +14,12 @@ static constexpr int P_MIX   = 2;
 // Grain window size in seconds (~23 ms at 48kHz = 1024 samples)
 static constexpr float GRAIN_WINDOW_SEC = 0.023f;
 
+static float wrap_phase(float phase, int buf_size) {
+    phase = std::fmod(phase, static_cast<float>(buf_size));
+    if (phase < 0.0f) phase += static_cast<float>(buf_size);
+    return phase;
+}
+
 PitchShifter::PitchShifter() {
     params_ = {
         {"Shift", 0.0f, -12.0f, 12.0f, 0.0f, "st",
@@ -35,9 +41,7 @@ void PitchShifter::set_sample_rate(int sample_rate) {
 }
 
 float PitchShifter::read_linear(float phase) const {
-    // Wrap phase into [0, buf_size_)
-    phase = std::fmod(phase, static_cast<float>(buf_size_));
-    if (phase < 0.0f) phase += buf_size_;
+    phase = wrap_phase(phase, buf_size_);
 
     int pos0 = static_cast<int>(phase);
     int pos1 = (pos0 + 1) % buf_size_;
@@ -77,11 +81,9 @@ void PitchShifter::process(float* buffer, int num_samples) {
         read_phase_a_ += drift;
         read_phase_b_ += drift;
 
-        // Wrap phases into [0, buf_size_)
-        while (read_phase_a_ < 0.0f) read_phase_a_ += buf_size_;
-        while (read_phase_a_ >= buf_size_) read_phase_a_ -= buf_size_;
-        while (read_phase_b_ < 0.0f) read_phase_b_ += buf_size_;
-        while (read_phase_b_ >= buf_size_) read_phase_b_ -= buf_size_;
+        // Wrap phases into [0, buf_size_) in constant time.
+        read_phase_a_ = wrap_phase(read_phase_a_, buf_size_);
+        read_phase_b_ = wrap_phase(read_phase_b_, buf_size_);
 
         // Compute absolute read positions in the buffer
         float pos_a = static_cast<float>(write_pos_) - read_phase_a_;

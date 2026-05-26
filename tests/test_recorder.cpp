@@ -181,6 +181,156 @@ TEST(recorder_restart_recording) {
     std::remove(path2.c_str());
 }
 
+TEST(recorder_pause_resume_preserves_data) {
+    Recorder rec;
+    std::string path = "recordings/test_rec_pause_resume.wav";
+
+    float buf[100];
+    std::memset(buf, 0, sizeof(buf));
+
+    ASSERT_TRUE(rec.start(path, 48000, 1));
+
+    rec.write_samples(buf, 100);
+
+    rec.pause();
+    ASSERT_TRUE(rec.is_paused());
+
+    rec.resume();
+    ASSERT_FALSE(rec.is_paused());
+
+    rec.write_samples(buf, 100);
+
+    ASSERT_EQ(rec.get_samples_written(), (int64_t)200);
+
+    rec.stop();
+    std::remove(path.c_str());
+}
+
+TEST(recorder_pause_blocks_writes) {
+    Recorder rec;
+    std::string path = "recordings/test_rec_pause_blocks.wav";
+
+    float buf[100];
+    std::memset(buf, 0, sizeof(buf));
+
+    ASSERT_TRUE(rec.start(path, 48000, 1));
+
+    rec.write_samples(buf, 100);
+
+    rec.pause();
+    rec.write_samples(buf, 100);
+
+    ASSERT_EQ(rec.get_samples_written(), (int64_t)100);
+
+    rec.resume();
+    rec.write_samples(buf, 100);
+
+    ASSERT_EQ(rec.get_samples_written(), (int64_t)200);
+
+    rec.stop();
+    std::remove(path.c_str());
+}
+
+TEST(recorder_current_peak_tracks_max_sample) {
+    Recorder rec;
+    std::string path = "recordings/test_rec_peak.wav";
+
+    float buf[64];
+    for (int i = 0; i < 64; ++i) {
+        buf[i] = 0.3f;
+    }
+
+    buf[32] = 0.9f;
+
+    ASSERT_TRUE(rec.start(path, 48000, 1));
+
+    rec.write_samples(buf, 64);
+
+    ASSERT_NEAR(rec.get_current_peak(), 0.9f, 0.01f);
+
+    rec.stop();
+    std::remove(path.c_str());
+}
+
+TEST(recorder_zero_duration_when_empty) {
+    Recorder rec;
+
+    ASSERT_NEAR(rec.get_duration(), 0.0f, 0.001f);
+}
+
+TEST(recorder_write_after_stop_is_noop) {
+    Recorder rec;
+    std::string path = "recordings/test_rec_after_stop.wav";
+
+    float buf[100];
+    std::memset(buf, 0, sizeof(buf));
+
+    ASSERT_TRUE(rec.start(path, 48000, 1));
+    rec.stop();
+
+    rec.write_samples(buf, 100);
+
+    ASSERT_EQ(rec.get_samples_written(), (int64_t)0);
+
+    std::remove(path.c_str());
+}
+
+TEST(recorder_empty_recording_has_valid_wav_header) {
+    Recorder rec;
+    std::string path = "recordings/test_rec_empty.wav";
+
+    ASSERT_TRUE(rec.start(path, 48000, 1));
+    rec.stop();
+
+    ASSERT_TRUE(file_exists(path));
+    ASSERT_EQ(file_size(path), 44L);
+
+    std::ifstream f(path, std::ios::binary);
+    char header[4];
+
+    f.read(header, 4);
+    ASSERT_TRUE(std::strncmp(header, "RIFF", 4) == 0);
+
+    f.seekg(8);
+    f.read(header, 4);
+    ASSERT_TRUE(std::strncmp(header, "WAVE", 4) == 0);
+
+    f.seekg(36);
+    f.read(header, 4);
+    ASSERT_TRUE(std::strncmp(header, "data", 4) == 0);
+
+    std::remove(path.c_str());
+}
+
+TEST(recorder_waveform_updates_after_write) {
+    Recorder rec;
+    std::string path = "recordings/test_rec_waveform.wav";
+
+    float buf[1024];
+    for (int i = 0; i < 1024; ++i) {
+        buf[i] = 0.5f;
+    }
+
+    ASSERT_TRUE(rec.start(path, 48000, 1));
+    rec.write_samples(buf, 1024);
+
+    float waveform[Recorder::WAVEFORM_SIZE];
+    rec.get_waveform(waveform, Recorder::WAVEFORM_SIZE);
+
+    bool found_peak = false;
+    for (int i = 0; i < Recorder::WAVEFORM_SIZE; ++i) {
+        if (waveform[i] > 0.0f) {
+            found_peak = true;
+            break;
+        }
+    }
+
+    ASSERT_TRUE(found_peak);
+
+    rec.stop();
+    std::remove(path.c_str());
+}
+
 TEST(recorder_wav_header_data_size_field_is_correct) {
     Recorder rec;
     std::string path = "recordings/test_rec_header_datasize.wav";
@@ -326,5 +476,6 @@ TEST(recorder_stereo_data_size_accounts_for_two_channels) {
     ASSERT_EQ(data_size, expected);
 
     f.close();
+
     std::remove(path.c_str());
 }
