@@ -18,6 +18,8 @@
 #include "preset_json.h"
 #include "preset_manager.h"
 #include "audio/audio_engine.h"
+#include <stdexcept>
+
 #include "audio/effects/noise_gate.h"
 #include "audio/effects/overdrive.h"
 #include "audio/effects/equalizer.h"
@@ -408,3 +410,344 @@ TEST(json_audio_engine_autosave_roundtrip) {
     
     engine.shutdown();
 }
+
+TEST(json_graph_node_and_link_roundtrip) {
+    PresetData preset;
+    preset.routing = "graph";
+    
+    PresetData::NodeData n;
+    n.id = "n1";
+    n.type = "Overdrive";
+    n.enabled = true;
+    n.mix = 0.5f;
+    n.num_inputs = 2;
+    n.x = 10.0f;
+    n.y = 20.0f;
+    n.params.push_back({"Drive", 1.0f});
+    n.metadata["test"] = "meta";
+    preset.nodes.push_back(n);
+
+    PresetData::LinkData l;
+    l.src_pin = "p1";
+    l.dst_pin = "p2";
+    preset.links.push_back(l);
+
+    std::string json_str = to_json_ext(preset);
+    
+    PresetData restored;
+    bool ok = from_json_ext(json_str, restored);
+    ASSERT_TRUE(ok);
+    
+    ASSERT_EQ(restored.nodes.size(), 1u);
+    ASSERT_EQ(restored.nodes[0].id, "n1");
+    ASSERT_EQ(restored.nodes[0].type, "Overdrive");
+    ASSERT_TRUE(restored.nodes[0].enabled);
+    ASSERT_EQ(restored.nodes[0].mix, 0.5f);
+    ASSERT_EQ(restored.nodes[0].num_inputs, 2);
+    ASSERT_EQ(restored.nodes[0].x, 10.0f);
+    ASSERT_EQ(restored.nodes[0].y, 20.0f);
+    ASSERT_EQ(restored.nodes[0].params.size(), 1u);
+    ASSERT_EQ(restored.nodes[0].metadata["test"], "meta");
+
+    ASSERT_EQ(restored.links.size(), 1u);
+    ASSERT_EQ(restored.links[0].src_pin, "p1");
+    ASSERT_EQ(restored.links[0].dst_pin, "p2");
+}
+
+TEST(json_from_json_ext_exceptions) {
+    PresetData p;
+    // Missing nodes
+    bool ok1 = from_json_ext(R"({"routing": "graph", "links": []})", p);
+    ASSERT_FALSE(ok1);
+    
+    // Missing links
+    bool ok2 = from_json_ext(R"({"routing": "graph", "nodes": []})", p);
+    ASSERT_FALSE(ok2);
+}
+
+TEST(json_from_json_exceptions) {
+    nlohmann::json j1 = {
+        {"routing", "graph"},
+        {"links", nlohmann::json::array()}
+    };
+    PresetData p1;
+    bool caught1 = false;
+    try {
+        from_json(j1, p1);
+    } catch(const std::invalid_argument&) {
+        caught1 = true;
+    }
+    ASSERT_TRUE(caught1);
+
+    nlohmann::json j2 = {
+        {"routing", "graph"},
+        {"nodes", nlohmann::json::array()}
+    };
+    PresetData p2;
+    bool caught2 = false;
+    try {
+        from_json(j2, p2);
+    } catch(const std::invalid_argument&) {
+        caught2 = true;
+    }
+    ASSERT_TRUE(caught2);
+}
+
+TEST(json_from_ordered_json_missing_fields) {
+    // Actually the namespace requires us to use from_json_ext because ordered json hook is internal.
+    // So we just parse from string
+    PresetData p;
+    bool ok = from_json_ext(R"({
+        "format_version": 2,
+        "routing": "graph",
+        "name": "Missing Fields",
+        "nodes": [
+            { "id": "n1", "type": "test" }
+        ],
+        "links": []
+    })", p);
+    ASSERT_TRUE(ok);
+    ASSERT_EQ(p.nodes.size(), 1u);
+    ASSERT_EQ(p.nodes[0].id, "n1");
+    ASSERT_TRUE(p.nodes[0].enabled); // Default true
+    ASSERT_EQ(p.nodes[0].mix, 1.0f);
+}
+
+TEST(json_from_json_missing_fields) {
+    nlohmann::json j = nlohmann::json::parse(R"({
+        "format_version": 2,
+        "routing": "graph",
+        "name": "Missing Fields",
+        "nodes": [
+            { "id": "n1", "type": "test" }
+        ],
+        "links": []
+    })");
+    PresetData p;
+    from_json(j, p);
+    ASSERT_EQ(p.nodes.size(), 1u);
+    ASSERT_EQ(p.nodes[0].id, "n1");
+    ASSERT_TRUE(p.nodes[0].enabled); 
+    ASSERT_EQ(p.nodes[0].mix, 1.0f);
+}
+
+TEST(json_from_json_invalid_types_skipped) {
+    nlohmann::json j = nlohmann::json::parse(R"({
+        "type": "Delay",
+        "params": {
+            "Valid": 1.0,
+            "Invalid": "string_instead_of_number"
+        },
+        "metadata": {
+            "ValidMeta": "string",
+            "InvalidMeta": 123
+        }
+    })");
+    PresetData::EffectData fx;
+    from_json(j, fx);
+    
+    ASSERT_EQ(fx.params.size(), 1u);
+    ASSERT_EQ(fx.params[0].first, "Valid");
+    ASSERT_EQ(fx.metadata.size(), 1u);
+    ASSERT_EQ(fx.metadata["ValidMeta"], "string");
+}
+
+TEST(json_from_json_node_invalid_types_skipped) {
+    nlohmann::json j = nlohmann::json::parse(R"({
+        "routing": "graph",
+        "name": "Test",
+        "nodes": [
+            {
+                "id": "n1",
+                "type": "Delay",
+                "params": {
+                    "Valid": 1.0,
+                    "Invalid": "string"
+                },
+                "metadata": {
+                    "ValidMeta": "string",
+                    "InvalidMeta": 123
+                }
+            }
+        ],
+        "links": []
+    })");
+    PresetData p;
+    from_json(j, p);
+    
+    ASSERT_EQ(p.nodes.size(), 1u);
+    ASSERT_EQ(p.nodes[0].params.size(), 1u);
+    ASSERT_EQ(p.nodes[0].params[0].first, "Valid");
+    ASSERT_EQ(p.nodes[0].metadata.size(), 1u);
+    ASSERT_EQ(p.nodes[0].metadata["ValidMeta"], "string");
+}
+
+TEST(json_from_ordered_json_invalid_types_skipped) {
+    PresetData p;
+    bool ok = from_json_ext(R"({
+        "format_version": 2,
+        "routing": "graph",
+        "name": "Test",
+        "nodes": [
+            {
+                "id": "n1",
+                "type": "Delay",
+                "params": {
+                    "Valid": 1.0,
+                    "Invalid": "string"
+                },
+                "metadata": {
+                    "ValidMeta": "string",
+                    "InvalidMeta": 123
+                }
+            }
+        ],
+        "links": []
+    })", p);
+    
+    ASSERT_TRUE(ok);
+    ASSERT_EQ(p.nodes.size(), 1u);
+    ASSERT_EQ(p.nodes[0].params.size(), 1u);
+    ASSERT_EQ(p.nodes[0].params[0].first, "Valid");
+    ASSERT_EQ(p.nodes[0].metadata.size(), 1u);
+    ASSERT_EQ(p.nodes[0].metadata["ValidMeta"], "string");
+}
+
+TEST(json_from_ordered_json_effect_invalid_types_skipped) {
+    PresetData p;
+    bool ok = from_json_ext(R"({
+        "format_version": 2,
+        "routing": "linear",
+        "name": "Test",
+        "effects": [
+            {
+                "type": "Delay",
+                "params": {
+                    "Valid": 1.0,
+                    "Invalid": "string"
+                },
+                "metadata": {
+                    "ValidMeta": "string",
+                    "InvalidMeta": 123
+                }
+            }
+        ]
+    })", p);
+    
+    ASSERT_TRUE(ok);
+    ASSERT_EQ(p.effects.size(), 1u);
+    ASSERT_EQ(p.effects[0].params.size(), 1u);
+    ASSERT_EQ(p.effects[0].metadata.size(), 1u);
+}
+
+TEST(json_to_json_linear_routing) {
+    PresetData p;
+    p.routing = "linear";
+    p.effects.push_back({"Delay", true, 0.5f, {{"Time", 0.5f}}, {}});
+    
+    nlohmann::json j = p; // Uses to_json ADL hook
+    ASSERT_TRUE(j.contains("effects"));
+    ASSERT_EQ(j["effects"].size(), 1u);
+    ASSERT_EQ(j["effects"][0]["type"], "Delay");
+}
+
+TEST(json_from_json_skips_empty_type) {
+    nlohmann::json j = nlohmann::json::parse(R"({
+        "routing": "linear",
+        "effects": [
+            { "type": "" },
+            { "type": "Valid" }
+        ],
+        "nodes": [
+            { "id": "n1", "type": "" },
+            { "id": "", "type": "Valid" },
+            { "id": "n3", "type": "Valid" }
+        ],
+        "links": [
+            { "src_pin": "", "dst_pin": "n2.in" },
+            { "src_pin": "n1.out", "dst_pin": "" },
+            { "src_pin": "n1.out", "dst_pin": "n2.in" }
+        ]
+    })");
+    PresetData p;
+    from_json(j, p);
+    
+    ASSERT_EQ(p.effects.size(), 1u);
+    ASSERT_EQ(p.effects[0].type, "Valid");
+    ASSERT_EQ(p.nodes.size(), 1u);
+    ASSERT_EQ(p.nodes[0].id, "n3");
+    ASSERT_EQ(p.links.size(), 1u);
+}
+
+TEST(json_from_ordered_json_skips_empty_type) {
+    PresetData p;
+    bool ok = from_json_ext(R"({
+        "format_version": 2,
+        "routing": "linear",
+        "effects": [
+            { "type": "" },
+            { "type": "Valid" }
+        ],
+        "nodes": [
+            { "id": "n1", "type": "" },
+            { "id": "", "type": "Valid" },
+            { "id": "n3", "type": "Valid" }
+        ],
+        "links": [
+            { "src_pin": "", "dst_pin": "n2.in" },
+            { "src_pin": "n1.out", "dst_pin": "" },
+            { "src_pin": "n1.out", "dst_pin": "n2.in" }
+        ]
+    })", p);
+    
+    ASSERT_TRUE(ok);
+    ASSERT_EQ(p.effects.size(), 1u);
+    ASSERT_EQ(p.nodes.size(), 1u);
+    ASSERT_EQ(p.links.size(), 1u);
+}
+
+TEST(json_from_json_missing_nodes_throws) {
+    nlohmann::json j = nlohmann::json::parse(R"({"routing": "graph"})");
+    PresetData p;
+    ASSERT_THROW(from_json(j, p), std::invalid_argument);
+}
+
+TEST(json_from_json_missing_links_throws) {
+    nlohmann::json j = nlohmann::json::parse(R"({"routing": "graph", "nodes": []})");
+    PresetData p;
+    ASSERT_THROW(from_json(j, p), std::invalid_argument);
+}TEST(json_midi_mapping) {
+    PresetData p;
+    p.routing = "linear";
+    MidiMapping m;
+    m.cc_number = 7;
+    m.midi_channel = 1;
+    m.target_type = MidiTargetType::EffectParam;
+    m.mode = MidiMappingMode::Continuous;
+    m.effect_name = "Delay";
+    m.param_name = "Mix";
+    p.midi_mappings.push_back(m);
+    
+    std::string json_str = to_json_ext(p);
+    PresetData p2;
+    from_json_ext(json_str, p2);
+    
+    ASSERT_EQ(p2.midi_mappings.size(), 1u);
+    ASSERT_EQ(p2.midi_mappings[0].cc_number, 7);
+    ASSERT_EQ(p2.midi_mappings[0].midi_channel, 1);
+    ASSERT_EQ(p2.midi_mappings[0].effect_name, "Delay");
+    ASSERT_EQ(p2.midi_mappings[0].param_name, "Mix");
+}
+
+TEST(json_midi_mapping_missing_fields) {
+    nlohmann::json j = nlohmann::json::parse(R"({"routing": "linear", "midi_mappings": [{}]})");
+    PresetData p;
+    from_json(j, p);
+    ASSERT_EQ(p.midi_mappings.size(), 1u);
+    ASSERT_EQ(p.midi_mappings[0].cc_number, 0);
+    ASSERT_EQ(p.midi_mappings[0].midi_channel, -1);
+    ASSERT_EQ(p.midi_mappings[0].effect_name, "");
+}
+
+
+

@@ -3,7 +3,6 @@
 #include "gui/theme.h"
 #include "gui/gui_graph_state.h"
 #include "gui/command.h"
-#include <algorithm>
 #include <imgui.h>
 #include <unordered_map>
 #include <cmath>
@@ -128,26 +127,23 @@ void PedalBoard::render_signal_chain() {
     // Give all new nodes a default position at the end of the chain without shifting existing nodes
     for (const auto& node : audio_graph.get_nodes()) {
         if (ui_state.node_positions.find(node.id) == ui_state.node_positions.end()) {
-            float max_right = 40.0f;
-            for (const auto& existing_node : audio_graph.get_nodes()) {
-                auto pos_it = ui_state.node_positions.find(existing_node.id);
-                if (pos_it != ui_state.node_positions.end()) {
-                    float width = 110.0f;
-                    if (existing_node.routing_type == NodeRoutingType::StandardEffect) {
-                        if (existing_node.pedal && std::strcmp(existing_node.pedal->name(), "MultiBand Compressor") == 0) {
-                            width = 190.0f * 2.2f;
-                        } else {
-                            width = 190.0f;
+            if (node.x != 0.0f || node.y != 0.0f) {
+                ui_state.node_positions[node.id] = { ImVec2(node.x, node.y), false };
+            } else {
+                float max_right = 40.0f;
+                for (const auto& existing_node : audio_graph.get_nodes()) {
+                    auto pos_it = ui_state.node_positions.find(existing_node.id);
+                    if (pos_it != ui_state.node_positions.end()) {
+                        float width = (existing_node.routing_type == NodeRoutingType::StandardEffect) ? 190.0f : 110.0f;
+                        float right_edge = pos_it->second.position.x + width;
+                        if (right_edge > max_right) {
+                            max_right = right_edge;
                         }
                     }
-                    float right_edge = pos_it->second.position.x + width;
-                    if (right_edge > max_right) {
-                        max_right = right_edge;
-                    }
                 }
+                float insert_x = ui_state.node_positions.empty() ? 40.0f : max_right + 80.0f;
+                ui_state.node_positions[node.id] = { ImVec2(insert_x, 60.0f), false };
             }
-            float insert_x = ui_state.node_positions.empty() ? 40.0f : max_right + 80.0f;
-            ui_state.node_positions[node.id] = { ImVec2(insert_x, 60.0f), false };
         }
     }
     // Animation pulse based on time and audio level

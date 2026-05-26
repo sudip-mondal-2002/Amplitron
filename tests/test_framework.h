@@ -141,4 +141,18 @@ private:
         TestFramework::TestSuite::instance().fail(ss.str()); return; \
     }} while(0)
 
+#define ASSERT_THROW(expr, ExceptionType) \
+    do { \
+        bool caught = false; \
+        try { \
+            (expr); \
+        } catch (const ExceptionType&) { \
+            caught = true; \
+        } catch (...) {} \
+        if (!caught) { \
+            std::ostringstream ss; ss << "ASSERT_THROW failed: " #expr " did not throw " #ExceptionType " (line " << __LINE__ << ")"; \
+            TestFramework::TestSuite::instance().fail(ss.str()); return; \
+        } \
+    } while(0)
+
 } // namespace TestFramework
