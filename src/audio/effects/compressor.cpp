@@ -47,6 +47,8 @@ void Compressor::process(float* buffer, int num_samples) {
 
 void Compressor::reset() {
     env_.reset();
+    smoothed_attack_ms_ = params_[2].value;
+    smoothed_release_ms_ = params_[3].value;
 }
 
 } // namespace Amplitron
