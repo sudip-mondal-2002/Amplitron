@@ -72,6 +72,14 @@ void Equalizer::reset() {
     low_shelf_.reset();
     mid_peak_.reset();
     high_shelf_.reset();
+    bass_state_     = params_[0].value;
+    mid_state_      = params_[1].value;
+    treble_state_   = params_[2].value;
+    presence_state_ = params_.size() > 3 ? params_[3].value : 0.0f;
+    cached_bass_     = -999.0f;
+    cached_mid_      = -999.0f;
+    cached_treble_   = -999.0f;
+    cached_presence_ = -999.0f;
 }
 
 } // namespace Amplitron
