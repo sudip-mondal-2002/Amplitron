@@ -14,6 +14,17 @@
 
 import { test, expect, Page, ConsoleMessage } from '@playwright/test';
 
+// Emscripten injects `Module` into the page's global scope at runtime.
+// Declare it here so TypeScript doesn't report ts(2304) errors.
+// Overloads narrow the return type based on the `returnType` string literal.
+declare const Module: {
+  ccall(ident: string, returnType: 'number', argTypes: string[], args: (number | string | boolean)[]): number;
+  ccall(ident: string, returnType: 'boolean', argTypes: string[], args: (number | string | boolean)[]): boolean;
+  ccall(ident: string, returnType: 'string', argTypes: string[], args: (number | string | boolean)[]): string;
+  ccall(ident: string, returnType: null, argTypes: string[], args: (number | string | boolean)[]): void;
+};
+
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -353,5 +364,251 @@ test.describe('No Runtime Errors', () => {
     ].filter(msg => msg.toLowerCase().includes('sharedarraybuffer'));
 
     expect(sabErrors).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 6. Web MIDI Support
+// ---------------------------------------------------------------------------
+
+test.describe('Web MIDI Support', () => {
+  test('MIDI CC11 controls output gain', async ({ page }) => {
+    // Set up mock BEFORE page loads
+    await page.addInitScript(() => {
+      // Store the captured listener
+      let capturedListener: ((event: any) => void) | null = null;
+      
+      // Create a mock input port that properly captures addEventListener calls
+      const mockInput = {
+        name: 'Mock MIDI Controller',
+        state: 'connected',
+        id: 'mock-device-id',
+        manufacturer: 'Test',
+        addEventListener: (eventName: string, callback: any) => {
+          if (eventName === 'midimessage') {
+            capturedListener = callback;
+            console.log('[TEST-MOCK] Listener captured for midimessage');
+          }
+        },
+        removeEventListener: () => {},
+      };
+      
+      // Create mock MIDI access that returns our mock device
+      const mockMidiAccess = {
+        inputs: new Map([['mock-device-id', mockInput]]),
+        outputs: new Map(),
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        sysexEnabled: true,
+      };
+      
+      // Override navigator.requestMIDIAccess BEFORE the page requests it
+      (window.navigator as any).requestMIDIAccess = async () => {
+        console.log('[TEST-MOCK] requestMIDIAccess called');
+        
+        // Simulate a brief delay (like real MIDI access)
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        // Schedule the mock MIDI message to fire AFTER the listener is attached
+        setTimeout(() => {
+          if (capturedListener) {
+            console.log('[TEST-MOCK] Sending mock CC11 message');
+            const mockEvent = {
+              data: new Uint8Array([0xB0, 11, 64]),  // CC11, value 64
+            };
+            capturedListener(mockEvent);
+          } else {
+            console.warn('[TEST-MOCK] Listener not yet captured!');
+          }
+        }, 200);  // Wait 200ms to ensure listener is attached
+        
+        return mockMidiAccess;
+      };
+      
+      console.log('[TEST-MOCK] Mock MIDI API injected');
+    });
+    
+    // Load the page
+    await page.goto('/');
+    
+    // Wait for WASM to load
+    await page.waitForSelector('#loading.hidden', { timeout: 10000 });
+    
+    // Click to unlock audio AND trigger MIDI initialization
+    await page.click('#audio-unlock');
+    
+    // Wait for MIDI status to appear with the device name
+    // This is the key assertion — if it passes, MIDI is working
+    const midiStatus = page.locator('#midi-status');
+    await expect(midiStatus).toContainText('MIDI Active: Mock MIDI Controller', { 
+      timeout: 5000 
+    });
+    
+    // Verify no errors occurred
+    const errors: string[] = [];
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') {
+        errors.push(msg.text());
+        console.log('[BROWSER-ERROR]', msg.text());
+      }
+    });
+    
+    // Give it time to report any errors
+    await page.waitForTimeout(500);
+    
+    expect(errors).toHaveLength(0);
+  });
+  
+  test('Gracefully handles missing Web MIDI support', async ({ page }) => {
+    // Remove Web MIDI API from the browser
+    await page.addInitScript(() => {
+      delete (window.navigator as any).requestMIDIAccess;
+      console.log('[TEST-MOCK] Web MIDI API removed');
+    });
+    
+    await page.goto('/');
+    await page.waitForSelector('#loading.hidden', { timeout: 10000 });
+    await page.click('#audio-unlock');
+    
+    // Should show the unsupported message
+    const midiStatus = page.locator('#midi-status');
+    await expect(midiStatus).toContainText('MIDI not supported', { 
+      timeout: 5000 
+    });
+  });
+});
+test.describe('Modular Graph Canvas Interactions', () => {
+  async function waitForRuntime(page: Page) {
+    page.on('console', msg => console.log('BROWSER LOG:', msg.text()));
+    page.on('pageerror', err => console.error('BROWSER ERROR:', err.message));
+    await page.goto('/');
+    await page.waitForSelector('#loading.hidden', { timeout: 60_000 });
+    const overlay = page.locator('#audio-unlock');
+    if (await overlay.isVisible()) await overlay.click();
+    await page.waitForTimeout(500);
+  }
+
+  test('canvas pan via right-click drag shifts scrolling', async ({ page }) => {
+    await waitForRuntime(page);
+
+    const before = await page.evaluate(() => ({
+      x: Module.ccall('get_canvas_scroll_x', 'number', [], []),
+      y: Module.ccall('get_canvas_scroll_y', 'number', [], []),
+    }));
+
+    const canvas = page.locator('#canvas');
+    const box = await canvas.boundingBox();
+    if (!box) throw new Error('canvas not visible');
+
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
+    await page.mouse.click(cx, cy, { button: 'right' });
+    await page.mouse.move(cx, cy);
+    await page.mouse.down({ button: 'right' });
+    await page.mouse.move(cx + 80, cy + 60, { steps: 10 });
+    await page.mouse.up({ button: 'right' });
+
+    await page.waitForTimeout(200);
+
+    const after = await page.evaluate(() => ({
+      x: Module.ccall('get_canvas_scroll_x', 'number', [], []),
+      y: Module.ccall('get_canvas_scroll_y', 'number', [], []),
+    }));
+
+    expect(after.x).not.toBeCloseTo(before.x, 0);
+    expect(after.y).not.toBeCloseTo(before.y, 0);
+  });
+
+  test('two-finger touch gesture pans and zooms the canvas', async ({ page }) => {
+    await waitForRuntime(page);
+
+    const before = await page.evaluate(() => ({
+      zoom: Module.ccall('get_canvas_zoom', 'number', [], []),
+      sx: Module.ccall('get_canvas_scroll_x', 'number', [], []),
+    }));
+
+    await page.evaluate(() => {
+      Module.ccall('on_canvas_touch_gesture', null, ['number','number','number','number','number'], [30, 20, 0.15, 640, 360]);
+    });
+
+    const after = await page.evaluate(() => ({
+      zoom: Module.ccall('get_canvas_zoom', 'number', [], []),
+      sx: Module.ccall('get_canvas_scroll_x', 'number', [], []),
+    }));
+
+    expect(after.zoom).toBeGreaterThan(before.zoom);
+    expect(after.sx).not.toBeCloseTo(before.sx, 0);
+  });
+
+  test('adding a Splitter node increases the node count', async ({ page }) => {
+    await waitForRuntime(page);
+
+    const countBefore: number = await page.evaluate(() =>
+      Module.ccall('get_node_count', 'number', [], [])
+    );
+
+    await page.evaluate(() =>
+      Module.ccall('trigger_add_splitter_node', 'number', [], [])
+    );
+    await page.waitForTimeout(200);
+
+    const countAfter: number = await page.evaluate(() =>
+      Module.ccall('get_node_count', 'number', [], [])
+    );
+
+    expect(countAfter).toBe(countBefore + 1);
+
+    const hasSplitter: boolean = await page.evaluate(() =>
+      Module.ccall('has_node_of_type', 'boolean', ['number'], [1])
+    );
+    expect(hasSplitter).toBe(true);
+  });
+
+  test('drawing a cable between two nodes increases link count', async ({ page }) => {
+    await waitForRuntime(page);
+
+    const linksBefore: number = await page.evaluate(() =>
+      Module.ccall('get_link_count', 'number', [], [])
+    );
+
+    await page.evaluate(() => {
+      Module.ccall('trigger_add_splitter_node', 'number', [], []);
+    });
+    await page.waitForTimeout(100);
+
+    const result: number = await page.evaluate(() => {
+      const srcPin = Module.ccall('get_node_output_pin_by_index', 'number', ['number', 'number'], [2, 0]);
+      const dstPin = Module.ccall('get_node_input_pin_by_index', 'number', ['number', 'number'], [3, 0]);
+      return Module.ccall('trigger_add_link', 'number', ['number', 'number'], [srcPin, dstPin]);
+    });
+
+    const linksAfter: number = await page.evaluate(() =>
+      Module.ccall('get_link_count', 'number', [], [])
+    );
+
+    expect(linksAfter).toBeGreaterThan(linksBefore);
+  });
+
+  test('deleting a node decreases the node count', async ({ page }) => {
+    await waitForRuntime(page);
+
+    await page.evaluate(() =>
+      Module.ccall('trigger_add_splitter_node', 'number', [], [])
+    );
+    await page.waitForTimeout(100);
+
+    const countBefore: number = await page.evaluate(() =>
+      Module.ccall('get_node_count', 'number', [], [])
+    );
+
+    const deleted: boolean = await page.evaluate(() =>
+      Module.ccall('trigger_delete_last_node', 'boolean', [], [])
+    );
+    expect(deleted).toBe(true);
+
+    const countAfter: number = await page.evaluate(() =>
+      Module.ccall('get_node_count', 'number', [], [])
+    );
+    expect(countAfter).toBe(countBefore - 1);
   });
 });

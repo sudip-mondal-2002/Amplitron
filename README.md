@@ -1,5 +1,6 @@
 # Amplitron - Guitar Amp Simulator
 
+
 [![CI Build](https://github.com/sudip-mondal-2002/Amplitron/actions/workflows/ci.yml/badge.svg)](https://github.com/sudip-mondal-2002/Amplitron/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/badge/coverage-report-blue)](https://github.com/sudip-mondal-2002/Amplitron/actions/workflows/ci.yml)
 [![Release](https://github.com/sudip-mondal-2002/Amplitron/actions/workflows/release.yml/badge.svg)](https://github.com/sudip-mondal-2002/Amplitron/actions/workflows/release.yml)

@@ -3,16 +3,24 @@
 
 namespace Amplitron {
 
-void AudioEngine::sync_graph_with_dummy_effects() {
+void AudioEngine::sync_graph_with_dummy_effects(bool reset_graph) {
     {
         std::lock_guard<std::mutex> lock(effect_mutex_);
+        if (reset_graph) {
+            main_graph_ = AudioGraph();
+        }
         
         if (main_graph_.get_nodes().empty()) {
             // 1. INITIAL SETUP: Reset the main graph model completely and auto-wire
             main_graph_ = AudioGraph();
             
+            float cursor_x = 40.0f;
+            float cursor_y = 60.0f;
+            
             int input_node_id = main_graph_.add_node("Input", NodeRoutingType::StandardEffect, nullptr);
             main_graph_.set_node_as_input(input_node_id, true);
+            main_graph_.set_node_position(input_node_id, cursor_x, cursor_y);
+            cursor_x += 160.0f; // Input node is narrower
             
             int prev_output_pin = main_graph_.get_nodes().back().output_pin_ids.empty() ? -1 : main_graph_.get_nodes().back().output_pin_ids[0];
             
@@ -21,6 +29,8 @@ void AudioEngine::sync_graph_with_dummy_effects() {
                 fx->set_sample_rate(sample_rate_);
                 fx->reset();
                 int node_id = main_graph_.add_node(fx->name(), NodeRoutingType::StandardEffect, fx);
+                main_graph_.set_node_position(node_id, cursor_x, cursor_y);
+                cursor_x += 230.0f; // Standard pedals width + comfortable gap
                 
                 // Output routing will be handled dynamically at the end
                 
@@ -101,6 +111,11 @@ void AudioEngine::remove_effect(int index) {
         dummy_effects_.erase(dummy_effects_.begin() + index);
         sync_graph_with_dummy_effects();
     }
+}
+
+void AudioEngine::clear_effects() {
+    dummy_effects_.clear();
+    sync_graph_with_dummy_effects(true);
 }
 
 void AudioEngine::move_effect(int from, int to) {

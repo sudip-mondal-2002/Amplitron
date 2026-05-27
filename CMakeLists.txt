@@ -36,17 +36,31 @@ endif()
 # Single-header C++17 JSON library used for preset serialization /
 # deserialization.  We disable nlohmann's own tests and install rules so
 # they don't pollute the Amplitron build.
-include(FetchContent)
-FetchContent_Declare(
-    nlohmann_json
-    GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG        v3.11.3
-    GIT_SHALLOW    TRUE
-)
-set(JSON_BuildTests OFF CACHE INTERNAL "Disable nlohmann/json tests")
-set(JSON_Install    OFF CACHE INTERNAL "Disable nlohmann/json install")
-FetchContent_MakeAvailable(nlohmann_json)
+find_package(nlohmann_json QUIET)
+if(NOT nlohmann_json_FOUND)
+    include(FetchContent)
+    FetchContent_Declare(
+        nlohmann_json
+        GIT_REPOSITORY https://github.com/nlohmann/json.git
+        GIT_TAG        v3.11.3
+        GIT_SHALLOW    TRUE
+    )
+    set(JSON_BuildTests OFF CACHE INTERNAL "Disable nlohmann/json tests")
+    set(JSON_Install    OFF CACHE INTERNAL "Disable nlohmann/json install")
+    FetchContent_MakeAvailable(nlohmann_json)
+endif()
 # ---------------------------------------------------------------------------
+
+file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/external")
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/external/nanosvg.h" OR
+   NOT EXISTS "${CMAKE_SOURCE_DIR}/external/nanosvgrast.h" OR
+   NOT EXISTS "${CMAKE_SOURCE_DIR}/external/dr_wav.h")
+    message(FATAL_ERROR
+        "Missing external header dependencies in external/. "
+        "Run scripts/setup_dependencies.sh (Linux/macOS) or "
+        "scripts/setup_dependencies.ps1 (Windows) to fetch nanosvg and dr_wav.")
+endif()
+
 
 # --- Dependencies ---
 # Emscripten provides SDL2, OpenGL ES, and audio via built-in ports.
@@ -148,8 +162,8 @@ endif()
 set(APP_SOURCES
     src/main.cpp
     src/SessionManager.h
-    src/preset_manager.cpp
-    src/preset_json.cpp
+    src/presets/preset_manager.cpp
+    src/presets/preset_json.cpp
     src/audio/audio_engine.cpp
     src/audio/audio_engine_chain.cpp
     src/audio/audio_engine_process.cpp
@@ -168,6 +182,7 @@ set(APP_SOURCES
     src/audio/effects/equalizer.cpp
     src/audio/effects/noise_gate.cpp
     src/audio/effects/compressor.cpp
+    src/audio/effects/multiband_compressor.cpp
     src/audio/effects/looper.cpp
     src/audio/effects/cabinet_sim.cpp
     src/audio/effects/amp_simulator.cpp
@@ -196,15 +211,15 @@ set(APP_SOURCES
     src/gui/pedal_widget_knobs.cpp
     src/gui/command_history.cpp
     src/gui/gui_snapshots.cpp
-    src/preset_manager_dirs.cpp
-    src/preset_manager_io.cpp
+    src/presets/preset_manager_dirs.cpp
+    src/presets/preset_manager_io.cpp
     src/audio/audio_graph.cpp
     src/audio/audio_graph_executor.cpp
 )
 
 # --- MIDI Support (desktop only) ---
 set(MIDI_SOURCES)
-if(NOT EMSCRIPTEN AND NOT ANDROID AND NOT IOS)
+if(NOT ANDROID AND NOT IOS)
     list(APPEND MIDI_SOURCES
         src/midi/midi_manager.cpp
         src/midi/midi_manager_mapping.cpp
@@ -285,6 +300,7 @@ if(EMSCRIPTEN)
 
     target_include_directories(Amplitron PRIVATE
         ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/presets
         ${CMAKE_SOURCE_DIR}/external
         ${CMAKE_SOURCE_DIR}/external/kiss_fft
         ${IMGUI_DIR}
@@ -292,7 +308,7 @@ if(EMSCRIPTEN)
     )
 
     # OpenGL ES 3 for ImGui's OpenGL3 backend on WebGL 2
-    target_compile_definitions(Amplitron PRIVATE IMGUI_IMPL_OPENGL_ES3 AMPLITRON_VERSION="${AMPLITRON_VERSION}" AMPLITRON_NO_MIDI)
+    target_compile_definitions(Amplitron PRIVATE IMGUI_IMPL_OPENGL_ES3 AMPLITRON_VERSION="${AMPLITRON_VERSION}")
 
     target_link_libraries(Amplitron PRIVATE nlohmann_json::nlohmann_json)
 
@@ -344,6 +360,7 @@ elseif(ANDROID)
 
     target_include_directories(main PRIVATE
         ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/presets
         ${CMAKE_SOURCE_DIR}/external
         ${CMAKE_SOURCE_DIR}/external/kiss_fft
         ${IMGUI_DIR}
@@ -386,6 +403,7 @@ elseif(IOS)
 
     target_include_directories(Amplitron PRIVATE
         ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/presets
         ${CMAKE_SOURCE_DIR}/external
         ${CMAKE_SOURCE_DIR}/external/kiss_fft
         ${IMGUI_DIR}
@@ -444,6 +462,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
 
     target_include_directories(Amplitron PRIVATE
         ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/presets
         ${CMAKE_SOURCE_DIR}/external
         ${CMAKE_SOURCE_DIR}/external/kiss_fft
         ${IMGUI_DIR}
@@ -486,31 +505,55 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
     # --- Test Target ---
     set(TEST_SOURCES
         tests/test_main.cpp
-        tests/test_common.cpp
-        tests/test_oboe_ring_buffer.cpp
-        tests/test_effects.cpp
-        tests/test_looper.cpp
-        tests/test_preset_manager.cpp
-        tests/test_json_serialization.cpp
-        tests/test_recorder.cpp
-        tests/test_theme.cpp
-        tests/test_command_history.cpp
-        tests/test_snapshot_manager.cpp
-        tests/test_cabinet_sim_ir.cpp
-        tests/test_midi_manager.cpp
-        tests/test_unsaved_preset.cpp
-        tests/test_audio_graph.cpp
-        tests/test_metronome.cpp
-        tests/test_gui_manager.cpp
-        tests/test_clipboard_preset.cpp
+        tests/unit/test_common.cpp
+        tests/unit/test_oboe_ring_buffer.cpp
+        tests/unit/test_effects_dynamics.cpp
+        tests/unit/test_effects_saturation.cpp
+        tests/unit/test_effects_filter.cpp
+        tests/unit/test_effects_modulation.cpp
+        tests/unit/test_effects_spatial.cpp
+        tests/unit/test_effects_pitch.cpp
+        tests/unit/test_effects_utility.cpp
+        tests/unit/test_looper.cpp
+        tests/unit/test_theme.cpp
+        tests/unit/test_command_history.cpp
+        tests/unit/test_cabinet_sim_ir.cpp
+        tests/unit/test_wav_loader.cpp
+        tests/unit/test_convolution_engine.cpp
+        tests/integration/test_preset_manager.cpp
+        tests/integration/test_json_serialization.cpp
+        tests/integration/test_recorder.cpp
+        tests/integration/test_snapshot_manager.cpp
+        tests/integration/test_midi_manager.cpp
+        tests/integration/test_unsaved_preset.cpp
+        tests/integration/test_audio_graph.cpp
+        tests/integration/test_metronome.cpp
+        tests/integration/test_clipboard_preset.cpp
+        tests/integration/test_audio_engine.cpp
+        tests/integration/test_audio_backend_portaudio.cpp
+        tests/e2e/test_e2e_preset_workflow.cpp
+        tests/ui/test_gui_manager.cpp
+        tests/ui/test_pedal_board.cpp
+        tests/ui/test_crash_recovery.cpp
+        tests/ui/test_gui_commands.cpp
+        tests/ui/test_spectrum_analyzer.cpp
+        tests/ui/test_gui_presets.cpp
+        tests/ui/test_gui_snapshots.cpp
+        tests/ui/test_gui_midi.cpp
+        tests/ui/test_gui_recording.cpp
+        tests/ui/test_gui_tuner.cpp
+        tests/ui/test_gui_components.cpp
+        tests/unit/test_session_manager.cpp
+        tests/unit/test_cli.cpp
+        tests/integration/test_main.cpp
     )
 
     # Effect + core sources needed by tests (no GUI, no main)
     set(CORE_SOURCES
-        src/preset_manager.cpp
-        src/preset_json.cpp
-        src/preset_manager_dirs.cpp
-        src/preset_manager_io.cpp
+        src/presets/preset_manager.cpp
+        src/presets/preset_json.cpp
+        src/presets/preset_manager_dirs.cpp
+        src/presets/preset_manager_io.cpp
         src/audio/audio_engine.cpp
         src/audio/audio_engine_chain.cpp
         src/audio/audio_engine_process.cpp
@@ -533,6 +576,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         src/audio/effects/equalizer.cpp
         src/audio/effects/noise_gate.cpp
         src/audio/effects/compressor.cpp
+        src/audio/effects/multiband_compressor.cpp
         src/audio/effects/looper.cpp
         src/audio/effects/cabinet_sim.cpp
         src/audio/effects/amp_simulator.cpp
@@ -553,10 +597,43 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         src/midi/midi_manager_persist.cpp
     )
 
-    add_executable(amplitron-tests ${TEST_SOURCES} ${CORE_SOURCES} ${KISS_FFT_SOURCES})
+    # GUI + ImGui + platform-specific sources for testing
+    set(TEST_GUI_SOURCES
+        src/gui/gui_manager.cpp
+        src/gui/gui_manager_frame.cpp
+        src/gui/gui_manager_menu.cpp
+        src/gui/gui_manager_update.cpp
+        src/gui/gui_settings.cpp
+        src/gui/gui_presets.cpp
+        src/gui/gui_recording.cpp
+        src/gui/gui_tuner.cpp
+        src/gui/gui_analyzer.cpp
+        src/gui/spectrum_analyzer.cpp
+        src/gui/pedal_board.cpp
+        src/gui/pedal_board_menu.cpp
+        src/gui/pedal_board_chain.cpp
+        src/gui/pedal_widget.cpp
+        src/gui/pedal_widget_body.cpp
+        src/gui/pedal_widget_knobs.cpp
+        src/gui/gui_snapshots.cpp
+        ${IMGUI_SOURCES}
+    )
+    if(EMSCRIPTEN OR IOS OR ANDROID)
+        list(APPEND TEST_GUI_SOURCES src/gui/file_dialog_web.cpp)
+    else()
+        list(APPEND TEST_GUI_SOURCES
+            src/gui/gui_midi.cpp
+            src/gui/file_dialog_native.cpp
+            src/gui/file_dialog_native_open.cpp
+            src/gui/file_dialog_native_folder.cpp
+        )
+    endif()
+
+    add_executable(amplitron-tests ${TEST_SOURCES} ${CORE_SOURCES} ${TEST_GUI_SOURCES} ${KISS_FFT_SOURCES})
 
     target_include_directories(amplitron-tests PRIVATE
         ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/presets
         ${CMAKE_SOURCE_DIR}/external
         ${CMAKE_SOURCE_DIR}/external/kiss_fft
         ${CMAKE_SOURCE_DIR}/tests
@@ -569,9 +646,27 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
     )
 
     # ============================================================
-    # DEFINE AMPLITRON_HAS_MIDI FOR TEST BUILDS
+    # DEFINE AMPLITRON_HAS_MIDI AND AMPLITRON_VERSION FOR TEST BUILDS
     # ============================================================
-    target_compile_definitions(amplitron-tests PRIVATE AMPLITRON_HAS_MIDI)
+    target_compile_definitions(amplitron-tests PRIVATE 
+        AMPLITRON_HAS_MIDI
+        AMPLITRON_VERSION="${AMPLITRON_VERSION}"
+        AMPLITRON_HEADLESS
+        SDL_MAIN_HANDLED
+        "Pa_GetDeviceCount=MOCK_Pa_GetDeviceCount"
+        "Pa_GetDeviceInfo=MOCK_Pa_GetDeviceInfo"
+        "Pa_GetHostApiInfo=MOCK_Pa_GetHostApiInfo"
+        "Pa_GetHostApiCount=MOCK_Pa_GetHostApiCount"
+        "Pa_HostApiDeviceIndexToDeviceIndex=MOCK_Pa_HostApiDeviceIndexToDeviceIndex"
+        "Pa_GetDefaultInputDevice=MOCK_Pa_GetDefaultInputDevice"
+        "Pa_GetDefaultOutputDevice=MOCK_Pa_GetDefaultOutputDevice"
+        "Pa_OpenStream=MOCK_Pa_OpenStream"
+        "Pa_StartStream=MOCK_Pa_StartStream"
+        "Pa_StopStream=MOCK_Pa_StopStream"
+        "Pa_CloseStream=MOCK_Pa_CloseStream"
+        "Pa_GetStreamInfo=MOCK_Pa_GetStreamInfo"
+        "Pa_Initialize=MOCK_Pa_Initialize"
+    )
 
     target_link_libraries(amplitron-tests PRIVATE
         nlohmann_json::nlohmann_json

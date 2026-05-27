@@ -72,6 +72,50 @@ void MidiManager::install_default_mappings() {
     cc74.effect_name = "WahPedal";
     cc74.param_name = "Sweep";
     add_mapping(cc74);
+
+#ifdef __EMSCRIPTEN__
+    // Web-specific MIDI defaults
+    
+    // CC11 (Expression pedal) → Output Gain
+    MidiMapping cc11_output;
+    cc11_output.cc_number = 11;
+    cc11_output.midi_channel = -1;  // Respond on any channel
+    cc11_output.target_type = MidiTargetType::OutputGain;
+    cc11_output.mode = MidiMappingMode::Continuous;
+    add_mapping(cc11_output);
+    
+    // CC7 (Volume) → Also Output Gain (alternative)
+    MidiMapping cc7_output;
+    cc7_output.cc_number = 7;
+    cc7_output.midi_channel = -1;
+    cc7_output.target_type = MidiTargetType::OutputGain;
+    cc7_output.mode = MidiMappingMode::Continuous;
+    add_mapping(cc7_output);
+    
+    // CC64 (Sustain/Damper pedal) → Bypass toggle
+    // (Already implemented as EffectBypass for AmpSimulator above, 
+    // but redefined here explicitly for Web defaults)
+
+    // CC64 (Sustain) → acts as bypass via OutputGain toggle (web fallback)
+    
+    // CC1 (Modulation) → EffectParam (e.g., Chorus Depth)
+    MidiMapping cc1_mod;
+    cc1_mod.cc_number = 1;
+    cc1_mod.midi_channel = -1;
+    cc1_mod.target_type = MidiTargetType::EffectParam;
+    cc1_mod.mode = MidiMappingMode::Continuous;
+    cc1_mod.effect_name = "Chorus";
+    cc1_mod.param_name = "Depth";
+    add_mapping(cc1_mod);
+
+    MidiMapping cc64_bypass;
+    cc64_bypass.cc_number = 64;
+    cc64_bypass.midi_channel = -1;
+    cc64_bypass.target_type = MidiTargetType::EffectBypass;
+    cc64_bypass.mode = MidiMappingMode::Toggle;
+    cc64_bypass.effect_name = "AmpSimulator";
+    add_mapping(cc64_bypass);
+#endif
 }
 
 // ---------------------------------------------------------------------------
@@ -160,7 +204,6 @@ void MidiManager::apply_mapping(const MidiMapping& mapping, int cc_value,
 
     switch (mapping.target_type) {
         case MidiTargetType::InputGain: {
-            // Map 0-127 to 0.0-2.0 (same range as GUI gain knob)
             float gain = normalized * 2.0f;
             engine.set_input_gain(gain);
             break;
@@ -175,11 +218,18 @@ void MidiManager::apply_mapping(const MidiMapping& mapping, int cc_value,
             auto& effects = engine.effects();
             for (int i = 0; i < static_cast<int>(effects.size()); ++i) {
                 if (effects[i]->name() == mapping.effect_name) {
-                    bool enabled = (mapping.mode == MidiMappingMode::Toggle)
-                                     ? (cc_value >= 64)
-                                     : (normalized > 0.5f);
-                    effects[i]->set_enabled(enabled);
-                    engine.push_effect_enabled(i, enabled ? 1.0f : 0.0f);
+                    bool is_pressed = (cc_value >= 64);
+
+                    // Toggle on either edge: press (false→true) or release (true→false)
+                    if (is_pressed != mapping.last_state) {
+                        effects[i]->set_enabled(!effects[i]->is_enabled());
+                        engine.push_effect_enabled(i, effects[i]->is_enabled() ? 1.0f : 0.0f);
+
+                        printf("[DEBUG] AmpSimulator BYPASS TOGGLED\n");
+                    }
+
+                    // Update state for next event
+                    mapping.last_state = is_pressed;
                     break;
                 }
             }

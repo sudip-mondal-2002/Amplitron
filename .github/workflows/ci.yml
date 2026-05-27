@@ -44,16 +44,7 @@ jobs:
 
       - name: Setup External Dependencies
         run: |
-          mkdir -p external external/kiss_fft
-          git clone --depth 1 --branch v1.90.1 https://github.com/ocornut/imgui.git external/imgui &
-          curl -fsSL -o external/nanosvg.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h &
-          curl -fsSL -o external/nanosvgrast.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h &
-          curl -fsSL -o external/dr_wav.h https://raw.githubusercontent.com/mackron/dr_libs/master/dr_wav.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.c https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.c &
-          curl -fsSL -o external/kiss_fft/_kiss_fft_guts.h https://raw.githubusercontent.com/mborgerding/kissfft/master/_kiss_fft_guts.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft_log.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft_log.h &
-          wait
+          bash ./scripts/setup_dependencies.sh
 
       - name: Generate Version
         id: version
@@ -75,11 +66,28 @@ jobs:
       - name: Run Tests
         run: cd build && ./amplitron-tests
 
+      - name: Install Smoke Test
+        env:
+          INSTALL_PREFIX: ${{ runner.temp }}/amplitron-install
+        run: |
+          make PREFIX="$INSTALL_PREFIX" install
+          test -x "$INSTALL_PREFIX/bin/Amplitron"
+          "$INSTALL_PREFIX/bin/Amplitron" --version | grep -q "Amplitron v1.0"
+
+      - name: Uninstall Smoke Test
+        env:
+          INSTALL_PREFIX: ${{ runner.temp }}/amplitron-install
+        run: |
+          make PREFIX="$INSTALL_PREFIX" uninstall
+          test ! -e "$INSTALL_PREFIX/bin/Amplitron"
+          test ! -e "$INSTALL_PREFIX/share/amplitron"
+          test ! -e "$INSTALL_PREFIX/bin/assets"
+
       - name: Package Build Data for Coverage
         run: tar -czf build-coverage.tar.gz build/
 
       - name: Upload Build Artifact for Coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-coverage
           path: build-coverage.tar.gz
@@ -108,7 +116,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends lcov
 
       - name: Download Build Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: build-coverage
           path: .
@@ -170,7 +178,7 @@ jobs:
 
       - name: Upload PR Coverage Artifact
         if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pr-coverage-comment
           path: pr_coverage/
@@ -205,16 +213,7 @@ jobs:
 
       - name: Setup External Dependencies
         run: |
-          mkdir -p external external/kiss_fft
-          git clone --depth 1 --branch v1.90.1 https://github.com/ocornut/imgui.git external/imgui &
-          curl -fsSL -o external/nanosvg.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h &
-          curl -fsSL -o external/nanosvgrast.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h &
-          curl -fsSL -o external/dr_wav.h https://raw.githubusercontent.com/mackron/dr_libs/master/dr_wav.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.c https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.c &
-          curl -fsSL -o external/kiss_fft/_kiss_fft_guts.h https://raw.githubusercontent.com/mborgerding/kissfft/master/_kiss_fft_guts.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft_log.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft_log.h &
-          wait
+          bash ./scripts/setup_dependencies.sh
 
       - name: Generate Version
         id: version
@@ -239,6 +238,23 @@ jobs:
 
       - name: Run Tests
         run: cd build && ./amplitron-tests
+
+      - name: Install Smoke Test
+        env:
+          INSTALL_PREFIX: ${{ runner.temp }}/amplitron-install
+        run: |
+          make PREFIX="$INSTALL_PREFIX" install
+          test -x "$INSTALL_PREFIX/bin/Amplitron"
+          "$INSTALL_PREFIX/bin/Amplitron" --version | grep -q "Amplitron v1.0"
+
+      - name: Uninstall Smoke Test
+        env:
+          INSTALL_PREFIX: ${{ runner.temp }}/amplitron-install
+        run: |
+          make PREFIX="$INSTALL_PREFIX" uninstall
+          test ! -e "$INSTALL_PREFIX/bin/Amplitron"
+          test ! -e "$INSTALL_PREFIX/share/amplitron"
+          test ! -e "$INSTALL_PREFIX/bin/assets"
 
       - name: Bundle Dylibs
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -349,16 +365,7 @@ jobs:
 
       - name: Setup External Dependencies
         run: |
-          mkdir -p external external/kiss_fft
-          git clone --depth 1 --branch v1.90.1 https://github.com/ocornut/imgui.git external/imgui &
-          curl -fsSL -o external/nanosvg.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h &
-          curl -fsSL -o external/nanosvgrast.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h &
-          curl -fsSL -o external/dr_wav.h https://raw.githubusercontent.com/mackron/dr_libs/master/dr_wav.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.c https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.c &
-          curl -fsSL -o external/kiss_fft/_kiss_fft_guts.h https://raw.githubusercontent.com/mborgerding/kissfft/master/_kiss_fft_guts.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft_log.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft_log.h &
-          wait
+          bash ./scripts/setup_dependencies.sh
 
       - name: Generate Version
         id: version
@@ -416,12 +423,21 @@ jobs:
         run: npx playwright test
 
       - name: Upload Playwright HTML report
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: tests/web/playwright-report/
           retention-days: 7
+
+      - name: Upload Playwright test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-test-results
+          path: tests/web/test-results/
+          retention-days: 7
+
 
   test-windows:
     name: Test on Windows
@@ -460,16 +476,7 @@ jobs:
       - name: Setup External Dependencies
         shell: msys2 {0}
         run: |
-          mkdir -p external external/kiss_fft
-          git clone --depth 1 --branch v1.90.1 https://github.com/ocornut/imgui.git external/imgui &
-          curl -fsSL -o external/nanosvg.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h &
-          curl -fsSL -o external/nanosvgrast.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h &
-          curl -fsSL -o external/dr_wav.h https://raw.githubusercontent.com/mackron/dr_libs/master/dr_wav.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.c https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.c &
-          curl -fsSL -o external/kiss_fft/_kiss_fft_guts.h https://raw.githubusercontent.com/mborgerding/kissfft/master/_kiss_fft_guts.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft_log.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft_log.h &
-          wait
+          bash ./scripts/setup_dependencies.sh
 
       - name: Generate Version
         shell: msys2 {0}
@@ -496,6 +503,27 @@ jobs:
       - name: Run Tests
         shell: msys2 {0}
         run: cd build && ./amplitron-tests.exe
+
+      - name: Install Smoke Test
+        shell: msys2 {0}
+        env:
+          INSTALL_PREFIX: ${{ runner.temp }}\amplitron-install
+        run: |
+          cmake --install build --prefix "$INSTALL_PREFIX"
+          test -x "$INSTALL_PREFIX/bin/Amplitron.exe"
+          "$INSTALL_PREFIX/bin/Amplitron.exe" --version | grep -q "Amplitron v1.0"
+
+      - name: Uninstall Smoke Test
+        shell: msys2 {0}
+        env:
+          INSTALL_PREFIX: ${{ runner.temp }}\amplitron-install
+        run: |
+          rm -f "$INSTALL_PREFIX/bin/Amplitron.exe"
+          rm -rf "$INSTALL_PREFIX/share/amplitron"
+          rm -rf "$INSTALL_PREFIX/bin/assets"
+          test ! -e "$INSTALL_PREFIX/bin/Amplitron.exe"
+          test ! -e "$INSTALL_PREFIX/share/amplitron"
+          test ! -e "$INSTALL_PREFIX/bin/assets"
 
       - name: Collect Binaries
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -543,16 +571,7 @@ jobs:
 
       - name: Setup External Dependencies
         run: |
-          mkdir -p external external/kiss_fft
-          git clone --depth 1 --branch v1.90.1 https://github.com/ocornut/imgui.git external/imgui &
-          curl -fsSL -o external/nanosvg.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h &
-          curl -fsSL -o external/nanosvgrast.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h &
-          curl -fsSL -o external/dr_wav.h https://raw.githubusercontent.com/mackron/dr_libs/master/dr_wav.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.c https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.c &
-          curl -fsSL -o external/kiss_fft/_kiss_fft_guts.h https://raw.githubusercontent.com/mborgerding/kissfft/master/_kiss_fft_guts.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft_log.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft_log.h &
-          wait
+          bash ./scripts/setup_dependencies.sh
 
       - name: Fetch SDL2 Java bridge
         run: |
@@ -607,16 +626,7 @@ jobs:
 
       - name: Setup External Dependencies
         run: |
-          mkdir -p external external/kiss_fft
-          git clone --depth 1 --branch v1.90.1 https://github.com/ocornut/imgui.git external/imgui &
-          curl -fsSL -o external/nanosvg.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h &
-          curl -fsSL -o external/nanosvgrast.h https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvgrast.h &
-          curl -fsSL -o external/dr_wav.h https://raw.githubusercontent.com/mackron/dr_libs/master/dr_wav.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft.c https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft.c &
-          curl -fsSL -o external/kiss_fft/_kiss_fft_guts.h https://raw.githubusercontent.com/mborgerding/kissfft/master/_kiss_fft_guts.h &
-          curl -fsSL -o external/kiss_fft/kiss_fft_log.h https://raw.githubusercontent.com/mborgerding/kissfft/master/kiss_fft_log.h &
-          wait
+          bash ./scripts/setup_dependencies.sh
 
       - name: Generate Version
         id: version
