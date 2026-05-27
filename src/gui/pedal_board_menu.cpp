@@ -188,7 +188,7 @@ void PedalBoard::render_midi_menu() {
 
         // Learn mode status
         if (midi.is_learning()) {
-            ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f), "⚡ Learn Mode Active");
+            ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f), "[MIDI LEARN ACTIVE]");
             if (ImGui::MenuItem("Cancel Learn Mode", "Esc")) {
                 midi.cancel_learn();
             }
