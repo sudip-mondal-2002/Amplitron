@@ -53,6 +53,9 @@ void Overdrive::process(float* buffer, int num_samples) {
 void Overdrive::reset() {
     tone_lp_.reset();
     dc_block_.reset();
+    smoothed_drive_ = params_[0].value;
+    smoothed_tone_  = params_[1].value;
+    smoothed_level_ = params_[2].value;
 }
 
 } // namespace Amplitron
