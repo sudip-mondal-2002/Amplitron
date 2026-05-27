@@ -7,6 +7,20 @@
 #include <cmath>
 #include <sstream>
 #include <type_traits>
+#include <any>
+#include <memory>
+#include <thread>
+#include <mutex>
+#include <chrono>
+#include <algorithm>
+#include <map>
+#include <unordered_map>
+#include <set>
+#include <unordered_set>
+#include <stdexcept>
+#include <filesystem>
+#include <queue>
+#include <deque>
 
 namespace TestFramework {
 
@@ -23,6 +37,13 @@ struct TestResult {
     std::string name;
     bool passed;
     std::string message;
+};
+
+class Test {
+public:
+    virtual ~Test() = default;
+    virtual void SetUp() {}
+    virtual void TearDown() {}
 };
 
 class TestSuite {
@@ -112,6 +133,29 @@ private:
 
 #define TEST_GET_MACRO(_1, _2, NAME, ...) NAME
 #define TEST(...) TEST_GET_MACRO(__VA_ARGS__, TEST_SUITE_CASE, TEST_SINGLE)(__VA_ARGS__)
+
+#define TEST_F(FixtureName, TestName) \
+    class FixtureName##_##TestName : public FixtureName { \
+    public: \
+        void RunTest(); \
+    }; \
+    static void run_fixture_test_##FixtureName##_##TestName() { \
+        FixtureName##_##TestName t; \
+        t.SetUp(); \
+        try { \
+            t.RunTest(); \
+        } catch (...) { \
+            t.TearDown(); \
+            throw; \
+        } \
+        t.TearDown(); \
+    } \
+    namespace { struct Register_##FixtureName##_##TestName { \
+        Register_##FixtureName##_##TestName() { \
+            TestFramework::TestSuite::instance().add_test(#FixtureName "_" #TestName, run_fixture_test_##FixtureName##_##TestName); \
+        } \
+    } reg_##FixtureName##_##TestName; } \
+    void FixtureName##_##TestName::RunTest()
 
 #define ASSERT_TRUE(expr) \
     do { if (!(expr)) { \
