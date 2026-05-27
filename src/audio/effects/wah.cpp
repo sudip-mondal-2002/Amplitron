@@ -77,8 +77,8 @@ void WahPedal::reset() {
     svf_lp_       = 0.0f;
     svf_bp_       = 0.0f;
     env_.reset();
-    sweep_smooth_ = 0.5f;
-    q_smooth_     = 3.5f;
+    sweep_smooth_ = params_[1].value;
+    q_smooth_     = params_[2].value;
 }
 
 } // namespace Amplitron
