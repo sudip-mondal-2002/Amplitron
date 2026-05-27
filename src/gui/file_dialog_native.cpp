@@ -27,6 +27,12 @@
 
 namespace Amplitron {
 
+#ifdef AMPLITRON_HEADLESS
+std::string show_save_dialog(const std::string&, const std::string&, const std::string&) {
+    return "";
+}
+#else
+
 #ifdef _WIN32
 std::string show_save_dialog(const std::string& default_name,
                              const std::string& filter_desc,
@@ -153,5 +159,7 @@ std::string show_save_dialog(const std::string& default_name,
     return result;
 }
 #endif
+
+#endif // AMPLITRON_HEADLESS
 
 } // namespace Amplitron

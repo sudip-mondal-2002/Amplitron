@@ -46,7 +46,7 @@ public:
 
   // Graph Construction Interface
   int add_node(const std::string &name, NodeRoutingType type,
-               std::shared_ptr<Effect> pedal = nullptr);
+               std::shared_ptr<Effect> pedal = nullptr, int num_inputs = 0);
   bool remove_node(int node_id);
   int add_link(int source_pin_id, int dest_pin_id);
   bool remove_link(int link_id);

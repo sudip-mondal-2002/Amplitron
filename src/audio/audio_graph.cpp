@@ -6,7 +6,7 @@
 namespace Amplitron {
 
 int AudioGraph::add_node(const std::string &name, NodeRoutingType type,
-                         std::shared_ptr<Effect> pedal) {
+                         std::shared_ptr<Effect> pedal, int num_inputs) {
   DSPNode node;
   node.id = next_id_++; // Uses your unified member counter
   node.name = name;
@@ -15,8 +15,10 @@ int AudioGraph::add_node(const std::string &name, NodeRoutingType type,
 
   // Dynamically configure pin structures using the same unified ID pool
   if (type == NodeRoutingType::Mixer || type == NodeRoutingType::MergeSum) {
-    node.input_pin_ids.push_back(next_id_++);  // Input Pin Branch A
-    node.input_pin_ids.push_back(next_id_++);  // Input Pin Branch B
+    int inputs_to_create = (num_inputs > 0) ? num_inputs : 2;
+    for (int i = 0; i < inputs_to_create; ++i) {
+      node.input_pin_ids.push_back(next_id_++);
+    }
     node.output_pin_ids.push_back(next_id_++); // 1 Output Pin
   } else if (type == NodeRoutingType::Splitter) {
     node.input_pin_ids.push_back(next_id_++);  // 1 Input Pin

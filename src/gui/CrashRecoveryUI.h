@@ -8,8 +8,9 @@
  */
 
 inline bool promptRestoreSession() {
-#ifdef __EMSCRIPTEN__
-    return false; // Blocking message boxes aren't supported well in WebAssembly
+#if defined(__EMSCRIPTEN__) || defined(AMPLITRON_HEADLESS)
+    // Blocking message boxes not supported in WebAssembly or headless test builds.
+    return false;
 #else
     if (SDL_WasInit(SDL_INIT_VIDEO) == 0) {
         if (SDL_InitSubSystem(SDL_INIT_VIDEO) < 0) return false;

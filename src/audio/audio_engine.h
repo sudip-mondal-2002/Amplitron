@@ -37,6 +37,8 @@ struct AudioBackendState;
  */
 class AudioEngine {
 public:
+    friend class PortAudioTestSaboteur;
+    
     /** @brief Construct the engine with default settings. */
     AudioEngine();
 

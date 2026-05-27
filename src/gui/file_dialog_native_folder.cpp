@@ -28,6 +28,12 @@
 
 namespace Amplitron {
 
+#ifdef AMPLITRON_HEADLESS
+std::string show_folder_dialog(const std::string&) {
+    return "";
+}
+#else
+
 #ifdef _WIN32
 std::string show_folder_dialog(const std::string& title) {
     BROWSEINFOA bi;
@@ -144,5 +150,7 @@ std::string show_folder_dialog(const std::string& title) {
     return result;
 }
 #endif
+
+#endif // AMPLITRON_HEADLESS
 
 } // namespace Amplitron

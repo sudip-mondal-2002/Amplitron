@@ -17,8 +17,11 @@
 
 namespace Amplitron {
 
+
+
+
 // PortAudio callback
-static int pa_audio_callback(const void* input, void* output,
+int pa_audio_callback(const void* input, void* output,
                               unsigned long frame_count,
                               const PaStreamCallbackTimeInfo* /*time_info*/,
                               PaStreamCallbackFlags /*status_flags*/,
@@ -198,12 +201,7 @@ void AudioEngine::shutdown() {
     }
 }
 
-// Forward declaration for the PortAudio callback
-extern int pa_audio_callback(const void* input, void* output,
-                             unsigned long frame_count,
-                             const void* time_info,
-                             unsigned int status_flags,
-                             void* user_data);
+
 
 bool AudioEngine::start() {
     if (!initialized_ || running_) return false;

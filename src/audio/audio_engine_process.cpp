@@ -301,29 +301,6 @@ void AudioEngine::drain_commands() {
             case AudioCommand::SetOutputGain:
                 output_gain_.store(cmd.value, std::memory_order_relaxed);
                 break;
-            case AudioCommand::ToggleMetronome:
-                metronome_enabled_ = !metronome_enabled_;
-                if (metronome_enabled_) {
-                    metronome_sample_counter_ = 0.0;
-                    metronome_click_samples_remaining_ = 0;
-                    metronome_click_env_ = 0.0f;
-                    metronome_click_phase_ = 0.0f;
-                } else {
-                    metronome_click_samples_remaining_ = 0;
-                    metronome_click_env_ = 0.0f;
-                }
-                break;
-            case AudioCommand::SetMetronomeBpm:
-                metronome_bpm_ = static_cast<int>(cmd.value);
-                update_metronome_timing();
-                if (metronome_sample_counter_ <= 0.0 ||
-                    metronome_sample_counter_ > metronome_samples_per_beat_) {
-                    metronome_sample_counter_ = metronome_samples_per_beat_;
-                }
-                break;
-            case AudioCommand::SetMetronomeVolume:
-                metronome_volume_ = clamp(cmd.value, 0.0f, 1.0f);
-                break;
             default:
                 break;
         }
