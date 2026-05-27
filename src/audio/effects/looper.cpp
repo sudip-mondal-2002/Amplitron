@@ -47,6 +47,8 @@ void Looper::reset() {
     loop_length_ = 0;
     loop_level_smoothed_ = clamp(params_[0].value, 0.0f, 1.0f);
     crossfade_ms_smoothed_ = clamp(params_[1].value, 0.0f, 20.0f);
+    std::fill(buffer_l_.begin(), buffer_l_.end(), 0.0f);
+    std::fill(buffer_r_.begin(), buffer_r_.end(), 0.0f);
     pending_commands_.store(0, std::memory_order_relaxed);
     publish_ui_snapshot();
 }
