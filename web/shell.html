@@ -136,7 +136,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
   ">
-    🎹 Waiting for permission...
+    <svg class="midi-status-icon" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 6px; width: 14px; height: 14px; fill: currentColor; display: inline-block;"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A1,1 0 0,0 11,7V13A1,1 0 0,0 12,14A1,1 0 0,0 13,13V7A1,1 0 0,0 12,6M12,16A1,1 0 0,0 11,17A1,1 0 0,0 12,18A1,1 0 0,0 13,17A1,1 0 0,0 12,16Z"/></svg> Waiting for permission...
   </div>
 
   <!-- Emscripten canvas -->
@@ -249,7 +249,7 @@
       updateMIDIStatus(`MIDI Active: ${firstInputName}`);
       console.log(`[MIDI] Listening on ${inputCount} input port(s)`);
     } else {
-      updateMIDIStatus('📭 No MIDI devices detected (connect a controller)');
+      updateMIDIStatus('No MIDI devices detected (connect a controller)');
     }
     
     // Handle dynamic MIDI port connections/disconnections
@@ -298,10 +298,18 @@
     // Could refresh the device list, but keeping it simple for now
   }
   
+  const SVG_PIANO = '<svg class="midi-status-icon" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 6px; width: 14px; height: 14px; fill: currentColor; display: inline-block;"><path d="M19,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M5,5H7V15H8V5H10V15H11V5H13V15H14V5H16V15H17V5H19V19H5V5Z"/></svg>';
+  const SVG_INFO = '<svg class="midi-status-icon" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 6px; width: 14px; height: 14px; fill: currentColor; display: inline-block;"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A1,1 0 0,0 11,7V13A1,1 0 0,0 12,14A1,1 0 0,0 13,13V7A1,1 0 0,0 12,6M12,16A1,1 0 0,0 11,17A1,1 0 0,0 12,18A1,1 0 0,0 13,17A1,1 0 0,0 12,16Z"/></svg>';
+
   function updateMIDIStatus(message) {
     const statusEl = document.getElementById('midi-status');
     if (statusEl) {
-      statusEl.textContent = message;
+      let icon = SVG_INFO;
+      let cleanMessage = message.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, '').trim();
+      if (cleanMessage.toLowerCase().includes('active')) {
+        icon = SVG_PIANO;
+      }
+      statusEl.innerHTML = icon + ' ' + cleanMessage;
     }
   }
   
