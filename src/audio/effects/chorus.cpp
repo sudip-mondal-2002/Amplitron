@@ -123,6 +123,7 @@ void Chorus::reset() {
     std::fill(delay_buffer_.begin(), delay_buffer_.end(), 0.0f);
     write_pos_ = 0;
     lfo_phase_ = 0.0f;
+    smoothed_rate_ = params_[0].value;
 }
 
 } // namespace Amplitron
