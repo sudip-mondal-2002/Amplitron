@@ -12,10 +12,12 @@ presets/*
 !presets/05_Phase_Shift_Lead.json
 !presets/06_Jet_Flanger.json
 recordings/
+*.log
 
 # IDE
 .vs/
 .vscode/
+.claude/
 *.suo
 *.user
 *.sln
@@ -80,3 +82,9 @@ build-ios/
 *.xcworkspace/
 xcuserdata/
 emsdk/
+
+# Coverage
+*.gcda
+*.gcno
+*.info
+*_html_report/

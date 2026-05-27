@@ -6,6 +6,20 @@
 #include <functional>
 #include <cmath>
 #include <sstream>
+#include <any>
+#include <memory>
+#include <thread>
+#include <mutex>
+#include <chrono>
+#include <algorithm>
+#include <map>
+#include <unordered_map>
+#include <set>
+#include <unordered_set>
+#include <stdexcept>
+#include <filesystem>
+#include <queue>
+#include <deque>
 
 namespace TestFramework {
 
@@ -13,6 +27,13 @@ struct TestResult {
     std::string name;
     bool passed;
     std::string message;
+};
+
+class Test {
+public:
+    virtual ~Test() = default;
+    virtual void SetUp() {}
+    virtual void TearDown() {}
 };
 
 class TestSuite {
@@ -93,6 +114,29 @@ private:
     } reg_##name; } \
     static void test_##name()
 
+#define TEST_F(FixtureName, TestName) \
+    class FixtureName##_##TestName : public FixtureName { \
+    public: \
+        void RunTest(); \
+    }; \
+    static void run_fixture_test_##FixtureName##_##TestName() { \
+        FixtureName##_##TestName t; \
+        t.SetUp(); \
+        try { \
+            t.RunTest(); \
+        } catch (...) { \
+            t.TearDown(); \
+            throw; \
+        } \
+        t.TearDown(); \
+    } \
+    namespace { struct Register_##FixtureName##_##TestName { \
+        Register_##FixtureName##_##TestName() { \
+            TestFramework::TestSuite::instance().add_test(#FixtureName "_" #TestName, run_fixture_test_##FixtureName##_##TestName); \
+        } \
+    } reg_##FixtureName##_##TestName; } \
+    void FixtureName##_##TestName::RunTest()
+
 #define ASSERT_TRUE(expr) \
     do { if (!(expr)) { \
         std::ostringstream ss; ss << "ASSERT_TRUE failed: " #expr " (line " << __LINE__ << ")"; \
@@ -140,5 +184,19 @@ private:
         std::ostringstream ss; ss << "ASSERT_GE failed: " #a " >= " #b " (" << _a << " < " << _b << ") (line " << __LINE__ << ")"; \
         TestFramework::TestSuite::instance().fail(ss.str()); return; \
     }} while(0)
+
+#define ASSERT_THROW(expr, ExceptionType) \
+    do { \
+        bool caught = false; \
+        try { \
+            (expr); \
+        } catch (const ExceptionType&) { \
+            caught = true; \
+        } catch (...) {} \
+        if (!caught) { \
+            std::ostringstream ss; ss << "ASSERT_THROW failed: " #expr " did not throw " #ExceptionType " (line " << __LINE__ << ")"; \
+            TestFramework::TestSuite::instance().fail(ss.str()); return; \
+        } \
+    } while(0)
 
 } // namespace TestFramework

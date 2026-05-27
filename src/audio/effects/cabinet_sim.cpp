@@ -1,5 +1,5 @@
 #include "audio/effects/cabinet_sim.h"
-#include "audio/effect_factory.h"
+#include "audio/effects/effect_factory.h"
 #include "audio/dsp/wav_loader.h"
 #include <algorithm>
 
@@ -35,6 +35,13 @@ CabinetSim::~CabinetSim() {
     // Clean up any unconsumed pending kernel
     ConvolutionKernel* pending = pending_kernel_.exchange(nullptr);
     delete pending;
+
+    // Clean up active kernel
+    delete active_kernel_;
+
+    // Clean up old garbage kernel
+    const ConvolutionKernel* old = old_kernel_to_delete_.exchange(nullptr);
+    delete old;
 }
 
 int CabinetSim::max_ir_samples() const {
@@ -71,17 +78,26 @@ void CabinetSim::clear_ir() {
     ConvolutionKernel* old = pending_kernel_.exchange(nullptr);
     delete old;
 
-    conv_engine_.set_kernel(nullptr);
+    // Safe clear via audio thread callback
+    clear_pending_.store(true, std::memory_order_release);
     expected_block_size_ = 0;
     pending_block_size_.store(0);
 }
 
 bool CabinetSim::has_ir() const {
+    // Sweep and clean up any old kernels on the GUI thread (thread-safe, lock-free GC)
+    const ConvolutionKernel* to_delete = old_kernel_to_delete_.exchange(nullptr, std::memory_order_acquire);
+    delete to_delete;
+
     return !raw_ir_samples_.empty();
 }
 
 void CabinetSim::build_kernel(int block_size) {
     if (raw_ir_samples_.empty() || block_size <= 0) return;
+
+    // Perform a GC sweep on the GUI thread here as well
+    const ConvolutionKernel* to_delete = old_kernel_to_delete_.exchange(nullptr, std::memory_order_acquire);
+    delete to_delete;
 
     auto* kernel = new ConvolutionKernel(raw_ir_samples_, block_size);
     kernel->source_path = ir_path_;
@@ -95,12 +111,33 @@ void CabinetSim::build_kernel(int block_size) {
 }
 
 void CabinetSim::check_pending_kernel() {
+    // 1. Process pending clear commands
+    if (clear_pending_.exchange(false, std::memory_order_acq_rel)) {
+        const ConvolutionKernel* old = active_kernel_;
+        active_kernel_ = nullptr;
+        conv_engine_.set_kernel(nullptr);
+        if (old) {
+            const ConvolutionKernel* prev_old = old_kernel_to_delete_.exchange(old, std::memory_order_release);
+            if (prev_old) {
+                delete prev_old;
+            }
+        }
+    }
+
+    // 2. Process pending kernel updates
     ConvolutionKernel* pending = pending_kernel_.exchange(nullptr,
                                                           std::memory_order_acquire);
     if (pending) {
-        conv_engine_.set_kernel(
-            std::shared_ptr<const ConvolutionKernel>(pending));
+        const ConvolutionKernel* old = active_kernel_;
+        active_kernel_ = pending;
+        conv_engine_.set_kernel(active_kernel_);
         expected_block_size_ = pending->block_size();
+        if (old) {
+            const ConvolutionKernel* prev_old = old_kernel_to_delete_.exchange(old, std::memory_order_release);
+            if (prev_old) {
+                delete prev_old;
+            }
+        }
     }
 
     // Block size mismatch is handled via pending_kernel_ rebuild on the

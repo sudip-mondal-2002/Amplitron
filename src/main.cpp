@@ -1,7 +1,7 @@
 #include "common.h"
-#include "audio/audio_engine.h"
+#include "audio/engine/audio_engine.h"
 #include "gui/gui_manager.h"
-#include "gui/gui_graph_state.h"
+#include "gui/state/gui_graph_state.h"
 #include "preset_manager.h"
 #include "cli.h"
 
@@ -22,8 +22,8 @@
 #include <filesystem>
 
 // New includes for Autosave and Recovery
-#include "SessionManager.h"
-#include "gui/CrashRecoveryUI.h"
+#include "session_manager.h"
+#include "gui/crash_recovery_ui.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
