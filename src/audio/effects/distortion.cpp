@@ -61,6 +61,9 @@ void Distortion::process(float* buffer, int num_samples) {
 
 void Distortion::reset() {
     tone_lp_.reset();
+    drive_smoothed_ = params_[0].value;
+    tone_smoothed_  = params_[1].value;
+    level_smoothed_ = params_[2].value;
 }
 
 } // namespace Amplitron
