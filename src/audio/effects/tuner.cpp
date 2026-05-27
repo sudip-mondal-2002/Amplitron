@@ -1,5 +1,5 @@
 #include "audio/effects/tuner.h"
-#include "audio/effect_factory.h"
+#include "audio/effects/effect_factory.h"
 
 #include <cmath>
 #include <cstring>

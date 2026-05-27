@@ -5,7 +5,7 @@
 // build the decay tail, followed by all-pass filters that diffuse echoes while
 // keeping magnitude roughly flat.
 
-#include "audio/effect.h"
+#include "audio/effects/effect.h"
 
 namespace Amplitron {
 

@@ -4,7 +4,7 @@
 // The Equalizer cascades active biquads H(z)=H_lowShelf(z)*H_peakMid(z)*H_highShelf(z),
 // giving independent low-shelf, peaking-mid, and high-shelf gain control.
 
-#include "audio/effect.h"
+#include "audio/effects/effect.h"
 #include "audio/dsp/biquad.h"
 
 namespace Amplitron {

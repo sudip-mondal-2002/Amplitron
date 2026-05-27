@@ -1,5 +1,5 @@
 #include "midi/midi_manager.h"
-#include "audio/audio_engine.h"
+#include "audio/engine/audio_engine.h"
 
 namespace Amplitron {
 

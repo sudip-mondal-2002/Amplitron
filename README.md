@@ -1,5 +1,6 @@
 # Amplitron - Guitar Amp Simulator
 
+
 [![CI Build](https://github.com/sudip-mondal-2002/Amplitron/actions/workflows/ci.yml/badge.svg)](https://github.com/sudip-mondal-2002/Amplitron/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/badge/coverage-report-blue)](https://github.com/sudip-mondal-2002/Amplitron/actions/workflows/ci.yml)
 [![Release](https://github.com/sudip-mondal-2002/Amplitron/actions/workflows/release.yml/badge.svg)](https://github.com/sudip-mondal-2002/Amplitron/actions/workflows/release.yml)
@@ -307,10 +308,7 @@ You can remove any pedal and add new ones in any order.
 Amplitron/
 ├── CMakeLists.txt                 # Build configuration
 ├── Makefile                       # Convenience wrapper
-├── README.md
-├── CONTRIBUTING.md                # Contribution guidelines
-├── DEPLOYMENT.md                  # CI/CD deployment guide
-├── AGENTS.md                      # System architecture doc
+├── CLAUDE.md                      # Developer guidelines and architecture doc
 ├── CODE_OF_CONDUCT.md             # Contributor Covenant
 ├── LICENSE                        # MIT License
 ├── docs/
@@ -318,77 +316,39 @@ Amplitron/
 │   ├── PRESETS.md                 # Preset guide
 │   └── demo/                      # Web demo (deployed)
 ├── external/                      # Vendored deps (fetched by setup script)
-│   ├── imgui/                     # Dear ImGui v1.90.1
-│   ├── kiss_fft/                  # kiss_fft (BSD-3-Clause, FFT library)
-│   ├── dr_wav.h                   # dr_wav (single-header WAV library)
-│   ├── nanosvg.h                  # nanosvg (SVG parser)
-│   └── nanosvgrast.h              # nanosvg rasterizer
 ├── presets/                       # Example presets (JSON)
-│   ├── 01_Sparkling_Clean.json
-│   ├── 02_Classic_Rock_Crunch.json
-│   ├── 03_Modern_Metal_Lead.json
-│   └── 04_Ambient_Swells.json
-├── scripts/
-│   ├── setup_dependencies.sh      # Linux/macOS dependency setup
-│   ├── setup_dependencies.ps1     # Windows dependency setup
-│   ├── build_windows.ps1          # Windows build script
-│   ├── installer.nsi              # NSIS installer config
-│   ├── package_linux.sh
-│   ├── package_macos.sh
-│   └── package_windows.ps1
+├── scripts/                       # Build/Package scripts
 ├── src/
 │   ├── main.cpp                   # Entry point
-│   ├── common.h                   # Shared utilities, math helpers
-│   ├── preset_manager.h/cpp       # Preset save/load (JSON)
-│   ├── audio/
-│   │   ├── audio_engine.h/cpp     # Core DSP pipeline
-│   │   ├── audio_backend.h        # Abstract audio backend
-│   │   ├── audio_backend_portaudio.cpp  # Native desktop backend
-│   │   ├── audio_backend_jack.cpp      # Optional JACK backend (Linux)
-│   │   ├── audio_backend_sdl.cpp  # Web/Emscripten backend
-│   │   ├── effect.h               # Base effect interface
-│   │   ├── recorder.h/cpp         # WAV recording
-│   │   ├── spsc_queue.h           # Lock-free queue (audio→GUI)
-│   │   └── effects/
-│   │       ├── noise_gate.*       # Noise gate
-│   │       ├── compressor.*       # Dynamic range compressor
-│   │       ├── overdrive.*        # Tube-style overdrive
-│   │       ├── distortion.*       # Hard clipping distortion
-│   │       ├── equalizer.*        # 3-band parametric EQ
-│   │       ├── amp_simulator.*    # Amp model simulator (4 models)
-│   │       ├── cabinet_sim.*      # Speaker cabinet simulation
-│   │       ├── chorus.*           # Chorus modulation
-│   │       ├── delay.*            # Digital delay with feedback
-│   │       ├── reverb.*           # Schroeder reverb
-│   │       ├── tuner.*            # Chromatic tuner (YIN algorithm)
-│   │       ├── wah.*              # Wah (manual sweep + auto-wah)
-│   │       ├── phaser.*           # Cascaded all-pass filter phaser
-│   │       ├── flanger.*          # Modulated delay flanger
-│   │       ├── octaver.*          # Sub/upper-octave generator
-│   │       └── pitch_shifter.*    # Granular pitch shifting
-│   └── gui/
-│       ├── gui_manager.h/cpp      # Window, ImGui, main render loop
-│       ├── pedal_board.h/cpp      # Pedal chain management UI
-│       ├── pedal_widget.h/cpp     # Individual pedal rendering
-│       ├── command_history.h/cpp  # Undo/redo system
-│       ├── command.h              # Command interface
-│       ├── spectrum_analyzer.h/cpp # Real-time spectrum display
-│       ├── theme.h                # Color scheme & pedal colors
-│       ├── gl_setup.h             # OpenGL initialization
-│       ├── file_dialog.h/cpp      # File dialog interface
-│       ├── file_dialog_native.cpp # Native file dialogs
-│       └── file_dialog_web.cpp    # Web-based file dialogs
-├── tests/                         # 105+ test suite
-│   ├── test_framework.h           # Minimal test framework
-│   ├── test_main.cpp
-│   ├── test_common.cpp            # Utility function tests
-│   ├── test_effects.cpp           # All effects tested (including Wah)
-│   ├── test_preset_manager.cpp    # Preset I/O tests
-│   ├── test_recorder.cpp          # WAV recording tests
-│   ├── test_theme.cpp             # Color system tests
-│   ├── test_command_history.cpp   # Undo/redo tests
-│   └── web/
-│       └── amplitron.spec.ts      # Playwright end-to-end web demo tests
+│   ├── common.h                   # Shared math/DSP utilities
+│   ├── cli.h                      # Command-line arguments parser
+│   ├── session_manager.h          # Lifecycle and auto-save coordinator
+│   ├── audio/                     # Audio DSP and drivers
+│   │   ├── backend/               # Platform audio backends (PortAudio, Oboe, SDL)
+│   │   ├── dsp/                   # Base DSP filters and loaders (Biquad, FFT convolution)
+│   │   ├── effects/               # Base effect interface & 16 pedal DSP agents
+│   │   ├── engine/                # Core processing engine & graph executor
+│   │   ├── recorder/              # Audio recorder and WAV flusher agents
+│   │   └── utils/                 # Low-level queue thread primitives (SPSC)
+│   ├── gui/                       # User Interface orchestrator (SDL2 / Dear ImGui)
+│   │   ├── commands/              # Command pattern undo/redo stack agents
+│   │   ├── components/            # Atomic, reusable visual elements (Knob, Footswitch, Screen)
+│   │   ├── dialogs/               # Native/Web file selector windows
+│   │   ├── pedalboard/            # Visual pedal canvas and interactive pedal board
+│   │   ├── state/                 # Snapshot managers and dynamic state orchestrators
+│   │   ├── theme/                 # Scaling metrics and color palettes
+│   │   └── views/                 # Top-level windows, overlays, and sidebars
+│   ├── midi/                      # MIDI CC managers and learning persistence
+│   └── presets/                   # JSON serialization and Preset managers
+├── tests/                         # Full test suite (590 tests)
+│   ├── test_framework.h           # Headless-safe unit test framework
+│   ├── test_fixtures.h            # Mock engines and standard chains
+│   ├── test_mocks.h               # Proxy effects and bypass stubs
+│   ├── unit/                      # Isolated unit tests for DSP and commands
+│   ├── integration/               # Multi-component state integration tests
+│   ├── ui/                        # Visual headless simulation and event loop tests
+│   └── web/                       # Playwright end-to-end web demo tests
+
 └── web/
     ├── shell.html                 # Emscripten shell template
     └── coi-serviceworker.js       # SharedArrayBuffer support
