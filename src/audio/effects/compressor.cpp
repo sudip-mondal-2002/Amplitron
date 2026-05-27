@@ -24,7 +24,8 @@ void Compressor::process(float* buffer, int num_samples) {
     float release_ms = params_[3].value;
     float makeup = db_to_linear(params_[4].value);
 
-    // Parameter smoothing (anti-zipper) — keep faster than the smallest attack/release time
+    // Parameter smoothing (anti-zipper) — keep short enough to reduce zipper noise
+    // while limiting lag in fast attack/release settings.
     const float alpha = 1.0f - std::exp(-1.0f / (sample_rate_ * 0.002f)); // 2 ms
     smoothed_attack_ms_  += alpha * (attack_ms  - smoothed_attack_ms_);
     smoothed_release_ms_ += alpha * (release_ms - smoothed_release_ms_);
