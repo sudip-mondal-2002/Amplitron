@@ -65,6 +65,10 @@ void Delay::reset() {
     std::fill(delay_buffer_.begin(), delay_buffer_.end(), 0.0f);
     write_pos_ = 0;
     tone_lp_.reset();
+    smoothed_time_ms_  = params_[0].value;
+    smoothed_feedback_ = params_[1].value;
+    smoothed_tone_     = params_[2].value;
+    smoothed_level_    = params_[3].value;
 }
 
 void Delay::set_transport_state(float bpm){
