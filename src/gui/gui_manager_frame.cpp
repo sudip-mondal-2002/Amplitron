@@ -76,6 +76,33 @@ SettingsProps GuiManager::build_settings_props() {
     p.suggested_buf      = engine_.get_suggested_buffer_size();
     p.latency_ms         = (p.sample_rate > 0) ? (1000.0f * p.buffer_size / p.sample_rate) : 0.0f;
     p.cpu_load           = engine_.get_cpu_load();
+
+    p.buffer_duration_ms = (p.sample_rate > 0) ? (1000.0f * p.buffer_size / p.sample_rate) : 0.0f;
+    p.estimated_roundtrip_latency_ms = p.buffer_duration_ms * 2.0f;
+
+    // Headroom is how much CPU is left before hitting saturation.
+    const float clamped_cpu = std::clamp(p.cpu_load, 0.0f, 1.0f);
+    p.dsp_headroom_percent = (1.0f - clamped_cpu) * 100.0f;
+
+    // Performance status (based on CPU load)
+    if (p.cpu_load < 0.35f) {
+        p.performance_status_label = "Excellent";
+    } else if (p.cpu_load < 0.65f) {
+        p.performance_status_label = "Stable";
+    } else if (p.cpu_load < 0.85f) {
+        p.performance_status_label = "Warning";
+    } else {
+        p.performance_status_label = "Critical";
+    }
+
+    // Simple user-facing heuristic: when CPU is high, suggest increasing buffer.
+    if (p.cpu_load >= 0.85f) {
+        p.safe_buffer_label = "Increase buffer size for stability";
+    } else if (p.cpu_load >= 0.65f) {
+        p.safe_buffer_label = "Buffer size is close to its limit";
+    } else {
+        p.safe_buffer_label = "Buffer size looks safe";
+    }
     p.auto_buf           = engine_.is_auto_buffer_enabled();
     p.current_input      = engine_.get_input_device();
     p.current_output     = engine_.get_output_device();

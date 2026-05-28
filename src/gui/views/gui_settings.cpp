@@ -59,7 +59,40 @@ void GuiSettings::render(bool& show) {
     ImGui::Spacing();
     ImGui::TextColored(load_color, "CPU Load: %.0f%%", p.cpu_load * 100.0f);
     ImGui::SameLine();
-    ImGui::ProgressBar(p.cpu_load, ImVec2(150, 0));
+    ImGui::ProgressBar(std::clamp(p.cpu_load, 0.0f, 1.0f), ImVec2(150, 0));
+
+    // DSP performance profiler section
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    ImGui::TextColored(Theme::Gold(), "DSP PERFORMANCE PROFILER");
+
+    // Status color
+    ImVec4 status_color = (p.cpu_load >= 0.85f) ? ImVec4(1.0f, 0.2f, 0.2f, 1.0f) :
+                           (p.cpu_load >= 0.65f) ? ImVec4(1.0f, 0.8f, 0.2f, 1.0f) :
+                           ImVec4(0.2f, 0.8f, 0.2f, 1.0f);
+
+    ImGui::Text("Buffer duration: %.2f ms", p.buffer_duration_ms);
+    ImGui::Text("Estimated round-trip latency: %.2f ms", p.estimated_roundtrip_latency_ms);
+    ImGui::TextColored(status_color, "Performance: %s", p.performance_status_label.c_str());
+    ImGui::Text("DSP headroom: %.0f%%", p.dsp_headroom_percent);
+    ImGui::TextDisabled("%s", p.safe_buffer_label.c_str());
+
+    // Progress bars
+    ImGui::Separator();
+    ImGui::Text("CPU Load");
+    ImGui::ProgressBar(std::clamp(p.cpu_load, 0.0f, 1.0f), ImVec2(250, 0));
+
+    ImGui::Text("DSP Headroom");
+    float headroom_norm = std::clamp(p.dsp_headroom_percent / 100.0f, 0.0f, 1.0f);
+    ImGui::ProgressBar(headroom_norm, ImVec2(250, 0));
+
+    // Hints
+    ImGui::Spacing();
+    ImGui::TextWrappedColored(Theme::Live(), "Tuning hints:");
+    ImGui::BulletText("Lower buffer = lower latency but higher CPU usage.");
+    ImGui::BulletText("Higher CPU load may cause crackling/dropouts.");
+    ImGui::BulletText("Increasing buffer size improves stability.");
 
     if (p.suggested_buf != p.buffer_size) {
         ImGui::SameLine();

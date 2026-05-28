@@ -26,6 +26,13 @@ struct SettingsProps {
     int  suggested_buf   = 128;
     float latency_ms     = 0.0f;
     float cpu_load       = 0.0f;
+
+    // DSP profiler (calculated)
+    float buffer_duration_ms               = 0.0f;
+    float estimated_roundtrip_latency_ms  = 0.0f;
+    float dsp_headroom_percent            = 0.0f;
+    std::string safe_buffer_label;
+    std::string performance_status_label;
     bool  auto_buf       = false;
 
     // Devices
