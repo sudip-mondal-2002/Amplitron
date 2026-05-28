@@ -199,6 +199,11 @@ jobs:
             coverage.filtered.info
             coverage-summary.txt
           retention-days: 7
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+        files: ./coverage.filtered.info
+        fail_ci_if_error: false
 
       
 
