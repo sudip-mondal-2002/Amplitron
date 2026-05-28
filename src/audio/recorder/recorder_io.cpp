@@ -87,4 +87,41 @@ float Recorder::get_duration() const {
     return static_cast<float>(total) / sample_rate_;
 }
 
+void Recorder::write_samples_stereo(const float* left, const float* right, int num_samples) {
+    if (!recording_ || paused_) return;
+
+    int64_t wp = ring_write_pos_.load(std::memory_order_relaxed);
+    int64_t rp = ring_read_pos_.load(std::memory_order_acquire);
+    int64_t available_space = RING_BUFFER_SIZE - (wp - rp);
+
+    // Each frame = 2 floats (left + right interleaved)
+    int frames_to_write = num_samples;
+    if (frames_to_write * 2 > static_cast<int>(available_space)) {
+        frames_to_write = static_cast<int>(available_space) / 2;
+    }
+
+    for (int i = 0; i < frames_to_write; ++i) {
+        ring_buffer_[static_cast<int>(wp % RING_BUFFER_SIZE)] = left[i];
+        wp++;
+        ring_buffer_[static_cast<int>(wp % RING_BUFFER_SIZE)] = right[i];
+        wp++;
+    }
+    ring_write_pos_.store(wp, std::memory_order_release);
+    samples_written_ += frames_to_write;
+
+    // Update waveform display using left channel
+    for (int i = 0; i < frames_to_write; ++i) {
+        float abs_val = std::fabs(left[i]);
+        if (abs_val > bin_peak_) bin_peak_ = abs_val;
+        bin_sample_count_++;
+        if (bin_sample_count_ >= samples_per_bin_) {
+            int pos = waveform_write_pos_.load() % WAVEFORM_SIZE;
+            waveform_buf_[pos].store(bin_peak_);
+            waveform_write_pos_.fetch_add(1);
+            current_peak_.store(bin_peak_);
+            bin_peak_ = 0.0f;
+            bin_sample_count_ = 0;
+        }
+    }
+}
 } // namespace Amplitron

@@ -231,8 +231,10 @@ void AudioEngine::process_audio(const float* input, float* output, int frame_cou
     output_level_.store(peak_out);
 
     if (recorder_.is_recording()) {
-        recorder_.write_samples(process_buffer_.data(), frame_count);
-    }
+    recorder_.write_samples_stereo(process_buffer_.data(),
+                                   process_buffer_right_.data(),
+                                   frame_count);
+}
 
     auto t_end = std::chrono::steady_clock::now();
     float duration_us = std::chrono::duration<float, std::micro>(t_end - t_start).count();

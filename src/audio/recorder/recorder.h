@@ -30,6 +30,8 @@ public:
     // Write audio samples (called from audio callback)
     void write_samples(const float* buffer, int num_samples);
 
+    void write_samples_stereo(const float* left, const float* right, int num_samples);
+
     // Write metadata JSON sidecar file
     void write_metadata(const std::string& wav_path, AudioEngine& engine);
 

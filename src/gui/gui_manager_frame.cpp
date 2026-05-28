@@ -44,7 +44,7 @@ RecordingProps GuiManager::build_recording_props() {
     p.on_pause   = [&rec]() { rec.pause(); };
     p.on_stop    = [&rec]() { rec.stop(); };
     p.on_start   = [this, &rec]() {
-        rec.start(Recorder::generate_filename(), engine_.get_sample_rate());
+        rec.start(Recorder::generate_filename(), engine_.get_sample_rate(), 2);
     };
     p.on_discard = [&rec]() { rec.discard(); };
     return p;

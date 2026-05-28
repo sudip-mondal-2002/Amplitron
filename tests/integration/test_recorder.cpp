@@ -1,5 +1,7 @@
 #include "test_framework.h"
 #include "audio/recorder/recorder.h"
+#include "audio/engine/audio_engine.h"
+#include <nlohmann/json.hpp>
 
 #include <fstream>
 #include <cstdio>
@@ -478,4 +480,206 @@ TEST(recorder_stereo_data_size_accounts_for_two_channels) {
     f.close();
 
     std::remove(path.c_str());
+}
+
+TEST(recorder_stereo_write_samples_stereo_interleaves_correctly) {
+    Recorder rec;
+    std::string path = "recordings/test_rec_stereo_interleave.wav";
+
+    // Start in stereo
+    ASSERT_TRUE(rec.start(path, 48000, 2));
+    ASSERT_TRUE(rec.is_recording());
+    ASSERT_FALSE(rec.is_paused());
+
+    // Write left channel as 0.5, right channel as -0.5
+    const int num_samples = 256;
+    float left[num_samples];
+    float right[num_samples];
+    for (int i = 0; i < num_samples; ++i) {
+        left[i] = 0.5f;
+        right[i] = -0.5f;
+    }
+
+    rec.write_samples_stereo(left, right, num_samples);
+    ASSERT_EQ(rec.get_samples_written(), (int64_t)num_samples);
+
+    rec.stop();
+    ASSERT_FALSE(rec.is_recording());
+
+    // File size should be: 44 bytes header + (256 frames * 2 channels * 2 bytes/sample) = 44 + 1024 = 1068 bytes
+    ASSERT_EQ(file_size(path), 44L + num_samples * 2 * 2);
+
+    // Open file and verify interleaved content
+    std::ifstream f(path, std::ios::binary);
+    ASSERT_TRUE(f.good());
+
+    // Skip the 44-byte WAV header
+    f.seekg(44);
+
+    int16_t samples[num_samples * 2];
+    f.read(reinterpret_cast<char*>(samples), num_samples * 2 * sizeof(int16_t));
+    f.close();
+
+    // Verify samples are interleaved: left (index 0, positive) and right (index 1, negative)
+    ASSERT_GT(samples[0], 0);
+    ASSERT_LT(samples[1], 0);
+
+    // Check magnitude (approx 16383 for 0.5f and -16384 for -0.5f)
+    ASSERT_NEAR(static_cast<float>(samples[0]), 16383.0f, 10.0f);
+    ASSERT_NEAR(static_cast<float>(samples[1]), -16384.0f, 10.0f);
+
+    std::remove(path.c_str());
+}
+
+TEST(recorder_write_metadata_generates_valid_json) {
+    Recorder rec;
+    std::string path = "recordings/test_rec_metadata.wav";
+
+    ASSERT_TRUE(rec.start(path, 44100, 2));
+    
+    const int num_samples = 128;
+    float left[num_samples];
+    float right[num_samples];
+    std::memset(left, 0, sizeof(left));
+    std::memset(right, 0, sizeof(right));
+    rec.write_samples_stereo(left, right, num_samples);
+    
+    rec.stop();
+
+    AudioEngine engine;
+    rec.write_metadata(path, engine);
+
+    std::string meta_path = "recordings/test_rec_metadata.meta.json";
+    ASSERT_TRUE(file_exists(meta_path));
+
+    // Read and verify JSON structure
+    std::ifstream meta_file(meta_path);
+    nlohmann::json j;
+    meta_file >> j;
+    meta_file.close();
+
+    ASSERT_EQ(j["recording"]["filename"], path);
+    ASSERT_EQ(j["recording"]["format"], "WAV PCM 16-bit");
+    ASSERT_EQ(j["recording"]["sample_rate"], 44100);
+    ASSERT_EQ(j["recording"]["channels"], 2);
+    ASSERT_EQ(j["recording"]["total_samples"], num_samples);
+    ASSERT_TRUE(j.contains("audio_settings"));
+    ASSERT_TRUE(j.contains("signal_chain"));
+
+    std::remove(path.c_str());
+    std::remove(meta_path.c_str());
+}
+
+TEST(recorder_discard_removes_temp_and_metadata_files) {
+    Recorder rec;
+    std::string path = "recordings/test_rec_discard.wav";
+    std::string meta_path = "recordings/test_rec_discard.meta.json";
+
+    ASSERT_TRUE(rec.start(path, 48000, 1));
+    float buf[64];
+    std::memset(buf, 0, sizeof(buf));
+    rec.write_samples(buf, 64);
+    rec.stop();
+
+    AudioEngine engine;
+    rec.write_metadata(path, engine);
+
+    ASSERT_TRUE(file_exists(path));
+    ASSERT_TRUE(file_exists(meta_path));
+    ASSERT_TRUE(rec.has_unsaved());
+
+    rec.discard();
+
+    ASSERT_FALSE(file_exists(path));
+    ASSERT_FALSE(file_exists(meta_path));
+    ASSERT_FALSE(rec.has_unsaved());
+}
+
+TEST(recorder_save_to_errors_and_edge_cases) {
+    Recorder rec;
+    
+    // Save when no recording exists
+    ASSERT_FALSE(rec.save_to("recordings/no_exist.wav"));
+
+    std::string path = "recordings/test_rec_save_src.wav";
+    std::string dst_path = "recordings/test_rec_save_dst.wav";
+
+    ASSERT_TRUE(rec.start(path, 48000, 1));
+    float buf[64];
+    std::memset(buf, 0, sizeof(buf));
+    rec.write_samples(buf, 64);
+    rec.stop();
+
+    // 1. Same destination path
+    ASSERT_TRUE(rec.save_to(path));
+    ASSERT_FALSE(rec.has_unsaved()); // Cleared
+
+    // Reset unsaved flag by doing another start/stop sequence
+    std::remove(path.c_str());
+    ASSERT_TRUE(rec.start(path, 48000, 1));
+    rec.write_samples(buf, 64);
+    rec.stop();
+
+    // Generate metadata file
+    AudioEngine engine;
+    rec.write_metadata(path, engine);
+    std::string meta_src = "recordings/test_rec_save_src.meta.json";
+    std::string meta_dst = "recordings/test_rec_save_dst.meta.json";
+    ASSERT_TRUE(file_exists(meta_src));
+
+    // 2. Different destination path
+    ASSERT_TRUE(rec.save_to(dst_path));
+    ASSERT_FALSE(rec.has_unsaved());
+    ASSERT_FALSE(file_exists(path)); // Temp file removed
+    ASSERT_TRUE(file_exists(dst_path)); // New file created
+    ASSERT_FALSE(file_exists(meta_src)); // Old metadata removed
+
+    std::remove(dst_path.c_str());
+
+    // 3. Copy to invalid destination
+    ASSERT_TRUE(rec.start(path, 48000, 1));
+    rec.write_samples(buf, 64);
+    rec.stop();
+
+    ASSERT_FALSE(rec.save_to("/non_existent_folder_xyz/file.wav"));
+    
+    rec.discard();
+    std::remove(path.c_str());
+}
+
+TEST(recorder_start_invalid_params_fails) {
+    Recorder rec;
+    
+    // 1. Empty filepath
+    ASSERT_FALSE(rec.start("", 48000, 1));
+    ASSERT_FALSE(rec.is_recording());
+
+    // 2. Path where parent is a regular file
+    std::string dummy_file = "recordings/test_not_a_dir.txt";
+    std::ofstream dummy(dummy_file);
+    dummy.close();
+
+    ASSERT_FALSE(rec.start("recordings/test_not_a_dir.txt/recording.wav", 48000, 1));
+    ASSERT_FALSE(rec.is_recording());
+
+    std::remove(dummy_file.c_str());
+}
+
+TEST(recorder_waveform_sizing_boundaries) {
+    Recorder rec;
+    
+    // Waveform check when not recording (should be all 0.0f)
+    float waveform[Recorder::WAVEFORM_SIZE];
+    std::fill_n(waveform, Recorder::WAVEFORM_SIZE, 1.0f);
+    rec.get_waveform(waveform, Recorder::WAVEFORM_SIZE);
+    
+    for (int i = 0; i < Recorder::WAVEFORM_SIZE; ++i) {
+        ASSERT_EQ(waveform[i], 0.0f);
+    }
+
+    // Call get_waveform with 0 count
+    rec.get_waveform(waveform, 0);
+
+    // Verify peak levels initial state
+    ASSERT_EQ(rec.get_current_peak(), 0.0f);
 }
