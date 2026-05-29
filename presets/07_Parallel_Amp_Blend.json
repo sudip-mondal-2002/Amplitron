@@ -1,34 +1,15 @@
 {
   "presetName": "Parallel Amp Blend",
-  "description": "Routes signal in parallel to a Clean American amp and a British Crunch amp, blending them 50/50.",
-  "tags": ["parallel", "dual-amp", "blending"],
-  "routing": "graph",
-  "nodes": [
-    { "id": "input", "type": "input", "position": { "x": 50, "y": 200 } },
-    { "id": "noise_gate", "type": "noise_gate", "position": { "x": 180, "y": 200 } },
-    { "id": "compressor", "type": "compressor", "position": { "x": 310, "y": 200 } },
-    { "id": "splitter", "type": "splitter", "position": { "x": 450, "y": 200 } },
-    { "id": "overdrive_a", "type": "overdrive", "position": { "x": 580, "y": 100 } },
-    { "id": "amp_british", "type": "amp_simulator", "params": { "Model": 1.0, "Gain": 0.5 }, "position": { "x": 710, "y": 100 } },
-    { "id": "cab_a", "type": "cabinet", "position": { "x": 840, "y": 100 } },
-    { "id": "amp_american", "type": "amp_simulator", "params": { "Model": 0.0, "Gain": 0.5 }, "position": { "x": 710, "y": 300 } },
-    { "id": "cab_b", "type": "cabinet", "position": { "x": 840, "y": 300 } },
-    { "id": "mixer", "type": "mixer", "params": {}, "position": { "x": 980, "y": 200 } },
-    { "id": "reverb", "type": "reverb", "position": { "x": 1110, "y": 200 } },
-    { "id": "output", "type": "output", "position": { "x": 1240, "y": 200 } }
-  ],
-  "links": [
-    { "from": "input", "outputIndex": 0, "to": "noise_gate", "inputIndex": 0 },
-    { "from": "noise_gate", "outputIndex": 0, "to": "compressor", "inputIndex": 0 },
-    { "from": "compressor", "outputIndex": 0, "to": "splitter", "inputIndex": 0 },
-    { "from": "splitter", "outputIndex": 0, "to": "overdrive_a", "inputIndex": 0 },
-    { "from": "overdrive_a", "outputIndex": 0, "to": "amp_british", "inputIndex": 0 },
-    { "from": "amp_british", "outputIndex": 0, "to": "cab_a", "inputIndex": 0 },
-    { "from": "cab_a", "outputIndex": 0, "to": "mixer", "inputIndex": 0 },
-    { "from": "splitter", "outputIndex": 1, "to": "amp_american", "inputIndex": 0 },
-    { "from": "amp_american", "outputIndex": 0, "to": "cab_b", "inputIndex": 0 },
-    { "from": "cab_b", "outputIndex": 0, "to": "mixer", "inputIndex": 1 },
-    { "from": "mixer", "outputIndex": 0, "to": "reverb", "inputIndex": 0 },
-    { "from": "reverb", "outputIndex": 0, "to": "output", "inputIndex": 0 }
+  "description": "Routes signal through noise gate, compressor, overdrive, and amp simulator.",
+  "tags": ["parallel", "amp", "blend"],
+  "pedals": [
+    { "type": "input" },
+    { "type": "noise_gate" },
+    { "type": "compressor" },
+    { "type": "overdrive" },
+    { "type": "amp_simulator", "params": { "Model": 1.0, "Gain": 0.5 } },
+    { "type": "cabinet" },
+    { "type": "reverb" },
+    { "type": "output" }
   ]
 }
