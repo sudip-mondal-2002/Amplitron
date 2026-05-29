@@ -1,0 +1,33 @@
+{
+  "presetName": "Parallel Amp Blend",
+  "description": "Routes signal in parallel to a Clean American amp and a British Crunch amp, blending them 50/50.",
+  "tags": ["parallel", "dual-amp", "blending"],
+  "nodes": [
+    { "id": "input", "type": "input", "position": { "x": 50, "y": 200 } },
+    { "id": "noise_gate", "type": "noise_gate", "position": { "x": 180, "y": 200 } },
+    { "id": "compressor", "type": "compressor", "position": { "x": 310, "y": 200 } },
+    { "id": "splitter", "type": "splitter", "position": { "x": 450, "y": 200 } },
+    { "id": "overdrive_a", "type": "overdrive", "position": { "x": 580, "y": 100 } },
+    { "id": "amp_british", "type": "amp_sim", "params": { "model": "British Crunch", "gain": 0.5 }, "position": { "x": 710, "y": 100 } },
+    { "id": "cab_a", "type": "cabinet_sim", "position": { "x": 840, "y": 100 } },
+    { "id": "amp_american", "type": "amp_sim", "params": { "model": "Clean American", "gain": 0.5 }, "position": { "x": 710, "y": 300 } },
+    { "id": "cab_b", "type": "cabinet_sim", "position": { "x": 840, "y": 300 } },
+    { "id": "mixer", "type": "mixer", "params": { "gain1": 0.5, "gain2": 0.5 }, "position": { "x": 980, "y": 200 } },
+    { "id": "reverb", "type": "reverb", "position": { "x": 1110, "y": 200 } },
+    { "id": "output", "type": "output", "position": { "x": 1240, "y": 200 } }
+  ],
+  "connections": [
+    { "from": "input", "to": "noise_gate" },
+    { "from": "noise_gate", "to": "compressor" },
+    { "from": "compressor", "to": "splitter" },
+    { "from": "splitter", "outputIndex": 0, "to": "overdrive_a" },
+    { "from": "overdrive_a", "to": "amp_british" },
+    { "from": "amp_british", "to": "cab_a" },
+    { "from": "cab_a", "to": "mixer", "inputIndex": 0 },
+    { "from": "splitter", "outputIndex": 1, "to": "amp_american" },
+    { "from": "amp_american", "to": "cab_b" },
+    { "from": "cab_b", "to": "mixer", "inputIndex": 1 },
+    { "from": "mixer", "to": "reverb" },
+    { "from": "reverb", "to": "output" }
+  ]
+}
