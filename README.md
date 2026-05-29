@@ -537,3 +537,12 @@ This project is licensed under the [MIT License](LICENSE). The audio DSP algorit
 - [PortAudio](http://www.portaudio.com/) — MIT License
 - [SDL2](https://www.libsdl.org/) — zlib License
 - [Dear ImGui](https://github.com/ocornut/imgui) — MIT License
+
+
+## 07. Parallel Amp Blend Preset
+
+This preset demonstrates the capabilities of Amplitron by splitting the guitar signal into two parallel processing paths:
+- **Path A (Dirty):** Overdrive → Amp (British Crunch) → Cabinet
+- **Path B (Clean):** Amp (Clean American) → Cabinet
+
+Both paths are blended back together 50/50 using the Mixer node before hitting the Reverb and Output.
