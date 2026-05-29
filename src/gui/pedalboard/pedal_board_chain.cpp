@@ -63,8 +63,8 @@ void PedalBoard::render_signal_chain() {
     if (ImGui::IsItemActive() && (ImGui::IsMouseDragging(ImGuiMouseButton_Right) || 
                                   ImGui::IsMouseDragging(ImGuiMouseButton_Middle) || 
                                   ImGui::IsMouseDragging(ImGuiMouseButton_Left))) {
-        ui_state.scrolling.x += ImGui::GetIO().MousePos.x - ImGui::GetIO().MousePosPrev.x;
-        ui_state.scrolling.y += ImGui::GetIO().MousePos.y - ImGui::GetIO().MousePosPrev.y;
+        ui_state.scrolling.x += ImGui::GetIO().MouseDelta.x;
+        ui_state.scrolling.y += ImGui::GetIO().MouseDelta.y;
         ui_state.target_scrolling = ui_state.scrolling;
     }
     // Zooming is now allowed in both fullscreen and normal modes

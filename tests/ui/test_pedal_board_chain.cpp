@@ -106,8 +106,8 @@ TEST_F(PresetTest, test_pedal_board_chain_scrolling_and_zooming) {
 
     // 4. Left-click panning (implicit — no hand tool toggle needed)
     // Reset scrolling offset to prove left-click panning actually moves it
-    ui_state.scrolling.x = 0.0f;
-    ui_state.scrolling.y = 0.0f;
+    ui_state.scrolling = ImVec2(0, 0);
+    ui_state.target_scrolling = ImVec2(0, 0);
     // Left-click drag on empty canvas should pan without any mode switch
     io.MouseDown[0] = true;
     io.MousePos = ImVec2(500, 380);
@@ -116,6 +116,7 @@ TEST_F(PresetTest, test_pedal_board_chain_scrolling_and_zooming) {
 
     io.MousePos = ImVec2(480, 370);
     advance_frame();
+    io.MouseDelta = ImVec2(-20, -10);
     TestAccessor::render_signal_chain(board);
     
     io.MouseDown[0] = false;
@@ -241,6 +242,7 @@ TEST_F(PresetTest, test_implicit_hand_tool) {
 
     io.MousePos = ImVec2(480, 370);       // drag to (480, 370) on next frame
     advance_frame();
+    io.MouseDelta = ImVec2(-20, -10);     // simulate movement delta (EndFrame zeroed MousePosPrev)
     TestAccessor::render_signal_chain(board);
 
     io.MouseDown[0] = false;
