@@ -226,14 +226,20 @@ TEST_F(PresetTest, test_implicit_hand_tool) {
 
     // ── Test 3: Left-click drag on empty canvas → pans (implicit hand) ──
     // Proves the implicit left-click panning works without a hand tool toggle.
+    // NOTE: MouseDown and MousePos MUST be on separate frames so that ImGui
+    // captures MouseClickedPos at (500, 380); the subsequent mouse movement
+    // to (480, 370) exceeds the drag threshold and triggers isMouseDragging.
     ui_state.scrolling = ImVec2(0, 0);
     ui_state.target_scrolling = ImVec2(0, 0);
     io.MousePos = ImVec2(500, 380);
     advance_frame();
     TestAccessor::render_signal_chain(board);
 
-    io.MouseDown[0] = true;
-    io.MousePos = ImVec2(480, 370);
+    io.MouseDown[0] = true;               // press at (500, 380) — click pos captured here
+    advance_frame();
+    TestAccessor::render_signal_chain(board);
+
+    io.MousePos = ImVec2(480, 370);       // drag to (480, 370) on next frame
     advance_frame();
     TestAccessor::render_signal_chain(board);
 
