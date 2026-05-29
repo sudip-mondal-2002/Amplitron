@@ -1,0 +1,90 @@
+name: Pull Request Size Labeler
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label-size:
+    name: Label PR by Size
+    runs-on: ubuntu-latest
+    steps:
+      - name: Calculate PR Size
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const { owner, repo } = context.repo;
+
+            // Fetch the list of files in the PR
+            const response = await github.rest.pulls.listFiles({
+              owner,
+              repo,
+              pull_number: pr.number,
+              per_page: 100
+            });
+
+            let totalChanges = 0;
+            const excludedExtensions = ['.json', '.lock', '.md', '.txt'];
+
+            for (const file of response.data) {
+              const ext = file.filename.slice(((file.filename.lastIndexOf(".") - 1) >>> 0) + 2);
+              if (excludedExtensions.includes('.' + ext)) {
+                // Skip documentation and lock files for actual code size calculation
+                continue;
+              }
+              totalChanges += file.changes;
+            }
+
+            core.info(`Total code line changes: ${totalChanges}`);
+
+            let sizeLabel = 'size/XS';
+            if (totalChanges >= 500) {
+              sizeLabel = 'size/XL';
+            } else if (totalChanges >= 200) {
+              sizeLabel = 'size/L';
+            } else if (totalChanges >= 50) {
+              sizeLabel = 'size/M';
+            } else if (totalChanges >= 10) {
+              sizeLabel = 'size/S';
+            }
+
+            core.info(`Selected size label: ${sizeLabel}`);
+
+            // Get existing labels on this PR
+            const { data: currentLabels } = await github.rest.issues.listLabelsOnIssue({
+              owner,
+              repo,
+              issue_number: pr.number
+            });
+
+            const currentLabelNames = currentLabels.map(l => l.name);
+            const sizeLabels = ['size/XS', 'size/S', 'size/M', 'size/L', 'size/XL'];
+
+            // Remove any outdated size labels
+            for (const label of currentLabelNames) {
+              if (sizeLabels.includes(label) && label !== sizeLabel) {
+                await github.rest.issues.removeLabel({
+                  owner,
+                  repo,
+                  issue_number: pr.number,
+                  name: label
+                });
+                core.info(`Removed old size label: ${label}`);
+              }
+            }
+
+            // Add the new size label if it's not already present
+            if (!currentLabelNames.includes(sizeLabel)) {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: pr.number,
+                labels: [sizeLabel]
+              });
+              core.info(`Added size label: ${sizeLabel}`);
+            }
