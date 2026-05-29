@@ -5,7 +5,7 @@
 // equivalent soft clip, preserving small-signal dynamics while compressing
 // peaks before tone filtering and output level scaling.
 
-#include "audio/effect.h"
+#include "audio/effects/effect.h"
 #include "audio/dsp/biquad.h"
 
 namespace Amplitron {
@@ -16,6 +16,7 @@ public:
     void process(float* buffer, int num_samples) override;
     void reset() override;
     const char* name() const override { return "Overdrive"; }
+    const char* type_id() const override { return "Overdrive"; }
     std::vector<EffectParam>& params() override { return params_; }
 
 private:

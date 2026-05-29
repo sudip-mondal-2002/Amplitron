@@ -1,5 +1,5 @@
 #include "audio/effects/phaser.h"
-#include "audio/effect_factory.h"
+#include "audio/effects/effect_factory.h"
 #include <cmath>
 
 namespace Amplitron {

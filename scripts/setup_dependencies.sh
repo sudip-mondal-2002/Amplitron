@@ -53,7 +53,7 @@ else
 fi
 
 # --- nanosvg (single-header SVG rasterizer) ---
-if [ ! -f "$EXTERNAL_DIR/nanosvg.h" ]; then
+if [ ! -f "$EXTERNAL_DIR/nanosvg.h" ] || [ ! -f "$EXTERNAL_DIR/nanosvgrast.h" ]; then
     echo ""
     echo "Fetching nanosvg..."
     curl -fsSL -o "$EXTERNAL_DIR/nanosvg.h"     https://raw.githubusercontent.com/memononen/nanosvg/master/src/nanosvg.h
@@ -75,33 +75,41 @@ install_deps() {
             build-essential cmake pkg-config \
             libportaudio2 portaudio19-dev \
             libsdl2-dev \
-            libgl1-mesa-dev
+            libgl1-mesa-dev \
+            libjack-jackd2-dev
     elif command -v dnf &> /dev/null; then
         echo "Detected Fedora/RHEL. Installing dependencies..."
         sudo dnf install -y \
             gcc-c++ cmake pkg-config \
             portaudio-devel \
             SDL2-devel \
-            mesa-libGL-devel
+            mesa-libGL-devel \
+            jack-audio-connection-kit-devel
     elif command -v pacman &> /dev/null; then
         echo "Detected Arch Linux. Installing dependencies..."
         sudo pacman -S --noconfirm \
             base-devel cmake pkg-config \
             portaudio \
             sdl2 \
-            mesa
+            mesa \
+            jack2
     elif command -v brew &> /dev/null; then
         echo "Detected macOS with Homebrew. Installing dependencies..."
-        brew install cmake portaudio sdl2
+        brew install cmake portaudio sdl2 jack
     else
         echo "WARNING: Could not detect package manager."
         echo "Please install manually: cmake, portaudio, sdl2, opengl dev headers"
     fi
 }
 
-read -p "Install system dependencies? [y/N] " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
+if [ -t 0 ]; then
+    read -p "Install system dependencies? [y/N] " -n 1 -r
+    echo
+else
+    REPLY="N"
+    echo "Non-interactive shell detected; skipping system dependency install prompt."
+fi
+if [[ ${REPLY:-N} =~ ^[Yy]$ ]]; then
     install_deps
 fi
 

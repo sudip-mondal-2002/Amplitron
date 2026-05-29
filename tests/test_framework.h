@@ -6,13 +6,44 @@
 #include <functional>
 #include <cmath>
 #include <sstream>
+#include <type_traits>
+#include <any>
+#include <memory>
+#include <thread>
+#include <mutex>
+#include <chrono>
+#include <algorithm>
+#include <map>
+#include <unordered_map>
+#include <set>
+#include <unordered_set>
+#include <stdexcept>
+#include <filesystem>
+#include <queue>
+#include <deque>
 
 namespace TestFramework {
+
+template <typename A, typename B>
+inline bool assert_eq_values(const A& a, const B& b) {
+    if constexpr (std::is_arithmetic_v<A> && std::is_arithmetic_v<B>) {
+        using Common = std::common_type_t<A, B>;
+        return static_cast<Common>(a) == static_cast<Common>(b);
+    }
+    return a == b;
+}
 
 struct TestResult {
     std::string name;
     bool passed;
     std::string message;
+};
+
+class Test {
+public:
+    virtual ~Test() = default;
+    virtual void SetUp() {}
+    virtual void TearDown() {}
 };
 
 class TestSuite {
@@ -86,12 +117,45 @@ private:
 };
 
 // Macros
-#define TEST(name) \
+#define TEST_SINGLE(name) \
     static void test_##name(); \
     namespace { struct Register_##name { \
         Register_##name() { TestFramework::TestSuite::instance().add_test(#name, test_##name); } \
     } reg_##name; } \
     static void test_##name()
+
+#define TEST_SUITE_CASE(suite, name) \
+    static void test_##suite##_##name(); \
+    namespace { struct Register_##suite##_##name { \
+        Register_##suite##_##name() { TestFramework::TestSuite::instance().add_test(#suite "." #name, test_##suite##_##name); } \
+    } reg_##suite##_##name; } \
+    static void test_##suite##_##name()
+
+#define TEST_GET_MACRO(_1, _2, NAME, ...) NAME
+#define TEST(...) TEST_GET_MACRO(__VA_ARGS__, TEST_SUITE_CASE, TEST_SINGLE)(__VA_ARGS__)
+
+#define TEST_F(FixtureName, TestName) \
+    class FixtureName##_##TestName : public FixtureName { \
+    public: \
+        void RunTest(); \
+    }; \
+    static void run_fixture_test_##FixtureName##_##TestName() { \
+        FixtureName##_##TestName t; \
+        t.SetUp(); \
+        try { \
+            t.RunTest(); \
+        } catch (...) { \
+            t.TearDown(); \
+            throw; \
+        } \
+        t.TearDown(); \
+    } \
+    namespace { struct Register_##FixtureName##_##TestName { \
+        Register_##FixtureName##_##TestName() { \
+            TestFramework::TestSuite::instance().add_test(#FixtureName "_" #TestName, run_fixture_test_##FixtureName##_##TestName); \
+        } \
+    } reg_##FixtureName##_##TestName; } \
+    void FixtureName##_##TestName::RunTest()
 
 #define ASSERT_TRUE(expr) \
     do { if (!(expr)) { \
@@ -106,7 +170,7 @@ private:
     }} while(0)
 
 #define ASSERT_EQ(a, b) \
-    do { auto _a = (a); auto _b = (b); if (_a != _b) { \
+    do { auto _a = (a); auto _b = (b); if (!TestFramework::assert_eq_values(_a, _b)) { \
         std::ostringstream ss; ss << "ASSERT_EQ failed: " #a " == " #b " (" << _a << " != " << _b << ") (line " << __LINE__ << ")"; \
         TestFramework::TestSuite::instance().fail(ss.str()); return; \
     }} while(0)
@@ -140,5 +204,19 @@ private:
         std::ostringstream ss; ss << "ASSERT_GE failed: " #a " >= " #b " (" << _a << " < " << _b << ") (line " << __LINE__ << ")"; \
         TestFramework::TestSuite::instance().fail(ss.str()); return; \
     }} while(0)
+
+#define ASSERT_THROW(expr, ExceptionType) \
+    do { \
+        bool caught = false; \
+        try { \
+            (expr); \
+        } catch (const ExceptionType&) { \
+            caught = true; \
+        } catch (...) {} \
+        if (!caught) { \
+            std::ostringstream ss; ss << "ASSERT_THROW failed: " #expr " did not throw " #ExceptionType " (line " << __LINE__ << ")"; \
+            TestFramework::TestSuite::instance().fail(ss.str()); return; \
+        } \
+    } while(0)
 
 } // namespace TestFramework

@@ -8,7 +8,7 @@
 // sag follows an envelope e[n] = a*x_abs[n] + (1-a)*e[n-1] and reduces gain
 // as the simulated supply is loaded.
 
-#include "audio/effect.h"
+#include "audio/effects/effect.h"
 #include "audio/dsp/biquad.h"
 
 namespace Amplitron {
@@ -68,6 +68,7 @@ public:
     void set_sample_rate(int sample_rate) override;
     void reset() override;
     const char* name() const override { return "Amp Sim"; }
+    const char* type_id() const override { return "Amp Sim"; }
     std::vector<EffectParam>& params() override { return params_; }
 
 private:

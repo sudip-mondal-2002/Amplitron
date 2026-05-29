@@ -1,5 +1,6 @@
 # Build
 build/
+build_web/
 build-*/
 out/
 cmake-build-*/
@@ -11,10 +12,12 @@ presets/*
 !presets/05_Phase_Shift_Lead.json
 !presets/06_Jet_Flanger.json
 recordings/
+*.log
 
 # IDE
 .vs/
 .vscode/
+.claude/
 *.suo
 *.user
 *.sln
@@ -33,7 +36,14 @@ desktop.ini
 # Dependencies (fetched by setup script)
 external/
 node_modules/
-
+package-lock.json
+# Playwright test results & reports
+test-results/
+playwright-report/
+blob-report/
+tests/web/test-results/
+tests/web/playwright-report/
+tests/web/blob-report/
 
 # Compiled
 *.o
@@ -71,3 +81,10 @@ android/app/src/main/java/org/libsdl/
 build-ios/
 *.xcworkspace/
 xcuserdata/
+emsdk/
+
+# Coverage
+*.gcda
+*.gcno
+*.info
+*_html_report/

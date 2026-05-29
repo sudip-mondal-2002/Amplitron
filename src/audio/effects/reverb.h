@@ -5,7 +5,7 @@
 // build the decay tail, followed by all-pass filters that diffuse echoes while
 // keeping magnitude roughly flat.
 
-#include "audio/effect.h"
+#include "audio/effects/effect.h"
 
 namespace Amplitron {
 
@@ -17,6 +17,7 @@ public:
     void set_sample_rate(int sample_rate) override;
     void reset() override;
     const char* name() const override { return "Reverb"; }
+    const char* type_id() const override { return "Reverb"; }
     std::vector<EffectParam>& params() override { return params_; }
 
 private:

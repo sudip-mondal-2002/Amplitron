@@ -5,7 +5,7 @@
 // state, while the upper octave emphasizes rectified/nonlinear content; output
 // blends dry, sub, and upper components by their mix gains.
 
-#include "audio/effect.h"
+#include "audio/effects/effect.h"
 
 namespace Amplitron {
 
@@ -27,6 +27,7 @@ public:
     void set_sample_rate(int sample_rate) override;
     void reset() override;
     const char* name() const override { return "Octaver"; }
+    const char* type_id() const override { return "Octaver"; }
     std::vector<EffectParam>& params() override { return params_; }
 
 private:

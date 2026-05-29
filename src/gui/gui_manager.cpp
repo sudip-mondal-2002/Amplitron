@@ -1,8 +1,9 @@
 #include "gui/gui_manager.h"
-#include "gui/pedal_board.h"
-#include "gui/theme.h"
-#include "gui/file_dialog.h"
-#include "gui/command.h"
+#include "gui/pedalboard/pedal_board.h"
+#include "gui/theme/theme.h"
+#include "gui/dialogs/file_dialog.h"
+#include "gui/commands/command.h"
+#include "gui/state/gui_graph_state.h"
 #include "preset_manager.h"
 
 #include "gui/gl_setup.h"
@@ -14,11 +15,15 @@
 #include <cmath>
 #include <algorithm>
 #include <cstdio>
+#include <SDL2/SDL.h>
 #if defined(__APPLE__)
 #  include <TargetConditionals.h>
 #endif
 #if defined(EMSCRIPTEN) || (defined(__APPLE__) && TARGET_OS_IOS)
 #  define AMPLITRON_NO_DESKTOP_SHELL 1
+#endif
+#ifdef __EMSCRIPTEN__
+#  include <emscripten.h>
 #endif
 
 #pragma GCC diagnostic push
@@ -35,13 +40,15 @@ namespace Amplitron {
 
 GuiManager::GuiManager(AudioEngine& engine)
     : engine_(engine),
-      gui_settings_(engine),
+      command_history_(),
+      tuner_pedal_(std::make_shared<TunerPedal>()),
       gui_presets_(engine, command_history_),
-      gui_recording_(engine),
-      gui_tuner_(engine, std::make_shared<TunerPedal>()),
-      gui_analyzer_(engine),
-      gui_snapshots_(engine, command_history_),
-      gui_midi_(midi_manager_) {}
+      gui_midi_(midi_manager_)
+{
+    pedal_board_ = std::make_unique<PedalBoard>(engine_, command_history_, &gui_midi_);
+    gui_presets_.set_pedal_board(pedal_board_.get());
+    gui_presets_.set_midi_manager(&midi_manager_);
+}
 
 GuiManager::~GuiManager() {
     shutdown();
@@ -103,6 +110,16 @@ bool GuiManager::initialize(int width, int height) {
             dpi_scale = static_cast<float>(draw_w) / static_cast<float>(window_width_);
     }
 
+#ifdef __EMSCRIPTEN__
+    // If SDL didn't pick up a high DPI scaling factor inside the browser, fallback safely
+    if (dpi_scale <= 1.0f) {
+        dpi_scale = emscripten_get_device_pixel_ratio();
+        if (dpi_scale <= 0.0f) dpi_scale = 1.0f;
+    }
+#endif
+
+    GuiGraphState::get_instance().dpi_scale = dpi_scale;
+
     {
         const float base_font_size = 14.0f;
         const float scaled_size    = base_font_size * dpi_scale;
@@ -115,8 +132,6 @@ bool GuiManager::initialize(int width, int height) {
 
         char* base_path = SDL_GetBasePath();
         if (base_path) {
-            // On a macOS app bundle, SDL_GetBasePath() returns Contents/Resources/ (not MacOS/).
-            // Assets are copied there by the CI workflow, so this resolves correctly.
             try_font(std::string(base_path) + "assets/fonts/Roboto-Medium.ttf");
             SDL_free(base_path);
         }
@@ -125,10 +140,15 @@ bool GuiManager::initialize(int width, int height) {
         try_font("external/imgui/misc/fonts/Roboto-Medium.ttf");
         try_font("../external/imgui/misc/fonts/Roboto-Medium.ttf");
 
-        if (!loaded_font)
+        if (!loaded_font) {
             io.Fonts->AddFontDefault();
-
-        io.FontGlobalScale = 1.0f / dpi_scale;
+            io.FontGlobalScale = 1.0f;
+        } else {
+            // On all platforms (Desktop & Web viewports), ImGui operates in logical coordinates.
+            // We load fonts at high physical resolution (scaled_size) to keep text sharp,
+            // and set FontGlobalScale to 1.0f / dpi_scale to draw them at their intended logical size.
+            io.FontGlobalScale = 1.0f / dpi_scale;
+        }
     }
 
     // Load window icon from assets/icon.svg
@@ -178,7 +198,6 @@ bool GuiManager::initialize(int width, int height) {
     pedal_board_ = std::make_unique<PedalBoard>(engine_, command_history_, &gui_midi_);
     gui_presets_.set_pedal_board(pedal_board_.get());
     gui_presets_.set_midi_manager(&midi_manager_);
-    gui_snapshots_.set_pedal_board(pedal_board_.get());
 
     PresetManager::load_config();
 
@@ -196,6 +215,7 @@ bool GuiManager::initialize(int width, int height) {
     initialized_ = true;
     return true;
 }
+
 
 void GuiManager::shutdown() {
     if (!initialized_) return;
@@ -225,6 +245,5 @@ void GuiManager::shutdown() {
     }
     SDL_Quit();
 }
-
 
 } // namespace Amplitron

@@ -62,7 +62,7 @@ public:
     ~ConvolutionEngine();
 
     // Set the active kernel. Resets internal state if kernel changes.
-    void set_kernel(std::shared_ptr<const ConvolutionKernel> kernel);
+    void set_kernel(const ConvolutionKernel* kernel);
 
     // Process a block of audio in-place.
     void process(float* buffer, int num_samples);
@@ -73,7 +73,7 @@ public:
     bool has_kernel() const { return kernel_ != nullptr; }
 
 private:
-    std::shared_ptr<const ConvolutionKernel> kernel_;
+    const ConvolutionKernel* kernel_ = nullptr;
 
     // Frequency-domain delay line (circular buffer of past input blocks in freq domain)
     std::vector<std::vector<char>> fdl_;  // raw storage for kiss_fft_cpx arrays
@@ -88,11 +88,18 @@ private:
 
     int current_fft_size_ = 0;
 
+    // Preallocated FFT buffers (raw storage for kiss_fft_cpx arrays)
+    // Kept here to avoid per-block allocations in the audio callback.
+    std::vector<char> input_cpx_;
+    std::vector<char> accum_cpx_;
+    std::vector<char> ifft_out_cpx_;
+
     void init_fft(int fft_size);
     void cleanup_fft();
 
     // Direct time-domain convolution fallback
     void process_direct(float* buffer, int num_samples);
+    std::vector<float> direct_input_;    // scratch copy of input (allocation-free in callback)
     std::vector<float> direct_overlap_;  // tail from direct convolution
 };
 

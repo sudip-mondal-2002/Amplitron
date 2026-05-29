@@ -25,6 +25,7 @@
       width: 100vw;
       height: 100vh;
       display: block;
+      touch-action: none;
     }
     /* Loading overlay */
     #loading {
@@ -118,6 +119,27 @@
     </p>
   </div>
 
+  <!-- MIDI status indicator -->
+  <div id="midi-status" style="
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    padding: 6px 12px;
+    background: rgba(20, 18, 16, 0.8);
+    color: #888;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    border: 1px solid rgba(240, 160, 48, 0.2);
+    font-family: monospace;
+    z-index: 50;
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  ">
+    🎹 Waiting for permission...
+  </div>
+
   <!-- Emscripten canvas -->
   <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
 
@@ -150,6 +172,281 @@
         console.log('[Amplitron] WASM runtime ready.');
       }
     };
+    window.amplitronPickDirectory = async function () {
+      try {
+        const dir = await window.showDirectoryPicker();
+        window._amplitronPresetDir = dir.name;
+        return dir.name;
+
+      } catch(e) {
+        console.log('Directory picker cancelled');
+        return '';
+      }
+      
+    };
+
+    window.amplitronSaveFile = async function(filename, dataPtr, dataLen){
+      try{
+        const data = Module.HEAPU8.slice(dataPtr, dataPtr + dataLen);
+        const blob = new Blob([data], {type: 'audio/wav'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url); 
+      } catch(e) {
+        console.log('Save failed:', e);
+      }
+    };
+
+  // ==========================================
+  // Web MIDI API Bridge
+  // ==========================================
+  
+  function initMIDI() {
+    // Check browser support
+    if (!navigator.requestMIDIAccess) {
+      console.warn('[MIDI] Web MIDI API not supported in this browser');
+      updateMIDIStatus('MIDI not supported');
+      return;
+    }
+    
+    navigator.requestMIDIAccess()
+      .then(onMIDISuccess)
+      .catch(() => {
+        updateMIDIStatus('MIDI not supported');
+      });
+  }
+  
+  function onMIDISuccess(midiAccess) {
+    console.log('[MIDI] Access granted');
+    
+    // Iterate through all available MIDI input ports
+    const inputs = midiAccess.inputs.values();
+    let inputCount = 0;
+    let firstInputName = "";
+    
+    for (let input of inputs) {
+      if (inputCount === 0) firstInputName = input.name;
+      inputCount++;
+      console.log(`[MIDI] Input ${inputCount}: ${input.name}`);
+      
+      // Attach event listener to this input port
+      input.addEventListener('midimessage', handleMIDIMessage);
+      
+      // Notify C++ about the device
+      if (Module && Module.ccall) {
+        Module.ccall(
+          'on_midi_device_connected',
+          null,
+          ['string'],
+          [input.name]
+        );
+      }
+    }
+    
+    if (inputCount > 0) {
+      updateMIDIStatus(`MIDI Active: ${firstInputName}`);
+      console.log(`[MIDI] Listening on ${inputCount} input port(s)`);
+    } else {
+      updateMIDIStatus('📭 No MIDI devices detected (connect a controller)');
+    }
+    
+    // Handle dynamic MIDI port connections/disconnections
+    midiAccess.addEventListener('statechange', handleMIDIStateChange);
+  }
+  
+  function onMIDIFailure(error) {
+    console.error('[MIDI] Permission denied or error:', error);
+    updateMIDIStatus('MIDI not supported');
+  }
+  
+  function handleMIDIMessage(event) {
+    const [status, data1, data2] = event.data;
+    
+    // Extract message type from status byte
+    const messageType = status & 0xF0;
+    const channel = status & 0x0F;
+    
+    // Only handle Control Change (CC) messages: 0xB0-0xBF
+    if (messageType !== 0xB0) {
+      return;  // Ignore other MIDI message types
+    }
+    
+    const cc = data1;        // CC number (0-127)
+    const value = data2;     // CC value (0-127)
+    
+    console.log(`[MIDI] CC ${cc} = ${value} on channel ${channel}`);
+    
+    // Call C++ handler via Emscripten
+    if (Module && Module.ccall) {
+      try {
+        Module.ccall(
+          'on_midi_cc',
+          null,  // return type
+          ['number', 'number', 'number'],  // argument types
+          [channel, cc, value]  // arguments
+        );
+      } catch (err) {
+        console.error('[MIDI] Error calling on_midi_cc:', err);
+      }
+    }
+  }
+  
+  function handleMIDIStateChange(event) {
+    console.log(`[MIDI] Port state changed: ${event.port.name} (${event.port.state})`);
+    // Could refresh the device list, but keeping it simple for now
+  }
+  
+  function updateMIDIStatus(message) {
+    const statusEl = document.getElementById('midi-status');
+    if (statusEl) {
+      statusEl.textContent = message;
+    }
+  }
+  
+  // Request MIDI access after audio is unlocked
+  const audioUnlockEl = document.getElementById('audio-unlock');
+  if (audioUnlockEl) {
+    audioUnlockEl.addEventListener('click', function(e) {
+      this.style.display = 'none';
+      
+      // Request MIDI after a brief delay to let audio settle
+      setTimeout(() => {
+        console.log('[MIDI] Requesting Web MIDI access...');
+        initMIDI();
+      }, 100);
+    });
+  }
+  (function() {
+    var prevDist = 0;
+    var prevMidX = 0;
+    var prevMidY = 0;
+    var tracking = false;
+    var singleTouchId = null;
+
+    var c = document.getElementById('canvas');
+    if (!c) return;
+
+    function dist(t) {
+      var dx = t[1].clientX - t[0].clientX;
+      var dy = t[1].clientY - t[0].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function getCanvasCoords(clientX, clientY) {
+      var rect = c.getBoundingClientRect();
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+
+    c.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      if (e.touches.length === 2) {
+        // Cancel any in-progress single-touch interaction
+        if (singleTouchId !== null) {
+          singleTouchId = null;
+          if (Module && Module.ccall) {
+            Module.ccall('on_canvas_touch_cancel', null, []);
+          }
+        }
+        tracking = true;
+        prevDist = dist(e.touches);
+        prevMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        prevMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      } else if (e.touches.length === 1) {
+        tracking = false;
+        singleTouchId = e.touches[0].identifier;
+        var coords = getCanvasCoords(e.touches[0].clientX, e.touches[0].clientY);
+        if (Module && Module.ccall) {
+          Module.ccall('on_canvas_touch_down', null, ['number', 'number'], [coords.x, coords.y]);
+        }
+      }
+    }, { passive: false });
+
+    c.addEventListener('touchmove', function(e) {
+      e.preventDefault();
+      if (tracking && e.touches.length === 2) {
+        var d = dist(e.touches);
+        var mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        var my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        var dscale = prevDist > 0 ? (d - prevDist) / prevDist : 0;
+        var dx = mx - prevMidX;
+        var dy = my - prevMidY;
+        prevDist = d;
+        prevMidX = mx;
+        prevMidY = my;
+        var rect = c.getBoundingClientRect();
+        var localX = mx - rect.left;
+        var localY = my - rect.top;
+        if (Module && Module.ccall) {
+          Module.ccall('on_canvas_touch_gesture', null, ['number','number','number','number','number'], [dx, dy, dscale, localX, localY]);
+        }
+      } else if (e.touches.length === 1 && singleTouchId !== null) {
+        var coords = getCanvasCoords(e.touches[0].clientX, e.touches[0].clientY);
+        if (Module && Module.ccall) {
+          Module.ccall('on_canvas_touch_move', null, ['number', 'number'], [coords.x, coords.y]);
+        }
+      }
+    }, { passive: false });
+
+    c.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      if (singleTouchId !== null) {
+        for (var i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].identifier === singleTouchId) {
+            var coords = getCanvasCoords(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
+            if (Module && Module.ccall) {
+              Module.ccall('on_canvas_touch_up', null, ['number', 'number'], [coords.x, coords.y]);
+            }
+            break;
+          }
+        }
+        singleTouchId = null;
+      }
+      if (e.touches.length < 2) tracking = false;
+    });
+
+    c.addEventListener('touchcancel', function() {
+      tracking = false;
+      if (singleTouchId !== null) {
+        singleTouchId = null;
+        if (Module && Module.ccall) {
+          Module.ccall('on_canvas_touch_cancel', null, []);
+        }
+      }
+    });
+
+    c.addEventListener('wheel', function(e) {
+      var canvasHovered = false;
+      if (Module && Module.ccall) {
+        try {
+          canvasHovered = Module.ccall('is_canvas_hovered', 'boolean');
+        } catch (err) {
+          console.warn('[Amplitron] is_canvas_hovered bridge error:', err);
+        }
+      }
+      if (e.ctrlKey) {
+        e.preventDefault();
+        var dscale = -e.deltaY * 0.005;
+        if (dscale < -0.08) dscale = -0.08;
+        if (dscale > 0.08) dscale = 0.08;
+        var rect = c.getBoundingClientRect();
+        var localX = e.clientX - rect.left;
+        var localY = e.clientY - rect.top;
+        if (Module && Module.ccall) {
+          Module.ccall('on_canvas_touch_gesture', null, ['number','number','number','number','number'], [0, 0, dscale, localX, localY]);
+        }
+      } else if (canvasHovered) {
+        e.preventDefault();
+        var dx = -e.deltaX;
+        var dy = -e.deltaY;
+        if (Module && Module.ccall) {
+          Module.ccall('on_canvas_touch_gesture', null, ['number','number','number','number','number'], [dx, dy, 0.0, 0, 0]);
+        }
+      }
+    }, { passive: false });
+  })();
   </script>
   {{{ SCRIPT }}}
 </body>

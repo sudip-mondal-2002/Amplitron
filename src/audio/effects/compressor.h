@@ -5,7 +5,7 @@
 // g_db = T + (level_db - T)/ratio - level_db, with attack/release smoothing
 // applied before multiplying y[n] = x[n] * 10^(g_db/20).
 
-#include "audio/effect.h"
+#include "audio/effects/effect.h"
 #include "audio/dsp/envelope_follower.h"
 
 namespace Amplitron {
@@ -16,6 +16,7 @@ public:
     void process(float* buffer, int num_samples) override;
     void reset() override;
     const char* name() const override { return "Compressor"; }
+    const char* type_id() const override { return "Compressor"; }
     std::vector<EffectParam>& params() override { return params_; }
 
 private:
