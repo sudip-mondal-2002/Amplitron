@@ -427,7 +427,7 @@ jobs:
             portaudio:p
             SDL2:p
             rtmidi:p
-          install: git lcov
+          install: git
           cache: true
 
       - name: Restore ccache
@@ -459,21 +459,12 @@ jobs:
           export CCACHE_DIR="$GITHUB_WORKSPACE/.ccache"
           export CCACHE_MAXSIZE=200M
           mkdir -p "$CCACHE_DIR"
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BUILD_TYPE=Debug
-            COV_FLAGS="--coverage -O0 -g"
-            LINK_FLAGS="--coverage"
-          else
-            BUILD_TYPE=Release
-            COV_FLAGS=""
-            LINK_FLAGS=""
-          fi
+          # Always build Release on Windows: coverage is handled by Linux (baseline) and macOS.
+          # Skipping -O0 + --coverage cuts Windows build time and eliminates the lcov step entirely.
+          BUILD_TYPE=Release
           mkdir -p build && cd build
           cmake -G Ninja -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
             -DAMPLITRON_VERSION="${{ steps.version.outputs.version }}" \
-            -DCMAKE_C_FLAGS="$COV_FLAGS" \
-            -DCMAKE_CXX_FLAGS="$COV_FLAGS" \
-            -DCMAKE_EXE_LINKER_FLAGS="$LINK_FLAGS" \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             ..
@@ -505,36 +496,11 @@ jobs:
           test ! -e "$INSTALL_PREFIX/share/amplitron"
           test ! -e "$INSTALL_PREFIX/bin/assets"
 
-      - name: Generate Windows Coverage
-        if: github.event_name == 'pull_request'
-        shell: msys2 {0}
-        run: |
-          # MSYS2 ships lcov 1.x which has limited --ignore-errors support
-          LCOV_VER=$(lcov --version 2>&1 | grep -oP '\d+' | head -1)
-          if [ "$LCOV_VER" -ge 2 ] 2>/dev/null; then
-            LCOV_IGNORE="--ignore-errors gcov,gcov,source,source,inconsistent,inconsistent,format,format,unsupported,unsupported,corrupt,corrupt,unused,unused"
-          else
-            LCOV_IGNORE=""
-          fi
-          # Skip --initial baseline: Linux provides the zero-coverage baseline for the merged report
-          lcov --capture --directory build --output-file coverage.info $LCOV_IGNORE 2>&1 | tail -20
-          # Normalize backslashes, unmangle MSYS2 paths, resolve build/../ quirks, and normalize to absolute Linux runner workspace paths
-          sed -i 's|\\|/|g' coverage.info
-          sed -i 's|/build/../|/|g' coverage.info
-          sed -i 's|SF:.*/Amplitron/|SF:/home/runner/work/Amplitron/Amplitron/|g' coverage.info
-          # Remove external dependencies, tests, and build artifacts
-          lcov --remove coverage.info \
-            '/usr/*' '/Library/*' '/opt/homebrew/*' '*external/*' '*tests/*' '*build/*' '*mingw64/*' '*_temp/*' '*include/c++/*' \
-            --output-file coverage.filtered.info $LCOV_IGNORE 2>&1 | tail -5
-          lcov --summary coverage.filtered.info $LCOV_IGNORE | tee coverage-summary-windows.txt
-
-      - name: Upload Windows Coverage
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v7
-        with:
-          name: windows-coverage
-          path: coverage.filtered.info
-          retention-days: 1
+      # Windows coverage is intentionally skipped: Linux provides the zero-coverage
+      # baseline (lcov --initial) and macOS provides supplementary coverage.
+      # Running lcov on Windows via MSYS2 lcov 1.x (slow, no parallel gcov) against
+      # a Debug+--coverage build was the single largest bottleneck in the pipeline
+      # (~3-4 min). Linux+macOS coverage is sufficient for the merged report.
 
       - name: Collect Binaries
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
