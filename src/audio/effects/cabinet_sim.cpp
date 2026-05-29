@@ -164,7 +164,7 @@ void CabinetSim::process(float* buffer, int num_samples) {
     check_pending_kernel();
     if (conv_engine_.has_kernel()) {
         if (num_samples != expected_block_size_ && num_samples > 0 &&
-            !raw_ir_samples_.empty()) {
+            expected_block_size_ > 0 && !raw_ir_samples_.empty()) {
             pending_block_size_.store(num_samples, std::memory_order_release);
         }
 
