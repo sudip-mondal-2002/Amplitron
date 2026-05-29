@@ -1,0 +1,43 @@
+name: Pull Request Linter
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate-pr:
+    name: Lint PR Title & Body
+    runs-on: ubuntu-latest
+    steps:
+      - name: Lint PR Title and Description
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const title = pr.title;
+            const body = pr.body || '';
+
+            // Check conventional commit prefix
+            const semanticRegex = /^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(?:\([a-z0-9\-]+\))?: .+/;
+            if (!semanticRegex.test(title)) {
+              core.setFailed(
+                `PR title "${title}" does not follow semantic formatting. ` +
+                `Example: "feat: add noise gate parameter smoothing" or "fix: resolve delay clip".`
+              );
+            } else {
+              core.info("PR title follows semantic conventions!");
+            }
+
+            // Check if PR references an issue
+            const issueRegex = /(fixes|closes|resolves)\s+#\d+/i;
+            if (!issueRegex.test(body)) {
+              core.setFailed(
+                `PR description must reference a linked issue using keywords (e.g. "Closes #123", "Fixes #45").`
+              );
+            } else {
+              core.info("PR description successfully links to an issue!");
+            }
