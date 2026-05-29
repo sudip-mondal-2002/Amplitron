@@ -24,7 +24,6 @@ public:
     ImVec2 target_scrolling = ImVec2(0.0f, 0.0f);
     bool show_grid = true;
     bool is_fullscreen = false;
-    bool hand_tool_active = false;
     float zoom = 1.0f;
     float target_zoom = 1.0f;
     float dpi_scale = 1.0f;

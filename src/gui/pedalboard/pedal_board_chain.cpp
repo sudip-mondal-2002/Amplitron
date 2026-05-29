@@ -45,25 +45,26 @@ void PedalBoard::render_signal_chain() {
     ImVec2 canvas_end = ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y);
     ui_state.last_canvas_pos = canvas_pos;
     ImGui::SetCursorScreenPos(canvas_pos);
-    ImGuiButtonFlags btn_flags = ImGuiButtonFlags_MouseButtonRight | ImGuiButtonFlags_MouseButtonMiddle;
-    if (ui_state.hand_tool_active) {
-        btn_flags |= ImGuiButtonFlags_MouseButtonLeft;
-    }
+    // Left mouse button always pans the canvas on empty space. Widgets (knobs,
+    // drag handles, pins) are rendered on top and capture clicks first — this
+    // InvisibleButton only receives clicks that fall through to empty canvas.
+    ImGuiButtonFlags btn_flags = ImGuiButtonFlags_MouseButtonRight | ImGuiButtonFlags_MouseButtonMiddle | ImGuiButtonFlags_MouseButtonLeft;
     
     ImGui::SetNextItemAllowOverlap();
     ImGui::InvisibleButton("canvas_panning_hotspot", canvas_size, btn_flags);
     // Update canvas_hovered here — after InvisibleButton — so it reflects the actual canvas item
     ui_state.canvas_hovered = ImGui::IsItemHovered();
     
-    if (ui_state.hand_tool_active && ImGui::IsItemHovered()) {
+    // Show hand cursor only when hovering empty canvas (no widget underneath)
+    if (ImGui::IsItemHovered() && !ImGui::IsAnyItemHovered()) {
         ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
     }
     
     if (ImGui::IsItemActive() && (ImGui::IsMouseDragging(ImGuiMouseButton_Right) || 
                                   ImGui::IsMouseDragging(ImGuiMouseButton_Middle) || 
-                                  (ui_state.hand_tool_active && ImGui::IsMouseDragging(ImGuiMouseButton_Left)))) {
-        ui_state.scrolling.x += ImGui::GetIO().MousePos.x - ImGui::GetIO().MousePosPrev.x;
-        ui_state.scrolling.y += ImGui::GetIO().MousePos.y - ImGui::GetIO().MousePosPrev.y;
+                                  ImGui::IsMouseDragging(ImGuiMouseButton_Left))) {
+        ui_state.scrolling.x += ImGui::GetIO().MouseDelta.x;
+        ui_state.scrolling.y += ImGui::GetIO().MouseDelta.y;
         ui_state.target_scrolling = ui_state.scrolling;
     }
     // Zooming is now allowed in both fullscreen and normal modes
@@ -175,7 +176,7 @@ void PedalBoard::render_signal_chain() {
             ImGui::SetCursorScreenPos(node_screen_pos);
             ImGui::SetNextItemAllowOverlap(); 
             ImGui::InvisibleButton("native_drag_handle", ImVec2(node_width - 25.0f * ui_state.zoom, 30.0f * ui_state.zoom));
-            if (!ui_state.hand_tool_active && ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+            if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
                 if (!node_layout.is_dragging) {
                     node_layout.is_dragging = true;
                     node_layout.drag_start_pos = node_layout.position;
@@ -196,7 +197,7 @@ void PedalBoard::render_signal_chain() {
             ImGui::SetCursorScreenPos(node_screen_pos);
             ImGui::SetNextItemAllowOverlap();
             ImGui::InvisibleButton("util_drag_handle", ImVec2(node_width - 25.0f * ui_state.zoom, node_height));
-            if (!ui_state.hand_tool_active && ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+            if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
                 if (!node_layout.is_dragging) {
                     node_layout.is_dragging = true;
                     node_layout.drag_start_pos = node_layout.position;

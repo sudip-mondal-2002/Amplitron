@@ -5,7 +5,6 @@
 #include "audio/effects/amp_simulator.h"
 #include "gui/views/gui_midi.h"
 #include "midi/midi_manager.h"
-#include "gui/state/gui_graph_state.h"
 
 #include <cstring>
 #include <imgui.h>
@@ -90,20 +89,6 @@ void PedalBoard::render() {
 
     if (ImGui::Button("Clear All")) {
         show_confirm_clear_ = true;
-    }
-    ImGui::SameLine();
-
-    auto& ui_state = GuiGraphState::get_instance();
-    if (ui_state.hand_tool_active) {
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
-        if (ImGui::Button("Hand Tool [Active]")) {
-            ui_state.hand_tool_active = false;
-        }
-        ImGui::PopStyleColor();
-    } else {
-        if (ImGui::Button("Hand Tool")) {
-            ui_state.hand_tool_active = true;
-        }
     }
     ImGui::SameLine();
 
