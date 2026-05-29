@@ -18,17 +18,17 @@
     { "id": "output", "type": "output", "position": { "x": 1240, "y": 200 } }
   ],
   "links": [
-    { "from": "input", "src_pin": "out", "to": "noise_gate", "dst_pin": "in" },
-    { "from": "noise_gate", "src_pin": "out", "to": "compressor", "dst_pin": "in" },
-    { "from": "compressor", "src_pin": "out", "to": "splitter", "dst_pin": "in" },
-    { "from": "splitter", "src_pin": "out0", "to": "overdrive_a", "dst_pin": "in" },
-    { "from": "overdrive_a", "src_pin": "out", "to": "amp_british", "dst_pin": "in" },
-    { "from": "amp_british", "src_pin": "out", "to": "cab_a", "dst_pin": "in" },
-    { "from": "cab_a", "src_pin": "out", "to": "mixer", "dst_pin": "in0" },
-    { "from": "splitter", "src_pin": "out1", "to": "amp_american", "dst_pin": "in" },
-    { "from": "amp_american", "src_pin": "out", "to": "cab_b", "dst_pin": "in" },
-    { "from": "cab_b", "src_pin": "out", "to": "mixer", "dst_pin": "in1" },
-    { "from": "mixer", "src_pin": "out", "to": "reverb", "dst_pin": "in" },
-    { "from": "reverb", "src_pin": "out", "to": "output", "dst_pin": "in" }
+    { "from": "input", "outputIndex": 0, "to": "noise_gate", "inputIndex": 0 },
+    { "from": "noise_gate", "outputIndex": 0, "to": "compressor", "inputIndex": 0 },
+    { "from": "compressor", "outputIndex": 0, "to": "splitter", "inputIndex": 0 },
+    { "from": "splitter", "outputIndex": 0, "to": "overdrive_a", "inputIndex": 0 },
+    { "from": "overdrive_a", "outputIndex": 0, "to": "amp_british", "inputIndex": 0 },
+    { "from": "amp_british", "outputIndex": 0, "to": "cab_a", "inputIndex": 0 },
+    { "from": "cab_a", "outputIndex": 0, "to": "mixer", "inputIndex": 0 },
+    { "from": "splitter", "outputIndex": 1, "to": "amp_american", "inputIndex": 0 },
+    { "from": "amp_american", "outputIndex": 0, "to": "cab_b", "inputIndex": 0 },
+    { "from": "cab_b", "outputIndex": 0, "to": "mixer", "inputIndex": 1 },
+    { "from": "mixer", "outputIndex": 0, "to": "reverb", "inputIndex": 0 },
+    { "from": "reverb", "outputIndex": 0, "to": "output", "inputIndex": 0 }
   ]
 }
