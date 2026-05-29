@@ -151,6 +151,102 @@ TEST_F(PresetTest, test_pedal_board_chain_scrolling_and_zooming) {
     engine.shutdown();
 }
 
+TEST_F(PresetTest, test_implicit_hand_tool) {
+    ScopedImGuiContext imgui;
+    AudioEngine engine;
+    engine.initialize();
+    CommandHistory history;
+    MidiManager midi_manager;
+    GuiMidi gui_midi(midi_manager);
+
+    PedalBoard board(engine, history, &gui_midi);
+    auto od = std::make_shared<Overdrive>();
+    engine.add_effect(od);
+    board.rebuild_widgets();
+
+    auto& ui_state = GuiGraphState::get_instance();
+    ui_state.zoom = 1.0f;
+    ui_state.target_zoom = 1.0f;
+    ui_state.scrolling = ImVec2(0, 0);
+    ui_state.target_scrolling = ImVec2(0, 0);
+
+    // Place the Overdrive pedal at a known position
+    for (const auto& node : engine.graph().get_nodes()) {
+        ui_state.node_positions[node.id] = { ImVec2(100.0f, 100.0f), false };
+    }
+
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2(1024, 768));
+    ImGui::Begin("TestWindow");
+    TestAccessor::render_signal_chain(board);
+
+    ImGuiIO& io = ImGui::GetIO();
+    io.MousePos = ImVec2(512, 384);
+    advance_frame();
+    TestAccessor::render_signal_chain(board);
+
+    // ── Test 1: Left-click drag on pedal widget → canvas does NOT pan ──
+    // The widget's native_drag_handle captures the click; the canvas
+    // InvisibleButton beneath it should NOT receive the drag.
+    io.MousePos = ImVec2(110.0f, 110.0f); // Overdrive drag handle area
+    io.MouseDown[0] = true;
+    advance_frame();
+    TestAccessor::render_signal_chain(board);
+
+    io.MousePos = ImVec2(150.0f, 120.0f); // drag moves within widget
+    advance_frame();
+    TestAccessor::render_signal_chain(board);
+
+    io.MouseDown[0] = false;
+    advance_frame();
+    TestAccessor::render_signal_chain(board);
+
+    // Scrolling must remain at zero — the widget consumed the drag
+    ASSERT_EQ(ui_state.scrolling.x, 0.0f);
+    ASSERT_EQ(ui_state.scrolling.y, 0.0f);
+
+    // ── Test 2: Left-click click (no drag) on empty canvas → no pan ──
+    // A click without mouse movement should not trigger panning.
+    ui_state.scrolling = ImVec2(0, 0);
+    ui_state.target_scrolling = ImVec2(0, 0);
+    io.MousePos = ImVec2(512, 384);
+    advance_frame();
+    TestAccessor::render_signal_chain(board);
+
+    io.MouseDown[0] = true;               // press
+    advance_frame();
+    TestAccessor::render_signal_chain(board);
+
+    io.MouseDown[0] = false;              // release, no movement between frames
+    advance_frame();
+    TestAccessor::render_signal_chain(board);
+
+    ASSERT_EQ(ui_state.scrolling.x, 0.0f);
+    ASSERT_EQ(ui_state.scrolling.y, 0.0f);
+
+    // ── Test 3: Left-click drag on empty canvas → pans (implicit hand) ──
+    // Proves the implicit left-click panning works without a hand tool toggle.
+    ui_state.scrolling = ImVec2(0, 0);
+    ui_state.target_scrolling = ImVec2(0, 0);
+    io.MousePos = ImVec2(500, 380);
+    advance_frame();
+    TestAccessor::render_signal_chain(board);
+
+    io.MouseDown[0] = true;
+    io.MousePos = ImVec2(480, 370);
+    advance_frame();
+    TestAccessor::render_signal_chain(board);
+
+    io.MouseDown[0] = false;
+    advance_frame();
+    TestAccessor::render_signal_chain(board);
+
+    ASSERT_NE(ui_state.scrolling.x, 0.0f);
+
+    ImGui::End();
+    engine.shutdown();
+}
+
 TEST_F(PresetTest, test_pedal_board_chain_nodes_and_wiring) {
     ScopedImGuiContext imgui;
     AudioEngine engine;
