@@ -55,8 +55,8 @@ void PedalBoard::render_signal_chain() {
     // Update canvas_hovered here — after InvisibleButton — so it reflects the actual canvas item
     ui_state.canvas_hovered = ImGui::IsItemHovered();
     
-    // Show hand cursor when hovering empty canvas (indicates implicit panning)
-    if (ImGui::IsItemHovered()) {
+    // Show hand cursor only when hovering empty canvas (no widget underneath)
+    if (ImGui::IsItemHovered() && !ImGui::IsAnyItemHovered()) {
         ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
     }
     
