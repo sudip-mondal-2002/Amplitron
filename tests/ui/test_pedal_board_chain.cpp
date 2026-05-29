@@ -104,8 +104,8 @@ TEST_F(PresetTest, test_pedal_board_chain_scrolling_and_zooming) {
     advance_frame();
     TestAccessor::render_signal_chain(board);
 
-    // 4. Hand tool active dragging
-    ui_state.hand_tool_active = true;
+    // 4. Left-click panning (implicit — no hand tool toggle needed)
+    // Left-click drag on empty canvas should pan without any mode switch
     io.MouseDown[0] = true;
     io.MousePos = ImVec2(500, 380);
     advance_frame();
@@ -116,9 +116,11 @@ TEST_F(PresetTest, test_pedal_board_chain_scrolling_and_zooming) {
     TestAccessor::render_signal_chain(board);
     
     io.MouseDown[0] = false;
-    ui_state.hand_tool_active = false;
     advance_frame();
     TestAccessor::render_signal_chain(board);
+    
+    // Scrolling should have changed after the drag
+    ASSERT_NE(ui_state.scrolling.x, 0.0f);
 
     // 5. Scroll without Ctrl (should do scrolling/panning)
     io.MousePos = ImVec2(512, 384);
