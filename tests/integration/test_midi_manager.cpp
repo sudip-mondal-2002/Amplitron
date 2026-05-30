@@ -3,8 +3,8 @@
 // Set a local hook definition to open up internal serialization blocks for test suite coverage tracking
 #define VIRTUAL_TEST_HOOK public
 #include "midi/midi_manager.h"
-#include "audio/audio_engine.h"
-#include "audio/effect.h"
+#include "audio/engine/audio_engine.h"
+#include "audio/effects/effect.h"
 #undef VIRTUAL_TEST_HOOK
 
 #include <cmath>

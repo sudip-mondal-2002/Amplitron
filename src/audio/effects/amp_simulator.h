@@ -8,7 +8,7 @@
 // sag follows an envelope e[n] = a*x_abs[n] + (1-a)*e[n-1] and reduces gain
 // as the simulated supply is loaded.
 
-#include "audio/effect.h"
+#include "audio/effects/effect.h"
 #include "audio/dsp/biquad.h"
 
 namespace Amplitron {

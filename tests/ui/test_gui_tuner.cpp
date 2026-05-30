@@ -7,112 +7,56 @@
  */
 #include "test_framework.h"
 #include "test_fixtures.h"
-#include "gui/gui_tuner.h"
-#include "audio/effects/tuner.h"
+#include "gui/views/gui_tuner.h"
 #include <memory>
 
 using namespace Amplitron;
 
 TEST_F(PresetTest, gui_tuner_construction_no_crash) {
-    auto tuner = std::make_shared<TunerPedal>();
-    GuiTuner gt(engine, tuner);
+    GuiTuner gt;
     (void)gt;
-}
-
-TEST_F(PresetTest, gui_tuner_tuner_instance_returns_correct_shared_ptr) {
-    auto tuner = std::make_shared<TunerPedal>();
-    GuiTuner gt(engine, tuner);
-    ASSERT_EQ(gt.tuner_instance().get(), tuner.get());
-}
-
-TEST_F(PresetTest, gui_tuner_toggle_on_enables_tuner_and_sets_tap) {
-    auto tuner = std::make_shared<TunerPedal>();
-    GuiTuner gt(engine, tuner);
-
-    bool show = false;
-    gt.toggle(show);
-
-    // show should toggle to true
-    ASSERT_TRUE(show);
-    // tuner should be enabled
-    ASSERT_TRUE(tuner->is_enabled());
-    // engine should have the tuner tap set
-    ASSERT_TRUE(engine.has_tuner_tap());
-}
-
-TEST_F(PresetTest, gui_tuner_toggle_off_disables_tuner_and_clears_tap) {
-    auto tuner = std::make_shared<TunerPedal>();
-    GuiTuner gt(engine, tuner);
-
-    bool show = true;
-    gt.toggle(show);
-
-    // show should toggle to false
-    ASSERT_FALSE(show);
-    // tuner should be disabled
-    ASSERT_FALSE(tuner->is_enabled());
-    // engine should have tuner tap cleared
-    ASSERT_FALSE(engine.has_tuner_tap());
-}
-
-TEST_F(PresetTest, gui_tuner_multiple_toggles_are_consistent) {
-    auto tuner = std::make_shared<TunerPedal>();
-    GuiTuner gt(engine, tuner);
-
-    bool show = false;
-
-    // Toggle On
-    gt.toggle(show);
-    ASSERT_TRUE(show);
-    ASSERT_TRUE(tuner->is_enabled());
-    ASSERT_TRUE(engine.has_tuner_tap());
-
-    // Toggle Off
-    gt.toggle(show);
-    ASSERT_FALSE(show);
-    ASSERT_FALSE(tuner->is_enabled());
-    ASSERT_FALSE(engine.has_tuner_tap());
-
-    // Toggle On Again
-    gt.toggle(show);
-    ASSERT_TRUE(show);
-    ASSERT_TRUE(tuner->is_enabled());
-    ASSERT_TRUE(engine.has_tuner_tap());
 }
 
 TEST_F(PresetTest, gui_tuner_render_disabled_state) {
     ScopedImGuiContext imgui;
-    auto tuner = std::make_shared<TunerPedal>();
-    GuiTuner gt(engine, tuner);
+    GuiTuner gt;
 
-    bool show = true;
+    TunerProps props;
+    props.note_name_fn = [](int idx) { return "E"; };
+    gt.set_props(props);
+
+    bool show = false;
     gt.render(show);
 }
 
 TEST_F(PresetTest, gui_tuner_render_active_state_no_signal) {
     ScopedImGuiContext imgui;
-    auto tuner = std::make_shared<TunerPedal>();
-    GuiTuner gt(engine, tuner);
+    GuiTuner gt;
+
+    bool mute_changed_called = false;
+    TunerProps props;
+    props.has_signal = false;
+    props.note_name_fn = [](int idx) { return "E"; };
+    props.on_mute_changed = [&](bool m) { mute_changed_called = true; };
+    gt.set_props(props);
 
     bool show = true;
-    tuner->set_enabled(true);
-    tuner->signal_detected.store(false);
-
     gt.render(show);
 }
 
 TEST_F(PresetTest, gui_tuner_render_active_state_with_signal) {
     ScopedImGuiContext imgui;
-    auto tuner = std::make_shared<TunerPedal>();
-    GuiTuner gt(engine, tuner);
+    GuiTuner gt;
+
+    TunerProps props;
+    props.has_signal = true;
+    props.note_idx = 4;
+    props.octave = 2;
+    props.cents = -5.5f;
+    props.freq = 82.4f;
+    props.note_name_fn = [](int idx) { return "E"; };
+    gt.set_props(props);
 
     bool show = true;
-    tuner->set_enabled(true);
-    tuner->signal_detected.store(true);
-    tuner->detected_note.store(4);       // E
-    tuner->detected_octave.store(2);     // E2
-    tuner->detected_cents.store(-5.5f);  // flat
-    tuner->detected_freq.store(82.4f);
-
     gt.render(show);
 }
