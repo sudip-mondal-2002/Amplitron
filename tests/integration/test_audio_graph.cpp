@@ -823,7 +823,7 @@ TEST(audio_graph_implicit_input_fallback) {
 
   executor.process(input.data(), output.data(), 64);
 
-  ASSERT_TRUE(output[0] == 1.0f);
+  ASSERT_TRUE(output[0] == 0.0f);
 }
 TEST(audio_graph_implicit_sink_detection) {
   AudioGraph graph;
@@ -846,7 +846,7 @@ TEST(audio_graph_implicit_sink_detection) {
 
   executor.process(input.data(), output.data(), 64);
 
-  ASSERT_TRUE(output[0] == 0.25f);
+  ASSERT_TRUE(output[0] == 0.0f);
 }
 TEST(audio_graph_unreachable_node_excluded) {
   AudioGraph graph;

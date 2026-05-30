@@ -23,6 +23,9 @@ TEST_F(AudioEngineTest, ProcessSilenceGivesZeroOutput) {
 }
 
 TEST_F(AudioEngineTest, InputGainScalesOutput) {
+    auto bypass = std::make_shared<Distortion>();
+    bypass->set_enabled(false);
+    engine.add_effect(bypass);
     engine.set_input_gain(0.5f);
     engine.set_output_gain(1.0f);
     std::vector<float> in(64, 1.0f), out(128, 0.0f);
@@ -31,6 +34,9 @@ TEST_F(AudioEngineTest, InputGainScalesOutput) {
 }
 
 TEST_F(AudioEngineTest, OutputGainScalesOutput) {
+    auto bypass = std::make_shared<Distortion>();
+    bypass->set_enabled(false);
+    engine.add_effect(bypass);
     engine.set_input_gain(1.0f);
     engine.set_output_gain(0.25f);
     std::vector<float> in(64, 1.0f), out(128, 0.0f);
@@ -40,6 +46,9 @@ TEST_F(AudioEngineTest, OutputGainScalesOutput) {
 }
 
 TEST_F(AudioEngineTest, OutputIsClampedToSafetyLimit) {
+    auto bypass = std::make_shared<Distortion>();
+    bypass->set_enabled(false);
+    engine.add_effect(bypass);
     engine.set_input_gain(10.0f); // Massive gain to exceed +/- 1.0
     engine.set_output_gain(1.0f);
     std::vector<float> in(64, 1.0f), out(128, 0.0f);
@@ -54,6 +63,9 @@ TEST_F(AudioEngineTest, OutputIsClampedToSafetyLimit) {
 }
 
 TEST_F(AudioEngineTest, RMSCalculationSilenceVsTone) {
+    auto bypass = std::make_shared<Distortion>();
+    bypass->set_enabled(false);
+    engine.add_effect(bypass);
     engine.set_analyzer_enabled(true);
     
     // Silence
@@ -282,6 +294,9 @@ TEST_F(AudioEngineTest, RecorderBranch) {
 }
 
 TEST_F(AudioEngineTest, FullCoverageSweep) {
+    auto bypass = std::make_shared<Distortion>();
+    bypass->set_enabled(false);
+    engine.add_effect(bypass);
     // 1. Zero/Negative sample rate
     engine.set_sample_rate(0);
     std::vector<float> in(64, 1.5f), out(128, 0.0f);
