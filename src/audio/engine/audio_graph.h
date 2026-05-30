@@ -31,6 +31,8 @@ struct DSPNode {
 
   float x = 0.0f;
   float y = 0.0f;
+
+  std::vector<float> input_gains; // Gain for each input pin (Mixer only)
 };
 
 struct GraphLink {
@@ -61,6 +63,17 @@ public:
   // For Undo/Redo System (forces cache reload)
   void restore_node(const DSPNode& node);
   void restore_link(const GraphLink& link);
+
+  // Dynamic Mixer API
+  bool add_input_pin(int node_id);
+  bool remove_input_pin(int node_id, int pin_id = -1);
+  void set_mixer_input_gain(int node_id, size_t pin_index, float gain);
+  void restore_input_pin(int node_id, int pin_id, int index, float gain);
+
+  // Dynamic Splitter API
+  bool add_output_pin(int node_id);
+  bool remove_output_pin(int node_id, int pin_id = -1);
+  void restore_output_pin(int node_id, int pin_id, int index);
 
   // Accessors
   const std::vector<int> &get_sorted_nodes() const { return sorted_node_ids_; }

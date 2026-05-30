@@ -26,6 +26,7 @@ public:
     // Hot-path processing (Strictly allocation-free and lock-free)
     // Adjust the pedal->process signature if your pedals process strictly in-place
     void process(const float* input, float* output, int num_samples);
+    void update_mixer_gain(int node_id, int pin_index, float gain);
 
 private:
     int sample_rate_ = 48000;
@@ -34,6 +35,8 @@ private:
 
     struct InputSource {
         int buffer_index; // The pool index to read from
+        float gain = 1.0f;
+        int pin_index = 0;
     };
 
     struct NodeExecutionStep {
