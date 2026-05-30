@@ -62,7 +62,7 @@ public:
     ~ConvolutionEngine();
 
     // Set the active kernel. Resets internal state if kernel changes.
-    void set_kernel(std::shared_ptr<const ConvolutionKernel> kernel);
+    void set_kernel(const ConvolutionKernel* kernel);
 
     // Process a block of audio in-place.
     void process(float* buffer, int num_samples);
@@ -73,7 +73,7 @@ public:
     bool has_kernel() const { return kernel_ != nullptr; }
 
 private:
-    std::shared_ptr<const ConvolutionKernel> kernel_;
+    const ConvolutionKernel* kernel_ = nullptr;
 
     // Frequency-domain delay line (circular buffer of past input blocks in freq domain)
     std::vector<std::vector<char>> fdl_;  // raw storage for kiss_fft_cpx arrays

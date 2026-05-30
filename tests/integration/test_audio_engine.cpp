@@ -1,7 +1,7 @@
 #include "test_framework.h"
 #include "test_fixtures.h"
 #include "test_mocks.h"
-#include "audio/audio_engine.h"
+#include "audio/engine/audio_engine.h"
 #include "audio/effects/distortion.h"
 #include "audio/effects/overdrive.h"
 #include <vector>

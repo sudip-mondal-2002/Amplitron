@@ -1,8 +1,9 @@
 #pragma once
 
 #include "common.h"
-#include "audio/audio_engine.h"
+#include "audio/engine/audio_engine.h"
 #include "midi/midi_manager.h"
+#include <nlohmann/json_fwd.hpp>
 #include <fstream>
 #include <map>
 #include <sstream>
@@ -48,6 +49,21 @@ struct PresetData {
     };
     std::vector<LinkData> links;
 };
+
+// Serialization helpers are declared here so translation units that include
+// preset_manager.h (including tests) can use preset JSON APIs without relying
+// on direct inclusion order of preset_json.h.
+std::string to_json_ext(const PresetData& preset);
+bool from_json_ext(const std::string& json_str, PresetData& preset);
+
+// nlohmann ADL hooks for PresetData and nested EffectData.
+void to_json(nlohmann::json& j, const PresetData::EffectData& fx);
+void from_json(const nlohmann::json& j, PresetData::EffectData& fx);
+void to_json(nlohmann::json& j, const PresetData& preset);
+void from_json(const nlohmann::json& j, PresetData& preset);
+
+// Directory helper exposed for tests and diagnostics.
+std::string get_user_presets_dir();
 
 class PresetManager {
 public:
