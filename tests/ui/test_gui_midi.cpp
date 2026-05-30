@@ -7,7 +7,7 @@
  */
 #include "test_framework.h"
 #include "test_fixtures.h"
-#include "gui/gui_midi.h"
+#include "gui/views/gui_midi.h"
 #include "midi/midi_manager.h"
 #include <string>
 
