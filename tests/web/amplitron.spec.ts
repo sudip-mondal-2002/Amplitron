@@ -611,4 +611,71 @@ test.describe('Modular Graph Canvas Interactions', () => {
     );
     expect(countAfter).toBe(countBefore - 1);
   });
+
+  test('add nodes and cables, then undo back to empty canvas', async ({ page }) => {
+    await waitForRuntime(page);
+
+    const countBefore: number = await page.evaluate(() =>
+      Module.ccall('get_node_count', 'number', [], [])
+    );
+
+    // 1. Add 3 Splitter nodes
+    for (let i = 0; i < 3; i++) {
+      await page.evaluate(() =>
+        Module.ccall('trigger_add_splitter_node', 'number', [], [])
+      );
+      await page.waitForTimeout(100);
+    }
+
+    const countAfterNodes: number = await page.evaluate(() =>
+      Module.ccall('get_node_count', 'number', [], [])
+    );
+    expect(countAfterNodes).toBe(countBefore + 3);
+
+    const linksBefore: number = await page.evaluate(() =>
+      Module.ccall('get_link_count', 'number', [], [])
+    );
+
+    // 2. Draw 2 cables
+    // Node indices are countBefore, countBefore+1, countBefore+2
+    // We'll connect them: N0 -> N1, N1 -> N2
+    await page.evaluate(() => {
+      const c = Module.ccall('get_node_count', 'number', [], []);
+      const n0 = c - 3;
+      const n1 = c - 2;
+      const n2 = c - 1;
+      
+      const pin0 = Module.ccall('get_node_output_pin_by_index', 'number', ['number', 'number'], [n0, 0]);
+      const pin1 = Module.ccall('get_node_input_pin_by_index', 'number', ['number', 'number'], [n1, 0]);
+      Module.ccall('trigger_add_link', 'number', ['number', 'number'], [pin0, pin1]);
+
+      const pin1Out = Module.ccall('get_node_output_pin_by_index', 'number', ['number', 'number'], [n1, 0]);
+      const pin2In = Module.ccall('get_node_input_pin_by_index', 'number', ['number', 'number'], [n2, 0]);
+      Module.ccall('trigger_add_link', 'number', ['number', 'number'], [pin1Out, pin2In]);
+    });
+    
+    await page.waitForTimeout(100);
+
+    const linksAfterCables: number = await page.evaluate(() =>
+      Module.ccall('get_link_count', 'number', [], [])
+    );
+    expect(linksAfterCables).toBe(linksBefore + 2);
+
+    // 3. Undo 5 times (2 cables + 3 nodes)
+    for (let i = 0; i < 5; i++) {
+      await page.keyboard.press('Control+Z');
+      await page.waitForTimeout(100);
+    }
+
+    // 4. Verify back to original state
+    const countFinalNodes: number = await page.evaluate(() =>
+      Module.ccall('get_node_count', 'number', [], [])
+    );
+    const countFinalLinks: number = await page.evaluate(() =>
+      Module.ccall('get_link_count', 'number', [], [])
+    );
+
+    expect(countFinalNodes).toBe(countBefore);
+    expect(countFinalLinks).toBe(linksBefore);
+  });
 });

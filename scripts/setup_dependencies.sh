@@ -4,6 +4,11 @@
 
 set -e
 
+SKIP_SYSTEM_DEPS=false
+if [[ "$1" == "--no-system-deps" ]]; then
+    SKIP_SYSTEM_DEPS=true
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 EXTERNAL_DIR="$PROJECT_ROOT/external"
@@ -67,6 +72,10 @@ fi
 echo ""
 echo "Checking system dependencies..."
 
+# install_deps - Detects the system package manager and installs required dependencies.
+#
+# This function checks for apt-get, dnf, pacman, or brew to install build-essential,
+# cmake, portaudio, and sdl2 libraries.
 install_deps() {
     if command -v apt-get &> /dev/null; then
         echo "Detected Debian/Ubuntu. Installing dependencies..."
@@ -75,39 +84,43 @@ install_deps() {
             build-essential cmake pkg-config \
             libportaudio2 portaudio19-dev \
             libsdl2-dev \
-            libgl1-mesa-dev
+            libgl1-mesa-dev \
+            libjack-jackd2-dev
     elif command -v dnf &> /dev/null; then
         echo "Detected Fedora/RHEL. Installing dependencies..."
         sudo dnf install -y \
             gcc-c++ cmake pkg-config \
             portaudio-devel \
             SDL2-devel \
-            mesa-libGL-devel
+            mesa-libGL-devel \
+            jack-audio-connection-kit-devel
     elif command -v pacman &> /dev/null; then
         echo "Detected Arch Linux. Installing dependencies..."
         sudo pacman -S --noconfirm \
             base-devel cmake pkg-config \
             portaudio \
             sdl2 \
-            mesa
+            mesa \
+            jack2
     elif command -v brew &> /dev/null; then
         echo "Detected macOS with Homebrew. Installing dependencies..."
-        brew install cmake portaudio sdl2
+        brew install cmake portaudio sdl2 jack
     else
         echo "WARNING: Could not detect package manager."
         echo "Please install manually: cmake, portaudio, sdl2, opengl dev headers"
     fi
 }
 
-if [ -t 0 ]; then
+if [[ "$SKIP_SYSTEM_DEPS" == true ]]; then
+    echo "Skipping system dependency installation (--no-system-deps flag set)."
+elif [ -t 0 ]; then
     read -p "Install system dependencies? [y/N] " -n 1 -r
     echo
+    if [[ ${REPLY:-N} =~ ^[Yy]$ ]]; then
+        install_deps
+    fi
 else
-    REPLY="N"
     echo "Non-interactive shell detected; skipping system dependency install prompt."
-fi
-if [[ ${REPLY:-N} =~ ^[Yy]$ ]]; then
-    install_deps
 fi
 
 echo ""
