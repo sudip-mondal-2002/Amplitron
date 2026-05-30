@@ -107,11 +107,11 @@ void AudioGraphExecutor::update_transport_state(float bpm) {
 
 void AudioGraphExecutor::process(const float* input, float* output, int num_samples) {
     if (num_samples > max_block_size_) {
-        std::memcpy(output, input, static_cast<size_t>(max_block_size_) * sizeof(float));
+        std::memset(output, 0, static_cast<size_t>(max_block_size_) * sizeof(float));
         return;
     }
     if (execution_plan_.empty()) {
-        std::memcpy(output, input, num_samples * sizeof(float));
+        std::memset(output, 0, num_samples * sizeof(float));
         return;
     }
 

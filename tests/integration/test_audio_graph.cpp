@@ -719,10 +719,10 @@ TEST(audio_graph_executor_process_without_compile) {
   executor.process(input.data(), output.data(), 64);
 
   for (size_t i = 0; i < input.size(); ++i) {
-    ASSERT_TRUE(output[i] == input[i]);
+    ASSERT_TRUE(output[i] == 0.0f);
   }
 }
-TEST(audio_graph_executor_oversized_block_passthrough) {
+TEST(audio_graph_executor_oversized_block_silence) {
   AudioGraphExecutor executor;
   executor.prepare(48000, 64);
 
@@ -732,7 +732,7 @@ TEST(audio_graph_executor_oversized_block_passthrough) {
   executor.process(input.data(), output.data(), 128);
 
   for (int i = 0; i < 64; ++i) {
-    ASSERT_TRUE(output[i] == input[i]);
+    ASSERT_TRUE(output[i] == 0.0f);
   }
 }
 TEST(audio_graph_duplicate_link_rejection) {
