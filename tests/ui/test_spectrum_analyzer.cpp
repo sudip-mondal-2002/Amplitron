@@ -1,14 +1,16 @@
 /**
  * @file test_spectrum_analyzer.cpp
- * @brief Headless-safe tests for SpectrumAnalyzer DSP logic.
+ * @brief Unit tests for SpectrumAnalyzer DSP logic.
  *
- * Only update() (pure DSP) and draw(nullptr, ...) (early-return guard) are
- * tested — no ImGui draw context is required.
+ * Tests the pure-DSP SpectrumAnalyzer (audio/dsp/spectrum_analyzer.h).
+ * No ImGui draw context or draw calls are exercised here — drawing lives
+ * in GuiAnalyzer, which has its own test suite.
  */
 #include "test_framework.h"
-#include "gui/spectrum_analyzer.h"
+#include "audio/dsp/spectrum_analyzer.h"
 #include <cmath>
 #include <vector>
+#include <limits>
 
 using namespace Amplitron;
 
@@ -24,6 +26,10 @@ TEST(spectrum_analyzer_update_silence_is_stable) {
     for (int frame = 0; frame < 10; ++frame) {
         sa.update(zeros.data(), zeros.data(), 48000, 1.0f / 60.0f);
     }
+    for (int i = 0; i < SpectrumAnalyzer::DISPLAY_BARS; ++i) {
+        ASSERT_TRUE(!std::isnan(sa.smoothed_input_db()[i]));
+        ASSERT_TRUE(!std::isinf(sa.smoothed_input_db()[i]));
+    }
 }
 
 TEST(spectrum_analyzer_update_sine_tone_does_not_produce_nan) {
@@ -33,8 +39,10 @@ TEST(spectrum_analyzer_update_sine_tone_does_not_produce_nan) {
         tone[i] = 0.5f * std::sin(2.0f * 3.14159265f * 1000.0f * i / 48000.0f);
     }
     sa.update(tone.data(), tone.data(), 48000, 1.0f / 60.0f);
-    // draw with nullptr must be a silent no-op — not crash
-    sa.draw(nullptr, ImVec2(0, 0), ImVec2(800, 200), SpectrumAnalyzer::DisplayMode::Input);
+    for (int i = 0; i < SpectrumAnalyzer::DISPLAY_BARS; ++i) {
+        ASSERT_TRUE(!std::isnan(sa.smoothed_input_db()[i]));
+        ASSERT_TRUE(!std::isnan(sa.smoothed_output_db()[i]));
+    }
 }
 
 TEST(spectrum_analyzer_update_null_input_is_safe) {
@@ -48,23 +56,8 @@ TEST(spectrum_analyzer_update_null_input_is_safe) {
 TEST(spectrum_analyzer_update_zero_sample_rate_is_safe) {
     SpectrumAnalyzer sa;
     std::vector<float> samples(SpectrumAnalyzer::FFT_SIZE, 0.1f);
-    sa.update(samples.data(), samples.data(), 0,  1.0f / 60.0f);
+    sa.update(samples.data(), samples.data(),  0, 1.0f / 60.0f);
     sa.update(samples.data(), samples.data(), -1, 1.0f / 60.0f);
-}
-
-TEST(spectrum_analyzer_draw_null_drawlist_all_modes) {
-    SpectrumAnalyzer sa;
-    sa.draw(nullptr, ImVec2(0,0), ImVec2(400,100), SpectrumAnalyzer::DisplayMode::Input);
-    sa.draw(nullptr, ImVec2(0,0), ImVec2(400,100), SpectrumAnalyzer::DisplayMode::Output);
-    sa.draw(nullptr, ImVec2(0,0), ImVec2(400,100), SpectrumAnalyzer::DisplayMode::Overlay);
-}
-
-TEST(spectrum_analyzer_draw_degenerate_size_is_safe) {
-    SpectrumAnalyzer sa;
-    // size.x <= 2 or size.y <= 2 triggers early return
-    sa.draw(nullptr, ImVec2(10,10), ImVec2(1,  1  ), SpectrumAnalyzer::DisplayMode::Output);
-    sa.draw(nullptr, ImVec2(10,10), ImVec2(0,  200), SpectrumAnalyzer::DisplayMode::Output);
-    sa.draw(nullptr, ImVec2(10,10), ImVec2(200,0  ), SpectrumAnalyzer::DisplayMode::Output);
 }
 
 TEST(spectrum_analyzer_update_high_frequency_tone) {
@@ -75,6 +68,9 @@ TEST(spectrum_analyzer_update_high_frequency_tone) {
         tone[i] = 0.3f * std::sin(2.0f * 3.14159265f * 10000.0f * i / 48000.0f);
     }
     sa.update(tone.data(), tone.data(), 48000, 1.0f / 60.0f);
+    for (int i = 0; i < SpectrumAnalyzer::DISPLAY_BARS; ++i) {
+        ASSERT_TRUE(!std::isnan(sa.smoothed_input_db()[i]));
+    }
 }
 
 TEST(spectrum_analyzer_update_full_scale_clipping_safe) {
@@ -89,4 +85,16 @@ TEST(spectrum_analyzer_different_sample_rates) {
     sa.update(samples.data(), samples.data(), 44100, 1.0f / 60.0f);
     sa.update(samples.data(), samples.data(), 48000, 1.0f / 60.0f);
     sa.update(samples.data(), samples.data(), 96000, 1.0f / 60.0f);
+}
+
+TEST(spectrum_analyzer_peak_hold_never_below_smoothed) {
+    SpectrumAnalyzer sa;
+    std::vector<float> tone(SpectrumAnalyzer::FFT_SIZE);
+    for (int i = 0; i < SpectrumAnalyzer::FFT_SIZE; ++i)
+        tone[i] = 0.5f * std::sin(2.0f * 3.14159265f * 440.0f * i / 48000.0f);
+    sa.update(tone.data(), tone.data(), 48000, 1.0f / 60.0f);
+    for (int i = 0; i < SpectrumAnalyzer::DISPLAY_BARS; ++i) {
+        ASSERT_TRUE(sa.input_peak_db()[i] >= sa.smoothed_input_db()[i] - 0.001f);
+        ASSERT_TRUE(sa.output_peak_db()[i] >= sa.smoothed_output_db()[i] - 0.001f);
+    }
 }

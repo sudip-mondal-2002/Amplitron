@@ -64,7 +64,9 @@ std::string PresetManager::get_config_path() {
     const char* home = std::getenv("HOME");
     if (!home) return "amplitron_config.json";
     std::string config_dir = std::string(home) + "/.config/amplitron";
-    std::filesystem::create_directories(config_dir);
+    try {
+        std::filesystem::create_directories(config_dir);
+    } catch (...) {}
     return config_dir + "/config.json";
 #endif
 }

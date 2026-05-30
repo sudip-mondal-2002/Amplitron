@@ -1,5 +1,5 @@
 #include "audio/effects/multiband_compressor.h"
-#include "audio/effect_factory.h"
+#include "audio/effects/effect_factory.h"
 
 namespace Amplitron {
 
@@ -92,7 +92,8 @@ void MultiBandCompressor::process(float* buffer, int num_samples) {
     float output_gain     = db_to_linear(params_[17].value);
 
     // Apply attack/release parameter smoothing to avoid pops/clicks during UI drags
-    const float alpha = 1.0f - std::exp(-1.0f / (sample_rate_ * 0.010f)); // 10 ms smoothing time constant
+    // Keep smoothing short to reduce zipper noise while minimizing parameter-lag audibility.
+    const float alpha = 1.0f - std::exp(-1.0f / (sample_rate_ * 0.002f)); // 2 ms smoothing time constant
     for (int b = 0; b < 3; ++b) {
         smoothed_attack_ms_[b]  += alpha * (attack_ms[b]  - smoothed_attack_ms_[b]);
         smoothed_release_ms_[b] += alpha * (release_ms[b] - smoothed_release_ms_[b]);

@@ -8,123 +8,73 @@
  */
 #include "test_framework.h"
 #include "test_fixtures.h"
-#include "gui/gui_recording.h"
-#include "audio/recorder.h"
+#include "gui/views/gui_recording.h"
 #include <string>
 
 using namespace Amplitron;
 
 TEST_F(PresetTest, gui_recording_construction_no_crash) {
-    GuiRecording gr(engine);
+    GuiRecording gr;
     (void)gr;
 }
 
-TEST_F(PresetTest, gui_recording_initial_save_pending_is_false) {
-    GuiRecording gr(engine);
-    ASSERT_FALSE(gr.is_save_pending());
+TEST_F(PresetTest, gui_recording_initial_needs_save_dialog_is_false) {
+    GuiRecording gr;
+    ASSERT_FALSE(gr.needs_save_dialog());
 }
 
-TEST_F(PresetTest, gui_recording_set_save_pending_works) {
-    GuiRecording gr(engine);
-    gr.set_save_pending(true);
-    ASSERT_TRUE(gr.is_save_pending());
-    gr.set_save_pending(false);
-    ASSERT_FALSE(gr.is_save_pending());
-}
-
-TEST_F(PresetTest, gui_recording_initial_show_save_is_false) {
-    GuiRecording gr(engine);
-    ASSERT_FALSE(gr.show_save());
-}
-
-TEST_F(PresetTest, gui_recording_show_save_reference_can_be_modified) {
-    GuiRecording gr(engine);
-    bool& ref = gr.show_save();
-    ref = true;
-    ASSERT_TRUE(gr.show_save());
-}
-
-TEST_F(PresetTest, gui_recording_status_message_initially_empty) {
-    GuiRecording gr(engine);
-    ASSERT_TRUE(gr.status_message().empty());
-}
-
-TEST_F(PresetTest, gui_recording_status_message_can_be_written) {
-    GuiRecording gr(engine);
-    gr.status_message() = "Test message";
-    ASSERT_EQ(gr.status_message(), "Test message");
-}
-
-TEST_F(PresetTest, gui_recording_render_save_dialog_early_return_when_not_pending) {
-    GuiRecording gr(engine);
-    bool show = true;
-    gr.set_save_pending(false);
-    
-    // When not pending, should set show to false and return immediately (no dialog)
-    gr.render_save_dialog(show);
-    ASSERT_FALSE(show);
+TEST_F(PresetTest, gui_recording_set_state_works) {
+    GuiRecording gr;
+    gr.set_state([](RecordingState& s) {
+        s.needs_save = true;
+        s.status_msg = "Recording stopped";
+    });
+    ASSERT_TRUE(gr.needs_save_dialog());
 }
 
 TEST_F(PresetTest, gui_recording_render_controls_ready_state) {
     ScopedImGuiContext imgui;
-    GuiRecording gr(engine);
+    GuiRecording gr;
 
-    // Call render_controls() in Ready state (not recording, no unsaved)
-    gr.render_controls();
+    RecordingProps props;
+    gr.set_props(props);
+    gr.render();
 }
 
 TEST_F(PresetTest, gui_recording_render_controls_recording_state) {
     ScopedImGuiContext imgui;
-    GuiRecording gr(engine);
+    GuiRecording gr;
 
-    // Start recording so the state changes to is_recording()
-    engine.recorder().start("presets/dummy.wav", engine.get_sample_rate());
-    gr.render_controls();
+    float dummy_waveform[16] = {0.0f};
+    RecordingProps props;
+    props.is_recording = true;
+    props.waveform_buf = dummy_waveform;
+    props.waveform_size = 16;
+    props.duration = 4.5f;
 
-    // Pause
-    engine.recorder().pause();
-    gr.render_controls();
+    gr.set_props(props);
+    gr.render();
 
-    // Resume
-    engine.recorder().resume();
-    gr.render_controls();
-
-    // Stop (will set show_save=true and recording_save_pending_=true)
-    engine.recorder().stop();
-    gr.show_save() = true;
-    gr.set_save_pending(true);
-    ASSERT_TRUE(gr.show_save());
-    ASSERT_TRUE(gr.is_save_pending());
-
-    engine.recorder().discard(); // Clean up
+    // Paused state
+    props.is_paused = true;
+    gr.set_props(props);
+    gr.render();
 }
 
-TEST_F(PresetTest, gui_recording_render_controls_unsaved_state) {
+TEST_F(PresetTest, gui_recording_render_save_dialog_triggers_safely) {
     ScopedImGuiContext imgui;
-    GuiRecording gr(engine);
+    GuiRecording gr;
 
-    // Start/stop recording to produce unsaved state
-    engine.recorder().start("presets/dummy.wav", engine.get_sample_rate());
-    engine.recorder().stop();
-    
-    // Renders complete unsaved state
-    gr.render_controls();
+    gr.set_state([](RecordingState& s) {
+        s.needs_save = true;
+    });
 
-    engine.recorder().discard();
-}
+    std::string saved_path = "";
+    gr.render_save_dialog([&](const std::string& path) {
+        saved_path = path;
+    });
 
-TEST_F(PresetTest, gui_recording_render_save_dialog_triggers_safely_when_pending) {
-    ScopedImGuiContext imgui;
-    GuiRecording gr(engine);
-
-    gr.set_save_pending(true);
-    bool show = true;
-
-    // Call render_save_dialog which invokes show_save_dialog
-    // (should safely return empty string in headless mode)
-    gr.render_save_dialog(show);
-    
-    // Asserts that dialog state was reset
-    ASSERT_FALSE(show);
-    ASSERT_FALSE(gr.is_save_pending());
+    // In headless test environment, the native dialog handles gracefully and should
+    // clear needs_save.
+    ASSERT_FALSE(gr.needs_save_dialog());
 }
