@@ -1,6 +1,6 @@
 #include "test_framework.h"
 #include "test_fixtures.h"
-#include "SessionManager.h"
+#include "session_manager.h"
 #include <filesystem>
 #include <thread>
 #include <chrono>

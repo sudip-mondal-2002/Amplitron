@@ -5,7 +5,7 @@
 // filtered by the tone stage and level-scaled; this creates odd harmonics as
 // the transfer function flattens near the clipping threshold.
 
-#include "audio/effect.h"
+#include "audio/effects/effect.h"
 #include "audio/dsp/biquad.h"
 
 namespace Amplitron {

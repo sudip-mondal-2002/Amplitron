@@ -1,5 +1,5 @@
 #include "audio/effects/amp_simulator.h"
-#include "audio/effect_factory.h"
+#include "audio/effects/effect_factory.h"
 
 namespace Amplitron {
 

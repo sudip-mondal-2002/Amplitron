@@ -4,7 +4,7 @@
 // The wet tap is y_w[n] = x[n - D(n)] with D(n)=D0 + A*sin(2*pi*f_lfo*n/Fs);
 // fractional delay reads use interpolation, then y[n]=(1-mix)*x[n]+mix*y_w[n].
 
-#include "audio/effect.h"
+#include "audio/effects/effect.h"
 
 namespace Amplitron {
 

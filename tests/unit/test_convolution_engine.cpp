@@ -16,7 +16,7 @@ TEST(ConvolutionEngine_ResetClearsState) {
 
     ConvolutionEngine conv;
 
-    conv.set_kernel(kernel);
+    conv.set_kernel(kernel.get());
 
     std::vector<float> buffer(256, 1.0f);
 
@@ -46,7 +46,7 @@ TEST(ConvolutionEngine_PartitionedFFTPath) {
         std::make_shared<ConvolutionKernel>(ir, 256);
 
     ConvolutionEngine conv;
-    conv.set_kernel(kernel);
+    conv.set_kernel(kernel.get());
 
     std::vector<float> buffer(256);
 
@@ -72,7 +72,7 @@ TEST(ConvolutionEngine_HasKernelAfterSetKernel) {
 
     ASSERT_FALSE(conv.has_kernel());
 
-    conv.set_kernel(kernel);
+    conv.set_kernel(kernel.get());
 
     ASSERT_TRUE(conv.has_kernel());
 }
@@ -85,7 +85,7 @@ TEST(ConvolutionEngine_OverlapAddConsistency) {
 
     ConvolutionEngine conv;
 
-    conv.set_kernel(kernel);
+    conv.set_kernel(kernel.get());
 
     std::vector<float> buffer(1024);
 
@@ -111,7 +111,7 @@ TEST(ConvolutionEngine_ClearKernel) {
 
     ConvolutionEngine conv;
 
-    conv.set_kernel(kernel);
+    conv.set_kernel(kernel.get());
 
     ASSERT_TRUE(conv.has_kernel());
 
@@ -128,7 +128,7 @@ TEST(ConvolutionEngine_SmallBlockProcessing) {
 
     ConvolutionEngine conv;
 
-    conv.set_kernel(kernel);
+    conv.set_kernel(kernel.get());
 
     std::vector<float> buffer(32, 1.0f);
 
@@ -147,7 +147,7 @@ TEST(ConvolutionEngine_ZeroInputRemainsSilent) {
 
     ConvolutionEngine conv;
 
-    conv.set_kernel(kernel);
+    conv.set_kernel(kernel.get());
 
     std::vector<float> buffer(128, 0.0f);
 

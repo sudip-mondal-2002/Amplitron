@@ -17,8 +17,8 @@
 #include "audio/effects/flanger.h"
 #include "audio/effects/octaver.h"
 #include "audio/effects/pitch_shifter.h"
-#include "audio/spsc_queue.h"
-#include "audio/effect_factory.h"
+#include "audio/utils/spsc_queue.h"
+#include "audio/effects/effect_factory.h"
 #include <cstring>
 #include <cmath>
 #include <vector>

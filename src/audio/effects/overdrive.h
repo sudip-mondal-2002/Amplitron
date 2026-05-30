@@ -5,7 +5,7 @@
 // equivalent soft clip, preserving small-signal dynamics while compressing
 // peaks before tone filtering and output level scaling.
 
-#include "audio/effect.h"
+#include "audio/effects/effect.h"
 #include "audio/dsp/biquad.h"
 
 namespace Amplitron {

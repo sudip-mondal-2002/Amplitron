@@ -1,13 +1,13 @@
 /**
  * @file test_crash_recovery.cpp
- * @brief Tests for CrashRecoveryUI headless behaviour.
+ * @brief Tests for crash_recovery_ui headless behaviour.
  *
  * promptRestoreSession() is guarded by AMPLITRON_HEADLESS (defined in the test
  * binary via CMake) so it returns false immediately without opening any SDL
  * message box — no hang on macOS, no X11 error on Linux CI.
  */
 #include "test_framework.h"
-#include "gui/CrashRecoveryUI.h"
+#include "gui/crash_recovery_ui.h"
 
 
 
