@@ -8,8 +8,8 @@
  */
 #include "test_framework.h"
 #include "test_fixtures.h"
-#include "gui/gui_presets.h"
-#include "gui/command_history.h"
+#include "gui/views/gui_presets.h"
+#include "gui/commands/command_history.h"
 #include "audio/effects/overdrive.h"
 #include "audio/effects/reverb.h"
 #include "preset_manager.h"

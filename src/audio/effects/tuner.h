@@ -5,7 +5,7 @@
 // normalized difference to estimate period tau; frequency is Fs/tau and cents
 // error is 1200*log2(freq / nearest_note_freq).
 
-#include "audio/effect.h"
+#include "audio/effects/effect.h"
 #include <atomic>
 
 namespace Amplitron {

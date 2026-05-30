@@ -100,8 +100,8 @@ void ConvolutionEngine::cleanup_fft() {
     current_fft_size_ = 0;
 }
 
-void ConvolutionEngine::set_kernel(std::shared_ptr<const ConvolutionKernel> kernel) {
-    kernel_ = std::move(kernel);
+void ConvolutionEngine::set_kernel(const ConvolutionKernel* kernel) {
+    kernel_ = kernel;
     reset();
 }
 

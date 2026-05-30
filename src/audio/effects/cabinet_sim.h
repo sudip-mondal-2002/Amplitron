@@ -5,7 +5,7 @@
 // cut removes rumble, a resonant biquad models cabinet/body emphasis, and a
 // low-pass rolloff attenuates harsh high-frequency content.
 
-#include "audio/effect.h"
+#include "audio/effects/effect.h"
 #include "audio/dsp/biquad.h"
 #include "audio/dsp/convolution_engine.h"
 #include <atomic>
@@ -45,6 +45,9 @@ private:
 
     // Atomic kernel swap: GUI thread stores, audio thread consumes
     std::atomic<ConvolutionKernel*> pending_kernel_{nullptr};
+    const ConvolutionKernel* active_kernel_ = nullptr;
+    mutable std::atomic<const ConvolutionKernel*> old_kernel_to_delete_{nullptr};
+    std::atomic<bool> clear_pending_{false};
 
     ConvolutionEngine conv_engine_;
 
@@ -63,8 +66,8 @@ private:
     float bright_smooth_ = 0.5f;
     float bright_alpha_ = 0.0f;
 
-    // Expected block size for the current kernel
-    int expected_block_size_ = 0;
+    // Expected block size for the current kernel (atomic: read by audio thread, written by both)
+    std::atomic<int> expected_block_size_{0};
 
     // Pending block size when audio callback detects a mismatch
     std::atomic<int> pending_block_size_{0};
