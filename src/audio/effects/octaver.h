@@ -5,7 +5,7 @@
 // state, while the upper octave emphasizes rectified/nonlinear content; output
 // blends dry, sub, and upper components by their mix gains.
 
-#include "audio/effect.h"
+#include "audio/effects/effect.h"
 
 namespace Amplitron {
 

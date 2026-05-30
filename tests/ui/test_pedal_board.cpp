@@ -9,9 +9,13 @@
 #include "test_framework.h"
 #include "test_fixtures.h"
 #include <memory>
-#include "gui/pedal_widget.h"
-#include "gui/gui_midi.h"
-#include "gui/command_history.h"
+#define private public
+#include "gui/pedalboard/pedal_widget.h"
+#undef private
+#include "gui/views/gui_midi.h"
+#include "gui/commands/command_history.h"
+#include "gui/state/gui_graph_state.h"
+#include "gui/components/screen.h"
 #include "audio/effects/overdrive.h"
 #include "audio/effects/reverb.h"
 #include "audio/effects/amp_simulator.h"
@@ -21,7 +25,7 @@
 #include "audio/effects/multiband_compressor.h"
 
 #define private public
-#include "gui/pedal_board.h"
+#include "gui/pedalboard/pedal_board.h"
 #undef private
 
 using namespace Amplitron;
@@ -232,6 +236,129 @@ TEST(pedal_board_private_menu_rendering) {
     board.show_confirm_clear_ = true;
     board.show_confirm_midi_clear_ = true;
     board.render();
+
+    engine.shutdown();
+}
+
+TEST(pedal_board_signal_chain_ui_interactions) {
+    ScopedImGuiContext imgui;
+    AudioEngine engine;
+    engine.initialize();
+    CommandHistory history;
+    MidiManager midi_manager;
+    GuiMidi gui_midi(midi_manager);
+
+    PedalBoard board(engine, history, &gui_midi);
+    auto od = std::make_shared<Overdrive>();
+    engine.add_effect(od);
+    board.rebuild_widgets();
+
+    // 1. Simulate scroll zooming (Ctrl + mouse wheel)
+    ImGuiIO& io = ImGui::GetIO();
+    io.KeyCtrl = true;
+    io.MouseWheel = 1.5f;
+    board.render_signal_chain();
+
+    // 2. Panning drag (Middle mouse button dragging)
+    io.KeyCtrl = false;
+    io.MouseDown[2] = true;
+    io.MouseDelta = ImVec2(25.0f, -10.0f);
+    board.render_signal_chain();
+    io.MouseDown[2] = false;
+
+    // 3. Zooming via scroll without Ctrl (should do scrolling)
+    io.MouseWheel = -2.0f;
+    io.MouseWheelH = 1.0f;
+    board.render_signal_chain();
+    io.MouseWheel = 0.0f;
+    io.MouseWheelH = 0.0f;
+
+    // 4. Wire Spline drafting state (dragging from pin)
+    auto& graph_state = GuiGraphState::get_instance();
+    graph_state.active_src_pin_id = 1;
+    graph_state.active_src_pin_pos = ImVec2(100.0f, 150.0f);
+    io.MousePos = ImVec2(200.0f, 250.0f);
+    board.render_signal_chain();
+
+    // 5. Dropping the wire spline (releasing dragging)
+    io.MouseReleased[0] = true;
+    board.render_signal_chain();
+    io.MouseReleased[0] = false;
+    graph_state.active_src_pin_id = -1;
+
+    // 6. Test bypass pulses / active glows on standard pedals
+    od->set_enabled(false);
+    board.render_signal_chain();
+    od->set_enabled(true);
+    board.render_signal_chain();
+
+    engine.shutdown();
+}
+
+TEST(pedal_widget_body_and_knob_adjustments) {
+    ScopedImGuiContext imgui;
+    AudioEngine engine;
+    engine.initialize();
+    CommandHistory history;
+    MidiManager midi_manager;
+    GuiMidi gui_midi(midi_manager);
+
+    auto od = std::make_shared<Overdrive>();
+    PedalWidget widget(engine, od, 0);
+    widget.set_history(&history);
+    widget.set_gui_midi(&gui_midi);
+
+    // Call individual rendering helpers in PedalWidget
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    widget.render_standard_pedal(dl, ImVec2(0, 0), ImVec2(200, 300), 200.0f, true, 1.0f);
+    widget.render_knobs(dl, ImVec2(0, 0), 200.0f, false, false, false, 1.0f);
+    
+    // Simulate knob scroll wheel adjustments
+    ImGuiIO& io = ImGui::GetIO();
+    io.MouseWheel = 1.0f;
+    widget.render_knobs(dl, ImVec2(0, 0), 200.0f, false, false, false, 1.0f);
+    io.MouseWheel = 0.0f;
+
+    // Simulate Shift fine scroll
+    io.MouseWheel = -1.0f;
+    io.KeyShift = true;
+    widget.render_knobs(dl, ImVec2(0, 0), 200.0f, false, false, false, 1.0f);
+    io.MouseWheel = 0.0f;
+    io.KeyShift = false;
+
+    // Simulate Double Click reset
+    io.MouseDoubleClicked[0] = true;
+    widget.render_knobs(dl, ImVec2(0, 0), 200.0f, false, false, false, 1.0f);
+    io.MouseDoubleClicked[0] = false;
+
+    // Render non-standard visual body types directly
+    ScreenProps props;
+    props.engine = &engine;
+    props.gui_midi = nullptr;
+
+    auto tuner = std::make_shared<TunerPedal>();
+    props.effect = tuner;
+    props.index = 0;
+    props.type = ScreenType::Tuner;
+    ScreenComponent::render(dl, ImVec2(0,0), 200.0f, 1.0f, props);
+
+    auto cab = std::make_shared<CabinetSim>();
+    props.effect = cab;
+    props.index = 0;
+    props.type = ScreenType::Cabinet;
+    ScreenComponent::render(dl, ImVec2(0,0), 200.0f, 1.0f, props);
+
+    auto looper = std::make_shared<Looper>();
+    props.effect = looper;
+    props.index = 0;
+    props.type = ScreenType::Looper;
+    ScreenComponent::render(dl, ImVec2(0,0), 200.0f, 1.0f, props);
+
+    auto mb_comp = std::make_shared<MultiBandCompressor>();
+    props.effect = mb_comp;
+    props.index = 0;
+    props.type = ScreenType::MultiBandCompressor;
+    ScreenComponent::render(dl, ImVec2(0,0), 200.0f, 1.0f, props);
 
     engine.shutdown();
 }

@@ -5,7 +5,7 @@
 // auto mode f_c follows an envelope e[n], while manual mode maps pedal position
 // directly. Resonance/Q controls bandwidth around f_c.
 
-#include "audio/effect.h"
+#include "audio/effects/effect.h"
 #include "audio/dsp/envelope_follower.h"
 
 namespace Amplitron {
