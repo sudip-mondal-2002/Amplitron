@@ -26,42 +26,45 @@ void Delay::process(float* buffer, int num_samples) {
     if (!enabled_) return;
 
     const float alpha = 1.0f - std::exp(-1.0f / (sample_rate_ * 0.020f)); // 20 ms
-    smoothed_time_ms_ += alpha * (params_[0].value - smoothed_time_ms_);
-    smoothed_feedback_ += alpha * (params_[1].value - smoothed_feedback_);
-    smoothed_tone_     += alpha * (params_[2].value - smoothed_tone_);
-    smoothed_level_    += alpha * (params_[3].value - smoothed_level_);
-
-    float time_ms = smoothed_time_ms_;
-    float feedback = smoothed_feedback_;
-    float tone = smoothed_tone_;
-    float level = smoothed_level_;
-
-    int delay_samples = static_cast<int>(time_ms * 0.001f * sample_rate_);
-    delay_samples = std::min(delay_samples, max_delay_samples_ - 1);
-    float lp_coeff = 0.1f + tone * 0.85f;
 
     for (int i = 0; i < num_samples; ++i) {
+        smoothed_time_ms_ += alpha * (params_[0].value - smoothed_time_ms_);
+        smoothed_feedback_ += alpha * (params_[1].value - smoothed_feedback_);
+        smoothed_tone_     += alpha * (params_[2].value - smoothed_tone_);
+        smoothed_level_    += alpha * (params_[3].value - smoothed_level_);
+
+        const float delay_samples = std::min(smoothed_time_ms_ * 0.001f * sample_rate_,
+                                             static_cast<float>(max_delay_samples_ - 2));
+        const float lp_coeff = 0.1f + smoothed_tone_ * 0.85f;
         float dry = buffer[i];
 
-        int read_pos = write_pos_ - delay_samples;
-        if (read_pos < 0) read_pos += max_delay_samples_;
+        float read_pos = static_cast<float>(write_pos_) - delay_samples;
+        while (read_pos < 0.0f) read_pos += static_cast<float>(max_delay_samples_);
 
-        float delayed = delay_buffer_[read_pos];
+        int read_idx = static_cast<int>(read_pos);
+        int read_idx_next = read_idx + 1;
+        if (read_idx_next >= max_delay_samples_) read_idx_next = 0;
+        const float frac = read_pos - static_cast<float>(read_idx);
+        float delayed = delay_buffer_[read_idx] * (1.0f - frac) + delay_buffer_[read_idx_next] * frac;
 
         // Tone filter on feedback path
         float filtered = tone_lp_.lp(delayed, lp_coeff);
 
         // Write to delay buffer: input + filtered feedback
-        delay_buffer_[write_pos_] = buffer[i] + filtered * feedback;
+        delay_buffer_[write_pos_] = buffer[i] + filtered * smoothed_feedback_;
 
         write_pos_++;
         if (write_pos_ >= max_delay_samples_) write_pos_ = 0;
 
-        buffer[i] = dry + delayed * level;
+        buffer[i] = dry + delayed * smoothed_level_;
     }
 }
 
 void Delay::reset() {
+    smoothed_time_ms_ = params_[0].value;
+    smoothed_feedback_ = params_[1].value;
+    smoothed_tone_ = params_[2].value;
+    smoothed_level_ = params_[3].value;
     std::fill(delay_buffer_.begin(), delay_buffer_.end(), 0.0f);
     write_pos_ = 0;
     tone_lp_.reset();

@@ -334,6 +334,9 @@ private:
     //global transport
     std::atomic<float> input_gain_{1.0f};
     std::atomic<float> output_gain_{0.8f};
+    float input_gain_smoothed_ = 1.0f;
+    float output_gain_smoothed_ = 0.8f;
+    bool gain_smoothing_initialized_ = false;
     std::atomic<bool> metronome_enabled_state_{false};
     std::atomic<int> metronome_bpm_state_{120};
     std::atomic<float> metronome_volume_state_{0.5f};

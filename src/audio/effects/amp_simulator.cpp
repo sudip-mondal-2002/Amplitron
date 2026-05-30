@@ -126,13 +126,11 @@ void AmpSimulator::recompute_coefficients_if_dirty() {
 void AmpSimulator::process(float* buffer, int num_samples) {
     if (!enabled_) return;
 
-    // One-pole smoothing: advance trim states toward raw param targets each block
+    // Coefficient-producing tone trims update once per block; gain and level ramp per sample.
     const float alpha = 1.0f - std::exp(-1.0f / (sample_rate_ * 0.010f)); // 10 ms
     bass_trim_state_   += alpha * (params_[2].value - bass_trim_state_);
     mid_trim_state_    += alpha * (params_[3].value - mid_trim_state_);
     treble_trim_state_ += alpha * (params_[4].value - treble_trim_state_);
-    gain_smoothed_     += alpha * (params_[1].value - gain_smoothed_);
-    level_smoothed_    += alpha * (params_[5].value - level_smoothed_);
 
     recompute_coefficients_if_dirty();
 
@@ -140,11 +138,6 @@ void AmpSimulator::process(float* buffer, int num_samples) {
                           0, static_cast<int>(get_amp_models().size()) - 1);
     const AmpModel& model = get_amp_models()[model_idx];
 
-    float gain_knob = gain_smoothed_;
-    float level = level_smoothed_;
-
-    // Effective preamp gain: model base * user gain control (0-2x range)
-    float effective_gain = model.preamp_gain * (0.2f + gain_knob * 1.8f);
     float sat_mix = model.saturation_mix;
     float asym = model.asymmetry;
     float model_output = model.output_level;
@@ -153,6 +146,10 @@ void AmpSimulator::process(float* buffer, int num_samples) {
     float sag = model.sag_amount;
 
     for (int i = 0; i < num_samples; ++i) {
+        gain_smoothed_  += alpha * (params_[1].value - gain_smoothed_);
+        level_smoothed_ += alpha * (params_[5].value - level_smoothed_);
+
+        const float effective_gain = model.preamp_gain * (0.2f + gain_smoothed_ * 1.8f);
         float dry = buffer[i];
         float x = buffer[i];
 
@@ -195,7 +192,7 @@ void AmpSimulator::process(float* buffer, int num_samples) {
         x = dc_block_.hp(x, 0.005f);
 
         // --- Output level ---
-        x *= model_output * level;
+        x *= model_output * level_smoothed_;
 
         // Safety clamp
         x = clamp(x, -1.0f, 1.0f);
@@ -206,6 +203,8 @@ void AmpSimulator::process(float* buffer, int num_samples) {
 }
 
 void AmpSimulator::reset() {
+    gain_smoothed_ = params_[1].value;
+    level_smoothed_ = params_[5].value;
     low_shelf_.reset();
     mid_peak_.reset();
     high_shelf_.reset();

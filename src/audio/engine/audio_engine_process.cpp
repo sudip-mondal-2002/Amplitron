@@ -45,14 +45,23 @@ void AudioEngine::process_audio(const float* input, float* output, int frame_cou
 
     const bool analyzer_on = analyzer_enabled_.load(std::memory_order_relaxed);
 
-    float in_gain = input_gain_.load(std::memory_order_relaxed);
+    const float input_gain_target = input_gain_.load(std::memory_order_relaxed);
+    const float output_gain_target = output_gain_.load(std::memory_order_relaxed);
+    if (!gain_smoothing_initialized_) {
+        input_gain_smoothed_ = input_gain_target;
+        output_gain_smoothed_ = output_gain_target;
+        gain_smoothing_initialized_ = true;
+    }
+
+    const float gain_alpha = 1.0f - std::exp(-1.0f / (sample_rate_ * 0.010f)); // 10 ms
     float peak_in = 0.0f;
     if (analyzer_on) {
         float sum_sq_in = 0.0f;
         bool clipped_in = false;
         int cap = analyzer_capture_index_;
         for (int i = 0; i < frame_count; ++i) {
-            process_buffer_[i] = input[i] * in_gain;
+            input_gain_smoothed_ += gain_alpha * (input_gain_target - input_gain_smoothed_);
+            process_buffer_[i] = input[i] * input_gain_smoothed_;
             float abs_val = std::fabs(process_buffer_[i]);
             if (abs_val > peak_in) peak_in = abs_val;
             if (abs_val >= 1.0f) clipped_in = true;
@@ -65,7 +74,8 @@ void AudioEngine::process_audio(const float* input, float* output, int frame_cou
         analyzer_capture_index_ = cap;
     } else {
         for (int i = 0; i < frame_count; ++i) {
-            process_buffer_[i] = input[i] * in_gain;
+            input_gain_smoothed_ += gain_alpha * (input_gain_target - input_gain_smoothed_);
+            process_buffer_[i] = input[i] * input_gain_smoothed_;
             float abs_val = std::fabs(process_buffer_[i]);
             if (abs_val > peak_in) peak_in = abs_val;
         }
@@ -139,7 +149,7 @@ void AudioEngine::process_audio(const float* input, float* output, int frame_cou
                     static_cast<size_t>(frame_count) * sizeof(float));
     }
 
-    float out_gain = output_gain_.load(std::memory_order_relaxed);
+    const float out_gain_target = output_gain_.load(std::memory_order_relaxed);
     float peak_out = 0.0f;
     constexpr float kTwoPi = 6.28318530718f;
     auto next_metronome_sample = [this]() -> float {
@@ -178,9 +188,10 @@ void AudioEngine::process_audio(const float* input, float* output, int frame_cou
         bool clipped_out = false;
         int cap = (analyzer_capture_index_ - frame_count) & ANALYZER_FFT_MASK;
         for (int i = 0; i < frame_count; ++i) {
+            output_gain_smoothed_ += gain_alpha * (out_gain_target - output_gain_smoothed_);
             float click = next_metronome_sample();
-            float out_l = clamp(process_buffer_[i]       * out_gain + click, -1.0f, 1.0f);
-            float out_r = clamp(process_buffer_right_[i] * out_gain + click, -1.0f, 1.0f);
+            float out_l = clamp(process_buffer_[i]       * output_gain_smoothed_ + click, -1.0f, 1.0f);
+            float out_r = clamp(process_buffer_right_[i] * output_gain_smoothed_ + click, -1.0f, 1.0f);
             if (std::fabs(out_l) >= 1.0f || std::fabs(out_r) >= 1.0f) clipped_out = true;
             output[i * 2]     = out_l;
             output[i * 2 + 1] = out_r;
@@ -218,9 +229,10 @@ void AudioEngine::process_audio(const float* input, float* output, int frame_cou
         }
     } else {
         for (int i = 0; i < frame_count; ++i) {
+            output_gain_smoothed_ += gain_alpha * (out_gain_target - output_gain_smoothed_);
             float click = next_metronome_sample();
-            float out_l = clamp(process_buffer_[i]       * out_gain + click, -1.0f, 1.0f);
-            float out_r = clamp(process_buffer_right_[i] * out_gain + click, -1.0f, 1.0f);
+            float out_l = clamp(process_buffer_[i]       * output_gain_smoothed_ + click, -1.0f, 1.0f);
+            float out_r = clamp(process_buffer_right_[i] * output_gain_smoothed_ + click, -1.0f, 1.0f);
             output[i * 2]     = out_l;
             output[i * 2 + 1] = out_r;
             process_buffer_[i] = out_l;

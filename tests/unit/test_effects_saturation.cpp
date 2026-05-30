@@ -37,6 +37,32 @@ TEST_F(EffectsTest, distortion_clips_signal) {
     }
 }
 
+TEST_F(EffectsTest, distortion_level_change_is_smoothed) {
+    Distortion dist;
+    dist.set_sample_rate(SR);
+    dist.params()[0].value = 1.0f;
+    dist.params()[1].value = 1.0f;
+    dist.params()[2].value = 1.0f;
+    dist.reset();
+
+    std::fill(input_buffer, input_buffer + BUFFER_SIZE, 0.2f);
+    dist.process(input_buffer, BUFFER_SIZE);
+    const float previous_last = input_buffer[BUFFER_SIZE - 1];
+
+    std::fill(input_buffer, input_buffer + BUFFER_SIZE, 0.2f);
+    dist.params()[2].value = 0.0f;
+    dist.process(input_buffer, BUFFER_SIZE);
+
+    ASSERT_LT(std::fabs(previous_last - input_buffer[0]), 0.02f);
+    ASSERT_GT(input_buffer[0], input_buffer[BUFFER_SIZE - 1]);
+
+    float max_step = 0.0f;
+    for (int i = 1; i < BUFFER_SIZE; ++i) {
+        max_step = std::max(max_step, std::fabs(input_buffer[i] - input_buffer[i - 1]));
+    }
+    ASSERT_LT(max_step, 0.02f);
+}
+
 TEST_F(EffectsTest, amp_simulator_processes_without_nan) {
     AmpSimulator amp;
     amp.set_sample_rate(SR);

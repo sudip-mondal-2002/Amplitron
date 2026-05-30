@@ -39,6 +39,44 @@ TEST_F(AudioEngineTest, OutputGainScalesOutput) {
     ASSERT_NEAR(out[1], 0.25f, 0.01f);
 }
 
+TEST_F(AudioEngineTest, OutputGainChangeRampsWithinAudioBlock) {
+    engine.set_input_gain(1.0f);
+    engine.set_output_gain(1.0f);
+
+    std::vector<float> in(512, 1.0f), out(1024, 0.0f);
+    engine.process_audio(in.data(), out.data(), 512);
+
+    engine.set_output_gain(0.0f);
+    engine.process_audio(in.data(), out.data(), 512);
+
+    ASSERT_GT(out[0], out[1022]);
+
+    float max_step = 0.0f;
+    for (int i = 2; i < 1024; i += 2) {
+        max_step = std::max(max_step, std::fabs(out[i] - out[i - 2]));
+    }
+    ASSERT_LT(max_step, 0.01f);
+}
+
+TEST_F(AudioEngineTest, InputGainChangeRampsWithinAudioBlock) {
+    engine.set_input_gain(1.0f);
+    engine.set_output_gain(1.0f);
+
+    std::vector<float> in(512, 1.0f), out(1024, 0.0f);
+    engine.process_audio(in.data(), out.data(), 512);
+
+    engine.set_input_gain(0.0f);
+    engine.process_audio(in.data(), out.data(), 512);
+
+    ASSERT_GT(out[0], out[1022]);
+
+    float max_step = 0.0f;
+    for (int i = 2; i < 1024; i += 2) {
+        max_step = std::max(max_step, std::fabs(out[i] - out[i - 2]));
+    }
+    ASSERT_LT(max_step, 0.01f);
+}
+
 TEST_F(AudioEngineTest, OutputIsClampedToSafetyLimit) {
     engine.set_input_gain(10.0f); // Massive gain to exceed +/- 1.0
     engine.set_output_gain(1.0f);

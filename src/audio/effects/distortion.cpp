@@ -19,20 +19,16 @@ Distortion::Distortion() {
 void Distortion::process(float* buffer, int num_samples) {
     if (!enabled_) return;
 
-    // One-pole smoothing: advance states toward raw param targets each block
     const float alpha = 1.0f - std::exp(-1.0f / (sample_rate_ * 0.010f)); // 10 ms
-    drive_smoothed_ += alpha * (params_[0].value - drive_smoothed_);
-    tone_smoothed_  += alpha * (params_[1].value - tone_smoothed_);
-    level_smoothed_ += alpha * (params_[2].value - level_smoothed_);
-
-    float drive = drive_smoothed_;
-    float tone = tone_smoothed_;
-    float level = level_smoothed_;
-
-    // Tone control: simple one-pole LP filter coefficient
-    float lp_coeff = 0.1f + tone * 0.8f;
 
     for (int i = 0; i < num_samples; ++i) {
+        drive_smoothed_ += alpha * (params_[0].value - drive_smoothed_);
+        tone_smoothed_  += alpha * (params_[1].value - tone_smoothed_);
+        level_smoothed_ += alpha * (params_[2].value - level_smoothed_);
+
+        const float drive = drive_smoothed_;
+        const float level = level_smoothed_;
+        const float lp_coeff = 0.1f + tone_smoothed_ * 0.8f;
         float dry = buffer[i];
 
         // Apply drive gain
@@ -60,6 +56,9 @@ void Distortion::process(float* buffer, int num_samples) {
 }
 
 void Distortion::reset() {
+    drive_smoothed_ = params_[0].value;
+    tone_smoothed_  = params_[1].value;
+    level_smoothed_ = params_[2].value;
     tone_lp_.reset();
 }
 
