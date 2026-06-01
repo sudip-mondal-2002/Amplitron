@@ -139,11 +139,7 @@ void GuiAnalyzer::draw_spectrum(ImDrawList* dl,
 void GuiAnalyzer::render() {
     const AnalyzerProps& p = props_;
 
-    #ifdef __EMSCRIPTEN__
-    float panel_h = expanded_ ? 150.0f : 34.0f;
-    #else
     float panel_h = expanded_ ? 230.0f : 34.0f;
-    #endif
     ImGui::BeginChild("AnalyzerPanel", ImVec2(0, panel_h), true, ImGuiWindowFlags_NoScrollbar);
 
     #ifdef __EMSCRIPTEN__
