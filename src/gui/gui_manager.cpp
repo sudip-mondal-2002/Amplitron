@@ -143,7 +143,7 @@ bool GuiManager::initialize(int width, int height) {
         if (!loaded_font) {
             io.Fonts->AddFontDefault();
         } 
-        io.FontGlobalScale = 1.0f / dpi_scale;
+        io.FontGlobalScale = 1.0f ;
 
     }
 
