@@ -105,16 +105,20 @@ void GuiMidi::render(bool& show) {
 
     const auto& mappings = midi_.mappings();
     if (mappings.empty()) {
-        ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
-                           #ifdef __EMSCRIPTEN__
-                           "No mappings. Open a knob menu to MIDI Learn, "
-                           #else
-                           "No mappings. Right-click any knob to MIDI Learn, "
-                           #endif
-                           "or click \"Add Defaults\".");
-    } else {
-        ImGui::BeginChild("MappingTable", ImVec2(0, 0), true);
-
+    #ifdef __EMSCRIPTEN__
+        ImGui::TextColored(
+            ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
+            "No mappings. Open a knob menu to MIDI Learn, or click \"Add Defaults\"."
+        );
+    #else
+        ImGui::TextColored(
+            ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
+            "No mappings. Right-click any knob to MIDI Learn, or click \"Add Defaults\"."
+        );
+   #endif
+   }
+   else {
+       ImGui::BeginChild("MappingTable", ImVec2(0, 0), true);
         // Table header
         if (ImGui::BeginTable("##MidiMappings", 6,
                 ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
