@@ -58,11 +58,14 @@
         (e.__SV = 1))
 })(document, window.posthog || [])
 
-posthog.init("phc_ecTrgEi1Wfx1rgTVwSZxCWt9swjuWiKaXAYssHhHLNr", {
-    api_host: "https://t.amplitron.sudipmondal.co.in",
-    ui_host: "https://us.posthog.com",
-    person_profiles: "identified_only",
-})
+var _phKey = window.__APP_CONFIG__ && window.__APP_CONFIG__.posthogKey
+if (_phKey) {
+    posthog.init(_phKey, {
+        api_host: "https://t.amplitron.sudipmondal.co.in",
+        ui_host: "https://us.posthog.com",
+        person_profiles: "identified_only",
+    })
+}
 
 /* === Page interactions (moved from inline <script>) === */
 document.addEventListener("DOMContentLoaded", () => {
