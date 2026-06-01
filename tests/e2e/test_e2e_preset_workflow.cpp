@@ -1,6 +1,6 @@
 #include "test_framework.h"
 #include "test_fixtures.h"
-#include "audio/audio_engine.h"
+#include "audio/engine/audio_engine.h"
 #include "preset_manager.h"
 #include "audio/effects/noise_gate.h"
 #include "audio/effects/distortion.h"

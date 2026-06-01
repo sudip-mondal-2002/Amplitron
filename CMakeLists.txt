@@ -8,6 +8,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Option to enable JACK backend on Linux
+if(UNIX AND NOT APPLE)
+    set(DEFAULT_WITH_JACK ON)
+else()
+    set(DEFAULT_WITH_JACK OFF)
+endif()
+option(WITH_JACK "Enable JACK audio backend (Linux only)" ${DEFAULT_WITH_JACK})
+
 # Build type
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
@@ -23,6 +31,11 @@ elseif(MSVC)
     endif()
 else()
     add_compile_options(-Wall -Wextra -ffast-math)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        # nlohmann/json intentionally uses infinity for some binary parsing paths;
+        # with -ffast-math Clang warns in external headers.
+        add_compile_options(-Wno-nan-infinity-disabled)
+    endif()
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
         add_compile_options(-O3 -ftree-vectorize)
         # -march=native is only valid for native (non-cross) builds
@@ -82,6 +95,28 @@ if(NOT PORTAUDIO_FOUND)
               "C:/Program Files/portaudio/lib"
               "${CMAKE_SOURCE_DIR}/external/portaudio/lib")
 endif()
+# pkg_check_modules can populate PORTAUDIO_LIBRARIES with just the library
+# name and PORTAUDIO_LIBRARY_DIRS with the matching prefix path.  Add the
+# directory explicitly so macOS / Homebrew links resolve correctly.
+if(PORTAUDIO_LIBRARY_DIRS)
+    link_directories(${PORTAUDIO_LIBRARY_DIRS})
+endif()
+
+    # JACK (optional, Linux only)
+    if(NOT JACK_LIBRARIES)
+        if(PkgConfig_FOUND)
+            pkg_check_modules(JACK jack)
+        endif()
+        if(NOT JACK_FOUND)
+            find_path(JACK_INCLUDE_DIRS jack/jack.h
+                PATHS /usr/include /usr/local/include)
+            find_library(JACK_LIBRARIES NAMES jack jackserver
+                PATHS /usr/lib /usr/local/lib)
+        endif()
+    endif()
+    if(JACK_LIBRARY_DIRS)
+        link_directories(${JACK_LIBRARY_DIRS})
+    endif()
 
 # SDL2
 if(PkgConfig_FOUND)
@@ -103,6 +138,11 @@ if(NOT SDL2_FOUND)
                   "C:/Program Files/SDL2/lib"
                   "${CMAKE_SOURCE_DIR}/external/SDL2/lib")
     endif()
+endif()
+# pkg_check_modules may provide a bare library name and a matching library
+# directory; add the path explicitly so macOS/Homebrew links resolve.
+if(SDL2_LIBRARY_DIRS)
+    link_directories(${SDL2_LIBRARY_DIRS})
 endif()
 
 # RtMidi (MIDI input)
@@ -161,17 +201,17 @@ endif()
 # --- Application Sources (platform-agnostic) ---
 set(APP_SOURCES
     src/main.cpp
-    src/SessionManager.h
+    src/session_manager.h
     src/presets/preset_manager.cpp
     src/presets/preset_json.cpp
-    src/audio/audio_engine.cpp
-    src/audio/audio_engine_chain.cpp
-    src/audio/audio_engine_process.cpp
-    src/audio/audio_engine_api.cpp
-    src/audio/recorder.cpp
-    src/audio/recorder_session.cpp
-    src/audio/recorder_io.cpp
-    src/audio/recorder_wav.cpp
+    src/audio/engine/audio_engine.cpp
+    src/audio/engine/audio_engine_chain.cpp
+    src/audio/engine/audio_engine_process.cpp
+    src/audio/engine/audio_engine_api.cpp
+    src/audio/recorder/recorder.cpp
+    src/audio/recorder/recorder_session.cpp
+    src/audio/recorder/recorder_io.cpp
+    src/audio/recorder/recorder_wav.cpp
     src/audio/effects/distortion.cpp
     src/audio/effects/overdrive.cpp
     src/audio/effects/delay.cpp
@@ -188,33 +228,38 @@ set(APP_SOURCES
     src/audio/effects/amp_simulator.cpp
     src/audio/dsp/wav_loader.cpp
     src/audio/dsp/convolution_engine.cpp
+    src/audio/dsp/spectrum_analyzer.cpp
+    src/audio/dsp/level_analyzer.cpp
     src/audio/effects/tuner.cpp
     src/audio/effects/wah.cpp
     src/audio/effects/octaver.cpp
     src/audio/effects/pitch_shifter.cpp
-    src/gui/CrashRecoveryUI.h
+    src/gui/crash_recovery_ui.h
     src/gui/gui_manager.cpp
     src/gui/gui_manager_frame.cpp
     src/gui/gui_manager_menu.cpp
     src/gui/gui_manager_update.cpp
-    src/gui/gui_settings.cpp
-    src/gui/gui_presets.cpp
-    src/gui/gui_recording.cpp
-    src/gui/gui_tuner.cpp
-    src/gui/gui_analyzer.cpp
-    src/gui/spectrum_analyzer.cpp
-    src/gui/pedal_board.cpp
-    src/gui/pedal_board_menu.cpp
-    src/gui/pedal_board_chain.cpp
-    src/gui/pedal_widget.cpp
-    src/gui/pedal_widget_body.cpp
-    src/gui/pedal_widget_knobs.cpp
-    src/gui/command_history.cpp
-    src/gui/gui_snapshots.cpp
+    src/gui/views/gui_settings.cpp
+    src/gui/views/gui_presets.cpp
+    src/gui/views/gui_recording.cpp
+    src/gui/views/gui_tuner.cpp
+    src/gui/views/gui_analyzer.cpp
+    src/gui/pedalboard/pedal_board.cpp
+    src/gui/pedalboard/pedal_board_menu.cpp
+    src/gui/pedalboard/pedal_board_chain.cpp
+    src/gui/pedalboard/pedal_widget.cpp
+    src/gui/pedalboard/pedal_widget_body.cpp
+    src/gui/pedalboard/pedal_widget_knobs.cpp
+    src/gui/commands/command_history.cpp
+    src/gui/views/gui_snapshots.cpp
+    src/gui/components/knob.cpp
+    src/gui/components/footswitch.cpp
+    src/gui/components/led.cpp
+    src/gui/components/screen.cpp
     src/presets/preset_manager_dirs.cpp
     src/presets/preset_manager_io.cpp
-    src/audio/audio_graph.cpp
-    src/audio/audio_graph_executor.cpp
+    src/audio/engine/audio_graph.cpp
+    src/audio/engine/audio_graph_executor.cpp
 )
 
 # --- MIDI Support (desktop only) ---
@@ -224,7 +269,7 @@ if(NOT ANDROID AND NOT IOS)
         src/midi/midi_manager.cpp
         src/midi/midi_manager_mapping.cpp
         src/midi/midi_manager_persist.cpp
-        src/gui/gui_midi.cpp
+        src/gui/views/gui_midi.cpp
     )
 endif()
 
@@ -232,21 +277,28 @@ endif()
 # Mobile (Android/iOS) and Web use SDL audio backend + stub file dialog
 # Android 8+ uses Oboe (AAudio exclusive mode) for low-latency audio.
 if(EMSCRIPTEN OR IOS)
-    set(BACKEND_SOURCES src/audio/audio_backend_sdl.cpp)
-    set(DIALOG_SOURCES  src/gui/file_dialog_web.cpp)
+    set(BACKEND_SOURCES src/audio/backend/audio_backend_sdl.cpp)
+    set(DIALOG_SOURCES  src/gui/dialogs/file_dialog_web.cpp)
 elseif(ANDROID)
-    set(BACKEND_SOURCES src/audio/audio_backend_oboe.cpp)
-    set(DIALOG_SOURCES  src/gui/file_dialog_web.cpp)
+    set(BACKEND_SOURCES src/audio/backend/audio_backend_oboe.cpp)
+    set(DIALOG_SOURCES  src/gui/dialogs/file_dialog_web.cpp)
 else()
-    set(BACKEND_SOURCES
-        src/audio/audio_backend_portaudio.cpp
-        src/audio/audio_backend_portaudio_lifecycle.cpp
-        src/audio/audio_backend_portaudio_devices.cpp
-    )
+    if(WITH_JACK AND UNIX AND NOT APPLE)
+        set(BACKEND_SOURCES
+            src/audio/backend/audio_backend_jack.cpp
+        )
+    else()
+        set(BACKEND_SOURCES
+            src/audio/backend/audio_backend_portaudio.cpp
+            src/audio/backend/audio_backend_portaudio_lifecycle.cpp
+            src/audio/backend/audio_backend_portaudio_devices.cpp
+        )
+    endif()
     set(DIALOG_SOURCES
-        src/gui/file_dialog_native.cpp
-        src/gui/file_dialog_native_open.cpp
-        src/gui/file_dialog_native_folder.cpp
+        src/gui/dialogs/file_dialog_native.cpp
+        src/gui/dialogs/file_dialog_native_open.cpp
+        src/gui/dialogs/file_dialog_native_folder.cpp
+        src/gui/views/gui_midi.cpp
     )
 endif()
 
@@ -449,7 +501,7 @@ elseif(IOS)
 
 else() # NOT EMSCRIPTEN, ANDROID, or IOS
 
-    # --- Native desktop build (unchanged) ---
+    # --- Native desktop build ---
 
     # Windows resource file for app icon
     if(WIN32 AND NOT MSVC)
@@ -458,7 +510,113 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         enable_language(RC)
     endif()
 
-    add_executable(Amplitron ${APP_SOURCES} ${MIDI_SOURCES} ${BACKEND_SOURCES} ${DIALOG_SOURCES} ${IMGUI_SOURCES} ${KISS_FFT_SOURCES} $<$<PLATFORM_ID:Windows>:${WIN_RC}>)
+    # ==========================================================================
+    # amplitron_core OBJECT library
+    # Sources compiled identically for both Amplitron and amplitron-tests
+    # (no target-specific compile definitions apply to them). Compiling them
+    # once and reusing the objects cuts build time roughly in half on slow
+    # CI platforms (e.g. Windows/MSYS2). Must be defined before any target
+    # that references it via $<TARGET_OBJECTS:amplitron_core>.
+    #
+    # Excluded intentionally:
+    #   audio_engine.cpp         — uses #ifdef AMPLITRON_TESTS
+    #   audio_backend_portaudio* — amplitron-tests mocks Pa_* symbols via -D
+    #   audio_backend_jack*      — amplitron-tests mocks jack_* symbols via -D
+    #   GUI / ImGui sources      — use AMPLITRON_HEADLESS / SDL_MAIN_HANDLED
+    #   main.cpp                 — unique entry point
+    #   test sources             — unique to amplitron-tests
+    # ==========================================================================
+    set(AMPLITRON_CORE_SOURCES
+        # Presets
+        src/presets/preset_manager.cpp
+        src/presets/preset_json.cpp
+        src/presets/preset_manager_dirs.cpp
+        src/presets/preset_manager_io.cpp
+        # Audio engine (partial — see exclusion note above)
+        src/audio/engine/audio_engine_chain.cpp
+        src/audio/engine/audio_engine_process.cpp
+        src/audio/engine/audio_engine_api.cpp
+        src/audio/engine/audio_graph.cpp
+        src/audio/engine/audio_graph_executor.cpp
+        # Recorder
+        src/audio/recorder/recorder.cpp
+        src/audio/recorder/recorder_session.cpp
+        src/audio/recorder/recorder_io.cpp
+        src/audio/recorder/recorder_wav.cpp
+        # GUI utility (no headless guards)
+        src/gui/commands/command_history.cpp
+        # Effects
+        src/audio/effects/distortion.cpp
+        src/audio/effects/overdrive.cpp
+        src/audio/effects/delay.cpp
+        src/audio/effects/reverb.cpp
+        src/audio/effects/chorus.cpp
+        src/audio/effects/phaser.cpp
+        src/audio/effects/flanger.cpp
+        src/audio/effects/equalizer.cpp
+        src/audio/effects/noise_gate.cpp
+        src/audio/effects/compressor.cpp
+        src/audio/effects/multiband_compressor.cpp
+        src/audio/effects/looper.cpp
+        src/audio/effects/cabinet_sim.cpp
+        src/audio/effects/amp_simulator.cpp
+        src/audio/effects/tuner.cpp
+        src/audio/effects/wah.cpp
+        src/audio/effects/octaver.cpp
+        src/audio/effects/pitch_shifter.cpp
+        # DSP
+        src/audio/dsp/wav_loader.cpp
+        src/audio/dsp/convolution_engine.cpp
+        src/audio/dsp/spectrum_analyzer.cpp
+        src/audio/dsp/level_analyzer.cpp
+        # kiss_fft (BSD-3 bundled)
+        ${KISS_FFT_SOURCES}
+        # Desktop MIDI — identical between both targets regardless of backend
+        src/midi/midi_manager.cpp
+        src/midi/midi_manager_mapping.cpp
+        src/midi/midi_manager_persist.cpp
+    )
+
+    add_library(amplitron_core OBJECT ${AMPLITRON_CORE_SOURCES})
+
+    target_include_directories(amplitron_core PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/presets
+        ${CMAKE_SOURCE_DIR}/external
+        ${CMAKE_SOURCE_DIR}/external/kiss_fft
+        ${IMGUI_DIR}
+        ${IMGUI_DIR}/backends
+        ${PORTAUDIO_INCLUDE_DIRS}
+        ${SDL2_INCLUDE_DIRS}
+        ${RTMIDI_INCLUDE_DIRS}
+    )
+    if(WITH_JACK AND UNIX AND NOT APPLE AND JACK_INCLUDE_DIRS)
+        target_include_directories(amplitron_core PRIVATE ${JACK_INCLUDE_DIRS})
+    endif()
+
+    # Both targets share AMPLITRON_HAS_MIDI; coverage instrumentation flows
+    # through CMAKE_CXX_FLAGS so the OBJECT library is always instrumented.
+    target_compile_definitions(amplitron_core PRIVATE
+        AMPLITRON_HAS_MIDI
+        AMPLITRON_VERSION="${AMPLITRON_VERSION}"
+    )
+    if(WITH_JACK AND UNIX AND NOT APPLE)
+        target_compile_definitions(amplitron_core PRIVATE WITH_JACK)
+    endif()
+
+    target_link_libraries(amplitron_core PRIVATE nlohmann_json::nlohmann_json)
+
+    # Remove shared sources from APP_SOURCES so Amplitron doesn't recompile them
+    list(REMOVE_ITEM APP_SOURCES ${AMPLITRON_CORE_SOURCES})
+
+    add_executable(Amplitron
+        ${APP_SOURCES}
+        ${BACKEND_SOURCES}
+        ${DIALOG_SOURCES}
+        ${IMGUI_SOURCES}
+        $<TARGET_OBJECTS:amplitron_core>
+        $<$<PLATFORM_ID:Windows>:${WIN_RC}>
+    )
 
     target_include_directories(Amplitron PRIVATE
         ${CMAKE_SOURCE_DIR}/src
@@ -473,13 +631,18 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${RTMIDI_INCLUDE_DIRS}
     )
 
-    # ============================================================
-    # DEFINE AMPLITRON_HAS_MIDI FOR DESKTOP BUILDS
-    # ============================================================
-    target_compile_definitions(Amplitron PRIVATE 
+    if(WITH_JACK AND UNIX AND NOT APPLE AND JACK_INCLUDE_DIRS)
+        target_include_directories(Amplitron PRIVATE ${JACK_INCLUDE_DIRS})
+    endif()
+
+    target_compile_definitions(Amplitron PRIVATE
         AMPLITRON_VERSION="${AMPLITRON_VERSION}"
         AMPLITRON_HAS_MIDI
     )
+
+    if(WITH_JACK AND UNIX AND NOT APPLE)
+        target_compile_definitions(Amplitron PRIVATE WITH_JACK)
+    endif()
 
     target_link_libraries(Amplitron PRIVATE
         nlohmann_json::nlohmann_json
@@ -488,6 +651,10 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${OPENGL_LIBRARIES}
         ${RTMIDI_LIBRARIES}
     )
+
+    if(WITH_JACK AND UNIX AND NOT APPLE)
+        target_link_libraries(Amplitron PRIVATE ${JACK_LIBRARIES})
+    endif()
 
     if(WIN32)
         target_link_libraries(Amplitron PRIVATE winmm ole32 setupapi comdlg32 shell32)
@@ -520,6 +687,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/unit/test_cabinet_sim_ir.cpp
         tests/unit/test_wav_loader.cpp
         tests/unit/test_convolution_engine.cpp
+        tests/unit/test_level_analyzer.cpp
         tests/integration/test_preset_manager.cpp
         tests/integration/test_json_serialization.cpp
         tests/integration/test_recorder.cpp
@@ -531,6 +699,8 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/integration/test_clipboard_preset.cpp
         tests/integration/test_audio_engine.cpp
         tests/integration/test_audio_backend_portaudio.cpp
+        tests/integration/test_headless.cpp
+        tests/integration/test_command_graph.cpp
         tests/e2e/test_e2e_preset_workflow.cpp
         tests/ui/test_gui_manager.cpp
         tests/ui/test_pedal_board.cpp
@@ -543,59 +713,37 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/ui/test_gui_recording.cpp
         tests/ui/test_gui_tuner.cpp
         tests/ui/test_gui_components.cpp
+        tests/ui/test_footswitch.cpp
+        tests/ui/test_led.cpp
+        tests/ui/test_knob.cpp
+        tests/ui/test_screen.cpp
+        tests/ui/test_pedal_board_chain.cpp
+        tests/ui/test_pedal_board_menu.cpp
+        tests/ui/test_pedal_widget_knobs.cpp
         tests/unit/test_session_manager.cpp
         tests/unit/test_cli.cpp
         tests/integration/test_main.cpp
+        tests/integration/test_audio_backend_jack.cpp
     )
 
-    # Effect + core sources needed by tests (no GUI, no main)
+    # CORE_SOURCES for amplitron-tests: only the files NOT in amplitron_core.
+    # - audio_engine.cpp    is excluded from the OBJECT lib (uses #ifdef AMPLITRON_TESTS)
+    # - audio_backend_*     are excluded because tests mock Pa_*/jack_* symbols via -D
     set(CORE_SOURCES
-        src/presets/preset_manager.cpp
-        src/presets/preset_json.cpp
-        src/presets/preset_manager_dirs.cpp
-        src/presets/preset_manager_io.cpp
-        src/audio/audio_engine.cpp
-        src/audio/audio_engine_chain.cpp
-        src/audio/audio_engine_process.cpp
-        src/audio/audio_engine_api.cpp
-        src/audio/audio_backend_portaudio.cpp
-        src/audio/audio_backend_portaudio_lifecycle.cpp
-        src/audio/audio_backend_portaudio_devices.cpp
-        src/audio/recorder.cpp
-        src/audio/recorder_session.cpp
-        src/audio/recorder_io.cpp
-        src/audio/recorder_wav.cpp
-        src/gui/command_history.cpp
-        src/audio/effects/distortion.cpp
-        src/audio/effects/overdrive.cpp
-        src/audio/effects/delay.cpp
-        src/audio/effects/reverb.cpp
-        src/audio/effects/chorus.cpp
-        src/audio/effects/phaser.cpp
-        src/audio/effects/flanger.cpp
-        src/audio/effects/equalizer.cpp
-        src/audio/effects/noise_gate.cpp
-        src/audio/effects/compressor.cpp
-        src/audio/effects/multiband_compressor.cpp
-        src/audio/effects/looper.cpp
-        src/audio/effects/cabinet_sim.cpp
-        src/audio/effects/amp_simulator.cpp
-        src/audio/effects/tuner.cpp
-        src/audio/effects/wah.cpp
-        src/audio/effects/octaver.cpp
-        src/audio/effects/pitch_shifter.cpp
-        src/audio/dsp/wav_loader.cpp
-        src/audio/dsp/convolution_engine.cpp
-        src/audio/audio_graph.cpp
-        src/audio/audio_graph_executor.cpp
+        src/audio/engine/audio_engine.cpp
     )
 
-    # Desktop-only MIDI support for tests
-    list(APPEND CORE_SOURCES
-        src/midi/midi_manager.cpp
-        src/midi/midi_manager_mapping.cpp
-        src/midi/midi_manager_persist.cpp
-    )
+    if(WITH_JACK AND UNIX AND NOT APPLE)
+        list(APPEND CORE_SOURCES
+            src/audio/backend/audio_backend_jack.cpp
+        )
+    else()
+        list(APPEND CORE_SOURCES
+            src/audio/backend/audio_backend_portaudio.cpp
+            src/audio/backend/audio_backend_portaudio_lifecycle.cpp
+            src/audio/backend/audio_backend_portaudio_devices.cpp
+        )
+    endif()
 
     # GUI + ImGui + platform-specific sources for testing
     set(TEST_GUI_SOURCES
@@ -603,33 +751,41 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         src/gui/gui_manager_frame.cpp
         src/gui/gui_manager_menu.cpp
         src/gui/gui_manager_update.cpp
-        src/gui/gui_settings.cpp
-        src/gui/gui_presets.cpp
-        src/gui/gui_recording.cpp
-        src/gui/gui_tuner.cpp
-        src/gui/gui_analyzer.cpp
-        src/gui/spectrum_analyzer.cpp
-        src/gui/pedal_board.cpp
-        src/gui/pedal_board_menu.cpp
-        src/gui/pedal_board_chain.cpp
-        src/gui/pedal_widget.cpp
-        src/gui/pedal_widget_body.cpp
-        src/gui/pedal_widget_knobs.cpp
-        src/gui/gui_snapshots.cpp
+        src/gui/views/gui_settings.cpp
+        src/gui/views/gui_presets.cpp
+        src/gui/views/gui_recording.cpp
+        src/gui/views/gui_tuner.cpp
+        src/gui/views/gui_analyzer.cpp
+        src/gui/pedalboard/pedal_board.cpp
+        src/gui/pedalboard/pedal_board_menu.cpp
+        src/gui/pedalboard/pedal_board_chain.cpp
+        src/gui/pedalboard/pedal_widget.cpp
+        src/gui/pedalboard/pedal_widget_body.cpp
+        src/gui/pedalboard/pedal_widget_knobs.cpp
+        src/gui/views/gui_snapshots.cpp
+        src/gui/components/knob.cpp
+        src/gui/components/footswitch.cpp
+        src/gui/components/led.cpp
+        src/gui/components/screen.cpp
         ${IMGUI_SOURCES}
     )
     if(EMSCRIPTEN OR IOS OR ANDROID)
-        list(APPEND TEST_GUI_SOURCES src/gui/file_dialog_web.cpp)
+        list(APPEND TEST_GUI_SOURCES src/gui/dialogs/file_dialog_web.cpp)
     else()
         list(APPEND TEST_GUI_SOURCES
-            src/gui/gui_midi.cpp
-            src/gui/file_dialog_native.cpp
-            src/gui/file_dialog_native_open.cpp
-            src/gui/file_dialog_native_folder.cpp
+            src/gui/views/gui_midi.cpp
+            src/gui/dialogs/file_dialog_native.cpp
+            src/gui/dialogs/file_dialog_native_open.cpp
+            src/gui/dialogs/file_dialog_native_folder.cpp
         )
     endif()
 
-    add_executable(amplitron-tests ${TEST_SOURCES} ${CORE_SOURCES} ${TEST_GUI_SOURCES} ${KISS_FFT_SOURCES})
+    add_executable(amplitron-tests
+        ${TEST_SOURCES}
+        ${CORE_SOURCES}
+        ${TEST_GUI_SOURCES}
+        $<TARGET_OBJECTS:amplitron_core>
+    )
 
     target_include_directories(amplitron-tests PRIVATE
         ${CMAKE_SOURCE_DIR}/src
@@ -645,13 +801,15 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${RTMIDI_INCLUDE_DIRS}
     )
 
-    # ============================================================
-    # DEFINE AMPLITRON_HAS_MIDI AND AMPLITRON_VERSION FOR TEST BUILDS
-    # ============================================================
-    target_compile_definitions(amplitron-tests PRIVATE 
+    if(WITH_JACK AND UNIX AND NOT APPLE AND JACK_INCLUDE_DIRS)
+        target_include_directories(amplitron-tests PRIVATE ${JACK_INCLUDE_DIRS})
+    endif()
+
+    target_compile_definitions(amplitron-tests PRIVATE
         AMPLITRON_HAS_MIDI
         AMPLITRON_VERSION="${AMPLITRON_VERSION}"
         AMPLITRON_HEADLESS
+        AMPLITRON_TESTS
         SDL_MAIN_HANDLED
         "Pa_GetDeviceCount=MOCK_Pa_GetDeviceCount"
         "Pa_GetDeviceInfo=MOCK_Pa_GetDeviceInfo"
@@ -668,13 +826,31 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         "Pa_Initialize=MOCK_Pa_Initialize"
     )
 
+    if(WITH_JACK AND UNIX AND NOT APPLE)
+        target_compile_definitions(amplitron-tests PRIVATE
+            WITH_JACK
+            "jack_client_open=MOCK_jack_client_open"
+            "jack_client_close=MOCK_jack_client_close"
+            "jack_port_register=MOCK_jack_port_register"
+            "jack_set_process_callback=MOCK_jack_set_process_callback"
+            "jack_activate=MOCK_jack_activate"
+            "jack_deactivate=MOCK_jack_deactivate"
+            "jack_port_get_buffer=MOCK_jack_port_get_buffer"
+        )
+    endif()
+
     target_link_libraries(amplitron-tests PRIVATE
         nlohmann_json::nlohmann_json
-        ${PORTAUDIO_LIBRARIES}
         ${SDL2_LIBRARIES}
         ${OPENGL_LIBRARIES}
         ${RTMIDI_LIBRARIES}
     )
+
+    if(WITH_JACK AND UNIX AND NOT APPLE)
+        target_link_libraries(amplitron-tests PRIVATE ${JACK_LIBRARIES})
+    else()
+        target_link_libraries(amplitron-tests PRIVATE ${PORTAUDIO_LIBRARIES})
+    endif()
 
     if(WIN32)
         target_link_libraries(amplitron-tests PRIVATE winmm ole32 setupapi)

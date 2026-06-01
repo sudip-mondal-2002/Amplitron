@@ -1,5 +1,5 @@
 #include "test_framework.h"
-#include "gui/theme.h"
+#include "gui/theme/theme.h"
 #include <cstring>
 
 using namespace Amplitron;

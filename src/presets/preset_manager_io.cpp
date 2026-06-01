@@ -1,6 +1,6 @@
-#include "audio/effect_factory.h"
+#include "audio/effects/effect_factory.h"
 #include "audio/effects/cabinet_sim.h"
-#include "gui/gui_graph_state.h"
+#include "gui/state/gui_graph_state.h"
 #include "preset_json.h"
 #include "preset_manager.h"
 #include "preset_manager_impl.h"

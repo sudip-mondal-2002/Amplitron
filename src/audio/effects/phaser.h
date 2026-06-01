@@ -5,7 +5,7 @@
 // dry + wet creates notches where phase cancellation occurs. The LFO modulates
 // the all-pass coefficient so notch frequencies sweep over time.
 
-#include "audio/effect.h"
+#include "audio/effects/effect.h"
 #include <array>
 
 namespace Amplitron {
