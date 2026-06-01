@@ -1,0 +1,153 @@
+{
+  "format_version": 2,
+  "routing": "graph",
+  "name": "Parallel Amp Blend",
+  "description": "Dual amp blend using Splitter and Mixer nodes.",
+
+  "nodes": [
+    {
+      "id": "input_1",
+      "type": "Input",
+      "is_graph_input": true,
+      "x": 50,
+      "y": 200
+    },
+
+    {
+      "id": "gate_1",
+      "type": "Noise Gate",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Threshold": -50.0,
+        "Attack": 0.5,
+        "Release": 50.0
+      },
+      "x": 150,
+      "y": 200
+    },
+
+    {
+      "id": "comp_1",
+      "type": "Compressor",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Threshold": -20.0,
+        "Ratio": 4.0,
+        "Attack": 5.0,
+        "Release": 100.0,
+        "Makeup": 0.0
+      },
+      "x": 250,
+      "y": 200
+    },
+
+    {
+      "id": "splitter_1",
+      "type": "splitter",
+      "x": 350,
+      "y": 200
+    },
+
+    {
+      "id": "od_1",
+      "type": "Overdrive",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Drive": 4.0,
+        "Tone": 0.7,
+        "Level": 0.8
+      },
+      "x": 500,
+      "y": 100
+    },
+
+    {
+      "id": "amp_dirty",
+      "type": "Amp Sim",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Gain": 8.5,
+        "Model": 2.0
+      },
+      "x": 650,
+      "y": 100
+    },
+
+    {
+      "id": "cab_dirty",
+      "type": "cabinet",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {},
+      "x": 800,
+      "y": 100
+    },
+
+    {
+      "id": "amp_clean",
+      "type": "Amp Sim",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Gain": 2.0,
+        "Model": 1.0
+      },
+      "x": 650,
+      "y": 300
+    },
+
+    {
+      "id": "cab_clean",
+      "type": "cabinet",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {},
+      "x": 800,
+      "y": 300
+    },
+
+    {
+      "id": "mixer_1",
+      "type": "mixer",
+      "num_inputs": 2,
+      "x": 950,
+      "y": 200
+    },
+
+    {
+      "id": "reverb_1",
+      "type": "Reverb",
+      "enabled": true,
+      "mix": 1.0,
+      "params": {
+        "Decay": 0.75,
+        "Damp": 0.3,
+        "Level": 0.35
+      },
+      "x": 1100,
+      "y": 200
+    }
+  ],
+
+  "links": [
+    { "src_pin": "input_1.out0", "dst_pin": "gate_1.in0" },
+    { "src_pin": "gate_1.out0", "dst_pin": "comp_1.in0" },
+    { "src_pin": "comp_1.out0", "dst_pin": "splitter_1.in0" },
+
+    { "src_pin": "splitter_1.out0", "dst_pin": "od_1.in0" },
+    { "src_pin": "od_1.out0", "dst_pin": "amp_dirty.in0" },
+    { "src_pin": "amp_dirty.out0", "dst_pin": "cab_dirty.in0" },
+
+    { "src_pin": "splitter_1.out1", "dst_pin": "amp_clean.in0" },
+    { "src_pin": "amp_clean.out0", "dst_pin": "cab_clean.in0" },
+
+    { "src_pin": "cab_dirty.out0", "dst_pin": "mixer_1.in0" },
+    { "src_pin": "cab_clean.out0", "dst_pin": "mixer_1.in1" },
+
+    { "src_pin": "mixer_1.out0", "dst_pin": "reverb_1.in0" }
+  ]
+}

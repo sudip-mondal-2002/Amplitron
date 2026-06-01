@@ -11,6 +11,7 @@ presets/*
 !presets/04_Ambient_Swells.json
 !presets/05_Phase_Shift_Lead.json
 !presets/06_Jet_Flanger.json
+!presets/07_Parallel_Amp_Blend.json
 recordings/
 *.log
 
