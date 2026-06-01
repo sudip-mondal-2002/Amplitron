@@ -72,7 +72,7 @@ void GuiSnapshots::render() {
                 ImGui::SetTooltip(
                     "Left-click to recall snapshot %s (or Ctrl+%d)\nRight-click to overwrite or clear",
                     lbl, i + 1);
-        #endif}
+        #endif
             } else {
         #ifdef __EMSCRIPTEN__
                 ImGui::SetTooltip(
