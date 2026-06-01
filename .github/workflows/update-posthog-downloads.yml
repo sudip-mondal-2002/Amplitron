@@ -10,7 +10,15 @@ jobs:
   update-posthog:
     runs-on: ubuntu-latest
     steps:
-      - name: Sync downloads from GitHub
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Update PostHog insight with download counts
         env:
           POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
-        run: 'python3 -c ''import json,urllib.request as u,os;r=json.loads(u.urlopen(u.Request("https://api.github.com/repos/sudip-mondal-2002/Amplitron/releases",headers={"User-Agent":"A"})).read());l=sum(a["download_count"] for x in r for a in x.get("assets",[]) if "Linux" in a["name"]);m=sum(a["download_count"] for x in r for a in x.get("assets",[]) if "macOS" in a["name"]);w=sum(a["download_count"] for x in r for a in x.get("assets",[]) if "Windows" in a["name"]);sql="SELECT "+chr(39)+"Linux"+chr(39)+" AS operating_system, "+str(l)+" AS download_count UNION ALL SELECT "+chr(39)+"macOS"+chr(39)+" AS operating_system, "+str(m)+" AS download_count UNION ALL SELECT "+chr(39)+"Windows"+chr(39)+" AS operating_system, "+str(w)+" AS download_count";p=json.dumps({"query":{"kind":"DataVisualizationNode","source":{"kind":"HogQLQuery","query":sql}}}).encode();req=u.Request("https://us.posthog.com/api/projects/355360/insights/7587728/",data=p,headers={"Authorization":"Bearer "+os.environ["POSTHOG_API_KEY"],"Content-Type":"application/json"},method="PATCH");print(json.loads(u.urlopen(req).read())["name"])'''
+        run: python3 scripts/update_posthog_downloads.py
