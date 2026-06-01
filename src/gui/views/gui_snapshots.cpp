@@ -63,27 +63,10 @@ void GuiSnapshots::render() {
 
         // Tooltip
         if (ImGui::IsItemHovered()) {
-            if (is_filled) {
-        #ifdef __EMSCRIPTEN__
-                ImGui::SetTooltip(
-                    "Tap to load snapshot %s",
-                    lbl);
-        #else
-                ImGui::SetTooltip(
-                    "Left-click to recall snapshot %s (or Ctrl+%d)\nRight-click to overwrite or clear",
-                    lbl, i + 1);
-        #endif
-            } else {
-        #ifdef __EMSCRIPTEN__
-                ImGui::SetTooltip(
-                    "Slot %s is empty",
-                    lbl);
-        #else
-                ImGui::SetTooltip(
-                    "Slot %s is empty\nRight-click to save current board here",
-                    lbl);
-        #endif
-            }
+            if (is_filled)
+                ImGui::SetTooltip("Left-click to recall snapshot %s (or Ctrl+%d)\nRight-click to overwrite or clear", lbl, i + 1);
+            else
+                ImGui::SetTooltip("Slot %s is empty\nRight-click to save current board here", lbl);
         }
 
         // Right-click context menu
@@ -116,10 +99,8 @@ void GuiSnapshots::render() {
         ImGui::TextColored(ImVec4(0.90f, 0.78f, 0.39f, alpha), "  %s", status_msg_);
         status_timer_ -= ImGui::GetIO().DeltaTime;
     } else {
-        #ifndef __EMSCRIPTEN__
-            ImGui::TextColored(Theme::TextDim(),
-                "  Left-click to recall  |  Right-click to save / clear  |  Ctrl+1-4 to recall");
-        #endif
+        ImGui::TextColored(Theme::TextDim(),
+            "  Left-click to recall  |  Right-click to save / clear  |  Ctrl+1-4 to recall");
     }
 
     ImGui::EndChild();
