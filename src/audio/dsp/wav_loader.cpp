@@ -2,6 +2,7 @@
 #include "dr_wav.h"
 
 #include "audio/dsp/wav_loader.h"
+#include <algorithm>
 #include <iostream>
 #include <cmath>
 #include <filesystem>
@@ -121,8 +122,13 @@ bool is_safe_ir_path(const std::string& path, const std::string& allowed_dir) {
         return false;
     }
 
+    // Normalize backslashes to forward slashes so that Windows-style paths
+    // (e.g. C:\Users\..\evil) are parsed correctly on all platforms.
+    std::string normalized = path;
+    std::replace(normalized.begin(), normalized.end(), '\\', '/');
+
     try {
-        const std::filesystem::path p(path);
+        const std::filesystem::path p(normalized);
 
         // Reject any component that is a parent-directory traversal.
         for (const auto& component : p) {
