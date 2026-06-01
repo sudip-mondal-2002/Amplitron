@@ -35,7 +35,7 @@ jobs:
           fi
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
-            build-essential cmake \
+            build-essential cmake ninja-build lcov \
             libportaudio2 portaudio19-dev \
             libsdl2-dev libgl1-mesa-dev libglu1-mesa-dev \
             librtmidi-dev
@@ -44,7 +44,8 @@ jobs:
 
       - name: Setup External Dependencies
         run: |
-          bash ./scripts/setup_dependencies.sh
+          chmod +x scripts/setup_dependencies.sh
+          ./scripts/setup_dependencies.sh --no-system-deps
 
       - name: Generate Version
         id: version
@@ -55,25 +56,63 @@ jobs:
       - name: Build
         run: |
           mkdir -p build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Debug \
+          cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
             -DAMPLITRON_VERSION="${{ steps.version.outputs.version }}" \
             -DCMAKE_C_FLAGS="--coverage -O0 -g" \
             -DCMAKE_CXX_FLAGS="--coverage -O0 -g" \
             -DCMAKE_EXE_LINKER_FLAGS="--coverage" \
             ..
-          make -j$(nproc)
+          ninja -j$(nproc)
 
       - name: Run Tests
         run: cd build && ./amplitron-tests
 
-      - name: Package Build Data for Coverage
-        run: tar -czf build-coverage.tar.gz build/
+      - name: Install Smoke Test
+        env:
+          INSTALL_PREFIX: ${{ runner.temp }}/amplitron-install
+        run: |
+          cmake --install build --prefix "$INSTALL_PREFIX"
+          test -x "$INSTALL_PREFIX/bin/Amplitron"
+          "$INSTALL_PREFIX/bin/Amplitron" --version | grep -q "Amplitron v1.0"
 
-      - name: Upload Build Artifact for Coverage
-        uses: actions/upload-artifact@v4
+      - name: Uninstall Smoke Test
+        env:
+          INSTALL_PREFIX: ${{ runner.temp }}/amplitron-install
+        run: |
+          make PREFIX="$INSTALL_PREFIX" uninstall
+          test ! -e "$INSTALL_PREFIX/bin/Amplitron"
+          test ! -e "$INSTALL_PREFIX/share/amplitron"
+          test ! -e "$INSTALL_PREFIX/bin/assets"
+
+      - name: Generate Linux Coverage
+        if: github.event_name == 'pull_request'
+        run: |
+          LCOV_IGNORE="--ignore-errors mismatch,mismatch,gcov,gcov,source,source,inconsistent,inconsistent,format,format,unsupported,unsupported,corrupt,corrupt,unused,unused"
+          lcov --capture --initial --directory build --output-file coverage_base.info $LCOV_IGNORE
+          lcov --capture --directory build --output-file coverage_test.info $LCOV_IGNORE
+          lcov --add-tracefile coverage_base.info --add-tracefile coverage_test.info \
+            --output-file coverage.info $LCOV_IGNORE
+          sed -i 's|/build/../|/|g' coverage.info
+          sed -i 's|SF:.*/Amplitron/|SF:/home/runner/work/Amplitron/Amplitron/|g' coverage.info
+          lcov --remove coverage.info \
+            '/usr/*' '/Library/*' '/opt/homebrew/*' '*external/*' '*tests/*' '*build/*' '*mingw64/*' '*_temp/*' '*include/c++/*' \
+            --output-file coverage.filtered.info $LCOV_IGNORE
+          lcov --summary coverage.filtered.info $LCOV_IGNORE | tee coverage-summary.txt
+
+      - name: Quick Linux Coverage Summary
+        if: github.event_name == 'pull_request'
+        run: |
+          LCOV_IGNORE="--ignore-errors unused,unused,inconsistent,inconsistent,format,format,corrupt,corrupt,unsupported,unsupported"
+          COVERAGE=$(lcov --summary coverage.filtered.info $LCOV_IGNORE 2>&1 | awk '/lines......:/ {print $2}' | sed 's/%//')
+          echo "Linux line coverage: $COVERAGE%"
+          echo "### Linux Coverage: ${COVERAGE}%" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload Linux Coverage
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v7
         with:
-          name: build-coverage
-          path: build-coverage.tar.gz
+          name: linux-coverage
+          path: coverage.filtered.info
           retention-days: 1
 
       - name: Upload Build
@@ -84,104 +123,6 @@ jobs:
           path: build/Amplitron
           retention-days: 1
 
-  coverage-linux:
-    name: Coverage Report on Linux
-    needs: test-linux
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Install lcov
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends lcov
-
-      - name: Download Build Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: build-coverage
-          path: .
-
-      - name: Extract Build Data
-        run: tar -xzf build-coverage.tar.gz
-
-      - name: Generate Coverage Report
-        run: |
-          lcov --capture --directory build --output-file coverage.info --ignore-errors mismatch,gcov,source
-          lcov --remove coverage.info \
-            '/usr/*' \
-            '*/external/*' \
-            '*/tests/*' \
-            '*/build/*' \
-            --output-file coverage.filtered.info \
-            --ignore-errors unused
-          genhtml coverage.filtered.info --output-directory coverage-report
-          lcov --summary coverage.filtered.info | tee coverage-summary.txt
-
-      - name: Enforce Coverage Threshold and Generate Markdown
-        run: |
-          COVERAGE=$(lcov --summary coverage.filtered.info 2>&1 | awk '/lines......:/ {print $2}' | sed 's/%//')
-          echo "Line coverage: $COVERAGE%"
-
-          THRESHOLD=60
-
-          echo "### Code Coverage Report 📊" > coverage_comment.md
-          echo "**Line Coverage:** ${COVERAGE}%" >> coverage_comment.md
-          echo "" >> coverage_comment.md
-
-          if awk "BEGIN {exit !($COVERAGE >= $THRESHOLD)}"; then
-            echo "✅ Coverage meets threshold: $COVERAGE% >= $THRESHOLD%"
-            echo "✅ Coverage meets threshold: $COVERAGE% >= $THRESHOLD%" >> coverage_comment.md
-          else
-            echo "⚠️ Coverage is below threshold: $COVERAGE% < $THRESHOLD%"
-            echo "⚠️ Coverage is below threshold: $COVERAGE% < $THRESHOLD%" >> coverage_comment.md
-            echo "This PR adds coverage reporting, so low coverage is reported as a warning."
-            echo "CI will continue and upload the coverage report."
-          fi
-
-          echo "" >> coverage_comment.md
-          echo "<details>" >> coverage_comment.md
-          echo "<summary>Full Coverage Summary</summary>" >> coverage_comment.md
-          echo "" >> coverage_comment.md
-          echo '```text' >> coverage_comment.md
-          cat coverage-summary.txt >> coverage_comment.md
-          echo '```' >> coverage_comment.md
-          echo "</details>" >> coverage_comment.md
-
-          cat coverage_comment.md >> $GITHUB_STEP_SUMMARY
-
-      - name: Save PR Number and Coverage Comment
-        if: github.event_name == 'pull_request'
-        run: |
-          mkdir -p pr_coverage
-          echo "${{ github.event.pull_request.number }}" > pr_coverage/pr_number.txt
-          cp coverage_comment.md pr_coverage/coverage_comment.md
-
-      - name: Upload PR Coverage Artifact
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr-coverage-comment
-          path: pr_coverage/
-          retention-days: 1
-
-      - name: Upload Coverage HTML Report
-        uses: actions/upload-artifact@v7
-        with:
-          name: coverage-report
-          path: coverage-report/
-          retention-days: 7
-
-      - name: Upload Coverage Summary
-        uses: actions/upload-artifact@v7
-        with:
-          name: coverage-summary
-          path: |
-            coverage.filtered.info
-            coverage-summary.txt
-          retention-days: 7
 
   test-macos:
     name: Test on macOS
@@ -192,11 +133,12 @@ jobs:
           fetch-depth: 0
 
       - name: Install Dependencies
-        run: brew install portaudio sdl2 rtmidi
+        run: brew install portaudio sdl2 rtmidi lcov ninja
 
       - name: Setup External Dependencies
         run: |
-          bash ./scripts/setup_dependencies.sh
+          chmod +x scripts/setup_dependencies.sh
+          ./scripts/setup_dependencies.sh --no-system-deps
 
       - name: Generate Version
         id: version
@@ -207,9 +149,21 @@ jobs:
       - name: Build
         run: |
           HOMEBREW_PREFIX=$(brew --prefix)
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BUILD_TYPE=Debug
+            COV_FLAGS="--coverage -O0 -g"
+            LINK_FLAGS="--coverage"
+          else
+            BUILD_TYPE=Release
+            COV_FLAGS=""
+            LINK_FLAGS=""
+          fi
           mkdir -p build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Release \
+          cmake -G Ninja -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
             -DAMPLITRON_VERSION="${{ steps.version.outputs.version }}" \
+            -DCMAKE_C_FLAGS="$COV_FLAGS" \
+            -DCMAKE_CXX_FLAGS="$COV_FLAGS" \
+            -DCMAKE_EXE_LINKER_FLAGS="$LINK_FLAGS" \
             -DPORTAUDIO_INCLUDE_DIRS="$HOMEBREW_PREFIX/include" \
             -DPORTAUDIO_LIBRARIES="$HOMEBREW_PREFIX/lib/libportaudio.dylib" \
             -DSDL2_INCLUDE_DIRS="$HOMEBREW_PREFIX/include/SDL2" \
@@ -217,10 +171,50 @@ jobs:
             -DRTMIDI_INCLUDE_DIRS="$HOMEBREW_PREFIX/include" \
             -DRTMIDI_LIBRARIES="$HOMEBREW_PREFIX/lib/librtmidi.dylib" \
             ..
-          make -j$(sysctl -n hw.ncpu)
+          ninja -j$(sysctl -n hw.ncpu)
 
       - name: Run Tests
         run: cd build && ./amplitron-tests
+
+      - name: Install Smoke Test
+        env:
+          INSTALL_PREFIX: ${{ runner.temp }}/amplitron-install
+        run: |
+          cmake --install build --prefix "$INSTALL_PREFIX"
+          test -x "$INSTALL_PREFIX/bin/Amplitron"
+          "$INSTALL_PREFIX/bin/Amplitron" --version | grep -q "Amplitron v1.0"
+
+      - name: Uninstall Smoke Test
+        env:
+          INSTALL_PREFIX: ${{ runner.temp }}/amplitron-install
+        run: |
+          make PREFIX="$INSTALL_PREFIX" uninstall
+          test ! -e "$INSTALL_PREFIX/bin/Amplitron"
+          test ! -e "$INSTALL_PREFIX/share/amplitron"
+          test ! -e "$INSTALL_PREFIX/bin/assets"
+
+      - name: Generate macOS Coverage
+        if: github.event_name == 'pull_request'
+        run: |
+          printf '#!/bin/bash\nexec xcrun llvm-cov gcov "$@"\n' > /tmp/llvm-gcov.sh
+          chmod +x /tmp/llvm-gcov.sh
+          LCOV_IGNORE="--ignore-errors mismatch,mismatch,gcov,gcov,source,source,inconsistent,inconsistent,format,format,unsupported,unsupported,corrupt,corrupt,unused,unused"
+          lcov --capture --directory build --output-file coverage.info \
+            --gcov-tool /tmp/llvm-gcov.sh $LCOV_IGNORE
+          sed -i '' 's|/build/../|/|g' coverage.info
+          sed -i '' 's|SF:.*/Amplitron/|SF:/home/runner/work/Amplitron/Amplitron/|g' coverage.info
+          lcov --remove coverage.info \
+            '/usr/*' '/Library/*' '/opt/homebrew/*' '*external/*' '*tests/*' '*build/*' '*mingw64/*' '*_temp/*' '*include/c++/*' \
+            --output-file coverage.filtered.info $LCOV_IGNORE
+          lcov --summary coverage.filtered.info $LCOV_IGNORE | tee coverage-summary-macos.txt
+
+      - name: Upload macOS Coverage
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: macos-coverage
+          path: coverage.filtered.info
+          retention-days: 1
 
       - name: Bundle Dylibs
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -331,7 +325,8 @@ jobs:
 
       - name: Setup External Dependencies
         run: |
-          bash ./scripts/setup_dependencies.sh
+          chmod +x scripts/setup_dependencies.sh
+          ./scripts/setup_dependencies.sh --no-system-deps
 
       - name: Generate Version
         id: version
@@ -411,7 +406,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Setup MSYS2
         uses: msys2/setup-msys2@v2
@@ -426,7 +421,7 @@ jobs:
             portaudio:p
             SDL2:p
             rtmidi:p
-          install: git
+          install: git lcov
           cache: true
 
       - name: Restore ccache
@@ -442,14 +437,13 @@ jobs:
       - name: Setup External Dependencies
         shell: msys2 {0}
         run: |
-          bash ./scripts/setup_dependencies.sh
+          chmod +x scripts/setup_dependencies.sh
+          ./scripts/setup_dependencies.sh --no-system-deps
 
       - name: Generate Version
-        shell: msys2 {0}
         id: version
-        run: |
-          COUNT=$(git rev-list --count HEAD)
-          echo "version=0.1.${COUNT}" >> $GITHUB_OUTPUT
+        shell: bash
+        run: echo "version=0.1.${{ github.run_number }}" >> $GITHUB_OUTPUT
 
       - name: Build
         shell: msys2 {0}
@@ -457,9 +451,21 @@ jobs:
           export CCACHE_DIR="$GITHUB_WORKSPACE/.ccache"
           export CCACHE_MAXSIZE=200M
           mkdir -p "$CCACHE_DIR"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BUILD_TYPE=RelWithDebInfo
+            COV_FLAGS="--coverage -O2"
+            LINK_FLAGS="--coverage"
+          else
+            BUILD_TYPE=Release
+            COV_FLAGS=""
+            LINK_FLAGS=""
+          fi
           mkdir -p build && cd build
-          cmake -G Ninja -DCMAKE_BUILD_TYPE=Release \
+          cmake -G Ninja -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
             -DAMPLITRON_VERSION="${{ steps.version.outputs.version }}" \
+            -DCMAKE_C_FLAGS="$COV_FLAGS" \
+            -DCMAKE_CXX_FLAGS="$COV_FLAGS" \
+            -DCMAKE_EXE_LINKER_FLAGS="$LINK_FLAGS" \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             ..
@@ -469,6 +475,58 @@ jobs:
       - name: Run Tests
         shell: msys2 {0}
         run: cd build && ./amplitron-tests.exe
+
+      - name: Install Smoke Test
+        shell: msys2 {0}
+        env:
+          INSTALL_PREFIX: ${{ runner.temp }}\amplitron-install
+        run: |
+          cmake --install build --prefix "$INSTALL_PREFIX"
+          test -x "$INSTALL_PREFIX/bin/Amplitron.exe"
+          "$INSTALL_PREFIX/bin/Amplitron.exe" --version | grep -q "Amplitron v1.0"
+
+      - name: Uninstall Smoke Test
+        shell: msys2 {0}
+        env:
+          INSTALL_PREFIX: ${{ runner.temp }}\amplitron-install
+        run: |
+          rm -f "$INSTALL_PREFIX/bin/Amplitron.exe"
+          rm -rf "$INSTALL_PREFIX/share/amplitron"
+          rm -rf "$INSTALL_PREFIX/bin/assets"
+          test ! -e "$INSTALL_PREFIX/bin/Amplitron.exe"
+          test ! -e "$INSTALL_PREFIX/share/amplitron"
+          test ! -e "$INSTALL_PREFIX/bin/assets"
+
+      - name: Generate Windows Coverage
+        if: github.event_name == 'pull_request'
+        shell: msys2 {0}
+        run: |
+          LCOV_VER=$(lcov --version 2>&1 | grep -oP '\d+' | head -1)
+          if [ "$LCOV_VER" -ge 2 ] 2>/dev/null; then
+            LCOV_IGNORE="--ignore-errors gcov,gcov,source,source,inconsistent,inconsistent,format,format,unsupported,unsupported,corrupt,corrupt,unused,unused"
+          else
+            LCOV_IGNORE=""
+          fi
+          lcov --capture \
+            --directory build/CMakeFiles/amplitron_core.dir \
+            --directory build/CMakeFiles/Amplitron.dir \
+            --directory build/CMakeFiles/amplitron-tests.dir \
+            --output-file coverage.info $LCOV_IGNORE 2>&1 | tail -20
+          sed -i 's|\\|/|g' coverage.info
+          sed -i 's|/build/../|/|g' coverage.info
+          sed -i 's|SF:.*/Amplitron/|SF:/home/runner/work/Amplitron/Amplitron/|g' coverage.info
+          lcov --remove coverage.info \
+            '/usr/*' '/Library/*' '/opt/homebrew/*' '*external/*' '*tests/*' '*build/*' '*mingw64/*' '*_temp/*' '*include/c++/*' \
+            --output-file coverage.filtered.info $LCOV_IGNORE 2>&1 | tail -5
+          lcov --summary coverage.filtered.info $LCOV_IGNORE | tee coverage-summary-windows.txt
+
+      - name: Upload Windows Coverage
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-coverage
+          path: coverage.filtered.info
+          retention-days: 1
 
       - name: Collect Binaries
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -516,7 +574,8 @@ jobs:
 
       - name: Setup External Dependencies
         run: |
-          bash ./scripts/setup_dependencies.sh
+          chmod +x scripts/setup_dependencies.sh
+          ./scripts/setup_dependencies.sh --no-system-deps
 
       - name: Fetch SDL2 Java bridge
         run: |
@@ -571,7 +630,8 @@ jobs:
 
       - name: Setup External Dependencies
         run: |
-          bash ./scripts/setup_dependencies.sh
+          chmod +x scripts/setup_dependencies.sh
+          ./scripts/setup_dependencies.sh --no-system-deps
 
       - name: Generate Version
         id: version
@@ -686,3 +746,122 @@ jobs:
           name: ios-build
           path: ios-staging/Amplitron.ipa
           retention-days: 1
+
+  merge-coverage:
+    name: Merge Cross-Platform Coverage
+    needs: [test-linux, test-macos, test-windows]
+    if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install lcov
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends lcov
+
+      - name: Download Linux Coverage
+        uses: actions/download-artifact@v8
+        with:
+          name: linux-coverage
+          path: coverage-linux/
+
+      - name: Download macOS Coverage
+        uses: actions/download-artifact@v8
+        continue-on-error: true
+        id: macos-dl
+        with:
+          name: macos-coverage
+          path: coverage-macos/
+
+      - name: Download Windows Coverage
+        uses: actions/download-artifact@v8
+        continue-on-error: true
+        id: windows-dl
+        with:
+          name: windows-coverage
+          path: coverage-windows/
+
+      - name: Merge Coverage Reports
+        run: |
+          MERGE_CMD="lcov"
+
+          MERGE_CMD="$MERGE_CMD --add-tracefile coverage-linux/coverage.filtered.info"
+          PLATFORMS="Linux"
+
+          if [ -f coverage-macos/coverage.filtered.info ]; then
+            MERGE_CMD="$MERGE_CMD --add-tracefile coverage-macos/coverage.filtered.info"
+            PLATFORMS="$PLATFORMS + macOS"
+          fi
+
+          if [ -f coverage-windows/coverage.filtered.info ]; then
+            MERGE_CMD="$MERGE_CMD --add-tracefile coverage-windows/coverage.filtered.info"
+            PLATFORMS="$PLATFORMS + Windows"
+          fi
+
+          LCOV_IGNORE="--ignore-errors unused,unused,inconsistent,inconsistent,format,format,corrupt,corrupt,unsupported,unsupported,source,source,mismatch,mismatch,gcov,gcov"
+          GENHTML_IGNORE="--ignore-errors unused,unused,inconsistent,inconsistent,format,format,corrupt,corrupt,unsupported,unsupported,source,source,category,category"
+          $MERGE_CMD --output-file merged.info $LCOV_IGNORE
+          echo "PLATFORMS=$PLATFORMS" >> $GITHUB_ENV
+
+          genhtml merged.info --output-directory coverage-report $GENHTML_IGNORE --synthesize-missing --prefix $GITHUB_WORKSPACE
+          lcov --summary merged.info $LCOV_IGNORE | tee merged-summary.txt
+
+      - name: Generate Merged Coverage Comment
+        run: |
+          LCOV_IGNORE="--ignore-errors unused,unused,inconsistent,inconsistent,format,format,corrupt,corrupt,unsupported,unsupported,source,source,mismatch,mismatch,gcov,gcov"
+          COVERAGE=$(lcov --summary merged.info $LCOV_IGNORE 2>&1 | awk '/lines......:/ {print $2}' | sed 's/%//')
+          echo "Merged line coverage: $COVERAGE%"
+
+          THRESHOLD=60
+
+          echo "### 🌍 Cross-Platform Coverage Report" > coverage_comment.md
+          echo "**Platforms:** ${{ env.PLATFORMS }}" >> coverage_comment.md
+          echo "**Merged Line Coverage:** ${COVERAGE}%" >> coverage_comment.md
+          echo "" >> coverage_comment.md
+
+          if awk "BEGIN {exit !($COVERAGE >= $THRESHOLD)}"; then
+            echo "✅ Coverage meets threshold: $COVERAGE% >= $THRESHOLD%" >> coverage_comment.md
+          else
+            echo "⚠️ Coverage is below threshold: $COVERAGE% < $THRESHOLD%" >> coverage_comment.md
+          fi
+
+          echo "" >> coverage_comment.md
+          echo "<details>" >> coverage_comment.md
+          echo "<summary>Full Merged Coverage Summary</summary>" >> coverage_comment.md
+          echo "" >> coverage_comment.md
+          echo '```text' >> coverage_comment.md
+          cat merged-summary.txt >> coverage_comment.md
+          echo '```' >> coverage_comment.md
+          echo "</details>" >> coverage_comment.md
+
+          cat coverage_comment.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Save PR Number and Coverage Comment
+        run: |
+          mkdir -p pr_coverage
+          echo "${{ github.event.pull_request.number }}" > pr_coverage/pr_number.txt
+          cp coverage_comment.md pr_coverage/coverage_comment.md
+
+      - name: Upload PR Coverage Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: pr-coverage-comment
+          path: pr_coverage/
+          retention-days: 1
+
+      - name: Upload Merged Coverage HTML Report
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-report
+          path: coverage-report/
+          retention-days: 7
+
+      - name: Upload Merged Coverage Info
+        uses: actions/upload-artifact@v7
+        with:
+          name: merged-coverage-summary
+          path: |
+            merged.info
+            merged-summary.txt
+          retention-days: 7

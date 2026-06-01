@@ -1,9 +1,9 @@
 #include "gui/gui_manager.h"
-#include "gui/pedal_board.h"
-#include "gui/theme.h"
-#include "gui/file_dialog.h"
-#include "gui/command.h"
-#include "gui/gui_graph_state.h"
+#include "gui/pedalboard/pedal_board.h"
+#include "gui/theme/theme.h"
+#include "gui/dialogs/file_dialog.h"
+#include "gui/commands/command.h"
+#include "gui/state/gui_graph_state.h"
 #include "preset_manager.h"
 
 #include "gui/gl_setup.h"
@@ -41,19 +41,13 @@ namespace Amplitron {
 GuiManager::GuiManager(AudioEngine& engine)
     : engine_(engine),
       command_history_(),
-      gui_settings_(engine),
+      tuner_pedal_(std::make_shared<TunerPedal>()),
       gui_presets_(engine, command_history_),
-      gui_recording_(engine),
-      gui_tuner_(engine, std::make_shared<TunerPedal>()),
-      gui_analyzer_(engine),
-      gui_snapshots_(engine, command_history_), // <-- UNCOMMENT THIS FIELD HERE!
-      gui_midi_(midi_manager_) 
+      gui_midi_(midi_manager_)
 {
     pedal_board_ = std::make_unique<PedalBoard>(engine_, command_history_, &gui_midi_);
     gui_presets_.set_pedal_board(pedal_board_.get());
     gui_presets_.set_midi_manager(&midi_manager_);
-    
-    gui_snapshots_.set_pedal_board(pedal_board_.get()); // <-- UNCOMMENT THIS ACTION TOO!
 }
 
 GuiManager::~GuiManager() {
@@ -146,20 +140,15 @@ bool GuiManager::initialize(int width, int height) {
         try_font("external/imgui/misc/fonts/Roboto-Medium.ttf");
         try_font("../external/imgui/misc/fonts/Roboto-Medium.ttf");
 
-        if (!loaded_font)
+        if (!loaded_font) {
             io.Fonts->AddFontDefault();
-
-        // On desktop platforms (like macOS), SDL uses logical coordinates for ImGui, 
-        // so we shouldn't scale the style sizes (padding, margins, etc.) by dpi_scale.
-#ifdef __EMSCRIPTEN__
-        ImGuiStyle& style = ImGui::GetStyle();
-        style.ScaleAllSizes(dpi_scale);
-        // On web viewports, setting FontGlobalScale smaller shrinks text rendering. 
-        // We set it to 1.0f here so that font rendering uses the high-res texture space fully.
-        io.FontGlobalScale = 1.0f;
-#else
-        io.FontGlobalScale = 1.0f / dpi_scale;
-#endif
+            io.FontGlobalScale = 1.0f;
+        } else {
+            // On all platforms (Desktop & Web viewports), ImGui operates in logical coordinates.
+            // We load fonts at high physical resolution (scaled_size) to keep text sharp,
+            // and set FontGlobalScale to 1.0f / dpi_scale to draw them at their intended logical size.
+            io.FontGlobalScale = 1.0f / dpi_scale;
+        }
     }
 
     // Load window icon from assets/icon.svg
@@ -209,7 +198,6 @@ bool GuiManager::initialize(int width, int height) {
     pedal_board_ = std::make_unique<PedalBoard>(engine_, command_history_, &gui_midi_);
     gui_presets_.set_pedal_board(pedal_board_.get());
     gui_presets_.set_midi_manager(&midi_manager_);
-    gui_snapshots_.set_pedal_board(pedal_board_.get());
 
     PresetManager::load_config();
 

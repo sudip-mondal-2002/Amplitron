@@ -25,6 +25,7 @@
       width: 100vw;
       height: 100vh;
       display: block;
+      touch-action: none;
     }
     /* Loading overlay */
     #loading {
@@ -323,6 +324,7 @@
     var prevMidX = 0;
     var prevMidY = 0;
     var tracking = false;
+    var singleTouchId = null;
 
     var c = document.getElementById('canvas');
     if (!c) return;
@@ -333,42 +335,86 @@
       return Math.sqrt(dx * dx + dy * dy);
     }
 
+    function getCanvasCoords(clientX, clientY) {
+      var rect = c.getBoundingClientRect();
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+
     c.addEventListener('touchstart', function(e) {
+      e.preventDefault();
       if (e.touches.length === 2) {
-        e.preventDefault();
+        // Cancel any in-progress single-touch interaction
+        if (singleTouchId !== null) {
+          singleTouchId = null;
+          if (Module && Module.ccall) {
+            Module.ccall('on_canvas_touch_cancel', null, []);
+          }
+        }
         tracking = true;
         prevDist = dist(e.touches);
         prevMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
         prevMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      } else if (e.touches.length === 1) {
+        tracking = false;
+        singleTouchId = e.touches[0].identifier;
+        var coords = getCanvasCoords(e.touches[0].clientX, e.touches[0].clientY);
+        if (Module && Module.ccall) {
+          Module.ccall('on_canvas_touch_down', null, ['number', 'number'], [coords.x, coords.y]);
+        }
       }
     }, { passive: false });
 
     c.addEventListener('touchmove', function(e) {
-      if (!tracking || e.touches.length !== 2) return;
       e.preventDefault();
-      var d = dist(e.touches);
-      var mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-      var my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-      var dscale = prevDist > 0 ? (d - prevDist) / prevDist : 0;
-      var dx = mx - prevMidX;
-      var dy = my - prevMidY;
-      prevDist = d;
-      prevMidX = mx;
-      prevMidY = my;
-      var rect = c.getBoundingClientRect();
-      var localX = mx - rect.left;
-      var localY = my - rect.top;
-      if (Module && Module.ccall) {
-        Module.ccall('on_canvas_touch_gesture', null, ['number','number','number','number','number'], [dx, dy, dscale, localX, localY]);
+      if (tracking && e.touches.length === 2) {
+        var d = dist(e.touches);
+        var mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        var my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        var dscale = prevDist > 0 ? (d - prevDist) / prevDist : 0;
+        var dx = mx - prevMidX;
+        var dy = my - prevMidY;
+        prevDist = d;
+        prevMidX = mx;
+        prevMidY = my;
+        var rect = c.getBoundingClientRect();
+        var localX = mx - rect.left;
+        var localY = my - rect.top;
+        if (Module && Module.ccall) {
+          Module.ccall('on_canvas_touch_gesture', null, ['number','number','number','number','number'], [dx, dy, dscale, localX, localY]);
+        }
+      } else if (e.touches.length === 1 && singleTouchId !== null) {
+        var coords = getCanvasCoords(e.touches[0].clientX, e.touches[0].clientY);
+        if (Module && Module.ccall) {
+          Module.ccall('on_canvas_touch_move', null, ['number', 'number'], [coords.x, coords.y]);
+        }
       }
     }, { passive: false });
 
     c.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      if (singleTouchId !== null) {
+        for (var i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].identifier === singleTouchId) {
+            var coords = getCanvasCoords(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
+            if (Module && Module.ccall) {
+              Module.ccall('on_canvas_touch_up', null, ['number', 'number'], [coords.x, coords.y]);
+            }
+            break;
+          }
+        }
+        singleTouchId = null;
+      }
       if (e.touches.length < 2) tracking = false;
     });
 
     c.addEventListener('touchcancel', function() {
       tracking = false;
+      if (singleTouchId !== null) {
+        singleTouchId = null;
+        if (Module && Module.ccall) {
+          Module.ccall('on_canvas_touch_cancel', null, []);
+        }
+      }
     });
 
     c.addEventListener('wheel', function(e) {

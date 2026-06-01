@@ -5,7 +5,7 @@
 // D(n)=D0 + A*sin(2*pi*f_lfo*n/Fs); the varying delay moves comb notches at
 // frequencies approximately k*Fs/D(n).
 
-#include "audio/effect.h"
+#include "audio/effects/effect.h"
 
 namespace Amplitron {
 
