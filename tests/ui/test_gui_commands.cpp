@@ -7,9 +7,9 @@
  */
 #include "test_framework.h"
 #include "test_fixtures.h"
-#include "gui/command_reset.h"
-#include "gui/command_clear.h"
-#include "gui/command_history.h"
+#include "gui/commands/command_reset.h"
+#include "gui/commands/command_clear.h"
+#include "gui/commands/command_history.h"
 #include "audio/effects/overdrive.h"
 #include "audio/effects/reverb.h"
 #include <memory>

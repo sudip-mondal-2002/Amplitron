@@ -5,7 +5,7 @@
 // line/resampling window at rate r and crossfades windows to reduce clicks,
 // producing y[n] from time-scaled input samples.
 
-#include "audio/effect.h"
+#include "audio/effects/effect.h"
 #include <vector>
 
 namespace Amplitron {
