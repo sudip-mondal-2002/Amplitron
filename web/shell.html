@@ -26,6 +26,10 @@
       height: 100vh;
       display: block;
       touch-action: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
     }
     /* Loading overlay */
     #loading {
@@ -39,7 +43,7 @@
       z-index: 100;
       transition: opacity 0.5s;
     }
-    #loading.hidden { opacity: 0; pointer-events: none; }
+    #loading.hidden { opacity: 0; pointer-events: none; visibility: hidden; }
     #loading h1 {
       font-size: 2rem;
       margin-bottom: 1rem;

@@ -172,7 +172,7 @@ inline void ApplyStyle() {
 
     // Window
     c[ImGuiCol_WindowBg]       = ImVec4(0.11f, 0.10f, 0.09f, 1.00f);  // #1c1a18
-    c[ImGuiCol_ChildBg]        = ImVec4(0.08f, 0.07f, 0.06f, 0.40f);
+    c[ImGuiCol_ChildBg]        = ImVec4(0.14f, 0.13f, 0.11f, 1.00f);  // solid vintage dark brown with high contrast
     c[ImGuiCol_PopupBg]        = ImVec4(0.14f, 0.13f, 0.11f, 0.95f);
 
     // Borders

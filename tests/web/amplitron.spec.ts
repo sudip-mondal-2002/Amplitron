@@ -687,4 +687,3 @@ test.describe('Modular Graph Canvas Interactions', () => {
     expect(countFinalLinks).toBe(linksBefore);
   });
 });
->>>>>>> upstream/main
