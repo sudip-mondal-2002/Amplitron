@@ -116,10 +116,7 @@ void GuiSnapshots::render() {
         ImGui::TextColored(ImVec4(0.90f, 0.78f, 0.39f, alpha), "  %s", status_msg_);
         status_timer_ -= ImGui::GetIO().DeltaTime;
     } else {
-        #ifdef __EMSCRIPTEN__
-            ImGui::TextColored(Theme::TextDim(),
-                "Tap snapshot to load or hold to edit");
-        #else
+        #ifndef __EMSCRIPTEN__
             ImGui::TextColored(Theme::TextDim(),
                 "  Left-click to recall  |  Right-click to save / clear  |  Ctrl+1-4 to recall");
         #endif
