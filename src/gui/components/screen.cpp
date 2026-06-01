@@ -820,21 +820,11 @@ void ScreenComponent::render_multiband_compressor_display(ImDrawList* dl, ImVec2
 
         if (is_hovered || is_active) {
             std::string midi_info = props.gui_midi ? props.gui_midi->get_mapping_info(props.effect->name(), param.name) : "";
-        #ifdef __EMSCRIPTEN__    
-            ImGui::SetTooltip("%s: %s\nRange: [%s, %s]%s\n\nDrag vertically to adjust",
-                              param.name.c_str(), val_str.c_str(),
-                              Theme::formatParameterValue(param.min_val, param.unit).c_str(),
-                              Theme::formatParameterValue(param.max_val, param.unit).c_str(),
-                              midi_info.c_str()
-            );
-        #else
             ImGui::SetTooltip("%s: %s\nRange: [%s, %s]%s\n\nDrag vertically to adjust\nShift=fine, Ctrl=coarse\nDbl-click to reset",
                               param.name.c_str(), val_str.c_str(),
                               Theme::formatParameterValue(param.min_val, param.unit).c_str(),
                               Theme::formatParameterValue(param.max_val, param.unit).c_str(),
-                              midi_info.c_str() 
-            );
-        #endif
+                              midi_info.c_str());
         }
     };
 
