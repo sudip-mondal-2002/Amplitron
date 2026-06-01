@@ -237,11 +237,29 @@ void KnobComponent::render(const char* imgui_id, const KnobProps& props, float z
         std::string max_str = Theme::formatParameterValue(props.max_val, props.unit);
 
         if (props.tooltip.empty()) {
-            ImGui::SetTooltip("%s: %s\nRange: [%s, %s]%s\n\nRotate or drag to adjust\nScroll wheel also works\nShift=fine  Ctrl=coarse\nDbl-click=reset  Right-click=edit/MIDI",
-                props.name.c_str(), val_str.c_str(), min_str.c_str(), max_str.c_str(), props.midi_info.c_str());
+    #ifdef __EMSCRIPTEN__
+            ImGui::SetTooltip(
+                "%s: %s\nRange: [%s, %s]%s\n\nRotate or drag to adjust\nOpen menu for MIDI Learn",
+                props.name.c_str(), val_str.c_str(), min_str.c_str(), max_str.c_str(),
+                props.midi_info.c_str());
+    #else
+            ImGui::SetTooltip(
+                "%s: %s\nRange: [%s, %s]%s\n\nRotate or drag to adjust\nScroll wheel also works\nShift=fine  Ctrl=coarse\nDbl-click=reset  Right-click=edit/MIDI",
+                props.name.c_str(), val_str.c_str(), min_str.c_str(), max_str.c_str(),
+                props.midi_info.c_str());
+    #endif
         } else {
-            ImGui::SetTooltip("%s: %s\nRange: [%s, %s]\n\n%s%s\n\nRotate or drag to adjust\nScroll wheel also works\nShift=fine  Ctrl=coarse\nDbl-click=reset  Right-click=edit/MIDI",
-                props.name.c_str(), val_str.c_str(), min_str.c_str(), max_str.c_str(), props.tooltip.c_str(), props.midi_info.c_str());
+    #ifdef __EMSCRIPTEN__
+            ImGui::SetTooltip(
+                "%s: %s\nRange: [%s, %s]\n\n%s%s\n\nRotate or drag to adjust\nOpen menu for MIDI Learn",
+                props.name.c_str(), val_str.c_str(), min_str.c_str(), max_str.c_str(),
+                props.tooltip.c_str(), props.midi_info.c_str());
+    #else
+            ImGui::SetTooltip(
+                "%s: %s\nRange: [%s, %s]\n\n%s%s\n\nRotate or drag to adjust\nScroll wheel also works\nShift=fine  Ctrl=coarse\nDbl-click=reset  Right-click=edit/MIDI",
+                props.name.c_str(), val_str.c_str(), min_str.c_str(), max_str.c_str(),
+                props.tooltip.c_str(), props.midi_info.c_str());
+    #endif
         }
     }
 
