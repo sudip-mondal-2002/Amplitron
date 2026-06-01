@@ -177,9 +177,14 @@ void GuiRecording::render() {
         ImGui::PopStyleColor(3);
 
         ImGui::SameLine();
+        #ifdef __EMSCRIPTEN__
+        ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f),
+                           "Ready to record");
+        #else
         ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f),
                            "  Ready to record  |  WAV 16-bit %d Hz",
                            p.sample_rate);
+        #endif
     }
 
     ImGui::EndChild();
