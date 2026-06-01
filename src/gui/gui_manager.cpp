@@ -110,13 +110,6 @@ bool GuiManager::initialize(int width, int height) {
             dpi_scale = static_cast<float>(draw_w) / static_cast<float>(window_width_);
     }
 
-#ifdef __EMSCRIPTEN__
-    // If SDL didn't pick up a high DPI scaling factor inside the browser, fallback safely
-    if (dpi_scale <= 1.0f) {
-        dpi_scale = emscripten_get_device_pixel_ratio();
-        if (dpi_scale <= 0.0f) dpi_scale = 1.0f;
-    }
-#endif
 
     GuiGraphState::get_instance().dpi_scale = dpi_scale;
 
