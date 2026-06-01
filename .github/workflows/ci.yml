@@ -35,7 +35,7 @@ jobs:
           fi
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
-            build-essential cmake lcov \
+            build-essential cmake ninja-build lcov \
             libportaudio2 portaudio19-dev \
             libsdl2-dev libgl1-mesa-dev libglu1-mesa-dev \
             librtmidi-dev
@@ -56,13 +56,13 @@ jobs:
       - name: Build
         run: |
           mkdir -p build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Debug \
+          cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
             -DAMPLITRON_VERSION="${{ steps.version.outputs.version }}" \
             -DCMAKE_C_FLAGS="--coverage -O0 -g" \
             -DCMAKE_CXX_FLAGS="--coverage -O0 -g" \
             -DCMAKE_EXE_LINKER_FLAGS="--coverage" \
             ..
-          make -j$(nproc)
+          ninja -j$(nproc)
 
       - name: Run Tests
         run: cd build && ./amplitron-tests
@@ -71,7 +71,7 @@ jobs:
         env:
           INSTALL_PREFIX: ${{ runner.temp }}/amplitron-install
         run: |
-          make PREFIX="$INSTALL_PREFIX" install
+          cmake --install build --prefix "$INSTALL_PREFIX"
           test -x "$INSTALL_PREFIX/bin/Amplitron"
           "$INSTALL_PREFIX/bin/Amplitron" --version | grep -q "Amplitron v1.0"
 
@@ -92,10 +92,8 @@ jobs:
           lcov --capture --directory build --output-file coverage_test.info $LCOV_IGNORE
           lcov --add-tracefile coverage_base.info --add-tracefile coverage_test.info \
             --output-file coverage.info $LCOV_IGNORE
-          # Resolve build/../ quirks and normalize to absolute Linux runner workspace paths
           sed -i 's|/build/../|/|g' coverage.info
           sed -i 's|SF:.*/Amplitron/|SF:/home/runner/work/Amplitron/Amplitron/|g' coverage.info
-          # Remove external dependencies, tests, and build artifacts
           lcov --remove coverage.info \
             '/usr/*' '/Library/*' '/opt/homebrew/*' '*external/*' '*tests/*' '*build/*' '*mingw64/*' '*_temp/*' '*include/c++/*' \
             --output-file coverage.filtered.info $LCOV_IGNORE
@@ -135,7 +133,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install Dependencies
-        run: brew install portaudio sdl2 rtmidi lcov
+        run: brew install portaudio sdl2 rtmidi lcov ninja
 
       - name: Setup External Dependencies
         run: |
@@ -161,7 +159,7 @@ jobs:
             LINK_FLAGS=""
           fi
           mkdir -p build && cd build
-          cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+          cmake -G Ninja -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
             -DAMPLITRON_VERSION="${{ steps.version.outputs.version }}" \
             -DCMAKE_C_FLAGS="$COV_FLAGS" \
             -DCMAKE_CXX_FLAGS="$COV_FLAGS" \
@@ -173,7 +171,7 @@ jobs:
             -DRTMIDI_INCLUDE_DIRS="$HOMEBREW_PREFIX/include" \
             -DRTMIDI_LIBRARIES="$HOMEBREW_PREFIX/lib/librtmidi.dylib" \
             ..
-          make -j$(sysctl -n hw.ncpu)
+          ninja -j$(sysctl -n hw.ncpu)
 
       - name: Run Tests
         run: cd build && ./amplitron-tests
@@ -182,7 +180,7 @@ jobs:
         env:
           INSTALL_PREFIX: ${{ runner.temp }}/amplitron-install
         run: |
-          make PREFIX="$INSTALL_PREFIX" install
+          cmake --install build --prefix "$INSTALL_PREFIX"
           test -x "$INSTALL_PREFIX/bin/Amplitron"
           "$INSTALL_PREFIX/bin/Amplitron" --version | grep -q "Amplitron v1.0"
 
@@ -198,17 +196,13 @@ jobs:
       - name: Generate macOS Coverage
         if: github.event_name == 'pull_request'
         run: |
-          # Create llvm-gcov wrapper for Apple Clang
           printf '#!/bin/bash\nexec xcrun llvm-cov gcov "$@"\n' > /tmp/llvm-gcov.sh
           chmod +x /tmp/llvm-gcov.sh
           LCOV_IGNORE="--ignore-errors mismatch,mismatch,gcov,gcov,source,source,inconsistent,inconsistent,format,format,unsupported,unsupported,corrupt,corrupt,unused,unused"
-          # Skip --initial baseline: Linux provides the zero-coverage baseline for the merged report
           lcov --capture --directory build --output-file coverage.info \
             --gcov-tool /tmp/llvm-gcov.sh $LCOV_IGNORE
-          # Resolve build/../ quirks and normalize to absolute Linux runner workspace paths
           sed -i '' 's|/build/../|/|g' coverage.info
           sed -i '' 's|SF:.*/Amplitron/|SF:/home/runner/work/Amplitron/Amplitron/|g' coverage.info
-          # Remove external dependencies, tests, and build artifacts
           lcov --remove coverage.info \
             '/usr/*' '/Library/*' '/opt/homebrew/*' '*external/*' '*tests/*' '*build/*' '*mingw64/*' '*_temp/*' '*include/c++/*' \
             --output-file coverage.filtered.info $LCOV_IGNORE
@@ -412,7 +406,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Setup MSYS2
         uses: msys2/setup-msys2@v2
@@ -447,11 +441,9 @@ jobs:
           ./scripts/setup_dependencies.sh --no-system-deps
 
       - name: Generate Version
-        shell: msys2 {0}
         id: version
-        run: |
-          COUNT=$(git rev-list --count HEAD)
-          echo "version=0.1.${COUNT}" >> $GITHUB_OUTPUT
+        shell: bash
+        run: echo "version=0.1.${{ github.run_number }}" >> $GITHUB_OUTPUT
 
       - name: Build
         shell: msys2 {0}
@@ -460,8 +452,8 @@ jobs:
           export CCACHE_MAXSIZE=200M
           mkdir -p "$CCACHE_DIR"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BUILD_TYPE=Debug
-            COV_FLAGS="--coverage -O0 -g"
+            BUILD_TYPE=RelWithDebInfo
+            COV_FLAGS="--coverage -O2"
             LINK_FLAGS="--coverage"
           else
             BUILD_TYPE=Release
@@ -509,20 +501,20 @@ jobs:
         if: github.event_name == 'pull_request'
         shell: msys2 {0}
         run: |
-          # MSYS2 ships lcov 1.x which has limited --ignore-errors support
           LCOV_VER=$(lcov --version 2>&1 | grep -oP '\d+' | head -1)
           if [ "$LCOV_VER" -ge 2 ] 2>/dev/null; then
             LCOV_IGNORE="--ignore-errors gcov,gcov,source,source,inconsistent,inconsistent,format,format,unsupported,unsupported,corrupt,corrupt,unused,unused"
           else
             LCOV_IGNORE=""
           fi
-          # Skip --initial baseline: Linux provides the zero-coverage baseline for the merged report
-          lcov --capture --directory build --output-file coverage.info $LCOV_IGNORE 2>&1 | tail -20
-          # Normalize backslashes, unmangle MSYS2 paths, resolve build/../ quirks, and normalize to absolute Linux runner workspace paths
+          lcov --capture \
+            --directory build/CMakeFiles/amplitron_core.dir \
+            --directory build/CMakeFiles/Amplitron.dir \
+            --directory build/CMakeFiles/amplitron-tests.dir \
+            --output-file coverage.info $LCOV_IGNORE 2>&1 | tail -20
           sed -i 's|\\|/|g' coverage.info
           sed -i 's|/build/../|/|g' coverage.info
           sed -i 's|SF:.*/Amplitron/|SF:/home/runner/work/Amplitron/Amplitron/|g' coverage.info
-          # Remove external dependencies, tests, and build artifacts
           lcov --remove coverage.info \
             '/usr/*' '/Library/*' '/opt/homebrew/*' '*external/*' '*tests/*' '*build/*' '*mingw64/*' '*_temp/*' '*include/c++/*' \
             --output-file coverage.filtered.info $LCOV_IGNORE 2>&1 | tail -5
@@ -794,7 +786,6 @@ jobs:
         run: |
           MERGE_CMD="lcov"
 
-          # Always include Linux
           MERGE_CMD="$MERGE_CMD --add-tracefile coverage-linux/coverage.filtered.info"
           PLATFORMS="Linux"
 

@@ -78,12 +78,17 @@ void AudioGraphExecutor::compile(const AudioGraph& graph) {
         }
 
         // Trace upstream connections to find which buffers to read from
-        for (int in_pin : it->input_pin_ids) {
+        for (size_t pin_idx = 0; pin_idx < it->input_pin_ids.size(); ++pin_idx) {
+            int in_pin = it->input_pin_ids[pin_idx];
+            float pin_gain = 1.0f;
+            if (pin_idx < it->input_gains.size()) {
+                pin_gain = it->input_gains[pin_idx];
+            }
             for (const auto& link : links) {
                 if (link.dest_pin_id == in_pin) {
                     int src_node_id = graph.get_node_from_pin(link.source_pin_id);
                     if (src_node_id != -1 && node_to_buffer.count(src_node_id)) {
-                        step.input_sources.push_back({ node_to_buffer[src_node_id] });
+                        step.input_sources.push_back({ node_to_buffer[src_node_id], pin_gain, static_cast<int>(pin_idx) });
                     }
                 }
             }
@@ -128,8 +133,14 @@ void AudioGraphExecutor::process(const float* input, float* output, int num_samp
             std::memset(node_input, 0, num_samples * sizeof(float));
             for (const auto& src : step.input_sources) {
                 const float* src_buf = buffer_pool_[src.buffer_index].data();
-                for (int i = 0; i < num_samples; ++i) {
-                    node_input[i] += src_buf[i];
+                if (src.gain == 1.0f) {
+                    for (int i = 0; i < num_samples; ++i) {
+                        node_input[i] += src_buf[i];
+                    }
+                } else {
+                    for (int i = 0; i < num_samples; ++i) {
+                        node_input[i] += src_buf[i] * src.gain;
+                    }
                 }
             }
         }
@@ -157,6 +168,20 @@ void AudioGraphExecutor::process(const float* input, float* output, int num_samp
             for (int i = 0; i < num_samples; ++i) {
                 output[i] += sink_buf[i];
             }
+        }
+    }
+}
+
+void AudioGraphExecutor::update_mixer_gain(int node_id, int pin_index, float gain) {
+    for (auto& step : execution_plan_) {
+        if (step.node_id == node_id && (step.type == NodeRoutingType::Mixer || step.type == NodeRoutingType::MergeSum)) {
+            for (auto& src : step.input_sources) {
+                if (src.pin_index == pin_index) {
+                    src.gain = std::clamp(gain, 0.0f, 2.0f);
+                    break;
+                }
+            }
+            break;
         }
     }
 }

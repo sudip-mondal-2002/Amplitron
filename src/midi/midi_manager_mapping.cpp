@@ -236,6 +236,24 @@ void MidiManager::apply_mapping(const MidiMapping& mapping, int cc_value,
             break;
         }
         case MidiTargetType::EffectParam: {
+            // Check if it's a Mixer Gain mapping
+            if (mapping.effect_name.find("Mixer_") == 0) {
+                int node_id = -1;
+                try { node_id = std::stoi(mapping.effect_name.substr(6)); } catch(...) {}
+                if (node_id != -1) {
+                    int pin_idx = -1;
+                    if (mapping.param_name.find("Gain ") == 0) {
+                        try { pin_idx = std::stoi(mapping.param_name.substr(5)); } catch(...) {}
+                    }
+                    if (pin_idx != -1) {
+                        float gain = normalized * 2.0f;
+                        engine.graph().set_mixer_input_gain(node_id, pin_idx, gain);
+                        engine.push_mixer_gain_change(node_id, pin_idx, gain);
+                        break;
+                    }
+                }
+            }
+
             // Find the effect by name, then the param by name
             auto& effects = engine.effects();
             for (int i = 0; i < static_cast<int>(effects.size()); ++i) {

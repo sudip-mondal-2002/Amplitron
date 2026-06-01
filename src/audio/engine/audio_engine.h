@@ -259,6 +259,14 @@ public:
     void push_param_change(int effect_index, int param_index, float value);
 
     /**
+     * @brief Enqueue a mixer input gain change from the GUI thread.
+     * @param node_id      ID of the Mixer node.
+     * @param pin_index    Index of the input pin on the mixer.
+     * @param gain         New gain multiplier (0.0–2.0).
+     */
+    void push_mixer_gain_change(int node_id, int pin_index, float gain);
+
+    /**
      * @brief Enqueue an effect enabled/disabled change from the GUI thread.
      * @param effect_index Index of the effect in the chain.
      * @param enabled      >0.5 means enabled.

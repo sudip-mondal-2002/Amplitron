@@ -7,6 +7,7 @@
 namespace Amplitron {
 
 void PedalWidget::render_amp_cabinet(ImDrawList* dl, ImVec2 p0, ImVec2 p1, float pedal_width, float pedal_height, float zoom) {
+    (void)pedal_height;
     ImU32 cab_body = IM_COL32(30, 22, 16, 255);
     ImU32 cab_border = IM_COL32(90, 70, 40, 255);
     ImU32 cab_grille = IM_COL32(18, 14, 10, 255);
