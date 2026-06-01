@@ -196,7 +196,11 @@ void PedalBoard::render_midi_menu() {
         midi.cancel_learn();
       }
     } else {
-      ImGui::TextDisabled("Right-click any knob to MIDI learn");
+    #ifdef __EMSCRIPTEN__
+    ImGui::TextDisabled("Open a knob menu to MIDI learn");
+    #else
+    ImGui::TextDisabled("Right-click any knob to MIDI learn");
+    #endif
     }
 
     ImGui::Separator();
