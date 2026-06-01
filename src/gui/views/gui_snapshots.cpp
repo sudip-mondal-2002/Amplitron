@@ -62,13 +62,30 @@ void GuiSnapshots::render() {
         ImGui::PopStyleColor(3);
 
         // Tooltip
+        // Tooltip
         if (ImGui::IsItemHovered()) {
-            if (is_filled)
-                ImGui::SetTooltip("Left-click to recall snapshot %s (or Ctrl+%d)\nRight-click to overwrite or clear", lbl, i + 1);
-            else
-                ImGui::SetTooltip("Slot %s is empty\nRight-click to save current board here", lbl);
+            if (is_filled) {
+        #ifdef __EMSCRIPTEN__
+                ImGui::SetTooltip(
+                    "Tap to load snapshot %s",
+                    lbl);
+        #else
+                ImGui::SetTooltip(
+                    "Left-click to recall snapshot %s (or Ctrl+%d)\nRight-click to overwrite or clear",
+                    lbl, i + 1);
+        #endif
+            } else {
+        #ifdef __EMSCRIPTEN__
+                ImGui::SetTooltip(
+                    "Slot %s is empty",
+                    lbl);
+        #else
+                ImGui::SetTooltip(
+                    "Slot %s is empty\nRight-click to save current board here",
+                    lbl);
+        #endif
+            }
         }
-
         // Right-click context menu
         char popup_id[24];
         std::snprintf(popup_id, sizeof(popup_id), "SnapCtx_%d", i);
