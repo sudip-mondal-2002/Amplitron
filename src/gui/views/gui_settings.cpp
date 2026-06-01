@@ -89,7 +89,9 @@ void GuiSettings::render(bool& show) {
 
     // Hints
     ImGui::Spacing();
-    ImGui::TextWrappedColored(Theme::Live(), "Tuning hints:");
+    ImGui::PushStyleColor(ImGuiCol_Text, Theme::Live());
+    ImGui::TextWrapped("Tuning hints:");
+    ImGui::PopStyleColor();
     ImGui::BulletText("Lower buffer = lower latency but higher CPU usage.");
     ImGui::BulletText("Higher CPU load may cause crackling/dropouts.");
     ImGui::BulletText("Increasing buffer size improves stability.");

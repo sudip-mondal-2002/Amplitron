@@ -66,8 +66,8 @@ private:
     float bright_smooth_ = 0.5f;
     float bright_alpha_ = 0.0f;
 
-    // Expected block size for the current kernel
-    int expected_block_size_ = 0;
+    // Expected block size for the current kernel (atomic: read by audio thread, written by both)
+    std::atomic<int> expected_block_size_{0};
 
     // Pending block size when audio callback detects a mismatch
     std::atomic<int> pending_block_size_{0};

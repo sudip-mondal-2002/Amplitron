@@ -89,6 +89,7 @@ struct AudioCommand {
         SetEffectParam,      // Change an effect parameter value
         SetEffectEnabled,    // Enable/disable an effect
         SetEffectMix,        // Change effect wet/dry mix
+        SetMixerGain,        // Change mixer input gain dynamically
         SetInputGain,        // Change master input gain
         SetOutputGain,       // Change master output gain
         AddEffect,           // Signal that effect list changed (swap pointer)

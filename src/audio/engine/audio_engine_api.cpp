@@ -60,6 +60,15 @@ void AudioEngine::push_effect_mix(int effect_index, float mix) {
     command_queue_.try_push(cmd);
 }
 
+void AudioEngine::push_mixer_gain_change(int node_id, int pin_index, float gain) {
+    AudioCommand cmd{};
+    cmd.type = AudioCommand::SetMixerGain;
+    cmd.effect_index = node_id; // Overload effect_index to mean node_id
+    cmd.param_index = pin_index; // Overload param_index to mean pin_index
+    cmd.value = gain;
+    command_queue_.try_push(cmd);
+}
+
 int AudioEngine::get_suggested_buffer_size() const {
     float load = cpu_load_.load(std::memory_order_relaxed);
     int current = buffer_size_;

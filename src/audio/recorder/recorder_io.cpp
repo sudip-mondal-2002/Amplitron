@@ -71,6 +71,26 @@ void Recorder::writer_thread_func() {
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
     }
+
+    // Final drain: flush any samples written between the last read and stop()
+    int64_t rp = ring_read_pos_.load(std::memory_order_relaxed);
+    int64_t wp = ring_write_pos_.load(std::memory_order_acquire);
+    int64_t remaining = wp - rp;
+    while (remaining > 0) {
+        int chunk = static_cast<int>(std::min(remaining,
+                    static_cast<int64_t>(pcm_buffer_.size())));
+        for (int i = 0; i < chunk; ++i) {
+            float s = ring_buffer_[static_cast<int>((rp + i) % RING_BUFFER_SIZE)];
+            if (s > 1.0f) s = 1.0f;
+            if (s < -1.0f) s = -1.0f;
+            pcm_buffer_[i] = static_cast<int16_t>(s * 32767.0f);
+        }
+        file_.write(reinterpret_cast<const char*>(pcm_buffer_.data()),
+                    chunk * sizeof(int16_t));
+        rp += chunk;
+        remaining -= chunk;
+    }
+    ring_read_pos_.store(rp, std::memory_order_release);
 }
 
 void Recorder::get_waveform(float* out, int count) const {

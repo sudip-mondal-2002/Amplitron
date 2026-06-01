@@ -63,7 +63,8 @@ bool CabinetSim::load_ir(const std::string& filepath) {
                       static_cast<float>(sample_rate_) * 1000.0f;
 
     // Build kernel with current expected block size, or a reasonable default
-    int bs = expected_block_size_ > 0 ? expected_block_size_ : 256;
+    int bs = expected_block_size_.load();
+    if (bs <= 0) bs = 256;
     build_kernel(bs);
 
     return true;
@@ -80,7 +81,7 @@ void CabinetSim::clear_ir() {
 
     // Safe clear via audio thread callback
     clear_pending_.store(true, std::memory_order_release);
-    expected_block_size_ = 0;
+    expected_block_size_.store(0, std::memory_order_release);
     pending_block_size_.store(0);
 }
 
@@ -104,7 +105,7 @@ void CabinetSim::build_kernel(int block_size) {
     kernel->source_name = ir_name_;
     kernel->duration_ms = ir_duration_ms_;
 
-    expected_block_size_ = block_size;
+    expected_block_size_.store(block_size, std::memory_order_release);
 
     ConvolutionKernel* old = pending_kernel_.exchange(kernel);
     delete old;
@@ -131,7 +132,7 @@ void CabinetSim::check_pending_kernel() {
         const ConvolutionKernel* old = active_kernel_;
         active_kernel_ = pending;
         conv_engine_.set_kernel(active_kernel_);
-        expected_block_size_ = pending->block_size();
+        expected_block_size_.store(pending->block_size(), std::memory_order_release);
         if (old) {
             const ConvolutionKernel* prev_old = old_kernel_to_delete_.exchange(old, std::memory_order_release);
             if (prev_old) {
@@ -163,8 +164,12 @@ void CabinetSim::process(float* buffer, int num_samples) {
     // If an IR is loaded, convolve for cabinet response.
     check_pending_kernel();
     if (conv_engine_.has_kernel()) {
-        if (num_samples != expected_block_size_ && num_samples > 0 &&
-            !raw_ir_samples_.empty()) {
+        // Audio thread: single acquire load of the atomic block size.
+        // raw_ir_samples_ is NOT read here (GUI-thread owned) — the
+        // expected_block_size_ > 0 check is sufficient because clear_ir()
+        // stores 0 before clearing the kernel, and no IR means size is 0.
+        int ebs = expected_block_size_.load(std::memory_order_acquire);
+        if (num_samples != ebs && num_samples > 0 && ebs > 0) {
             pending_block_size_.store(num_samples, std::memory_order_release);
         }
 

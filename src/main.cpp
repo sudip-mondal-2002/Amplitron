@@ -116,6 +116,27 @@ extern "C" EMSCRIPTEN_KEEPALIVE void on_canvas_touch_gesture(float dx, float dy,
     ui.target_scrolling.y += dy;
 }
 
+extern "C" EMSCRIPTEN_KEEPALIVE void on_canvas_touch_down(float x, float y) {
+    auto& io = ImGui::GetIO();
+    io.AddMousePosEvent(x, y);
+    io.AddMouseButtonEvent(0, true);
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE void on_canvas_touch_move(float x, float y) {
+    ImGui::GetIO().AddMousePosEvent(x, y);
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE void on_canvas_touch_up(float x, float y) {
+    auto& io = ImGui::GetIO();
+    io.AddMousePosEvent(x, y);
+    io.AddMouseButtonEvent(0, false);
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE void on_canvas_touch_cancel() {
+    auto& io = ImGui::GetIO();
+    io.AddMouseButtonEvent(0, false);
+}
+
 extern "C" EMSCRIPTEN_KEEPALIVE bool is_canvas_hovered() {
     return Amplitron::GuiGraphState::get_instance().canvas_hovered;
 }
