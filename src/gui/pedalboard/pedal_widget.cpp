@@ -164,6 +164,7 @@ void PedalWidget::render_standard_pedal(ImDrawList* dl, ImVec2 p0, ImVec2 p1, fl
 void PedalWidget::render_footswitch_and_extras(ImDrawList* dl, ImVec2 p0, ImVec2 p1, float pedal_width, float pedal_height, bool is_amp, bool enabled, bool& should_remove, float zoom) {
     (void)p1;
     (void)should_remove;
+    (void)dl;
     bool is_looper = !is_amp && (std::strcmp(effect_->name(), "Looper") == 0);
 
     // Footswitch (toggle on/off) — amps are always on, no footswitch

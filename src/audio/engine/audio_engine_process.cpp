@@ -252,6 +252,11 @@ void AudioEngine::drain_gain_commands() {
         } else if (cmd.type == AudioCommand::SetOutputGain) {
             command_queue_.try_pop(cmd);
             output_gain_.store(cmd.value, std::memory_order_relaxed);
+        } else if (cmd.type == AudioCommand::SetMixerGain) {
+            command_queue_.try_pop(cmd);
+            if (audio_shadow_executor_) {
+                audio_shadow_executor_->update_mixer_gain(cmd.effect_index, cmd.param_index, cmd.value);
+            }
         } else {
             break;
         }
@@ -293,6 +298,9 @@ void AudioEngine::drain_commands() {
                 }
                 break;
             }
+            case AudioCommand::SetMixerGain:
+                // Skip SetMixerGain in the mutex-gated path, it is handled lock-free
+                break;
             case AudioCommand::SetInputGain:
                 input_gain_.store(cmd.value, std::memory_order_relaxed);
                 break;
