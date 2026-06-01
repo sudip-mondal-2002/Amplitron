@@ -142,16 +142,7 @@ void GuiAnalyzer::render() {
     float panel_h = expanded_ ? 230.0f : 34.0f;
     ImGui::BeginChild("AnalyzerPanel", ImVec2(0, panel_h), true, ImGuiWindowFlags_NoScrollbar);
 
-    #ifdef __EMSCRIPTEN__
-    const bool expanded = ImGui::CollapsingHeader(
-        "Real-Time Analyzer"
-    );
-    #else
-    const bool expanded = ImGui::CollapsingHeader(
-        "Real-Time Analyzer",
-        ImGuiTreeNodeFlags_DefaultOpen
-    );
-    #endif
+    const bool expanded = ImGui::CollapsingHeader("Real-Time Analyzer", ImGuiTreeNodeFlags_DefaultOpen);
     if (expanded != expanded_) {
         expanded_ = expanded;
         if (p.on_expanded_changed) p.on_expanded_changed(expanded_);
