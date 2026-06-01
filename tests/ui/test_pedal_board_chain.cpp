@@ -350,3 +350,189 @@ TEST_F(PresetTest, test_pedal_board_chain_nodes_and_wiring) {
     ImGui::End();
     engine.shutdown();
 }
+
+TEST_F(PresetTest, test_pedal_board_chain_extended) {
+    ScopedImGuiContext imgui;
+    AudioEngine engine;
+    engine.initialize();
+    CommandHistory history;
+    MidiManager midi_manager;
+    GuiMidi gui_midi(midi_manager);
+
+    PedalBoard board(engine, history, &gui_midi);
+    auto od = std::make_shared<Overdrive>();
+    engine.add_effect(od);
+    board.rebuild_widgets();
+
+    auto& ui_state = GuiGraphState::get_instance();
+    auto& audio_graph = engine.graph();
+
+    // Reset zoom and panning
+    ui_state.zoom = 1.0f;
+    ui_state.target_zoom = 1.0f;
+    ui_state.scrolling = ImVec2(0, 0);
+    ui_state.target_scrolling = ImVec2(0, 0);
+
+    // Add splitter and mixer nodes via API
+    audio_graph.add_node("Splitter", NodeRoutingType::Splitter);
+    audio_graph.add_node("Mixer", NodeRoutingType::Mixer);
+    board.rebuild_widgets();
+
+    // Find Splitter and Mixer nodes
+    int splitter_id = -1;
+    int mixer_id = -1;
+    int input_id = -1;
+    int amp_id = -1;
+    for (const auto& node : audio_graph.get_nodes()) {
+        if (node.name == "Splitter") splitter_id = node.id;
+        else if (node.name == "Mixer") mixer_id = node.id;
+        else if (node.name == "Input") input_id = node.id;
+        else if (node.name == "Amp Sim") amp_id = node.id;
+    }
+
+    ASSERT_NE(splitter_id, -1);
+    ASSERT_NE(mixer_id, -1);
+
+    // Place nodes at known coordinates
+    ui_state.node_positions[splitter_id] = { ImVec2(300.0f, 100.0f), false };
+    ui_state.node_positions[mixer_id] = { ImVec2(500.0f, 100.0f), false };
+    ui_state.node_positions[input_id] = { ImVec2(50.0f, 100.0f), false };
+    ui_state.node_positions[amp_id] = { ImVec2(700.0f, 100.0f), false };
+
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2(1024, 768));
+    ImGui::Begin("TestWindow");
+    ImVec2 canvas_pos = ImGui::GetCursorScreenPos();
+    TestAccessor::render_signal_chain(board);
+
+    ImGuiIO& io = ImGui::GetIO();
+    io.MousePos = ImVec2(10, 10);
+    advance_frame();
+    TestAccessor::render_signal_chain(board);
+
+    // 1. Drag the Splitter utility node
+    // Click on utility drag handle relative to canvas_pos
+    ImVec2 drag_pos(canvas_pos.x + 300.0f + 40.0f, canvas_pos.y + 100.0f + 20.0f);
+    io.MousePos = drag_pos;
+    advance_frame();
+    TestAccessor::render_signal_chain(board);
+
+    // MouseDown
+    io.MouseDown[0] = true;
+    advance_frame();
+    TestAccessor::render_signal_chain(board);
+
+    // Drag move
+    io.MousePos = ImVec2(drag_pos.x + 40.0f, drag_pos.y + 10.0f);
+    advance_frame();
+    io.MouseDelta = ImVec2(40.0f, 10.0f);
+    TestAccessor::render_signal_chain(board);
+
+    // MouseUp
+    io.MouseDown[0] = false;
+    advance_frame();
+    TestAccessor::render_signal_chain(board);
+
+    // Position of Splitter should have changed
+    ASSERT_NE(ui_state.node_positions[splitter_id].position.x, 300.0f);
+
+    // Reset coordinates to known static values
+    ui_state.node_positions[splitter_id] = { ImVec2(300.0f, 100.0f), false };
+
+    // 2. Wire spline drafting and manual connection drop
+    auto* splitter_node = audio_graph.find_node(splitter_id);
+    auto* mixer_node = audio_graph.find_node(mixer_id);
+    ASSERT_TRUE(splitter_node != nullptr);
+    ASSERT_TRUE(mixer_node != nullptr);
+
+    int splitter_out_pin = splitter_node->output_pin_ids[0];
+    int mixer_in_pin = mixer_node->input_pin_ids[0];
+
+    // Compute exact screen positions of pins
+    ImVec2 splitter_pin_pos(canvas_pos.x + 300.0f + 130.0f + 2.0f, canvas_pos.y + 100.0f + 39.67f);
+    ImVec2 mixer_pin_pos(canvas_pos.x + 500.0f - 2.0f, canvas_pos.y + 100.0f + 39.67f);
+
+    // Set active drafting state
+    ui_state.active_src_pin_id = splitter_out_pin;
+    ui_state.active_src_pin_pos = splitter_pin_pos;
+
+    // Hover Mixer input pin and release mouse button to connect
+    io.MousePos = mixer_pin_pos;
+    advance_frame();
+    TestAccessor::render_signal_chain(board);
+
+    advance_frame();
+    io.MouseReleased[0] = true;
+    TestAccessor::render_signal_chain(board);
+
+    advance_frame();
+    io.MouseReleased[0] = false;
+    ui_state.active_src_pin_id = -1;
+    TestAccessor::render_signal_chain(board);
+
+    // The connection should now exist in the graph!
+    bool link_found = false;
+    for (const auto& link : audio_graph.get_links()) {
+        if (link.source_pin_id == splitter_out_pin && link.dest_pin_id == mixer_in_pin) {
+            link_found = true;
+            break;
+        }
+    }
+    ASSERT_TRUE(link_found);
+
+    // 3. Test link deletion via bezier hover (click on the splitter output pin where connection starts)
+    io.MousePos = splitter_pin_pos;
+    advance_frame();
+    TestAccessor::render_signal_chain(board);
+
+    io.MouseDown[0] = true;
+    advance_frame();
+    TestAccessor::render_signal_chain(board);
+
+    io.MouseDown[0] = false;
+    advance_frame();
+    TestAccessor::render_signal_chain(board);
+
+    // The link should be deleted
+    link_found = false;
+    for (const auto& link : audio_graph.get_links()) {
+        if (link.source_pin_id == splitter_out_pin && link.dest_pin_id == mixer_in_pin) {
+            link_found = true;
+            break;
+        }
+    }
+    ASSERT_FALSE(link_found);
+
+    // 4. Test utility node deletion (Splitter) via close button [X]
+    ImVec2 close_pos(canvas_pos.x + 300.0f + 130.0f - 12.0f, canvas_pos.y + 100.0f + 14.0f);
+    io.MousePos = close_pos;
+    advance_frame();
+    TestAccessor::render_signal_chain(board);
+
+    io.MouseDown[0] = true;
+    advance_frame();
+    TestAccessor::render_signal_chain(board);
+
+    io.MouseDown[0] = false;
+    advance_frame();
+    TestAccessor::render_signal_chain(board);
+
+    // The Splitter node should be removed
+    ASSERT_TRUE(audio_graph.find_node(splitter_id) == nullptr);
+
+    // 5. Test bypass rails animation (different segments)
+    od->set_enabled(false);
+    
+    io.DeltaTime = 0.1f;
+    for (int frame = 0; frame < 15; ++frame) {
+        advance_frame();
+        TestAccessor::render_signal_chain(board);
+    }
+
+    od->set_enabled(true);
+    advance_frame();
+    TestAccessor::render_signal_chain(board);
+
+    ImGui::End();
+    engine.shutdown();
+}

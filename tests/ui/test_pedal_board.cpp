@@ -9,6 +9,7 @@
 #include "test_framework.h"
 #include "test_fixtures.h"
 #include <memory>
+#include <imgui_internal.h>
 #define private public
 #include "gui/pedalboard/pedal_widget.h"
 #undef private
@@ -359,6 +360,179 @@ TEST(pedal_widget_body_and_knob_adjustments) {
     props.index = 0;
     props.type = ScreenType::MultiBandCompressor;
     ScreenComponent::render(dl, ImVec2(0,0), 200.0f, 1.0f, props);
+
+    engine.shutdown();
+}
+
+TEST(pedal_board_modals_and_rebuilds_extended) {
+    ScopedImGuiContext imgui;
+    AudioEngine engine;
+    engine.initialize();
+    CommandHistory history;
+    MidiManager midi_manager;
+    GuiMidi gui_midi(midi_manager);
+
+    PedalBoard board(engine, history, &gui_midi);
+
+    // Add overdrive
+    auto od = std::make_shared<Overdrive>();
+    engine.add_effect(od);
+    board.rebuild_widgets();
+
+    ImGuiIO& io = ImGui::GetIO();
+
+    auto advance_test_frame = [&]() {
+        ImGui::End();
+        ImGui::Render();
+        ImGui::NewFrame();
+        ImGui::SetNextWindowPos(ImVec2(0, 0));
+        ImGui::SetNextWindowSize(ImVec2(1024, 768));
+        ImGui::Begin("TestWindow");
+    };
+
+    // Begin window context
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2(1024, 768));
+    ImGui::Begin("TestWindow");
+
+    // --- TEST 1: RESET ALL CONFIRMATION MODAL (RESET CLICK) ---
+    board.show_confirm_reset_ = true;
+    board.render();
+    advance_test_frame();
+
+    // The popup should be open
+    ImGuiWindow* reset_win = ImGui::FindWindowByName("Confirm Reset##Modal");
+    ASSERT_TRUE(reset_win != nullptr);
+
+    // Calculate left button position (Reset)
+    ImVec2 reset_btn_pos(reset_win->Pos.x + reset_win->Size.x * 0.25f, reset_win->Pos.y + reset_win->Size.y - 20.0f);
+    
+    // Simulate hover and click
+    io.MousePos = reset_btn_pos;
+    board.render();
+    advance_test_frame();
+
+    io.MouseDown[0] = true;
+    board.render();
+    advance_test_frame();
+
+    io.MouseDown[0] = false;
+    board.render();
+    advance_test_frame();
+
+    // --- TEST 2: RESET ALL CONFIRMATION MODAL (CANCEL CLICK) ---
+    board.show_confirm_reset_ = true;
+    board.render();
+    advance_test_frame();
+
+    reset_win = ImGui::FindWindowByName("Confirm Reset##Modal");
+    ASSERT_TRUE(reset_win != nullptr);
+
+    // Calculate right button position (Cancel)
+    ImVec2 reset_cancel_btn_pos(reset_win->Pos.x + reset_win->Size.x * 0.75f, reset_win->Pos.y + reset_win->Size.y - 20.0f);
+
+    io.MousePos = reset_cancel_btn_pos;
+    board.render();
+    advance_test_frame();
+
+    io.MouseDown[0] = true;
+    board.render();
+    advance_test_frame();
+
+    io.MouseDown[0] = false;
+    board.render();
+    advance_test_frame();
+
+    // --- TEST 3: CLEAR ALL CONFIRMATION MODAL (CLEAR CLICK) ---
+    board.show_confirm_clear_ = true;
+    board.render();
+    advance_test_frame();
+
+    ImGuiWindow* clear_win = ImGui::FindWindowByName("Confirm Clear##Modal");
+    ASSERT_TRUE(clear_win != nullptr);
+
+    ImVec2 clear_btn_pos(clear_win->Pos.x + clear_win->Size.x * 0.25f, clear_win->Pos.y + clear_win->Size.y - 20.0f);
+
+    io.MousePos = clear_btn_pos;
+    board.render();
+    advance_test_frame();
+
+    io.MouseDown[0] = true;
+    board.render();
+    advance_test_frame();
+
+    io.MouseDown[0] = false;
+    board.render();
+    advance_test_frame();
+
+    // --- TEST 4: CLEAR ALL CONFIRMATION MODAL (CANCEL CLICK) ---
+    board.show_confirm_clear_ = true;
+    board.render();
+    advance_test_frame();
+
+    clear_win = ImGui::FindWindowByName("Confirm Clear##Modal");
+    ASSERT_TRUE(clear_win != nullptr);
+
+    ImVec2 clear_cancel_btn_pos(clear_win->Pos.x + clear_win->Size.x * 0.75f, clear_win->Pos.y + clear_win->Size.y - 20.0f);
+
+    io.MousePos = clear_cancel_btn_pos;
+    board.render();
+    advance_test_frame();
+
+    io.MouseDown[0] = true;
+    board.render();
+    advance_test_frame();
+
+    io.MouseDown[0] = false;
+    board.render();
+    advance_test_frame();
+
+    // --- TEST 5: MIDI CLEAR CONFIRMATION MODAL (CLEAR CLICK) ---
+    board.show_confirm_midi_clear_ = true;
+    board.render();
+    advance_test_frame();
+
+    ImGuiWindow* midi_win = ImGui::FindWindowByName("Confirm MIDI Clear##Modal");
+    ASSERT_TRUE(midi_win != nullptr);
+
+    ImVec2 midi_btn_pos(midi_win->Pos.x + midi_win->Size.x * 0.25f, midi_win->Pos.y + midi_win->Size.y - 20.0f);
+
+    io.MousePos = midi_btn_pos;
+    board.render();
+    advance_test_frame();
+
+    io.MouseDown[0] = true;
+    board.render();
+    advance_test_frame();
+
+    io.MouseDown[0] = false;
+    board.render();
+    advance_test_frame();
+
+    // --- TEST 6: MIDI CLEAR CONFIRMATION MODAL (CANCEL CLICK) ---
+    board.show_confirm_midi_clear_ = true;
+    board.render();
+    advance_test_frame();
+
+    midi_win = ImGui::FindWindowByName("Confirm MIDI Clear##Modal");
+    ASSERT_TRUE(midi_win != nullptr);
+
+    ImVec2 midi_cancel_btn_pos(midi_win->Pos.x + midi_win->Size.x * 0.75f, midi_win->Pos.y + midi_win->Size.y - 20.0f);
+
+    io.MousePos = midi_cancel_btn_pos;
+    board.render();
+    advance_test_frame();
+
+    io.MouseDown[0] = true;
+    board.render();
+    advance_test_frame();
+
+    io.MouseDown[0] = false;
+    board.render();
+    advance_test_frame();
+
+    // Clean up window
+    ImGui::End();
 
     engine.shutdown();
 }
