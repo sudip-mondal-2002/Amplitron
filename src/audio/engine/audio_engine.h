@@ -344,7 +344,7 @@ private:
     std::atomic<float> output_rms_{0.0f};
     std::atomic<bool> input_clipped_{false};
     std::atomic<bool> output_clipped_{false};
-    std::atomic<bool> analyzer_enabled_{false};
+    std::atomic<bool> analyzer_enabled_{true};
 
     // std::vector<std::shared_ptr<Effect>> effects_;
     std::vector<float>     process_buffer_;
