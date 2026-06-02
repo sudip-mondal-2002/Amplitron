@@ -48,6 +48,7 @@ GuiManager::GuiManager(AudioEngine& engine)
     pedal_board_ = std::make_unique<PedalBoard>(engine_, command_history_, &gui_midi_);
     gui_presets_.set_pedal_board(pedal_board_.get());
     gui_presets_.set_midi_manager(&midi_manager_);
+    gui_analyzer_.set_expanded(engine_.is_analyzer_enabled());
 }
 
 GuiManager::~GuiManager() {
