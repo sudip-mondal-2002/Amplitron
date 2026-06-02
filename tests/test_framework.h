@@ -131,8 +131,9 @@ private:
     } reg_##suite##_##name; } \
     static void test_##suite##_##name()
 
+#define TEST_EXPAND(x) x
 #define TEST_GET_MACRO(_1, _2, NAME, ...) NAME
-#define TEST(...) TEST_GET_MACRO(__VA_ARGS__, TEST_SUITE_CASE, TEST_SINGLE)(__VA_ARGS__)
+#define TEST(...) TEST_EXPAND(TEST_GET_MACRO(__VA_ARGS__, TEST_SUITE_CASE, TEST_SINGLE)(__VA_ARGS__))
 
 #define TEST_F(FixtureName, TestName) \
     class FixtureName##_##TestName : public FixtureName { \

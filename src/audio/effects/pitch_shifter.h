@@ -7,6 +7,7 @@
 
 #include "audio/effects/effect.h"
 #include <vector>
+#include <array>
 
 namespace Amplitron {
 
@@ -46,6 +47,16 @@ private:
     float shift_smooth_ = 0.0f;
     float fine_smooth_ = 0.0f;
     float mix_smooth_ = 0.0f;
+
+    // --- NEW OPTIMIZATION VARIABLES ---
+    // Adds the function to pre-calculate the cosine math
+    void build_hann_lut();
+
+    // 8192 is a power of 2 (allows fast bitwise wrapping) and fits easily in L1 cache
+    std::array<float, 8192> hann_lut_; 
+    
+    // Cached pitch ratio to avoid per-sample pow()
+    float ratio_ = 1.0f;
 
     float read_linear(float phase) const;
 };
