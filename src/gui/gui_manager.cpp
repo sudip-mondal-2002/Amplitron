@@ -129,7 +129,9 @@ bool GuiManager::initialize(int width, int height) {
             SDL_free(base_path);
         }
         try_font("assets/fonts/Roboto-Medium.ttf");
+        try_font("/assets/fonts/Roboto-Medium.ttf");
         try_font("../assets/fonts/Roboto-Medium.ttf");
+        
         try_font("external/imgui/misc/fonts/Roboto-Medium.ttf");
         try_font("../external/imgui/misc/fonts/Roboto-Medium.ttf");
 
