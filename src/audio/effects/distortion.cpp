@@ -45,7 +45,7 @@ void Distortion::process(float* buffer, int num_samples) {
         float x_hard = hard_clip(x, 1.0f);
 
         // Blend: more drive → more hard clipping
-        float hard_amount = (drive - 1.0f) / 19.0f; // 0 at drive=1, 1 at drive=20
+        float hard_amount = (drive - params_[0].min_val) / (params_[0].max_val - params_[0].min_val);
         x = x_soft * (1.0f - hard_amount) + x_hard * hard_amount;
 
         // Tone filter (one-pole LP)

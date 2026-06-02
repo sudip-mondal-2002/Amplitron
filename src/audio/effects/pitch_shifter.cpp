@@ -20,6 +20,15 @@ static float wrap_phase(float phase, int buf_size) {
     return phase;
 }
 
+void PitchShifter::build_hann_lut() {
+
+    for (size_t i = 0; i < hann_lut_.size(); ++i) {
+        // Calculates the Hann window curve once and stores it.
+        // Assumes TWO_PI is already defined
+        hann_lut_[i] = 0.5f * (1.0f - std::cos(TWO_PI * static_cast<float>(i) / 8192.0f));
+    }
+}
+
 PitchShifter::PitchShifter() {
     params_ = {
         {"Shift", 0.0f, -12.0f, 12.0f, 0.0f, "st",
@@ -29,6 +38,10 @@ PitchShifter::PitchShifter() {
         {"Mix",   0.0f,   0.0f,  1.0f, 0.0f, "",
          "Dry/wet blend. 0 = fully dry, 1 = fully pitch-shifted."},
     };
+
+    // --- CALL OPTIMIZATION ---
+    build_hann_lut();
+
     set_sample_rate(DEFAULT_SAMPLE_RATE);
 }
 
@@ -52,30 +65,37 @@ float PitchShifter::read_linear(float phase) const {
 void PitchShifter::process(float* buffer, int num_samples) {
     if (!enabled_) return;
 
-    const float alpha = 1.0f - std::exp(-1.0f / (sample_rate_ * 0.010f));
+    if (mix_smooth_ < 0.001f && params_[P_MIX].value < 0.001f) {
+        // We process in-place, so the input buffer is already the output buffer. 
+        // Exit immediately
+        return; 
+    }
+    
+    // Smooth parameters
+    // Hoisting: Calculate smoothing and std::pow ONCE per block, not per sample
+    const float block_alpha = 1.0f - std::exp(-static_cast<float>(num_samples) / (sample_rate_ * 0.010f));
+    shift_smooth_ += block_alpha * (params_[P_SHIFT].value - shift_smooth_);
+    fine_smooth_  += block_alpha * (params_[P_FINE].value  - fine_smooth_);
+    mix_smooth_   += block_alpha * (params_[P_MIX].value   - mix_smooth_);
+
+    // Total shift in semitones (coarse + fine)
+    float total_semitones = shift_smooth_ + fine_smooth_ / 100.0f;
+
+    // Pitch ratio: 2^(semitones/12)
+    float ratio = std::pow(2.0f, total_semitones / 12.0f);
+
+    // Read pointer increment: how much faster/slower we read vs write
+    // ratio > 1 means pitch up -> read faster -> increment > 1
+    // We want the *offset* from write to change, so increment = 1 - ratio
+    // gives us the drift rate of the read pointer relative to write.
+    float drift = 1.0f - ratio;
+
 
     for (int i = 0; i < num_samples; ++i) {
         const float dry = buffer[i];
 
         // Write input into circular grain buffer
         grain_buf_[write_pos_] = dry;
-
-        // Smooth parameters
-        shift_smooth_ += alpha * (params_[P_SHIFT].value - shift_smooth_);
-        fine_smooth_  += alpha * (params_[P_FINE].value  - fine_smooth_);
-        mix_smooth_   += alpha * (params_[P_MIX].value   - mix_smooth_);
-
-        // Total shift in semitones (coarse + fine)
-        float total_semitones = shift_smooth_ + fine_smooth_ / 100.0f;
-
-        // Pitch ratio: 2^(semitones/12)
-        float ratio = std::pow(2.0f, total_semitones / 12.0f);
-
-        // Read pointer increment: how much faster/slower we read vs write
-        // ratio > 1 means pitch up -> read faster -> increment > 1
-        // We want the *offset* from write to change, so increment = 1 - ratio
-        // gives us the drift rate of the read pointer relative to write.
-        float drift = 1.0f - ratio;
 
         // Advance read phases (they drift relative to write position)
         read_phase_a_ += drift;
@@ -99,8 +119,11 @@ void PitchShifter::process(float* buffer, int num_samples) {
         // Use read_phase_a_ as the crossfade driver: as it sweeps 0..buf_size_,
         // we fade A in for the first half and B in for the second half.
         float fade_pos = read_phase_a_ / static_cast<float>(buf_size_);
+
+        // LUT optimization: Fast array lookup with bitwise AND (& 8191)
+        int lut_idx = static_cast<int>(fade_pos * 8192.0f) & 8191;
         // Hann window for smooth crossfade
-        float gain_a = 0.5f * (1.0f - std::cos(TWO_PI * fade_pos));
+        float gain_a = hann_lut_[lut_idx];
         float gain_b = 1.0f - gain_a;
 
         float wet = tap_a * gain_a + tap_b * gain_b;

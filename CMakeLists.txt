@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.16)
 project(Amplitron VERSION 1.0.0 LANGUAGES CXX C)
 include(GNUInstallDirs)
 
+enable_testing()
+
 set(AMPLITRON_VERSION "0.0.0" CACHE STRING "Application version (set by CI)")
 
 set(CMAKE_CXX_STANDARD 17)
@@ -27,7 +29,7 @@ if(EMSCRIPTEN)
 elseif(MSVC)
     add_compile_options(/W4 /fp:fast)
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
-        add_compile_options(/O2 /arch:AVX)
+        add_compile_options("$<$<CONFIG:Release>:/O2>")
     endif()
 else()
     add_compile_options(-Wall -Wextra -ffast-math)
@@ -49,6 +51,10 @@ endif()
 # Single-header C++17 JSON library used for preset serialization /
 # deserialization.  We disable nlohmann's own tests and install rules so
 # they don't pollute the Amplitron build.
+
+# Suppress cmake_minimum_required deprecation warnings from fetched deps
+set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
+
 find_package(nlohmann_json QUIET)
 if(NOT nlohmann_json_FOUND)
     include(FetchContent)
@@ -63,6 +69,19 @@ if(NOT nlohmann_json_FOUND)
     FetchContent_MakeAvailable(nlohmann_json)
 endif()
 # ---------------------------------------------------------------------------
+
+find_package(GTest QUIET)
+if(NOT TARGET GTest::gtest AND NOT EMSCRIPTEN AND NOT ANDROID AND NOT IOS)
+    include(FetchContent)
+    FetchContent_Declare(
+        googletest
+        GIT_REPOSITORY https://github.com/google/googletest.git
+        GIT_TAG        release-1.12.1
+        GIT_SHALLOW    TRUE
+    )
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(googletest)
+endif()
 
 file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/external")
 if(NOT EXISTS "${CMAKE_SOURCE_DIR}/external/nanosvg.h" OR
@@ -81,6 +100,29 @@ endif()
 if(NOT EMSCRIPTEN AND NOT ANDROID AND NOT IOS)
 
 # PortAudio
+find_package(portaudio CONFIG QUIET)
+if(TARGET portaudio)
+    set(PORTAUDIO_FOUND TRUE)
+    set(PORTAUDIO_LIBRARIES portaudio)
+else()
+    find_package(PkgConfig QUIET)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(PORTAUDIO portaudio-2.0)
+    endif()
+    if(NOT PORTAUDIO_FOUND)
+        find_path(PORTAUDIO_INCLUDE_DIRS portaudio.h
+            PATHS /usr/include /usr/local/include /opt/homebrew/include
+                  "C:/Program Files/portaudio/include"
+                  "${CMAKE_SOURCE_DIR}/external/portaudio/include")
+        find_library(PORTAUDIO_LIBRARIES NAMES portaudio portaudio_x64
+            PATHS /usr/lib /usr/local/lib /opt/homebrew/lib
+                  "C:/Program Files/portaudio/lib"
+                  "${CMAKE_SOURCE_DIR}/external/portaudio/lib")
+    endif()
+    if(PORTAUDIO_LIBRARY_DIRS)
+        link_directories(${PORTAUDIO_LIBRARY_DIRS})
+    endif()
+endif() 
 find_package(PkgConfig QUIET)
 if(PkgConfig_FOUND)
     pkg_check_modules(PORTAUDIO portaudio-2.0)
@@ -123,7 +165,7 @@ if(PkgConfig_FOUND)
     pkg_check_modules(SDL2 sdl2)
 endif()
 if(NOT SDL2_FOUND)
-    find_package(SDL2 QUIET)
+    find_package(SDL2 CONFIG QUIET)
     if(SDL2_FOUND)
         set(SDL2_INCLUDE_DIRS ${SDL2_INCLUDE_DIRS})
         set(SDL2_LIBRARIES SDL2::SDL2 SDL2::SDL2main)
@@ -152,7 +194,7 @@ if(NOT RTMIDI_LIBRARIES)
         pkg_check_modules(RTMIDI rtmidi)
     endif()
     if(NOT RTMIDI_FOUND)
-        find_path(RTMIDI_INCLUDE_DIRS rtmidi/RtMidi.h
+        find_path(RTMIDI_INCLUDE_DIRS NAMES RtMidi.h rtmidi/RtMidi.h
             PATHS /usr/include /usr/local/include /opt/homebrew/include
                   "C:/Program Files/rtmidi/include"
                   "${CMAKE_SOURCE_DIR}/external/rtmidi")
@@ -680,6 +722,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/unit/test_effects_modulation.cpp
         tests/unit/test_effects_spatial.cpp
         tests/unit/test_effects_pitch.cpp
+        tests/unit/test_pitch_shifter.cpp
         tests/unit/test_effects_utility.cpp
         tests/unit/test_looper.cpp
         tests/unit/test_theme.cpp
