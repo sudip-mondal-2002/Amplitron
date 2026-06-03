@@ -18,9 +18,8 @@ static void sdl_audio_callback(void* userdata, Uint8* stream, int len) {
     int frame_count = len / static_cast<int>(2 * sizeof(float));
 
     auto& cap = be->get_capture_buffer();
-    assert(frame_count <= static_cast<int>(cap.size()));
     if (frame_count > static_cast<int>(cap.size())) {
-        return;
+        cap.resize(frame_count * 2, 0.0f);
     }
 
     SDL_AudioDeviceID cap_dev = be->get_capture_device();

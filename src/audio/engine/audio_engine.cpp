@@ -195,7 +195,8 @@ namespace Amplitron
 
         // 1. Create a brand new executor (so we don't mutate memory the audio thread is currently reading)
         auto new_executor = std::make_shared<AudioGraphExecutor>();
-        new_executor->prepare(sample_rate_, buffer_size_, 32);
+        int safe_block_size = std::max(buffer_size_, 8192);
+        new_executor->prepare(sample_rate_, safe_block_size, 32);
 
         // 2. Compile the latest UI graph into the new executor
         new_executor->compile(main_graph_);
