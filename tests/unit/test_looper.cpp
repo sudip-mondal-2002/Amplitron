@@ -1,6 +1,6 @@
 #include "test_framework.h"
 
-#include "audio/effects/looper.h"
+#include "audio/effects/utility/looper.h"
 
 #include <cmath>
 

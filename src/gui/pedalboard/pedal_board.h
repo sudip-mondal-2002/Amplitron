@@ -1,7 +1,7 @@
 #pragma once
 
 #include "common.h"
-#include "audio/engine/audio_engine.h"
+#include "audio/engine/i_audio_engine.h"
 #include "gui/commands/command_history.h"
 #include <set>
 
@@ -26,7 +26,7 @@ public:
      * @param history Reference to the shared command history for undo/redo.
      * @param gui_midi Optional GuiMidi pointer for MIDI learn on initial widgets.
      */
-    PedalBoard(AudioEngine& engine, CommandHistory& history, GuiMidi* gui_midi = nullptr);
+    PedalBoard(IAudioEngine& engine, CommandHistory& history, GuiMidi* gui_midi = nullptr);
 
     /** @brief Destructor. */
     ~PedalBoard();
@@ -64,7 +64,7 @@ private:
     /** @brief Add an effect, rebuild widgets, and mark it visible. */
     void add_effect_and_show(std::shared_ptr<Effect> effect);
 
-    AudioEngine& engine_;
+    IAudioEngine& engine_;
     CommandHistory& history_;
     std::vector<std::unique_ptr<PedalWidget>> widgets_;
     bool show_active_only_ = true;

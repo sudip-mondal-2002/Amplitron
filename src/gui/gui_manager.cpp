@@ -1,3 +1,4 @@
+#include "amplitron_session.h"
 #include "gui/gui_manager.h"
 #include "gui/pedalboard/pedal_board.h"
 #include "gui/theme/theme.h"
@@ -30,24 +31,24 @@
 #if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
-#define NANOSVG_IMPLEMENTATION
-#include "nanosvg.h"
-#define NANOSVGRAST_IMPLEMENTATION
-#include "nanosvgrast.h"
 #pragma GCC diagnostic pop
 
 namespace Amplitron {
 
-GuiManager::GuiManager(AudioEngine& engine)
-    : engine_(engine),
-      command_history_(),
+GuiManager::GuiManager(AmplitronSession& session)
+    : session_(session),
+      engine_(session.engine()),
+      command_history_(session.command_history()),
+      midi_manager_(session.midi()),
+      snapshot_manager_(session.snapshot_manager()),
       tuner_pedal_(std::make_shared<TunerPedal>()),
-      gui_presets_(engine, command_history_),
+      gui_presets_(engine_, command_history_, session.presets()),
       gui_midi_(midi_manager_)
 {
     pedal_board_ = std::make_unique<PedalBoard>(engine_, command_history_, &gui_midi_);
     gui_presets_.set_pedal_board(pedal_board_.get());
     gui_presets_.set_midi_manager(&midi_manager_);
+    gui_analyzer_.set_expanded(engine_.is_analyzer_enabled());
 }
 
 GuiManager::~GuiManager() {
@@ -55,31 +56,7 @@ GuiManager::~GuiManager() {
 }
 
 bool GuiManager::initialize(int width, int height) {
-    window_width_ = width;
-    window_height_ = height;
-
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
-        std::cerr << "SDL_Init failed: " << SDL_GetError() << std::endl;
-        return false;
-    }
-
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, GLSetup::GL_CONTEXT_PROFILE);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, GLSetup::GL_MAJOR);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, GLSetup::GL_MINOR);
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-
-    window_ = SDL_CreateWindow(
-        Theme::WINDOW_TITLE,
-        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        window_width_, window_height_,
-        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
-    );
-
-    if (!window_) {
-        std::cerr << "SDL_CreateWindow failed: " << SDL_GetError() << std::endl;
+    if (!window_context_.initialize(width, height, Theme::WINDOW_TITLE)) {
         return false;
     }
 
@@ -202,8 +179,12 @@ bool GuiManager::initialize(int width, int height) {
     midi_manager_.initialize();
 
 #ifndef AMPLITRON_NO_DESKTOP_SHELL
-    update_check_thread_ = std::thread([this]() { this->check_for_updates(); });
+    update_checker_.start_check();
 #endif
+
+    if (pedal_board_) {
+        pedal_board_->rebuild_widgets();
+    }
 
     initialized_ = true;
     return true;
@@ -214,29 +195,13 @@ void GuiManager::shutdown() {
     if (!initialized_) return;
     initialized_ = false;
 
-    if (update_check_thread_.joinable()) {
-        update_check_thread_.join();
-    }
-
     midi_manager_.save_config();
     midi_manager_.shutdown();
 
     engine_.clear_tuner_tap();
     pedal_board_.reset();
 
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplSDL2_Shutdown();
-    ImGui::DestroyContext();
-
-    if (gl_context_) {
-        SDL_GL_DeleteContext(gl_context_);
-        gl_context_ = nullptr;
-    }
-    if (window_) {
-        SDL_DestroyWindow(window_);
-        window_ = nullptr;
-    }
-    SDL_Quit();
+    window_context_.shutdown();
 }
 
 } // namespace Amplitron

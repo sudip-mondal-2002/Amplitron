@@ -8,7 +8,7 @@
 #include "test_framework.h"
 #include "test_fixtures.h"
 #include "gui/commands/command_history.h"
-#include "audio/effects/overdrive.h"
+#include "audio/effects/distortion/overdrive.h"
 #include <memory>
 
 #define private public

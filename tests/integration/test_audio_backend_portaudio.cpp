@@ -1,8 +1,8 @@
 #if !defined(WITH_JACK)
+#include "../fixtures/portaudio_mock.h"
 #include "audio/backend/audio_backend_portaudio_helpers.h"
 #include "audio/engine/audio_engine.h"
 #include "test_framework.h"
-#include "../fixtures/portaudio_mock.cpp"
 
 using namespace Amplitron;
 using namespace TestFramework;

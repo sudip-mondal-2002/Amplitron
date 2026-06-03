@@ -58,6 +58,7 @@ public:
 
     SpectrumDisplayMode current_mode() const { return mode_; }
     bool is_expanded() const { return expanded_; }
+    void set_expanded(bool expanded) { expanded_ = expanded; }
 
 private:
     void render_vu_bar(const char* id,

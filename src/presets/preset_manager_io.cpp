@@ -1,8 +1,12 @@
-#include "audio/effects/effect_factory.h"
-#include "audio/effects/cabinet_sim.h"
+#include "audio/effects/core/effect_factory.h"
+#include "audio/effects/amp_cab/cabinet_sim.h"
+#include "audio/engine/audio_graph.h"
 #include "gui/state/gui_graph_state.h"
 #include "preset_json.h"
 #include "preset_manager.h"
+#include "presets/i_preset_serializer.h"
+#include "presets/i_preset_storage.h"
+#include "presets/i_preset_migrator.h"
 #include "preset_manager_impl.h"
 #include <cstring>
 #include <iostream>
@@ -26,17 +30,13 @@ std::vector<std::string> PresetManager::list_presets() {
 
 bool PresetManager::save_preset_data(const std::string &filepath,
                                      const PresetData &preset) {
-  std::string json = to_json_ext(preset);
+  std::string json = serializer_->serialize(preset);
 
-  std::ofstream file(filepath);
-  if (!file.is_open()) {
+  if (!storage_->save(filepath, json)) {
     last_error_ = "Could not open file for writing: " + filepath;
     std::cerr << last_error_ << std::endl;
     return false;
   }
-
-  file << json;
-  file.close();
 
   std::cout << "Preset saved: " << filepath << std::endl;
   return true;
@@ -45,7 +45,7 @@ bool PresetManager::save_preset_data(const std::string &filepath,
 bool PresetManager::save_preset(const std::string &filepath,
                                 const std::string &preset_name,
                                 const std::string &description,
-                                AudioEngine &engine,
+                                IAudioEngine &engine,
                                 const std::vector<MidiMapping> &midi_mappings) {
   PresetData preset;
   preset.name = preset_name;
@@ -133,21 +133,19 @@ bool PresetManager::save_preset(const std::string &filepath,
 }
 
 bool PresetManager::load_preset(const std::string &filepath,
-                                AudioEngine &engine,
-                                MidiManager *midi_manager) {
-  std::ifstream file(filepath);
-  if (!file.is_open()) {
+                                IAudioEngine &engine,
+                                IMidiManager *midi_manager) {
+  std::string raw_json = storage_->load(filepath);
+  if (raw_json.empty()) {
     last_error_ = "Could not open file: " + filepath;
     std::cerr << last_error_ << std::endl;
     return false;
   }
 
-  std::string json((std::istreambuf_iterator<char>(file)),
-                   std::istreambuf_iterator<char>());
-  file.close();
+  std::string migrated_json = migrator_->migrate(raw_json);
 
   PresetData preset;
-  if (!from_json_ext(json, preset)) {
+  if (!serializer_->deserialize(migrated_json, preset)) {
     last_error_ = "Failed to parse preset file: " + filepath;
     std::cerr << last_error_ << std::endl;
     return false;
@@ -492,6 +490,22 @@ bool PresetManager::graph_from_json(const std::string &json,
   }
 
   return true;
+}
+
+bool PresetManager::delete_preset(const std::string& filepath) {
+  if (storage_->remove(filepath)) {
+    return true;
+  }
+  last_error_ = "Could not delete preset file: " + filepath;
+  return false;
+}
+
+std::string PresetManager::get_last_error() const {
+  return last_error_;
+}
+
+std::string PresetManager::get_presets_directory() const {
+  return get_presets_dir();
 }
 
 } // namespace Amplitron
