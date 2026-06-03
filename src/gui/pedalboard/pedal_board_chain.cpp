@@ -126,6 +126,22 @@ void PedalBoard::render_signal_chain() {
     else ++it;
   }
   draw_list->PushClipRect(canvas_pos, canvas_end, true);
+
+  if (ui_state.show_grid) {
+    float grid_sz = 32.0f * ui_state.zoom;
+    ImU32 grid_color = IM_COL32(36, 34, 30, 255);
+    for (float x = std::fmod(ui_state.scrolling.x, grid_sz); x < canvas_size.x;
+         x += grid_sz) {
+      draw_list->AddLine(ImVec2(canvas_pos.x + x, canvas_pos.y),
+                         ImVec2(canvas_pos.x + x, canvas_end.y), grid_color);
+    }
+    for (float y = std::fmod(ui_state.scrolling.y, grid_sz); y < canvas_size.y;
+         y += grid_sz) {
+      draw_list->AddLine(ImVec2(canvas_pos.x, canvas_pos.y + y),
+                         ImVec2(canvas_end.x, canvas_pos.y + y), grid_color);
+    }
+  }
+
   ImVec2 offset(canvas_pos.x + ui_state.scrolling.x, canvas_pos.y + ui_state.scrolling.y);
   for (int id : stale_ids) {
     ui_state.node_positions.erase(id);
@@ -246,63 +262,16 @@ void PedalBoard::render_signal_chain() {
           node_layout.is_dragging = true;
           node_layout.drag_start_pos = node_layout.position;
         }
-        float node_width = (target_widget ? (is_mb_comp ? 190.0f * 2.2f : 190.0f) : 110.0f) * ui_state.zoom;
-        float node_height = (target_widget ? 360.0f : 70.0f) * ui_state.zoom;
-        ImGui::PushID(node.id);
-        if (target_widget) {
-            ImGui::SetCursorScreenPos(node_screen_pos);
-            ImGui::BeginGroup();
-            ImGui::SetWindowFontScale(ui_state.zoom);
-            target_widget->render(ui_state.zoom); 
-            ImGui::SetWindowFontScale(1.0f);
-            ImGui::EndGroup();
-            ImGui::SetCursorScreenPos(node_screen_pos);
-            ImGui::SetNextItemAllowOverlap(); 
-            ImGui::InvisibleButton("native_drag_handle", ImVec2(node_width - 25.0f * ui_state.zoom, 30.0f * ui_state.zoom));
-            if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-                if (!node_layout.is_dragging) {
-                    node_layout.is_dragging = true;
-                    node_layout.drag_start_pos = node_layout.position;
-                }
-                node_layout.position.x += ImGui::GetIO().MouseDelta.x / ui_state.zoom;
-                node_layout.position.y += ImGui::GetIO().MouseDelta.y / ui_state.zoom;
-            } else if (node_layout.is_dragging && ImGui::IsItemDeactivated()) {
-                node_layout.is_dragging = false;
-                if (node_layout.position.x != node_layout.drag_start_pos.x || node_layout.position.y != node_layout.drag_start_pos.y) {
-                    history_.push_executed(std::make_unique<MoveGraphNodeCommand>(node.id, node_layout.drag_start_pos, node_layout.position));
-                }
-            }
-        } else {
-            ImVec2 node_end = ImVec2(node_screen_pos.x + node_width, node_screen_pos.y + node_height);
-            ImU32 bg_color = IM_COL32(50, 35, 60, 255);
-            draw_list->AddRectFilled(node_screen_pos, node_end, bg_color, Theme::ROUNDING_MD * ui_state.zoom);
-            draw_list->AddRect(node_screen_pos, node_end, IM_COL32(180, 140, 80, 180), Theme::ROUNDING_MD * ui_state.zoom, 0, 1.5f * ui_state.zoom);
-            ImGui::SetCursorScreenPos(node_screen_pos);
-            ImGui::SetNextItemAllowOverlap();
-            ImGui::InvisibleButton("util_drag_handle", ImVec2(node_width - 25.0f * ui_state.zoom, node_height));
-            if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-                if (!node_layout.is_dragging) {
-                    node_layout.is_dragging = true;
-                    node_layout.drag_start_pos = node_layout.position;
-                }
-                node_layout.position.x += ImGui::GetIO().MouseDelta.x / ui_state.zoom;
-                node_layout.position.y += ImGui::GetIO().MouseDelta.y / ui_state.zoom;
-            } else if (node_layout.is_dragging && ImGui::IsItemDeactivated()) {
-                node_layout.is_dragging = false;
-                if (node_layout.position.x != node_layout.drag_start_pos.x || node_layout.position.y != node_layout.drag_start_pos.y) {
-                    history_.push_executed(std::make_unique<MoveGraphNodeCommand>(node.id, node_layout.drag_start_pos, node_layout.position));
-                }
-            }
-            ImVec2 text_pos = ImVec2(node_screen_pos.x + 12.0f * ui_state.zoom, node_screen_pos.y + 25.0f * ui_state.zoom);
-            ImGui::SetWindowFontScale(ui_state.zoom);
-            draw_list->AddText(text_pos, IM_COL32(255, 255, 255, 255), node.name.c_str());
-            ImGui::SetWindowFontScale(1.0f);
+        node_layout.position.x += ImGui::GetIO().MouseDelta.x / ui_state.zoom;
+        node_layout.position.y += ImGui::GetIO().MouseDelta.y / ui_state.zoom;
+      } else if (node_layout.is_dragging && ImGui::IsItemDeactivated()) {
+        node_layout.is_dragging = false;
+        if (node_layout.position.x != node_layout.drag_start_pos.x ||
+            node_layout.position.y != node_layout.drag_start_pos.y) {
+          history_.push_executed(std::make_unique<MoveGraphNodeCommand>(
+              node.id, node_layout.drag_start_pos, node_layout.position));
         }
       }
-      ImVec2 text_pos = ImVec2(node_screen_pos.x + 12.0f * ui_state.zoom, node_screen_pos.y + 25.0f * ui_state.zoom);
-      ImGui::SetWindowFontScale(ui_state.zoom);
-      draw_list->AddText(text_pos, IM_COL32(255, 255, 255, 255), node.name.c_str());
-      ImGui::SetWindowFontScale(1.0f);
     }
 
       bool is_mixer = (node.routing_type == NodeRoutingType::Mixer ||
@@ -327,16 +296,18 @@ void PedalBoard::render_signal_chain() {
         ImGui::EndPopup();
       }
 
-      std::string display_name = node.name;
-      if (is_mixer) {
-        display_name = std::to_string(node.input_pin_ids.size()) + "-in Mixer";
+      if (!target_widget) {
+        std::string display_name = node.name;
+        if (is_mixer) {
+          display_name = std::to_string(node.input_pin_ids.size()) + "-in Mixer";
+        }
+        ImVec2 text_pos = ImVec2(node_screen_pos.x + 12.0f * ui_state.zoom,
+                                 node_screen_pos.y + 10.0f * ui_state.zoom);
+        ImGui::SetWindowFontScale(ui_state.zoom);
+        draw_list->AddText(text_pos, IM_COL32(255, 255, 255, 255),
+                           display_name.c_str());
+        ImGui::SetWindowFontScale(1.0f);
       }
-      ImVec2 text_pos = ImVec2(node_screen_pos.x + 12.0f * ui_state.zoom,
-                               node_screen_pos.y + 10.0f * ui_state.zoom);
-      ImGui::SetWindowFontScale(ui_state.zoom);
-      draw_list->AddText(text_pos, IM_COL32(255, 255, 255, 255),
-                         display_name.c_str());
-      ImGui::SetWindowFontScale(1.0f);
 
       if (is_mixer) {
         ImGui::SetWindowFontScale(ui_state.zoom * 0.8f);

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "gui/commands/command_base.h"
-#include "audio/engine/audio_engine.h"
+#include "audio/engine/i_audio_engine.h"
 #include "audio/engine/audio_graph.h"
 #include "gui/state/gui_graph_state.h"
 
@@ -11,7 +11,7 @@ using NodeId = int;
 using EffectType = NodeRoutingType;
 
 struct AddGraphNodeCommand : public Command {
-    AudioEngine& engine_;
+    IAudioEngine& engine_;
     NodeId node_id = -1; // Assigned on first execute
     std::string name;
     EffectType type;
@@ -21,7 +21,7 @@ struct AddGraphNodeCommand : public Command {
 
     int num_inputs = 0;
 
-    AddGraphNodeCommand(AudioEngine& engine, const std::string& name, EffectType type, std::shared_ptr<Effect> pedal, ImVec2 pos, int num_inputs = 0)
+    AddGraphNodeCommand(IAudioEngine& engine, const std::string& name, EffectType type, std::shared_ptr<Effect> pedal, ImVec2 pos, int num_inputs = 0)
         : engine_(engine), name(name), type(type), pedal(pedal), position(pos), num_inputs(num_inputs) {}
 
     bool execute() override {
@@ -60,7 +60,7 @@ struct RemovedPinInfo {
 };
 
 struct RemoveGraphNodeCommand : public Command {
-    AudioEngine& engine_;
+    IAudioEngine& engine_;
     NodeId node_id;
     EffectType type;
     ImVec2 position;
@@ -69,7 +69,7 @@ struct RemoveGraphNodeCommand : public Command {
     std::vector<RemovedPinInfo> auto_removed_pins; // cache for dynamically removed pins on other nodes
     std::vector<RemovedPinInfo> auto_removed_out_pins;
 
-    RemoveGraphNodeCommand(AudioEngine& engine, NodeId id, EffectType t, ImVec2 pos)
+    RemoveGraphNodeCommand(IAudioEngine& engine, NodeId id, EffectType t, ImVec2 pos)
         : engine_(engine), node_id(id), type(t), position(pos) {}
 
     bool execute() override {
@@ -153,7 +153,7 @@ struct RemoveGraphNodeCommand : public Command {
 };
 
 struct AddGraphLinkCommand : public Command {
-    AudioEngine& engine_;
+    IAudioEngine& engine_;
     GraphLink link;
     bool was_successful = false;
     
@@ -166,7 +166,7 @@ struct AddGraphLinkCommand : public Command {
     int auto_added_out_pin_id = -1;
     int auto_added_out_pin_index = -1;
 
-    AddGraphLinkCommand(AudioEngine& engine, int src_pin, int dst_pin)
+    AddGraphLinkCommand(IAudioEngine& engine, int src_pin, int dst_pin)
         : engine_(engine) {
             link.source_pin_id = src_pin;
             link.dest_pin_id = dst_pin;
@@ -271,7 +271,7 @@ struct AddGraphLinkCommand : public Command {
 };
 
 struct RemoveGraphLinkCommand : public Command {
-    AudioEngine& engine_;
+    IAudioEngine& engine_;
     GraphLink link;
     
     int auto_removed_pin_node_id = -1;
@@ -283,7 +283,7 @@ struct RemoveGraphLinkCommand : public Command {
     int auto_removed_out_pin_id = -1;
     int auto_removed_out_pin_index = -1;
 
-    RemoveGraphLinkCommand(AudioEngine& engine, const GraphLink& l)
+    RemoveGraphLinkCommand(IAudioEngine& engine, const GraphLink& l)
         : engine_(engine), link(l) {}
 
     bool execute() override {

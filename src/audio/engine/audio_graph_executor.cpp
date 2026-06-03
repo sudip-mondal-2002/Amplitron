@@ -93,7 +93,14 @@ void AudioGraphExecutor::compile(const AudioGraph& graph) {
                 }
             }
         }
-        execution_plan_.push_back(step);
+
+        if (it->routing_type == NodeRoutingType::StandardEffect && it->pedal) {
+            step.processor = std::make_unique<StandardEffectProcessor>(it->pedal);
+        } else {
+            step.processor = std::make_unique<PassthroughProcessor>();
+        }
+
+        execution_plan_.push_back(std::move(step));
     }
 }
 
@@ -147,15 +154,9 @@ void AudioGraphExecutor::process(const float* input, float* output, int num_samp
 
         float* node_output = buffer_pool_[step.buffer_index].data();
 
-        if (step.type == NodeRoutingType::StandardEffect && step.pedal) {
-            // FIX: In-place processing! 
-            // 1. Copy the summed input data into our dedicated output buffer
-            std::memcpy(node_output, node_input, num_samples * sizeof(float));
-            
-            // 2. Tell the pedal to process and overwrite that buffer directly
-            step.pedal->process(node_output, num_samples); 
+        if (step.processor) {
+            step.processor->process(node_input, node_output, num_samples);
         } else {
-            // Merge nodes or empty wrappers just pass the summed input directly downstream
             std::memcpy(node_output, node_input, num_samples * sizeof(float));
         }
     }

@@ -8,7 +8,7 @@
 namespace Amplitron {
 
 class Effect;
-class AudioEngine;
+class IAudioEngine;
 class GuiMidi;
 
 enum class ScreenType {
@@ -22,7 +22,7 @@ struct ScreenProps {
     ScreenType type;
     std::shared_ptr<Effect> effect;
     int index = 0;
-    AudioEngine* engine = nullptr;
+    IAudioEngine* engine = nullptr;
     GuiMidi* gui_midi = nullptr;
 
     // Callback events for undo-able parameter changes

@@ -3,14 +3,14 @@
 #include "gui/commands/command.h"
 #include "gui/commands/command_history.h"
 #include "audio/engine/audio_engine.h"
-#include "audio/effects/overdrive.h"
-#include "audio/effects/delay.h"
-#include "audio/effects/reverb.h"
-#include "audio/effects/equalizer.h"
-#include "audio/effects/noise_gate.h"
-#include "audio/effects/compressor.h"
-#include "audio/effects/distortion.h"
-#include "audio/effects/chorus.h"
+#include "audio/effects/distortion/overdrive.h"
+#include "audio/effects/delay_reverb/delay.h"
+#include "audio/effects/delay_reverb/reverb.h"
+#include "audio/effects/eq_filter/equalizer.h"
+#include "audio/effects/dynamics/noise_gate.h"
+#include "audio/effects/dynamics/compressor.h"
+#include "audio/effects/distortion/distortion.h"
+#include "audio/effects/modulation/chorus.h"
 
 #include <cstring>
 

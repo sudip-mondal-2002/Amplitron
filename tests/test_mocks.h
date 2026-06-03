@@ -1,5 +1,5 @@
 #pragma once
-#include "audio/effects/effect.h"
+#include "audio/effects/core/effect.h"
 #include <vector>
 #include <string>
 
@@ -21,6 +21,7 @@ public:
 
     const char* name() const override { return mock_name.c_str(); }
     std::vector<EffectParam>& params() override { return mock_params; }
+    const std::vector<EffectParam>& params() const override { return mock_params; }
     void process(float* /*buffer*/, int /*num_samples*/) override {
         is_processed = true;
     }
@@ -40,6 +41,7 @@ public:
     void reset() override {}
     const char* name() const override { return "TestTuner"; }
     std::vector<EffectParam>& params() override { static std::vector<EffectParam> p; return p; }
+    const std::vector<EffectParam>& params() const override { static const std::vector<EffectParam> p; return p; }
 };
 
 } // namespace Amplitron

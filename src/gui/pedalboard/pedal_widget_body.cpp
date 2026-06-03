@@ -1,5 +1,5 @@
 #include "gui/pedalboard/pedal_widget.h"
-#include "audio/effects/amp_simulator.h"
+#include "audio/effects/amp_cab/amp_simulator.h"
 #include "gui/theme/theme.h"
 
 #include <cstdio>

@@ -1,6 +1,6 @@
 #include "audio/engine/audio_graph.h"
 #include "audio/engine/audio_graph_executor.h"
-#include "audio/effects/effect_factory.h"
+#include "audio/effects/core/effect_factory.h"
 #include "presets/preset_json.h"
 #include "test_framework.h"
 #include <cmath>
