@@ -1,7 +1,7 @@
 #pragma once
 
 #include "audio/engine/audio_engine.h"
-#include "audio/effects/tuner.h"
+#include "audio/effects/utility/tuner.h"
 #include "gui/ui_component.h"
 #include <functional>
 #include <memory>

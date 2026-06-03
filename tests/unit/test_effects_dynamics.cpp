@@ -1,8 +1,8 @@
 #include "test_framework.h"
 #include "test_fixtures.h"
-#include "audio/effects/noise_gate.h"
-#include "audio/effects/compressor.h"
-#include "audio/effects/multiband_compressor.h"
+#include "audio/effects/dynamics/noise_gate.h"
+#include "audio/effects/dynamics/compressor.h"
+#include "audio/effects/dynamics/multiband_compressor.h"
 #include <cstring>
 #include <cmath>
 

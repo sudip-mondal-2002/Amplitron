@@ -1,8 +1,8 @@
 #include "test_framework.h"
 #include "test_fixtures.h"
-#include "audio/effects/equalizer.h"
-#include "audio/effects/cabinet_sim.h"
-#include "audio/effects/wah.h"
+#include "audio/effects/eq_filter/equalizer.h"
+#include "audio/effects/amp_cab/cabinet_sim.h"
+#include "audio/effects/eq_filter/wah.h"
 #include <cstring>
 #include <cmath>
 

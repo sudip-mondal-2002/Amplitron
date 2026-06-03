@@ -2,8 +2,8 @@
 #include "test_fixtures.h"
 #include "test_mocks.h"
 #include "audio/engine/audio_engine.h"
-#include "audio/effects/distortion.h"
-#include "audio/effects/overdrive.h"
+#include "audio/effects/distortion/distortion.h"
+#include "audio/effects/distortion/overdrive.h"
 #include <vector>
 #include <memory>
 #include <filesystem>

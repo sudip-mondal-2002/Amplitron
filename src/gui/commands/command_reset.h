@@ -1,7 +1,7 @@
 #pragma once
 
-#include "audio/engine/audio_engine.h"
-#include "audio/effects/effect.h"
+#include "audio/engine/i_audio_engine.h"
+#include "audio/effects/core/effect.h"
 #include "gui/commands/command_base.h"
 #include <vector>
 
@@ -16,7 +16,7 @@ namespace Amplitron {
  */
 class ResetAllCommand : public Command {
 public:
-  explicit ResetAllCommand(AudioEngine &engine) : engine_(engine) {
+  explicit ResetAllCommand(IAudioEngine &engine) : engine_(engine) {
     auto &effects = engine_.effects();
     for (auto &fx : effects) {
       std::vector<float> values;
@@ -56,7 +56,7 @@ public:
   const char *description() const override { return "Reset All"; }
 
 private:
-  AudioEngine &engine_;
+  IAudioEngine &engine_;
   std::vector<std::vector<float>> saved_values_;
   std::vector<bool> saved_enabled_;
 };

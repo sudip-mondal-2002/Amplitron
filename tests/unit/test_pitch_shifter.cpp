@@ -8,7 +8,7 @@
 //  4. Wet/dry blend — mix=0 passes dry, mid-mix blends energy correctly
 
 #include "test_framework.h"
-#include "audio/effects/pitch_shifter.h"
+#include "audio/effects/pitch/pitch_shifter.h"
 #include <algorithm>
 #include <cmath>
 #include <vector>

@@ -678,7 +678,8 @@ jobs:
             -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 \
             -DCMAKE_OSX_ARCHITECTURES="arm64" \
             -DAMPLITRON_VERSION="${{ steps.version.outputs.version }}" \
-            -DSDL2_DIR=$HOME/sdl2-ios/lib/cmake/SDL2 \
+            -DSDL2_INCLUDE_DIRS=$HOME/sdl2-ios/include/SDL2 \
+            -DSDL2_LIBRARIES="$HOME/sdl2-ios/lib/libSDL2main.a;$HOME/sdl2-ios/lib/libSDL2.a" \
             -G Xcode \
             -S . -B build-ios
 
