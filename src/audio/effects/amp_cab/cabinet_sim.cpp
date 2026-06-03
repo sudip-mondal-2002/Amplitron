@@ -18,8 +18,8 @@ CabinetSim::CabinetSim() {
     lp_.a1 = -1.14298f; lp_.a2 = 0.41280f;
 
     // Default HP at ~80Hz (low cut)
-    hp_.b0 = 0.9565f; hp_.b1 = -1.9131f; hp_.b2 = 0.9565f;
-    hp_.a1 = -1.9112f; hp_.a2 = 0.9150f;
+    hp_.b0 = 0.99262f; hp_.b1 = -1.98524f; hp_.b2 = 0.99262f;
+    hp_.a1 = -1.98519f; hp_.a2 = 0.98529f;
 
     // Resonance peak ~2kHz
     peak_.b0 = 1.05f; peak_.b1 = -1.65f; peak_.b2 = 0.65f;
