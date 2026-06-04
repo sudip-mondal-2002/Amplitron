@@ -16,9 +16,11 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
+
+// clang-format off
 #if defined(_WIN32)
-#include <shellapi.h>
 #include <windows.h>
+#include <shellapi.h>
 #elif defined(__APPLE__) && !TARGET_OS_IOS
 #include <fcntl.h>
 #include <sys/wait.h>
@@ -28,6 +30,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #endif
+// clang-format on
 
 namespace Amplitron {
 
