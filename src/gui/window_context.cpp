@@ -127,6 +127,9 @@ void WindowContext::load_fonts() {
         SDL_free(base_path);
     }
     try_font("assets/fonts/Roboto-Medium.ttf");
+    #ifdef __EMSCRIPTEN__
+    try_font("/assets/fonts/Roboto-Medium.ttf");
+    #endif
     try_font("../assets/fonts/Roboto-Medium.ttf");
     try_font("external/imgui/misc/fonts/Roboto-Medium.ttf");
     try_font("../external/imgui/misc/fonts/Roboto-Medium.ttf");
