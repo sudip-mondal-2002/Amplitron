@@ -103,19 +103,15 @@ const registration = await navigator.serviceWorker
       if (registration.installing) {
         const sw = registration.installing || registration.waiting;
         await new Promise((resolve) => {
-          if (sw) {
-            if (sw.state !== "activated") {
-              await new Promise((resolve) => {
-                const onStateChange = (e) => {
-                  if (e.target.state === "activated") {
-                    sw.removeEventListener("statechange", onStateChange);
-                    resolve();
-                  }
-                };
-                sw.addEventListener("statechange", onStateChange);
-              });
+          const sw = registration.installing || registration.waiting;
+          if (!sw) return resolve();
+          const onStateChange = () => {
+            if (sw.state === "activated") {
+              sw.removeEventListener("statechange", onStateChange);
+              resolve();
             }
-          }
+          };
+          sw.addEventListener("statechange", onStateChange);
         });
       }
       const RELOAD_KEY = "coiReloaded";
