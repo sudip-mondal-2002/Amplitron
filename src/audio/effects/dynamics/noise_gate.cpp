@@ -1,4 +1,5 @@
 #include "audio/effects/dynamics/noise_gate.h"
+
 #include "audio/effects/core/effect_factory.h"
 
 namespace Amplitron {
@@ -7,9 +8,15 @@ static EffectRegistrar<NoiseGate> reg("Noise Gate");
 
 NoiseGate::NoiseGate() {
     params_ = {
-        {"Threshold", -55.0f, -80.0f, 0.0f, -55.0f, "dB", "Signal level below which the gate closes and mutes the audio. Set just above background noise level."},
-        {"Attack",     0.5f,   0.1f,  10.0f, 0.5f,  "ms", "How quickly the gate opens when the signal exceeds the threshold. Fast attack preserves pick transients."},
-        {"Release",   50.0f,   5.0f, 500.0f, 50.0f,  "ms", "How quickly the gate closes after the signal falls below threshold. Longer release preserves sustained notes."},
+        {"Threshold", -55.0f, -80.0f, 0.0f, -55.0f, "dB",
+         "Signal level below which the gate closes and mutes the audio. Set just above background "
+         "noise level."},
+        {"Attack", 0.5f, 0.1f, 10.0f, 0.5f, "ms",
+         "How quickly the gate opens when the signal exceeds the threshold. Fast attack preserves "
+         "pick transients."},
+        {"Release", 50.0f, 5.0f, 500.0f, 50.0f, "ms",
+         "How quickly the gate closes after the signal falls below threshold. Longer release "
+         "preserves sustained notes."},
     };
 }
 
@@ -35,4 +42,4 @@ void NoiseGate::reset() {
     gain_ = 0.0f;
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

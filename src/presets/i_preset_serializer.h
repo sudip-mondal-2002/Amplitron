@@ -11,10 +11,10 @@ struct PresetData;
  * Satisfies Single Responsibility Principle (SRP) and Dependency Inversion Principle (DIP).
  */
 class IPresetSerializer {
-public:
+   public:
     virtual ~IPresetSerializer() = default;
     virtual std::string serialize(const PresetData& preset) = 0;
     virtual bool deserialize(const std::string& json_str, PresetData& preset) = 0;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

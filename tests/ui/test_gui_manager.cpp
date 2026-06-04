@@ -5,9 +5,9 @@
  * Headless-safe: constructor and accessor paths only — initialize() and
  * run_frame() require SDL+OpenGL and are not exercised here.
  */
-#include "test_framework.h"
-#include "test_fixtures.h"
 #include "amplitron_session.h"
+#include "test_fixtures.h"
+#include "test_framework.h"
 #define private public
 #include "gui/gui_manager.h"
 #undef private
@@ -15,9 +15,15 @@
 using namespace Amplitron;
 
 TEST(amplitron_session_throws_on_null_arguments) {
-    ASSERT_THROW(AmplitronSession(nullptr, std::make_unique<MidiManager>(), std::make_unique<PresetManagerService>()), std::invalid_argument);
-    ASSERT_THROW(AmplitronSession(std::make_unique<AudioEngine>(), nullptr, std::make_unique<PresetManagerService>()), std::invalid_argument);
-    ASSERT_THROW(AmplitronSession(std::make_unique<AudioEngine>(), std::make_unique<MidiManager>(), nullptr), std::invalid_argument);
+    ASSERT_THROW(AmplitronSession(nullptr, std::make_unique<MidiManager>(),
+                                  std::make_unique<PresetManagerService>()),
+                 std::invalid_argument);
+    ASSERT_THROW(AmplitronSession(std::make_unique<AudioEngine>(), nullptr,
+                                  std::make_unique<PresetManagerService>()),
+                 std::invalid_argument);
+    ASSERT_THROW(
+        AmplitronSession(std::make_unique<AudioEngine>(), std::make_unique<MidiManager>(), nullptr),
+        std::invalid_argument);
 }
 
 TEST(gui_manager_basic_lifecycle) {
@@ -77,11 +83,13 @@ TEST(gui_manager_private_rendering_methods) {
     GuiManager gui(session);
 
     // 1. Mute/unmute
-    engine.set_running_for_testing(true); // Headless-safe: bypass physical soundcard start requirement
+    engine.set_running_for_testing(
+        true);  // Headless-safe: bypass physical soundcard start requirement
     gui.toggle_audio_mute_state();
     ASSERT_TRUE(gui.audio_muted_);
-    
-    engine.set_running_for_testing(false); // Headless-safe: manually update engine state since Pa_Stream is nullptr
+
+    engine.set_running_for_testing(
+        false);  // Headless-safe: manually update engine state since Pa_Stream is nullptr
     gui.toggle_audio_mute_state();
     ASSERT_FALSE(gui.audio_muted_);
 
@@ -117,7 +125,7 @@ TEST(gui_manager_logical_builders) {
         p1.on_start();
         auto p2 = gui.build_recording_props();
         ASSERT_TRUE(p2.is_recording);
-        
+
         // Pause and stop
         p2.on_pause();
         auto p3 = gui.build_recording_props();
@@ -134,7 +142,7 @@ TEST(gui_manager_logical_builders) {
         ASSERT_FALSE(p.has_signal);
         p.on_mute_changed(true);
         p.on_a4_ref_changed(442.0f);
-        
+
         auto p2 = gui.build_tuner_props();
         ASSERT_TRUE(p2.mute_on);
         ASSERT_NEAR(p2.a4_ref, 442.0f, 0.01f);
@@ -160,7 +168,8 @@ TEST(gui_manager_logical_builders) {
     // 4. build_analyzer_props
     {
         auto p = gui.build_analyzer_props();
-        ASSERT_TRUE(p.spectrum.smoothed_input_db == gui.metrics_service_.spectrum_analyzer().smoothed_input_db());
+        ASSERT_TRUE(p.spectrum.smoothed_input_db ==
+                    gui.metrics_service_.spectrum_analyzer().smoothed_input_db());
         p.on_set_analyzer_enabled(true);
     }
 
@@ -168,7 +177,7 @@ TEST(gui_manager_logical_builders) {
     {
         auto p = gui.build_snapshots_props();
         ASSERT_FALSE(p.slots[0].is_filled);
-        
+
         p.on_save_slot(0);
         auto p2 = gui.build_snapshots_props();
         ASSERT_TRUE(p2.slots[0].is_filled);
@@ -176,7 +185,7 @@ TEST(gui_manager_logical_builders) {
 
         p2.on_recall_slot(0);
         p2.on_clear_slot(0);
-        
+
         auto p3 = gui.build_snapshots_props();
         ASSERT_FALSE(p3.slots[0].is_filled);
     }

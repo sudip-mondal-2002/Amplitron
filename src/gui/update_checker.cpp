@@ -1,17 +1,17 @@
 #include "gui/update_checker.h"
-#include "common.h"
-#include <iostream>
-#include <cstdio>
+
 #include <array>
+#include <cstdio>
+#include <iostream>
 #include <memory>
+
+#include "common.h"
 
 namespace Amplitron {
 
 UpdateChecker::UpdateChecker() = default;
 
-UpdateChecker::~UpdateChecker() {
-    shutdown();
-}
+UpdateChecker::~UpdateChecker() { shutdown(); }
 
 void UpdateChecker::start_check() {
     if (!check_thread_.joinable()) {
@@ -43,23 +43,25 @@ std::string UpdateChecker::new_release_url() const {
 
 void UpdateChecker::check_for_updates() {
 #ifndef AMPLITRON_NO_DESKTOP_SHELL
-    const char* cmd = "curl -s https://api.github.com/repos/amplitron-dsp/Amplitron/releases/latest | grep '\"tag_name\":' | sed -E 's/.*\"([^\"]+)\".*/\\1/'";
+    const char* cmd =
+        "curl -s https://api.github.com/repos/amplitron-dsp/Amplitron/releases/latest | grep "
+        "'\"tag_name\":' | sed -E 's/.*\"([^\"]+)\".*/\\1/'";
     std::array<char, 128> buffer;
     std::string result;
-    
+
     std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
     if (!pipe) {
         return;
     }
-    
+
     while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
         if (shutdown_requested_) return;
         result += buffer.data();
     }
-    
+
     if (!result.empty()) {
         result.erase(result.find_last_not_of(" \n\r\t") + 1);
-        
+
         std::lock_guard<std::mutex> lock(mutex_);
         if (result != AMPLITRON_VERSION && !result.empty() && result[0] == 'v') {
             has_new_release_ = true;
@@ -70,4 +72,4 @@ void UpdateChecker::check_for_updates() {
 #endif
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

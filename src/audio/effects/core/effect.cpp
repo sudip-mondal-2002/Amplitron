@@ -1,4 +1,5 @@
 #include "audio/effects/core/effect.h"
+
 #include "audio/effects/core/effect_factory.h"
 
 namespace Amplitron {
@@ -13,4 +14,4 @@ std::shared_ptr<Effect> Effect::clone() const {
     return new_effect;
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

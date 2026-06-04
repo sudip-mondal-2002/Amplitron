@@ -1,9 +1,10 @@
 #pragma once
 
-#include "audio/utils/spsc_queue.h"
-#include <memory>
 #include <atomic>
+#include <memory>
 #include <vector>
+
+#include "audio/utils/spsc_queue.h"
 
 namespace Amplitron {
 
@@ -16,7 +17,7 @@ class AudioGraphExecutor;
  * Satisfies the Single Responsibility Principle (SRP).
  */
 class AudioCommandDispatcher {
-public:
+   public:
     AudioCommandDispatcher() = default;
     ~AudioCommandDispatcher() = default;
 
@@ -28,18 +29,15 @@ public:
     void push_output_gain(float gain);
 
     // Audio thread side
-    void drain_gain_commands(std::atomic<float>& input_gain,
-                             std::atomic<float>& output_gain,
+    void drain_gain_commands(std::atomic<float>& input_gain, std::atomic<float>& output_gain,
                              std::shared_ptr<AudioGraphExecutor>& executor);
 
-    void drain_commands(std::atomic<float>& input_gain,
-                        std::atomic<float>& output_gain,
-                        std::shared_ptr<AudioGraphExecutor>& executor,
-                        AudioGraph& main_graph,
+    void drain_commands(std::atomic<float>& input_gain, std::atomic<float>& output_gain,
+                        std::shared_ptr<AudioGraphExecutor>& executor, AudioGraph& main_graph,
                         std::vector<std::shared_ptr<Effect>>& dummy_effects);
 
-private:
+   private:
     SPSCQueue<AudioCommand, 256> command_queue_;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

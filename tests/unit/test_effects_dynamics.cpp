@@ -1,10 +1,11 @@
-#include "test_framework.h"
-#include "test_fixtures.h"
-#include "audio/effects/dynamics/noise_gate.h"
+#include <cmath>
+#include <cstring>
+
 #include "audio/effects/dynamics/compressor.h"
 #include "audio/effects/dynamics/multiband_compressor.h"
-#include <cstring>
-#include <cmath>
+#include "audio/effects/dynamics/noise_gate.h"
+#include "test_fixtures.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 
@@ -75,11 +76,11 @@ TEST_F(EffectsTest, multiband_compressor_unity_gain_passthrough) {
     mbc.params()[1].value = 4000.0f;  // High XOver
 
     // Low Band
-    mbc.params()[2].value = -20.0f;   // Thresh
-    mbc.params()[3].value = 1.0f;     // Ratio = 1.0 (1:1)
-    mbc.params()[4].value = 5.0f;     // Attack
-    mbc.params()[5].value = 100.0f;   // Release
-    mbc.params()[6].value = 0.0f;     // Makeup = 0.0 dB
+    mbc.params()[2].value = -20.0f;  // Thresh
+    mbc.params()[3].value = 1.0f;    // Ratio = 1.0 (1:1)
+    mbc.params()[4].value = 5.0f;    // Attack
+    mbc.params()[5].value = 100.0f;  // Release
+    mbc.params()[6].value = 0.0f;    // Makeup = 0.0 dB
 
     // Mid Band
     mbc.params()[7].value = -20.0f;   // Thresh
@@ -96,7 +97,7 @@ TEST_F(EffectsTest, multiband_compressor_unity_gain_passthrough) {
     mbc.params()[16].value = 0.0f;    // Makeup = 0.0 dB
 
     // Global
-    mbc.params()[17].value = 0.0f;    // Out Gain = 0.0 dB
+    mbc.params()[17].value = 0.0f;  // Out Gain = 0.0 dB
 
     fill_sine(1000.0f);
     std::memcpy(output_buffer, input_buffer, sizeof(input_buffer));
@@ -120,13 +121,14 @@ TEST_F(EffectsTest, multiband_compressor_independent_band_compression) {
     // Set Low Band ratio to 10:1 and Mid/High ratios to 1:1
     for (int b = 0; b < 3; ++b) {
         int offset = 2 + b * 5;
-        mbc.params()[offset + 0].value = -40.0f; // Threshold = -40 dB
-        mbc.params()[offset + 1].value = (b == 0) ? 10.0f : 1.0f; // Low Ratio = 10:1, Mid/High = 1:1
+        mbc.params()[offset + 0].value = -40.0f;  // Threshold = -40 dB
+        mbc.params()[offset + 1].value =
+            (b == 0) ? 10.0f : 1.0f;             // Low Ratio = 10:1, Mid/High = 1:1
         mbc.params()[offset + 2].value = 2.0f;   // Fast attack
         mbc.params()[offset + 3].value = 50.0f;  // Fast release
         mbc.params()[offset + 4].value = 0.0f;   // Makeup = 0 dB
     }
-    mbc.params()[17].value = 0.0f; // Out Gain = 0 dB
+    mbc.params()[17].value = 0.0f;  // Out Gain = 0 dB
 
     // Feed a 100 Hz sine wave (Low band)
     float low_buf[1024];
@@ -152,7 +154,8 @@ TEST_F(EffectsTest, multiband_compressor_independent_band_compression) {
     for (int b = 0; b < 3; ++b) {
         int offset = 2 + b * 5;
         mbc.params()[offset + 0].value = -40.0f;
-        mbc.params()[offset + 1].value = (b == 2) ? 10.0f : 1.0f; // High Ratio = 10:1, Low/Mid = 1:1
+        mbc.params()[offset + 1].value =
+            (b == 2) ? 10.0f : 1.0f;  // High Ratio = 10:1, Low/Mid = 1:1
         mbc.params()[offset + 2].value = 2.0f;
         mbc.params()[offset + 3].value = 50.0f;
         mbc.params()[offset + 4].value = 0.0f;

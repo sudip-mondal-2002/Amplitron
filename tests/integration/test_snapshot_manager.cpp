@@ -1,18 +1,18 @@
-#include "test_framework.h"
-#include "gui/state/snapshot_manager.h"
-#include "gui/commands/command.h"
-#include "gui/commands/command_history.h"
-#include "audio/engine/audio_engine.h"
-#include "audio/effects/distortion/overdrive.h"
+#include <cstring>
+
 #include "audio/effects/delay_reverb/delay.h"
 #include "audio/effects/delay_reverb/reverb.h"
-#include "audio/effects/eq_filter/equalizer.h"
-#include "audio/effects/dynamics/noise_gate.h"
-#include "audio/effects/dynamics/compressor.h"
 #include "audio/effects/distortion/distortion.h"
+#include "audio/effects/distortion/overdrive.h"
+#include "audio/effects/dynamics/compressor.h"
+#include "audio/effects/dynamics/noise_gate.h"
+#include "audio/effects/eq_filter/equalizer.h"
 #include "audio/effects/modulation/chorus.h"
-
-#include <cstring>
+#include "audio/engine/audio_engine.h"
+#include "gui/commands/command.h"
+#include "gui/commands/command_history.h"
+#include "gui/state/snapshot_manager.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 
@@ -25,16 +25,14 @@ static void clear_engine(AudioEngine& engine) {
 
 // Helper: simulate the exact recall_slot() flow from GuiSnapshots
 // (capture before, get stored after, create command, execute via history)
-static void gui_recall_slot(SnapshotManager& mgr, int slot,
-                            AudioEngine& engine, CommandHistory& history) {
+static void gui_recall_slot(SnapshotManager& mgr, int slot, AudioEngine& engine,
+                            CommandHistory& history) {
     if (!mgr.has_slot(slot)) return;
     auto before = SnapshotManager::capture(engine);
     const auto* after_snap = mgr.get_slot(slot);
     history.execute(std::make_unique<RecallSnapshotCommand>(
-        engine,
-        before.effects, before.input_gain, before.output_gain,
-        after_snap->effects, after_snap->input_gain, after_snap->output_gain
-    ));
+        engine, before.effects, before.input_gain, before.output_gain, after_snap->effects,
+        after_snap->input_gain, after_snap->output_gain));
     mgr.set_active_slot(slot);
 }
 
@@ -142,7 +140,7 @@ TEST(snapshot_captures_effect_chain) {
     const auto* snap = mgr.get_slot(0);
     ASSERT_TRUE(snap != nullptr);
     ASSERT_EQ(static_cast<int>(snap->effects.size()), 2);
-    ASSERT_NEAR(snap->input_gain,  0.6f,  0.001f);
+    ASSERT_NEAR(snap->input_gain, 0.6f, 0.001f);
     ASSERT_NEAR(snap->output_gain, 0.75f, 0.001f);
     ASSERT_EQ(std::string(snap->effects[0].effect->name()), std::string("Overdrive"));
     ASSERT_EQ(std::string(snap->effects[1].effect->name()), std::string("Delay"));
@@ -155,8 +153,8 @@ TEST(snapshot_captures_parameter_values) {
     engine.initialize();
 
     auto eq = std::make_shared<Equalizer>();
-    float custom_val = eq->params()[0].min_val +
-                       (eq->params()[0].max_val - eq->params()[0].min_val) * 0.8f;
+    float custom_val =
+        eq->params()[0].min_val + (eq->params()[0].max_val - eq->params()[0].min_val) * 0.8f;
     eq->params()[0].value = custom_val;
     engine.add_effect(eq);
 
@@ -242,7 +240,7 @@ TEST(snapshot_apply_restores_chain) {
     ASSERT_EQ(static_cast<int>(engine.effects().size()), 2);
     ASSERT_EQ(std::string(engine.effects()[0]->name()), std::string("Overdrive"));
     ASSERT_EQ(std::string(engine.effects()[1]->name()), std::string("Delay"));
-    ASSERT_NEAR(engine.get_input_gain(),  0.5f, 0.001f);
+    ASSERT_NEAR(engine.get_input_gain(), 0.5f, 0.001f);
     ASSERT_NEAR(engine.get_output_gain(), 0.6f, 0.001f);
 
     engine.shutdown();
@@ -253,8 +251,8 @@ TEST(snapshot_apply_restores_parameter_values) {
     engine.initialize();
 
     auto ng = std::make_shared<NoiseGate>();
-    float saved_val = ng->params()[0].min_val +
-                      (ng->params()[0].max_val - ng->params()[0].min_val) * 0.4f;
+    float saved_val =
+        ng->params()[0].min_val + (ng->params()[0].max_val - ng->params()[0].min_val) * 0.4f;
     ng->params()[0].value = saved_val;
     engine.add_effect(ng);
 
@@ -653,10 +651,8 @@ TEST(snapshot_recall_command_undo_redo) {
 
     CommandHistory history;
     history.push_executed(std::make_unique<RecallSnapshotCommand>(
-        engine,
-        before.effects, before.input_gain, before.output_gain,
-        after.effects,  after.input_gain,  after.output_gain
-    ));
+        engine, before.effects, before.input_gain, before.output_gain, after.effects,
+        after.input_gain, after.output_gain));
 
     ASSERT_EQ(static_cast<int>(engine.effects().size()), 2);
     ASSERT_EQ(std::string(engine.effects()[0]->name()), std::string("Reverb"));
@@ -664,13 +660,13 @@ TEST(snapshot_recall_command_undo_redo) {
     history.undo();
     ASSERT_EQ(static_cast<int>(engine.effects().size()), 1);
     ASSERT_EQ(std::string(engine.effects()[0]->name()), std::string("Overdrive"));
-    ASSERT_NEAR(engine.get_input_gain(),  0.5f, 0.001f);
+    ASSERT_NEAR(engine.get_input_gain(), 0.5f, 0.001f);
     ASSERT_NEAR(engine.get_output_gain(), 0.6f, 0.001f);
 
     history.redo();
     ASSERT_EQ(static_cast<int>(engine.effects().size()), 2);
     ASSERT_EQ(std::string(engine.effects()[0]->name()), std::string("Reverb"));
-    ASSERT_NEAR(engine.get_input_gain(),  0.8f, 0.001f);
+    ASSERT_NEAR(engine.get_input_gain(), 0.8f, 0.001f);
     ASSERT_NEAR(engine.get_output_gain(), 0.7f, 0.001f);
 
     engine.shutdown();
@@ -681,13 +677,11 @@ TEST(snapshot_recall_command_description) {
     engine.initialize();
 
     auto before = SnapshotManager::capture(engine);
-    auto after  = SnapshotManager::capture(engine);
+    auto after = SnapshotManager::capture(engine);
 
-    auto cmd = std::make_unique<RecallSnapshotCommand>(
-        engine,
-        before.effects, before.input_gain, before.output_gain,
-        after.effects,  after.input_gain,  after.output_gain
-    );
+    auto cmd = std::make_unique<RecallSnapshotCommand>(engine, before.effects, before.input_gain,
+                                                       before.output_gain, after.effects,
+                                                       after.input_gain, after.output_gain);
 
     ASSERT_EQ(std::string(cmd->description()), std::string("Recall Snapshot"));
     engine.shutdown();

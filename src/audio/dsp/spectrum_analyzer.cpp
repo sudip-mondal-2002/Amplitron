@@ -1,4 +1,5 @@
 #include "audio/dsp/spectrum_analyzer.h"
+
 #include <algorithm>
 #include <cmath>
 
@@ -11,11 +12,9 @@ constexpr float kMaxHz = 20000.0f;
 constexpr float kMinDb = -90.0f;
 constexpr float kMaxDb = 0.0f;
 
-inline float lerp(float a, float b, float t) {
-    return a + (b - a) * t;
-}
+inline float lerp(float a, float b, float t) { return a + (b - a) * t; }
 
-} // namespace
+}  // namespace
 
 SpectrumAnalyzer::SpectrumAnalyzer() {
     for (int i = 0; i < FFT_SIZE; ++i) {
@@ -58,8 +57,7 @@ void SpectrumAnalyzer::run_fft(std::array<std::complex<float>, FFT_SIZE>& data) 
     }
 }
 
-void SpectrumAnalyzer::compute_spectrum_bars(const float* samples,
-                                             int sample_rate,
+void SpectrumAnalyzer::compute_spectrum_bars(const float* samples, int sample_rate,
                                              std::array<float, DISPLAY_BARS>& bars_db) {
     if (!samples || sample_rate <= 0) {
         bars_db.fill(kMinDb);
@@ -100,10 +98,8 @@ void SpectrumAnalyzer::compute_spectrum_bars(const float* samples,
     }
 }
 
-void SpectrumAnalyzer::update(const float* input_samples,
-                              const float* output_samples,
-                              int sample_rate,
-                              float dt_seconds) {
+void SpectrumAnalyzer::update(const float* input_samples, const float* output_samples,
+                              int sample_rate, float dt_seconds) {
     std::array<float, DISPLAY_BARS> input_db{};
     std::array<float, DISPLAY_BARS> output_db{};
     compute_spectrum_bars(input_samples, sample_rate, input_db);
@@ -122,4 +118,4 @@ void SpectrumAnalyzer::update(const float* input_samples,
     }
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

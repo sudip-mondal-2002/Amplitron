@@ -7,12 +7,13 @@
 // that exercises the same code paths, including wrap-around at kRingSize.
 // =============================================================================
 
-#include "test_framework.h"
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cstring>
-#include <algorithm>
 #include <vector>
+
+#include "test_framework.h"
 
 using namespace TestFramework;
 
@@ -23,7 +24,7 @@ using namespace TestFramework;
 // ---------------------------------------------------------------------------
 
 class RingBufferHarness {
-public:
+   public:
     static constexpr int kRingSize = 16384;
 
     // Producer: deposit samples (mirrors feedCaptureData)
@@ -52,8 +53,7 @@ public:
             return false;
         }
         int firstChunk = std::min(numFrames, kRingSize - read_pos_);
-        std::memcpy(out, ring_.data() + read_pos_,
-                    static_cast<size_t>(firstChunk) * sizeof(float));
+        std::memcpy(out, ring_.data() + read_pos_, static_cast<size_t>(firstChunk) * sizeof(float));
         if (firstChunk < numFrames) {
             std::memcpy(out + firstChunk, ring_.data(),
                         static_cast<size_t>(numFrames - firstChunk) * sizeof(float));
@@ -65,10 +65,10 @@ public:
 
     int filled() const { return filled_.load(std::memory_order_acquire); }
 
-private:
+   private:
     std::array<float, kRingSize> ring_{};
     int write_pos_ = 0;
-    int read_pos_  = 0;
+    int read_pos_ = 0;
     std::atomic<int> filled_{0};
 };
 
@@ -173,8 +173,7 @@ TEST(ring_buffer_multiple_small_feeds_one_drain) {
     std::vector<float> dst(16, 0.0f);
     bool ok = rb.drain(dst.data(), 16);
     ASSERT_TRUE(ok);
-    for (int i = 0; i < 16; ++i)
-        ASSERT_EQ(dst[i], static_cast<float>(i));
+    for (int i = 0; i < 16; ++i) ASSERT_EQ(dst[i], static_cast<float>(i));
 }
 
 TEST(ring_buffer_overflow_does_not_write_beyond_capacity) {
@@ -196,6 +195,6 @@ TEST(ring_buffer_preallocate_prevents_starvation_on_first_callback) {
     RingBufferHarness rb;
     std::vector<float> dst(256, 9.9f);
     bool ok = rb.drain(dst.data(), 256);
-    ASSERT_FALSE(ok);   // starved — silence returned, no crash
+    ASSERT_FALSE(ok);  // starved — silence returned, no crash
     ASSERT_EQ(dst[0], 0.0f);
 }

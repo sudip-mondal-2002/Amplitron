@@ -10,54 +10,54 @@
 namespace Amplitron {
 
 class AudioGraph {
-public:
-  AudioGraph() = default;
-  ~AudioGraph() = default;
+   public:
+    AudioGraph() = default;
+    ~AudioGraph() = default;
 
-  // Graph Construction Interface
-  int add_node(const std::string &name, NodeRoutingType type,
-               std::shared_ptr<Effect> pedal = nullptr, int num_inputs = 0);
-  bool remove_node(int node_id);
-  int add_link(int source_pin_id, int dest_pin_id);
-  bool remove_link(int link_id);
+    // Graph Construction Interface
+    int add_node(const std::string &name, NodeRoutingType type,
+                 std::shared_ptr<Effect> pedal = nullptr, int num_inputs = 0);
+    bool remove_node(int node_id);
+    int add_link(int source_pin_id, int dest_pin_id);
+    bool remove_link(int link_id);
 
-  void set_node_as_input(int node_id, bool is_input);
-  void set_node_as_output(int node_id, bool is_output);
-  void set_node_position(int node_id, float x, float y);
+    void set_node_as_input(int node_id, bool is_input);
+    void set_node_as_output(int node_id, bool is_output);
+    void set_node_position(int node_id, float x, float y);
 
-  // Topological Order & Loop Validation Core
-  bool rebuild_topology();
+    // Topological Order & Loop Validation Core
+    bool rebuild_topology();
 
-  // For Undo/Redo System (forces cache reload)
-  void restore_node(const DSPNode& node);
-  void restore_link(const GraphLink& link);
+    // For Undo/Redo System (forces cache reload)
+    void restore_node(const DSPNode &node);
+    void restore_link(const GraphLink &link);
 
-  // Dynamic Mixer API
-  bool add_input_pin(int node_id);
-  bool remove_input_pin(int node_id, int pin_id = -1);
-  void set_mixer_input_gain(int node_id, size_t pin_index, float gain);
-  void restore_input_pin(int node_id, int pin_id, int index, float gain);
+    // Dynamic Mixer API
+    bool add_input_pin(int node_id);
+    bool remove_input_pin(int node_id, int pin_id = -1);
+    void set_mixer_input_gain(int node_id, size_t pin_index, float gain);
+    void restore_input_pin(int node_id, int pin_id, int index, float gain);
 
-  // Dynamic Splitter API
-  bool add_output_pin(int node_id);
-  bool remove_output_pin(int node_id, int pin_id = -1);
-  void restore_output_pin(int node_id, int pin_id, int index);
+    // Dynamic Splitter API
+    bool add_output_pin(int node_id);
+    bool remove_output_pin(int node_id, int pin_id = -1);
+    void restore_output_pin(int node_id, int pin_id, int index);
 
-  // Accessors
-  const std::vector<int> &get_sorted_nodes() const { return sorted_node_ids_; }
-  const std::vector<DSPNode> &get_nodes() const { return nodes_; }
-  const std::vector<GraphLink> &get_links() const { return links_; }
+    // Accessors
+    const std::vector<int> &get_sorted_nodes() const { return sorted_node_ids_; }
+    const std::vector<DSPNode> &get_nodes() const { return nodes_; }
+    const std::vector<GraphLink> &get_links() const { return links_; }
 
-  int get_node_from_pin(int pin_id) const;
-  const DSPNode *find_node(int node_id) const;
+    int get_node_from_pin(int pin_id) const;
+    const DSPNode *find_node(int node_id) const;
 
-private:
-  size_t get_node_index(int node_id) const;
+   private:
+    size_t get_node_index(int node_id) const;
 
-  int next_id_ = 1;
-  std::vector<DSPNode> nodes_;
-  std::vector<GraphLink> links_;
-  std::vector<int> sorted_node_ids_;
+    int next_id_ = 1;
+    std::vector<DSPNode> nodes_;
+    std::vector<GraphLink> links_;
+    std::vector<int> sorted_node_ids_;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

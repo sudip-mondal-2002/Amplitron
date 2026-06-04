@@ -1,6 +1,8 @@
 #include "audio/effects/pitch/pitch_shifter.h"
-#include "audio/effects/core/effect_factory.h"
+
 #include <cmath>
+
+#include "audio/effects/core/effect_factory.h"
 
 namespace Amplitron {
 
@@ -8,8 +10,8 @@ static EffectRegistrar<PitchShifter> reg("Pitch Shifter");
 
 // Param indices
 static constexpr int P_SHIFT = 0;
-static constexpr int P_FINE  = 1;
-static constexpr int P_MIX   = 2;
+static constexpr int P_FINE = 1;
+static constexpr int P_MIX = 2;
 
 // Grain window size in seconds (~23 ms at 48kHz = 1024 samples)
 static constexpr float GRAIN_WINDOW_SEC = 0.023f;
@@ -21,7 +23,6 @@ static float wrap_phase(float phase, int buf_size) {
 }
 
 void PitchShifter::build_hann_lut() {
-
     for (size_t i = 0; i < hann_lut_.size(); ++i) {
         // Calculates the Hann window curve once and stores it.
         // Assumes TWO_PI is already defined
@@ -33,9 +34,9 @@ PitchShifter::PitchShifter() {
     params_ = {
         {"Shift", 0.0f, -12.0f, 12.0f, 0.0f, "st",
          "Pitch shift in semitones. Negative shifts down, positive shifts up. 12 = one octave."},
-        {"Fine",  0.0f, -50.0f, 50.0f, 0.0f, "ct",
+        {"Fine", 0.0f, -50.0f, 50.0f, 0.0f, "ct",
          "Fine-tune adjustment in cents (hundredths of a semitone) for precise detuning."},
-        {"Mix",   0.0f,   0.0f,  1.0f, 0.0f, "",
+        {"Mix", 0.0f, 0.0f, 1.0f, 0.0f, "",
          "Dry/wet blend. 0 = fully dry, 1 = fully pitch-shifted."},
     };
 
@@ -66,17 +67,18 @@ void PitchShifter::process(float* buffer, int num_samples) {
     if (!enabled_) return;
 
     if (mix_smooth_ < 0.001f && params_[P_MIX].value < 0.001f) {
-        // We process in-place, so the input buffer is already the output buffer. 
+        // We process in-place, so the input buffer is already the output buffer.
         // Exit immediately
-        return; 
+        return;
     }
-    
+
     // Smooth parameters
     // Hoisting: Calculate smoothing and std::pow ONCE per block, not per sample
-    const float block_alpha = 1.0f - std::exp(-static_cast<float>(num_samples) / (sample_rate_ * 0.010f));
+    const float block_alpha =
+        1.0f - std::exp(-static_cast<float>(num_samples) / (sample_rate_ * 0.010f));
     shift_smooth_ += block_alpha * (params_[P_SHIFT].value - shift_smooth_);
-    fine_smooth_  += block_alpha * (params_[P_FINE].value  - fine_smooth_);
-    mix_smooth_   += block_alpha * (params_[P_MIX].value   - mix_smooth_);
+    fine_smooth_ += block_alpha * (params_[P_FINE].value - fine_smooth_);
+    mix_smooth_ += block_alpha * (params_[P_MIX].value - mix_smooth_);
 
     // Total shift in semitones (coarse + fine)
     float total_semitones = shift_smooth_ + fine_smooth_ / 100.0f;
@@ -89,7 +91,6 @@ void PitchShifter::process(float* buffer, int num_samples) {
     // We want the *offset* from write to change, so increment = 1 - ratio
     // gives us the drift rate of the read pointer relative to write.
     float drift = 1.0f - ratio;
-
 
     for (int i = 0; i < num_samples; ++i) {
         const float dry = buffer[i];
@@ -147,4 +148,4 @@ void PitchShifter::reset() {
     mix_smooth_ = params_[P_MIX].value;
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

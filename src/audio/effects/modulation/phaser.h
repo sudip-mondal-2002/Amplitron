@@ -5,8 +5,9 @@
 // dry + wet creates notches where phase cancellation occurs. The LFO modulates
 // the all-pass coefficient so notch frequencies sweep over time.
 
-#include "audio/effects/core/effect.h"
 #include <array>
+
+#include "audio/effects/core/effect.h"
 
 namespace Amplitron {
 
@@ -15,7 +16,7 @@ namespace Amplitron {
  * Supports 4, 6, 8, or 12 stages (classic MXR Phase 90 to studio phasers).
  */
 class Phaser : public Effect {
-public:
+   public:
     Phaser();
     void process(float* buffer, int num_samples) override;
     void process_stereo(float* left, float* right, int num_samples) override;
@@ -26,11 +27,11 @@ public:
     std::vector<EffectParam>& params() override { return params_; }
     const std::vector<EffectParam>& params() const override { return params_; }
 
-private:
+   private:
     std::vector<EffectParam> params_;
 
     float lfo_phase_ = 0.0f;
-    float feedback_state_   = 0.0f;
+    float feedback_state_ = 0.0f;
     float feedback_state_r_ = 0.0f;  // right-channel APF feedback
 
     static constexpr int MAX_STAGES = 12;
@@ -41,4 +42,4 @@ private:
     std::array<float, MAX_STAGES> apf_yprev_r_{};
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

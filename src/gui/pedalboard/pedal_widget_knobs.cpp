@@ -1,16 +1,17 @@
+#include <algorithm>
+#include <cmath>
+
+#include "audio/engine/audio_engine.h"
+#include "gui/components/knob.h"
 #include "gui/pedalboard/pedal_widget.h"
+#include "gui/theme/theme.h"
 #include "gui/views/gui_midi.h"
 #include "midi/midi_manager.h"
-#include "audio/engine/audio_engine.h"
-#include "gui/theme/theme.h"
-#include "gui/components/knob.h"
-
-#include <cmath>
-#include <algorithm>
 
 namespace Amplitron {
 
-void PedalWidget::render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, bool is_amp, bool is_tuner, bool is_ir_cab, float zoom) {
+void PedalWidget::render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, bool is_amp,
+                               bool is_tuner, bool is_ir_cab, float zoom) {
     float knob_y_start = p0.y + Theme::KNOB_Y_START * zoom;
     if (is_ir_cab) knob_y_start = p0.y + 180 * zoom;
     auto& params = effect_->params();
@@ -21,7 +22,7 @@ void PedalWidget::render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, boo
         num_params = std::max(0, num_params - 1);
     }
 
-    float knob_radius    = Theme::KNOB_RADIUS * zoom;
+    float knob_radius = Theme::KNOB_RADIUS * zoom;
     float knob_spacing_x = Theme::KNOB_SPACING_X * zoom;
     float knob_spacing_y = Theme::KNOB_SPACING_Y * zoom;
 
@@ -33,9 +34,8 @@ void PedalWidget::render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, boo
         int row = i / 2;
 
         bool is_last_alone = (i == num_params - 1) && (num_params % 2 == 1);
-        float kx = is_last_alone
-            ? p0.x + (pedal_width - knob_spacing_x) * 0.5f
-            : knob_grid_left + col * knob_spacing_x;
+        float kx = is_last_alone ? p0.x + (pedal_width - knob_spacing_x) * 0.5f
+                                 : knob_grid_left + col * knob_spacing_x;
         float ky = knob_y_start + row * knob_spacing_y;
 
         ImVec2 knob_center = ImVec2(kx + knob_spacing_x * 0.5f, ky + knob_radius + 2 * zoom);
@@ -104,4 +104,4 @@ void PedalWidget::render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, boo
     }
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

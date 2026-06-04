@@ -1,16 +1,16 @@
 #include "audio/dsp/convolution_engine.h"
-#include "kiss_fft.h"
-#include <cstring>
-#include <cmath>
+
 #include <algorithm>
+#include <cmath>
+#include <cstring>
+
+#include "kiss_fft.h"
 
 namespace Amplitron {
 
 // Helper: complex multiply-accumulate (accum += a * b)
-static void complex_multiply_accumulate(kiss_fft_cpx* accum,
-                                         const kiss_fft_cpx* a,
-                                         const kiss_fft_cpx* b,
-                                         int n) {
+static void complex_multiply_accumulate(kiss_fft_cpx* accum, const kiss_fft_cpx* a,
+                                        const kiss_fft_cpx* b, int n) {
     for (int i = 0; i < n; ++i) {
         accum[i].r += a[i].r * b[i].r - a[i].i * b[i].i;
         accum[i].i += a[i].r * b[i].i + a[i].i * b[i].r;
@@ -21,13 +21,11 @@ static void complex_multiply_accumulate(kiss_fft_cpx* accum,
 // ConvolutionKernel
 // =============================================================================
 
-ConvolutionKernel::ConvolutionKernel(const std::vector<float>& ir_samples,
-                                     int block_size)
-    : block_size_(block_size)
-    , fft_size_(block_size * 2)
-    , ir_length_(static_cast<int>(ir_samples.size()))
-    , ir_time_(ir_samples) {
-
+ConvolutionKernel::ConvolutionKernel(const std::vector<float>& ir_samples, int block_size)
+    : block_size_(block_size),
+      fft_size_(block_size * 2),
+      ir_length_(static_cast<int>(ir_samples.size())),
+      ir_time_(ir_samples) {
     if (ir_samples.empty() || block_size <= 0) {
         num_partitions_ = 0;
         return;
@@ -63,8 +61,7 @@ ConvolutionKernel::ConvolutionKernel(const std::vector<float>& ir_samples,
         // Store the frequency-domain partition
         size_t byte_size = sizeof(kiss_fft_cpx) * static_cast<size_t>(fft_size_);
         partitions_freq_[static_cast<size_t>(p)].resize(byte_size);
-        std::memcpy(partitions_freq_[static_cast<size_t>(p)].data(),
-                    freq_buf.data(), byte_size);
+        std::memcpy(partitions_freq_[static_cast<size_t>(p)].data(), freq_buf.data(), byte_size);
     }
 }
 
@@ -83,9 +80,7 @@ const void* ConvolutionKernel::partition_freq(int index) const {
 
 ConvolutionEngine::ConvolutionEngine() = default;
 
-ConvolutionEngine::~ConvolutionEngine() {
-    cleanup_fft();
-}
+ConvolutionEngine::~ConvolutionEngine() { cleanup_fft(); }
 
 void ConvolutionEngine::init_fft(int fft_size) {
     cleanup_fft();
@@ -95,8 +90,14 @@ void ConvolutionEngine::init_fft(int fft_size) {
 }
 
 void ConvolutionEngine::cleanup_fft() {
-    if (fft_cfg_) { kiss_fft_free(fft_cfg_); fft_cfg_ = nullptr; }
-    if (ifft_cfg_) { kiss_fft_free(ifft_cfg_); ifft_cfg_ = nullptr; }
+    if (fft_cfg_) {
+        kiss_fft_free(fft_cfg_);
+        fft_cfg_ = nullptr;
+    }
+    if (ifft_cfg_) {
+        kiss_fft_free(ifft_cfg_);
+        ifft_cfg_ = nullptr;
+    }
     current_fft_size_ = 0;
 }
 
@@ -128,7 +129,7 @@ void ConvolutionEngine::reset() {
     }
 
     // Initialize frequency-domain delay line
-    if (fft_size <= 0 || fft_size > 65536) return; // Sanity check
+    if (fft_size <= 0 || fft_size > 65536) return;  // Sanity check
 
     size_t cpx_bytes = sizeof(kiss_fft_cpx) * static_cast<size_t>(fft_size);
     fdl_.resize(static_cast<size_t>(num_parts));
@@ -238,8 +239,7 @@ void ConvolutionEngine::process(float* buffer, int num_samples) {
     }
 
     // 2. Forward FFT of input -> store in FDL at current index
-    auto* fdl_data = reinterpret_cast<kiss_fft_cpx*>(
-        fdl_[static_cast<size_t>(fdl_index_)].data());
+    auto* fdl_data = reinterpret_cast<kiss_fft_cpx*>(fdl_[static_cast<size_t>(fdl_index_)].data());
     kiss_fft(fft_cfg_, input_cpx, fdl_data);
 
     // 3. Complex multiply-accumulate across all partitions
@@ -249,10 +249,9 @@ void ConvolutionEngine::process(float* buffer, int num_samples) {
     for (int k = 0; k < num_parts; ++k) {
         // FDL index for partition k (circular)
         int fdl_idx = (fdl_index_ - k + num_parts) % num_parts;
-        const auto* fdl_block = reinterpret_cast<const kiss_fft_cpx*>(
-            fdl_[static_cast<size_t>(fdl_idx)].data());
-        const auto* ir_block = reinterpret_cast<const kiss_fft_cpx*>(
-            kernel_->partition_freq(k));
+        const auto* fdl_block =
+            reinterpret_cast<const kiss_fft_cpx*>(fdl_[static_cast<size_t>(fdl_idx)].data());
+        const auto* ir_block = reinterpret_cast<const kiss_fft_cpx*>(kernel_->partition_freq(k));
 
         complex_multiply_accumulate(accum, fdl_block, ir_block, fft_size);
     }
@@ -266,18 +265,16 @@ void ConvolutionEngine::process(float* buffer, int num_samples) {
 
     // 5. Output = first block_size samples + overlap from previous block
     for (int i = 0; i < block_size; ++i) {
-        buffer[i] = ifft_out[static_cast<size_t>(i)].r * norm +
-                    overlap_[static_cast<size_t>(i)];
+        buffer[i] = ifft_out[static_cast<size_t>(i)].r * norm + overlap_[static_cast<size_t>(i)];
     }
 
     // 6. Store new overlap (last block_size samples of IFFT result)
     for (int i = 0; i < block_size; ++i) {
-        overlap_[static_cast<size_t>(i)] =
-            ifft_out[static_cast<size_t>(block_size + i)].r * norm;
+        overlap_[static_cast<size_t>(i)] = ifft_out[static_cast<size_t>(block_size + i)].r * norm;
     }
 
     // 7. Advance FDL index
     fdl_index_ = (fdl_index_ + 1) % num_parts;
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

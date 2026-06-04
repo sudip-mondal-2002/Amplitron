@@ -1,23 +1,24 @@
 #pragma once
 
-#include "audio/effects/core/effect.h"
-#include <memory>
-#include <atomic>
-#include <vector>
 #include <algorithm>
+#include <atomic>
 #include <cstring>
+#include <memory>
+#include <vector>
+
+#include "audio/effects/core/effect.h"
 
 namespace Amplitron {
 
 /**
- * @brief Decorator/wrapper class that wraps any IProcessor (or Effect) 
+ * @brief Decorator/wrapper class that wraps any IProcessor (or Effect)
  * to handle bypass (enabled/disabled) and wet/dry mix computation in a clean, unified way.
- * 
+ *
  * Satisfies the Single Responsibility Principle (SRP) by offloading bypass/mixing
  * math from individual DSP algorithms.
  */
 class EffectNode : public IProcessor {
-public:
+   public:
     explicit EffectNode(std::shared_ptr<IProcessor> processor)
         : processor_(std::move(processor)), enabled_(true), mix_(1.0f) {
         dry_buffer_.resize(4096, 0.0f);
@@ -33,7 +34,7 @@ public:
 
     void process(float* buffer, int num_samples) override {
         if (!enabled_.load(std::memory_order_relaxed)) {
-            return; // bypassed
+            return;  // bypassed
         }
 
         if (mix_.load(std::memory_order_relaxed) >= 1.0f) {
@@ -53,7 +54,7 @@ public:
 
     void process_stereo(float* left, float* right, int num_samples) override {
         if (!enabled_.load(std::memory_order_relaxed)) {
-            return; // bypassed
+            return;  // bypassed
         }
 
         if (mix_.load(std::memory_order_relaxed) >= 1.0f) {
@@ -73,35 +74,23 @@ public:
         }
     }
 
-    void set_sample_rate(int sample_rate) override {
-        processor_->set_sample_rate(sample_rate);
-    }
+    void set_sample_rate(int sample_rate) override { processor_->set_sample_rate(sample_rate); }
 
-    void reset() override {
-        processor_->reset();
-    }
+    void reset() override { processor_->reset(); }
 
-    void set_enabled(bool enabled) {
-        enabled_.store(enabled, std::memory_order_relaxed);
-    }
+    void set_enabled(bool enabled) { enabled_.store(enabled, std::memory_order_relaxed); }
 
-    bool is_enabled() const {
-        return enabled_.load(std::memory_order_relaxed);
-    }
+    bool is_enabled() const { return enabled_.load(std::memory_order_relaxed); }
 
     void set_mix(float mix) {
         mix_.store(std::max(0.0f, std::min(1.0f, mix)), std::memory_order_relaxed);
     }
 
-    float get_mix() const {
-        return mix_.load(std::memory_order_relaxed);
-    }
+    float get_mix() const { return mix_.load(std::memory_order_relaxed); }
 
-    IProcessor* get_processor() const {
-        return processor_.get();
-    }
+    IProcessor* get_processor() const { return processor_.get(); }
 
-private:
+   private:
     std::shared_ptr<IProcessor> processor_;
     std::atomic<bool> enabled_;
     std::atomic<float> mix_;
@@ -110,4 +99,4 @@ private:
     std::vector<float> dry_r_buffer_;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

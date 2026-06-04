@@ -1,9 +1,10 @@
 #pragma once
 
-#include "audio/effects/core/effect.h"
-#include "audio/dsp/envelope_follower.h"
-#include "audio/dsp/biquad.h"
 #include <atomic>
+
+#include "audio/dsp/biquad.h"
+#include "audio/dsp/envelope_follower.h"
+#include "audio/effects/core/effect.h"
 
 namespace Amplitron {
 
@@ -18,7 +19,7 @@ struct ButterworthLP {
         float w0 = TWO_PI * cutoff / sample_rate;
         float cos_w0 = std::cos(w0);
         float sin_w0 = std::sin(w0);
-        float alpha = sin_w0 / (2.0f * 0.70710678f); // Q = 1/sqrt(2)
+        float alpha = sin_w0 / (2.0f * 0.70710678f);  // Q = 1/sqrt(2)
         float a0 = 1.0f + alpha;
 
         float b0 = (1.0f - cos_w0) / 2.0f;
@@ -34,9 +35,7 @@ struct ButterworthLP {
         b1.a2 = b2.a2 = a2 / a0;
     }
 
-    float process(float x) {
-        return b2.process(b1.process(x));
-    }
+    float process(float x) { return b2.process(b1.process(x)); }
 
     void reset() {
         b1.reset();
@@ -55,7 +54,7 @@ struct ButterworthHP {
         float w0 = TWO_PI * cutoff / sample_rate;
         float cos_w0 = std::cos(w0);
         float sin_w0 = std::sin(w0);
-        float alpha = sin_w0 / (2.0f * 0.70710678f); // Q = 1/sqrt(2)
+        float alpha = sin_w0 / (2.0f * 0.70710678f);  // Q = 1/sqrt(2)
         float a0 = 1.0f + alpha;
 
         float b0 = (1.0f + cos_w0) / 2.0f;
@@ -71,9 +70,7 @@ struct ButterworthHP {
         b1.a2 = b2.a2 = a2 / a0;
     }
 
-    float process(float x) {
-        return b2.process(b1.process(x));
-    }
+    float process(float x) { return b2.process(b1.process(x)); }
 
     void reset() {
         b1.reset();
@@ -87,7 +84,7 @@ struct ButterworthHP {
  * Each band is compressed independently and summed back to the output.
  */
 class MultiBandCompressor : public Effect {
-public:
+   public:
     MultiBandCompressor();
     void process(float* buffer, int num_samples) override;
     void reset() override;
@@ -103,7 +100,7 @@ public:
         return gain_reduction_db_[band].load(std::memory_order_relaxed);
     }
 
-private:
+   private:
     std::vector<EffectParam> params_;
 
     // Crossover filters (LR4 crossovers)
@@ -131,4 +128,4 @@ private:
     void recompute_coefficients();
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

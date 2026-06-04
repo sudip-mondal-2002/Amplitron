@@ -1,7 +1,8 @@
 #pragma once
 
-#include <string>
 #include <nlohmann/json.hpp>
+#include <string>
+
 #include "preset_manager.h"
 
 namespace Amplitron {
@@ -36,4 +37,4 @@ void from_json(const nlohmann::json& j, PresetData::EffectData& fx);
 void to_json(nlohmann::json& j, const PresetData& preset);
 void from_json(const nlohmann::json& j, PresetData& preset);
 
-} // namespace Amplitron
+}  // namespace Amplitron

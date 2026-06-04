@@ -1,13 +1,14 @@
 #pragma once
 
-#include "common.h"
 #include <atomic>
+
 #include "audio/engine/i_metronome.h"
+#include "common.h"
 
 namespace Amplitron {
 
 class Metronome : public IMetronome {
-public:
+   public:
     Metronome();
     ~Metronome() override = default;
 
@@ -27,7 +28,7 @@ public:
     // Generate next click sample
     float next_sample() override;
 
-private:
+   private:
     void update_timing();
 
     std::atomic<bool> enabled_{false};
@@ -55,4 +56,4 @@ private:
     float metronome_click_decay_ = 0.0f;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

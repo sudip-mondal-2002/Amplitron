@@ -5,13 +5,13 @@
 // filtered by the tone stage and level-scaled; this creates odd harmonics as
 // the transfer function flattens near the clipping threshold.
 
-#include "audio/effects/core/effect.h"
 #include "audio/dsp/biquad.h"
+#include "audio/effects/core/effect.h"
 
 namespace Amplitron {
 
 class Distortion : public Effect {
-public:
+   public:
     // Create a distortion effect with drive, tone, and output gain controls.
     Distortion();
     // Apply the distortion curve and filtering to a mono audio buffer.
@@ -25,14 +25,14 @@ public:
     std::vector<EffectParam>& params() override { return params_; }
     const std::vector<EffectParam>& params() const override { return params_; }
 
-private:
+   private:
     std::vector<EffectParam> params_;
     OnePole tone_lp_;
 
     // One-pole smoothing states (avoids zipper noise on parameter changes)
     float drive_smoothed_ = 2.0f;
-    float tone_smoothed_  = 0.6f;
+    float tone_smoothed_ = 0.6f;
     float level_smoothed_ = 0.5f;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

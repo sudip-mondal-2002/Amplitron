@@ -1,15 +1,16 @@
 #pragma once
 
-#include "audio/engine/i_audio_engine.h"
-#include "midi/i_midi_manager.h"
-#include "presets/i_preset_manager.h"
-#include "audio/engine/audio_engine.h"
-#include "midi/midi_manager.h"
-#include "presets/preset_manager.h"
-#include "gui/commands/command_history.h"
-#include "gui/state/snapshot_manager.h"
 #include <memory>
 #include <stdexcept>
+
+#include "audio/engine/audio_engine.h"
+#include "audio/engine/i_audio_engine.h"
+#include "gui/commands/command_history.h"
+#include "gui/state/snapshot_manager.h"
+#include "midi/i_midi_manager.h"
+#include "midi/midi_manager.h"
+#include "presets/i_preset_manager.h"
+#include "presets/preset_manager.h"
 
 namespace Amplitron {
 
@@ -18,10 +19,11 @@ namespace Amplitron {
  * Satisfies the Facade Pattern and the Dependency Inversion Principle (DIP).
  */
 class AmplitronSession {
-public:
-    AmplitronSession(std::unique_ptr<IAudioEngine> engine = std::make_unique<AudioEngine>(),
-                     std::unique_ptr<IMidiManager> midi = std::make_unique<MidiManager>(),
-                     std::unique_ptr<IPresetManager> presets = std::make_unique<PresetManagerService>()) {
+   public:
+    AmplitronSession(
+        std::unique_ptr<IAudioEngine> engine = std::make_unique<AudioEngine>(),
+        std::unique_ptr<IMidiManager> midi = std::make_unique<MidiManager>(),
+        std::unique_ptr<IPresetManager> presets = std::make_unique<PresetManagerService>()) {
         if (!engine) {
             throw std::invalid_argument("engine cannot be null");
         }
@@ -58,7 +60,7 @@ public:
     CommandHistory& command_history() { return command_history_; }
     SnapshotManager& snapshot_manager() { return snapshot_manager_; }
 
-private:
+   private:
     std::unique_ptr<IAudioEngine> engine_;
     std::unique_ptr<IMidiManager> midi_;
     std::unique_ptr<IPresetManager> presets_;
@@ -66,4 +68,4 @@ private:
     SnapshotManager snapshot_manager_;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

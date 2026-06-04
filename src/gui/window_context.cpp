@@ -1,16 +1,18 @@
 #include "gui/window_context.h"
-#include "gui/theme/theme.h"
-#include "gui/gl_setup.h"
-#include "gui/state/gui_graph_state.h"
 
-#include <imgui.h>
-#include <imgui_impl_sdl2.h>
-#include <imgui_impl_opengl3.h>
 #include <SDL2/SDL.h>
+#include <imgui.h>
+#include <imgui_impl_opengl3.h>
+#include <imgui_impl_sdl2.h>
+
 #include <iostream>
 
+#include "gui/gl_setup.h"
+#include "gui/state/gui_graph_state.h"
+#include "gui/theme/theme.h"
+
 #ifdef __EMSCRIPTEN__
-#  include <emscripten.h>
+#include <emscripten.h>
 #endif
 
 #pragma GCC diagnostic push
@@ -27,9 +29,7 @@ namespace Amplitron {
 
 WindowContext::WindowContext() = default;
 
-WindowContext::~WindowContext() {
-    shutdown();
-}
+WindowContext::~WindowContext() { shutdown(); }
 
 bool WindowContext::initialize(int width, int height, const std::string& title) {
     width_ = width;
@@ -48,12 +48,9 @@ bool WindowContext::initialize(int width, int height, const std::string& title) 
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
-    window_ = SDL_CreateWindow(
-        title.c_str(),
-        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        width_, height_,
-        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
-    );
+    window_ = SDL_CreateWindow(title.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                               width_, height_,
+                               SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 
     if (!window_) {
         std::cerr << "SDL_CreateWindow failed: " << SDL_GetError() << std::endl;
@@ -70,7 +67,7 @@ bool WindowContext::initialize(int width, int height, const std::string& title) 
         return false;
     }
     SDL_GL_MakeCurrent(window_, gl_context_);
-    SDL_GL_SetSwapInterval(1); // vsync
+    SDL_GL_SetSwapInterval(1);  // vsync
 
     // Initialize ImGui
     IMGUI_CHECKVERSION();
@@ -99,8 +96,7 @@ void WindowContext::load_fonts() {
     dpi_scale_ = 1.0f;
     int draw_w = width_, draw_h = height_;
     SDL_GL_GetDrawableSize(window_, &draw_w, &draw_h);
-    if (width_ > 0)
-        dpi_scale_ = static_cast<float>(draw_w) / static_cast<float>(width_);
+    if (width_ > 0) dpi_scale_ = static_cast<float>(draw_w) / static_cast<float>(width_);
 
 #ifdef __EMSCRIPTEN__
     if (dpi_scale_ <= 1.0f) {
@@ -113,12 +109,11 @@ void WindowContext::load_fonts() {
     ImGuiIO& io = ImGui::GetIO();
 
     const float base_font_size = 14.0f;
-    const float scaled_size    = base_font_size * dpi_scale_;
+    const float scaled_size = base_font_size * dpi_scale_;
 
     ImFont* loaded_font = nullptr;
     auto try_font = [&](const std::string& path) {
-        if (!loaded_font)
-            loaded_font = io.Fonts->AddFontFromFileTTF(path.c_str(), scaled_size);
+        if (!loaded_font) loaded_font = io.Fonts->AddFontFromFileTTF(path.c_str(), scaled_size);
     };
 
     char* base_path = SDL_GetBasePath();
@@ -147,25 +142,20 @@ void WindowContext::load_icon() {
         SDL_free(base);
     }
     NSVGimage* svg = nullptr;
-    if (!icon_path.empty())
-        svg = nsvgParseFromFile(icon_path.c_str(), "px", 96.0f);
-    if (!svg)
-        svg = nsvgParseFromFile("../assets/icon.svg", "px", 96.0f);
-    if (!svg)
-        svg = nsvgParseFromFile("assets/icon.svg", "px", 96.0f);
+    if (!icon_path.empty()) svg = nsvgParseFromFile(icon_path.c_str(), "px", 96.0f);
+    if (!svg) svg = nsvgParseFromFile("../assets/icon.svg", "px", 96.0f);
+    if (!svg) svg = nsvgParseFromFile("assets/icon.svg", "px", 96.0f);
     if (svg) {
         const int icon_size = 64;
         NSVGrasterizer* rast = nsvgCreateRasterizer();
         if (rast) {
             unsigned char* img = new unsigned char[icon_size * icon_size * 4];
-            nsvgRasterize(rast, svg, 0, 0,
-                         icon_size / svg->width,
-                         img, icon_size, icon_size,
-                         icon_size * 4);
+            nsvgRasterize(rast, svg, 0, 0, icon_size / svg->width, img, icon_size, icon_size,
+                          icon_size * 4);
 
-            SDL_Surface* icon = SDL_CreateRGBSurfaceFrom(
-                img, icon_size, icon_size, 32, icon_size * 4,
-                0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
+            SDL_Surface* icon =
+                SDL_CreateRGBSurfaceFrom(img, icon_size, icon_size, 32, icon_size * 4, 0x000000FF,
+                                         0x0000FF00, 0x00FF0000, 0xFF000000);
             if (icon) {
                 SDL_SetWindowIcon(window_, icon);
                 SDL_FreeSurface(icon);
@@ -203,8 +193,7 @@ bool WindowContext::poll_events() {
     while (SDL_PollEvent(&event)) {
         ImGui_ImplSDL2_ProcessEvent(&event);
         if (event.type == SDL_QUIT) return false;
-        if (event.type == SDL_WINDOWEVENT &&
-            event.window.event == SDL_WINDOWEVENT_CLOSE &&
+        if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE &&
             event.window.windowID == SDL_GetWindowID(window_))
             return false;
     }
@@ -231,4 +220,4 @@ void WindowContext::end_frame() {
     SDL_GL_SwapWindow(window_);
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

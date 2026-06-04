@@ -1,10 +1,11 @@
-#include "test_framework.h"
-#include "test_fixtures.h"
-#include "audio/effects/modulation/chorus.h"
-#include "audio/effects/modulation/phaser.h"
-#include "audio/effects/modulation/flanger.h"
-#include <cstring>
 #include <cmath>
+#include <cstring>
+
+#include "audio/effects/modulation/chorus.h"
+#include "audio/effects/modulation/flanger.h"
+#include "audio/effects/modulation/phaser.h"
+#include "test_fixtures.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 
@@ -219,9 +220,9 @@ TEST_F(EffectsTest, flanger_wet_differs_from_dry) {
     fl.reset();
     fl.set_enabled(true);
 
-    fl.params()[0].value = 1.0f; // Rate
-    fl.params()[1].value = 5.0f; // Depth
-    fl.params()[4].value = 0.5f; // Mix
+    fl.params()[0].value = 1.0f;  // Rate
+    fl.params()[1].value = 5.0f;  // Depth
+    fl.params()[4].value = 0.5f;  // Mix
 
     fill_sine(440.0f);
     copy_input_to_output();

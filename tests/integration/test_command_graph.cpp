@@ -1,8 +1,8 @@
-#include "test_framework.h"
+#include "audio/engine/audio_engine.h"
 #include "gui/commands/command_graph.h"
 #include "gui/commands/command_history.h"
-#include "audio/engine/audio_engine.h"
 #include "gui/state/gui_graph_state.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 
@@ -10,7 +10,8 @@ TEST(AddGraphNodeCommand_executes_and_undoes_correctly) {
     AudioEngine engine;
     CommandHistory history(100);
 
-    auto cmd = std::make_unique<AddGraphNodeCommand>(engine, "TestNode", NodeRoutingType::Splitter, nullptr, ImVec2(100, 100));
+    auto cmd = std::make_unique<AddGraphNodeCommand>(engine, "TestNode", NodeRoutingType::Splitter,
+                                                     nullptr, ImVec2(100, 100));
     history.execute(std::move(cmd));
 
     auto& graph = engine.graph();
@@ -39,13 +40,14 @@ TEST(AddGraphNodeCommand_skips_position_tracking_on_zero_coords) {
     CommandHistory history(100);
 
     // Provide exactly (0,0) to trigger auto-placement bypass
-    auto cmd = std::make_unique<AddGraphNodeCommand>(engine, "AutoNode", NodeRoutingType::StandardEffect, nullptr, ImVec2(0, 0));
+    auto cmd = std::make_unique<AddGraphNodeCommand>(
+        engine, "AutoNode", NodeRoutingType::StandardEffect, nullptr, ImVec2(0, 0));
     history.execute(std::move(cmd));
 
     auto& graph = engine.graph();
     ASSERT_EQ(1, graph.get_nodes().size());
     int node_id = graph.get_nodes()[0].id;
-    
+
     // Position should NOT be inserted into the map for auto-placement
     ASSERT_FALSE(GuiGraphState::get_instance().node_positions.count(node_id));
 }
@@ -66,7 +68,8 @@ TEST(RemoveGraphNodeCommand_stores_severed_links_and_restores_them_on_undo) {
     ASSERT_EQ(2, graph.get_nodes().size());
     ASSERT_EQ(1, graph.get_links().size());
 
-    auto cmd = std::make_unique<RemoveGraphNodeCommand>(engine, n1, NodeRoutingType::Splitter, ImVec2(0, 0));
+    auto cmd = std::make_unique<RemoveGraphNodeCommand>(engine, n1, NodeRoutingType::Splitter,
+                                                        ImVec2(0, 0));
     history.execute(std::move(cmd));
 
     ASSERT_EQ(1, graph.get_nodes().size());
@@ -122,9 +125,9 @@ TEST(AddGraphLinkCommand_and_RemoveGraphLinkCommand) {
 TEST(MoveGraphNodeCommand_executes_and_undoes_correctly) {
     CommandHistory history(100);
     auto& state = GuiGraphState::get_instance();
-    
+
     int node_id = 999;
-    state.node_positions[node_id] = { ImVec2(10, 10), false };
+    state.node_positions[node_id] = {ImVec2(10, 10), false};
 
     auto cmd = std::make_unique<MoveGraphNodeCommand>(node_id, ImVec2(10, 10), ImVec2(50, 50));
     history.execute(std::move(cmd));
@@ -148,7 +151,8 @@ TEST(RemoveGraphNodeCommand_fails_on_missing_node_and_leaves_history_clean) {
     AudioEngine engine;
     CommandHistory history(100);
 
-    auto cmd = std::make_unique<RemoveGraphNodeCommand>(engine, 9999, NodeRoutingType::Splitter, ImVec2(0, 0));
+    auto cmd = std::make_unique<RemoveGraphNodeCommand>(engine, 9999, NodeRoutingType::Splitter,
+                                                        ImVec2(0, 0));
     history.execute(std::move(cmd));
 
     // The command should have returned false and thus NOT been added to history
@@ -198,16 +202,16 @@ TEST(RemoveGraphLinkCommand_fails_on_missing_link) {
 TEST(MoveGraphNodeCommand_fails_on_missing_node_or_identical_position) {
     CommandHistory history(100);
     auto& state = GuiGraphState::get_instance();
-    
+
     // 1. Fails on missing node
-    auto cmd1 = std::make_unique<MoveGraphNodeCommand>(8888, ImVec2(0,0), ImVec2(10,10));
+    auto cmd1 = std::make_unique<MoveGraphNodeCommand>(8888, ImVec2(0, 0), ImVec2(10, 10));
     history.execute(std::move(cmd1));
     ASSERT_EQ(0, history.undo_size());
 
     // 2. Fails on identical position
     int node_id = 7777;
-    state.node_positions[node_id] = { ImVec2(50, 50), false };
-    auto cmd2 = std::make_unique<MoveGraphNodeCommand>(node_id, ImVec2(50,50), ImVec2(50,50));
+    state.node_positions[node_id] = {ImVec2(50, 50), false};
+    auto cmd2 = std::make_unique<MoveGraphNodeCommand>(node_id, ImVec2(50, 50), ImVec2(50, 50));
     history.execute(std::move(cmd2));
     ASSERT_EQ(0, history.undo_size());
 

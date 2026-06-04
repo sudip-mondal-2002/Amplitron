@@ -21,7 +21,7 @@ namespace Amplitron {
  * Classic references: Boss OC-2, EHX Octave Multiplexer.
  */
 class Octaver : public Effect {
-public:
+   public:
     Octaver();
     void process(float* buffer, int num_samples) override;
     void set_sample_rate(int sample_rate) override;
@@ -31,16 +31,16 @@ public:
     std::vector<EffectParam>& params() override { return params_; }
     const std::vector<EffectParam>& params() const override { return params_; }
 
-private:
+   private:
     std::vector<EffectParam> params_;
 
     // Oct-1 state: flip-flop divider
-    float prev_sample_ = 0.0f;       // previous sample for zero-crossing detection
-    float flipflop_ = 1.0f;          // +1 or -1, toggles on hysteresis-gated positive zero crossings
+    float prev_sample_ = 0.0f;  // previous sample for zero-crossing detection
+    float flipflop_ = 1.0f;     // +1 or -1, toggles on hysteresis-gated positive zero crossings
 
     // Oct+1 state: DC blocker for full-wave rectified signal
-    float dc_x1_ = 0.0f;             // previous input to DC blocker
-    float dc_y1_ = 0.0f;             // previous output of DC blocker
+    float dc_x1_ = 0.0f;  // previous input to DC blocker
+    float dc_y1_ = 0.0f;  // previous output of DC blocker
 
     // Envelope follower for shaping synthesized octave signals
     float envelope_ = 0.0f;
@@ -51,4 +51,4 @@ private:
     float dry_smooth_ = 0.0f;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

@@ -1,10 +1,11 @@
-#include "test_framework.h"
-#include "test_fixtures.h"
-#include "audio/effects/eq_filter/equalizer.h"
-#include "audio/effects/amp_cab/cabinet_sim.h"
-#include "audio/effects/eq_filter/wah.h"
-#include <cstring>
 #include <cmath>
+#include <cstring>
+
+#include "audio/effects/amp_cab/cabinet_sim.h"
+#include "audio/effects/eq_filter/equalizer.h"
+#include "audio/effects/eq_filter/wah.h"
+#include "test_fixtures.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 
@@ -103,20 +104,20 @@ TEST_F(EffectsTest, wah_bandpass_tracks_sweep) {
         wah.set_sample_rate(SR);
         wah.reset();
         wah.set_mix(1.0f);
-        wah.params()[0].value = 0.0f; // manual mode
+        wah.params()[0].value = 0.0f;  // manual mode
         wah.params()[1].value = sweep_val;
-        wah.params()[2].value = 3.5f; // default resonance
+        wah.params()[2].value = 3.5f;  // default resonance
 
         float buf[4096];
         for (int i = 0; i < 4096; ++i) {
-            buf[i] = std::sin(2.0f * 3.14159265f * 2000.0f * i / SR); // 2 kHz probe tone
+            buf[i] = std::sin(2.0f * 3.14159265f * 2000.0f * i / SR);  // 2 kHz probe tone
         }
         wah.process(buf, 4096);
         return rms(buf, 4096);
     };
 
-    float rms_heel = measure_rms_at(0.0f); // centre ~350 Hz — 2 kHz is out-of-band
-    float rms_toe  = measure_rms_at(1.0f); // centre ~2500 Hz — 2 kHz is in-band
+    float rms_heel = measure_rms_at(0.0f);  // centre ~350 Hz — 2 kHz is out-of-band
+    float rms_toe = measure_rms_at(1.0f);   // centre ~2500 Hz — 2 kHz is in-band
 
     ASSERT_GT(rms_toe, rms_heel * 2.0f);
 }

@@ -1,8 +1,9 @@
-#include "test_framework.h"
-#include "audio/dsp/level_analyzer.h"
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+
+#include "audio/dsp/level_analyzer.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 
@@ -26,7 +27,8 @@ TEST(level_analyzer_normal_update_smoothing) {
     ASSERT_NEAR(la.smoothed_input_rms(), 0.11f, 1e-4f);
     ASSERT_NEAR(la.smoothed_output_rms(), 0.11f, 1e-4f);
 
-    // Peak hold should match smoothed RMS initially as peak_hold_ - decay*dt will be <= smoothed RMS
+    // Peak hold should match smoothed RMS initially as peak_hold_ - decay*dt will be <= smoothed
+    // RMS
     ASSERT_NEAR(la.input_peak_hold(), 0.11f, 1e-4f);
     ASSERT_NEAR(la.output_peak_hold(), 0.11f, 1e-4f);
 }
@@ -36,7 +38,7 @@ TEST(level_analyzer_peak_decay_and_clipping) {
 
     // Trigger clipping flash and set high initial RMS
     la.update(1.0f, 1.0f, true, true, 0.1f);
-    ASSERT_NEAR(la.input_clip_flash(), 0.8f, 1e-4f); // 1.0 - 0.1 * 2.0 = 0.8
+    ASSERT_NEAR(la.input_clip_flash(), 0.8f, 1e-4f);  // 1.0 - 0.1 * 2.0 = 0.8
     ASSERT_NEAR(la.output_clip_flash(), 0.8f, 1e-4f);
 
     float last_peak_in = la.input_peak_hold();
@@ -66,7 +68,8 @@ TEST(level_analyzer_invalid_inputs_nan_negative) {
     float valid_in_peak = la.input_peak_hold();
     float valid_out_peak = la.output_peak_hold();
 
-    // Construct runtime bitwise NaN and Infinity to prevent compile-time optimizations under -ffast-math
+    // Construct runtime bitwise NaN and Infinity to prevent compile-time optimizations under
+    // -ffast-math
     float nan_val;
     uint32_t nan_bits = 0x7FC00000;
     std::memcpy(&nan_val, &nan_bits, sizeof(float));

@@ -377,7 +377,7 @@ test.describe('Web MIDI Support', () => {
     await page.addInitScript(() => {
       // Store the captured listener
       let capturedListener: ((event: any) => void) | null = null;
-      
+
       // Create a mock input port that properly captures addEventListener calls
       const mockInput = {
         name: 'Mock MIDI Controller',
@@ -392,7 +392,7 @@ test.describe('Web MIDI Support', () => {
         },
         removeEventListener: () => {},
       };
-      
+
       // Create mock MIDI access that returns our mock device
       const mockMidiAccess = {
         inputs: new Map([['mock-device-id', mockInput]]),
@@ -401,14 +401,14 @@ test.describe('Web MIDI Support', () => {
         removeEventListener: () => {},
         sysexEnabled: true,
       };
-      
+
       // Override navigator.requestMIDIAccess BEFORE the page requests it
       (window.navigator as any).requestMIDIAccess = async () => {
         console.log('[TEST-MOCK] requestMIDIAccess called');
-        
+
         // Simulate a brief delay (like real MIDI access)
         await new Promise(resolve => setTimeout(resolve, 50));
-        
+
         // Schedule the mock MIDI message to fire AFTER the listener is attached
         setTimeout(() => {
           if (capturedListener) {
@@ -421,29 +421,29 @@ test.describe('Web MIDI Support', () => {
             console.warn('[TEST-MOCK] Listener not yet captured!');
           }
         }, 200);  // Wait 200ms to ensure listener is attached
-        
+
         return mockMidiAccess;
       };
-      
+
       console.log('[TEST-MOCK] Mock MIDI API injected');
     });
-    
+
     // Load the page
     await page.goto('/');
-    
+
     // Wait for WASM to load
     await page.waitForSelector('#loading.hidden', { timeout: 10000 });
-    
+
     // Click to unlock audio AND trigger MIDI initialization
     await page.click('#audio-unlock');
-    
+
     // Wait for MIDI status to appear with the device name
     // This is the key assertion — if it passes, MIDI is working
     const midiStatus = page.locator('#midi-status');
-    await expect(midiStatus).toContainText('MIDI Active: Mock MIDI Controller', { 
-      timeout: 5000 
+    await expect(midiStatus).toContainText('MIDI Active: Mock MIDI Controller', {
+      timeout: 5000
     });
-    
+
     // Verify no errors occurred
     const errors: string[] = [];
     page.on('console', (msg) => {
@@ -452,28 +452,28 @@ test.describe('Web MIDI Support', () => {
         console.log('[BROWSER-ERROR]', msg.text());
       }
     });
-    
+
     // Give it time to report any errors
     await page.waitForTimeout(500);
-    
+
     expect(errors).toHaveLength(0);
   });
-  
+
   test('Gracefully handles missing Web MIDI support', async ({ page }) => {
     // Remove Web MIDI API from the browser
     await page.addInitScript(() => {
       delete (window.navigator as any).requestMIDIAccess;
       console.log('[TEST-MOCK] Web MIDI API removed');
     });
-    
+
     await page.goto('/');
     await page.waitForSelector('#loading.hidden', { timeout: 10000 });
     await page.click('#audio-unlock');
-    
+
     // Should show the unsupported message
     const midiStatus = page.locator('#midi-status');
-    await expect(midiStatus).toContainText('MIDI not supported', { 
-      timeout: 5000 
+    await expect(midiStatus).toContainText('MIDI not supported', {
+      timeout: 5000
     });
   });
 });
@@ -644,7 +644,7 @@ test.describe('Modular Graph Canvas Interactions', () => {
       const n0 = c - 3;
       const n1 = c - 2;
       const n2 = c - 1;
-      
+
       const pin0 = Module.ccall('get_node_output_pin_by_index', 'number', ['number', 'number'], [n0, 0]);
       const pin1 = Module.ccall('get_node_input_pin_by_index', 'number', ['number', 'number'], [n1, 0]);
       Module.ccall('trigger_add_link', 'number', ['number', 'number'], [pin0, pin1]);
@@ -653,7 +653,7 @@ test.describe('Modular Graph Canvas Interactions', () => {
       const pin2In = Module.ccall('get_node_input_pin_by_index', 'number', ['number', 'number'], [n2, 0]);
       Module.ccall('trigger_add_link', 'number', ['number', 'number'], [pin1Out, pin2In]);
     });
-    
+
     await page.waitForTimeout(100);
 
     const linksAfterCables: number = await page.evaluate(() =>
