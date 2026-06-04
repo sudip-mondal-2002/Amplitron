@@ -873,4 +873,4 @@ jobs:
           files: merged.info
           flags: cross-platform
           name: cross-platform-coverage
-          fail_ci_if_error: false
+          fail_ci_if_error: true
