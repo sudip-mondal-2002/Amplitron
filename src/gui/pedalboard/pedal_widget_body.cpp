@@ -3,6 +3,9 @@
 #include "gui/theme/theme.h"
 
 #include <cstdio>
+#include "audio/effects/dynamics/multiband_compressor.h"
+#include "gui/views/gui_midi.h"
+#include "midi/midi_manager.h"
 
 namespace Amplitron {
 

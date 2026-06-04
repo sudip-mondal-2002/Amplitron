@@ -11,7 +11,10 @@ Delay::Delay() {
         {"Feedback",   0.4f,  0.0f,    0.95f,  0.4f, "", "Amount of the delayed signal fed back into the input. Higher values create more repeats."},
         {"Tone",       0.7f,  0.0f,    1.0f,   0.7f, "", "High-frequency damping on the repeats. Lower values create darker, tape-like echoes."},
         {"Level",      0.5f,  0.0f,    1.0f,   0.5f, "", "Mix volume of the delay repeats added to your dry signal."},
+        {"Sync",       0.0f,  0.0f,    1.0f,   0.0f, "", "BPM Sync. Lock delay time to the project tempo."},
+        {"Subdivision",0.0f,  0.0f,    4.0f,   0.0f, "", "Tempo subdivision: 0=1/4, 1=1/8, 2=1/16, 3=1/8D, 4=1/8T"},
     };
+    last_bpm_ = 0.0f;
     set_sample_rate(DEFAULT_SAMPLE_RATE);
 }
 
@@ -24,6 +27,19 @@ void Delay::set_sample_rate(int sample_rate) {
 
 void Delay::process(float* buffer, int num_samples) {
     if (!enabled_) return;
+
+    bool sync = params_[4].value >= 0.5f;
+    if (sync && last_bpm_ > 0.0f) {
+        float mult = 1.0f;
+        int subdiv = static_cast<int>(params_[5].value);
+        if (subdiv == 1) mult = 0.5f;
+        else if (subdiv == 2) mult = 0.25f;
+        else if (subdiv == 3) mult = 0.75f;
+        else if (subdiv == 4) mult = 1.0f / 3.0f;
+        
+        float target_time = (60000.0f / last_bpm_) * mult;
+        params_[0].value = clamp(target_time, params_[0].min_val, params_[0].max_val);
+    }
 
     const float alpha = 1.0f - std::exp(-1.0f / (sample_rate_ * 0.020f)); // 20 ms
     smoothed_time_ms_ += alpha * (params_[0].value - smoothed_time_ms_);
@@ -71,6 +87,20 @@ void Delay::set_transport_state(float bpm){
     if(bpm <= 0.0f || !std::isfinite(bpm)) return;
     if(bpm == last_bpm_) return;
     last_bpm_=bpm;
+
+    bool sync = params_[4].value >= 0.5f;
+    if (sync) {
+        float mult = 1.0f;
+        int subdiv = static_cast<int>(params_[5].value);
+        if (subdiv == 1) mult = 0.5f;
+        else if (subdiv == 2) mult = 0.25f;
+        else if (subdiv == 3) mult = 0.75f;
+        else if (subdiv == 4) mult = 1.0f / 3.0f;
+        
+        float target_time = (60000.0f / bpm) * mult;
+        params_[0].value = clamp(target_time, params_[0].min_val, params_[0].max_val);
+        return;
+    }
 
     //Quarter-note duration
     float quarter_note_ms = 60000.0f / bpm;

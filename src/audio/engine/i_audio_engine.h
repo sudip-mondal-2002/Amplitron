@@ -11,6 +11,7 @@ namespace Amplitron {
 class Effect;
 class AudioGraph;
 class IRecorder;
+class TempoEngine;
 
 /**
  * @brief Interface for managing lifecycle operations.
@@ -114,6 +115,9 @@ public:
     virtual bool get_metronome_enabled() const = 0;
     virtual int get_metronome_bpm() const = 0;
     virtual float get_metronome_volume() const = 0;
+
+    virtual void set_global_bpm(float bpm) = 0;
+    virtual float get_global_bpm() const = 0;
 };
 
 /**
@@ -199,6 +203,8 @@ public:
     virtual bool is_auto_buffer_enabled() const = 0;
     virtual void set_auto_buffer_enabled(bool enabled) = 0;
 
+    virtual TempoEngine& tempo_engine() = 0;
+    virtual const TempoEngine& tempo_engine() const = 0;
     virtual IRecorder& recorder() = 0;
     virtual void set_tuner_tap(std::shared_ptr<Effect> tap) = 0;
     virtual void clear_tuner_tap() = 0;

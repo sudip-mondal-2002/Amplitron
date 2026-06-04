@@ -54,6 +54,7 @@ namespace Amplitron
 
         // Read atomic variables safely
         j["input_gain"] = input_gain_.load(std::memory_order_relaxed);
+        j["global_bpm"] = global_bpm_.load(std::memory_order_relaxed);
 
         auto effects_array = nlohmann::json::array();
         for (const auto &fx : dummy_effects_)
@@ -77,6 +78,11 @@ namespace Amplitron
         if (j.contains("input_gain"))
         {
             set_input_gain(j["input_gain"]);
+        }
+
+        if (j.contains("global_bpm"))
+        {
+            set_global_bpm(j["global_bpm"]);
         }
 
         if (j.contains("effects"))
@@ -154,6 +160,7 @@ namespace Amplitron
             }
             metronome_->set_sample_rate(rate);
             metronome_->reset();
+            tempo_engine_.set_sample_rate(rate);
         }
 
         if (was_running)
@@ -181,6 +188,7 @@ namespace Amplitron
                 }
                 metronome_->set_sample_rate(prev_rate);
                 metronome_->reset();
+                tempo_engine_.set_sample_rate(prev_rate);
                 start();
             }
             else
@@ -287,6 +295,7 @@ namespace Amplitron
 
                 metronome_->set_sample_rate(sample_rate_);
                 metronome_->reset();
+                tempo_engine_.set_sample_rate(sample_rate_);
                 {
                     std::lock_guard<std::mutex> lock(effect_mutex_);
                     for (const auto& node : main_graph_.get_nodes()) {

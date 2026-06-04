@@ -8,6 +8,7 @@
 #include "audio/engine/audio_command_dispatcher.h"
 #include "audio/dsp/level_analyzer.h"
 #include "audio/dsp/spectrum_analyzer.h"
+#include "audio/engine/tempo_engine.h"
 #include <chrono>
 
 #include "audio/engine/audio_graph.h"
@@ -234,6 +235,16 @@ public:
     /** @brief Set the metronome BPM (atomic update). */
     void set_metronome_bpm(int bpm) override;
 
+    /** @brief Set the global BPM (atomic update). */
+    void set_global_bpm(float bpm) override;
+
+    /** @brief Return the current global BPM (atomic relaxed read). */
+    float get_global_bpm() const override { return global_bpm_.load(std::memory_order_relaxed); }
+
+    /** @brief Access the built-in tempo engine. */
+    TempoEngine& tempo_engine() override { return tempo_engine_; }
+    const TempoEngine& tempo_engine() const override { return tempo_engine_; }
+
     /** @brief Set the metronome click volume (atomic update). */
     void set_metronome_volume(float volume) override;
 
@@ -331,6 +342,8 @@ private:
     std::atomic<float> input_gain_{1.0f};
     std::atomic<float> output_gain_{0.8f};
     std::unique_ptr<IMetronome> metronome_;
+    std::atomic<float> global_bpm_{120.0f};
+    TempoEngine tempo_engine_;
 
     std::atomic<float> input_level_{0.0f};
     std::atomic<float> output_level_{0.0f};

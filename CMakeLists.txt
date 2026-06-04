@@ -51,7 +51,6 @@ endif()
 # Single-header C++17 JSON library used for preset serialization /
 # deserialization.  We disable nlohmann's own tests and install rules so
 # they don't pollute the Amplitron build.
-
 # Suppress cmake_minimum_required deprecation warnings from fetched deps
 set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
 
@@ -250,6 +249,7 @@ set(APP_SOURCES
     src/audio/engine/audio_engine_chain.cpp
     src/audio/engine/audio_engine_process.cpp
     src/audio/engine/audio_engine_api.cpp
+    src/audio/engine/tempo_engine.cpp
     src/audio/engine/audio_metrics_service.cpp
     src/audio/engine/metronome.cpp
     src/audio/recorder/recorder.cpp
@@ -599,6 +599,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         src/audio/engine/audio_engine_chain.cpp
         src/audio/engine/audio_engine_process.cpp
         src/audio/engine/audio_engine_api.cpp
+        src/audio/engine/tempo_engine.cpp
         src/audio/engine/audio_metrics_service.cpp
         src/audio/engine/metronome.cpp
         src/audio/engine/audio_graph.cpp
@@ -753,6 +754,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/unit/test_effects_utility.cpp
         tests/unit/test_looper.cpp
         tests/unit/test_theme.cpp
+        tests/unit/test_tempo.cpp
         tests/unit/test_command_history.cpp
         tests/unit/test_cabinet_sim_ir.cpp
         tests/unit/test_wav_loader.cpp

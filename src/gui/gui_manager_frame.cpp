@@ -5,6 +5,7 @@
 #include "gui/commands/command.h"
 #include "gui/state/gui_graph_state.h"
 #include "audio/effects/utility/tuner.h"
+#include "audio/engine/tempo_engine.h"
 #include <imgui.h>
 #include <imgui_impl_opengl3.h>
 #include <imgui_impl_sdl2.h>
@@ -378,26 +379,63 @@ void GuiManager::render_master_controls() {
 
     ImGui::Columns(1);
     ImGui::Separator();
-    ImGui::Columns(3, "metronome_cols", false);
 
-    ImGui::AlignTextToFramePadding();
-    ImGui::Text("METRONOME");
+    ImGui::Columns(2, "tempo_metronome_cols", false);
+
+    // COLUMN 1: TEMPO & AUTO-DETECT
+    ImGui::TextColored(Theme::Gold(), "TEMPO");
+    
+    float global_bpm = engine_.get_global_bpm();
+    ImGui::SetNextItemWidth(100.0f);
+    if (ImGui::DragFloat("##GlobalBPM", &global_bpm, 0.5f, 40.0f, 240.0f, "%.1f BPM")) {
+        engine_.set_global_bpm(global_bpm);
+    }
+    
     ImGui::SameLine();
+    if (ImGui::Button("Tap")) {
+        master_tap_tempo_.tap(std::chrono::steady_clock::now());
+        float new_bpm = master_tap_tempo_.get_bpm(std::chrono::steady_clock::now());
+        if (new_bpm > 0.0f) {
+            engine_.set_global_bpm(new_bpm);
+        }
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Tap repeatedly in time with the music to set tempo");
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button("Auto-Detect")) {
+        float detected = engine_.tempo_engine().detect_bpm();
+        if (detected > 0.0f) {
+            engine_.set_global_bpm(detected);
+            toast_message_ = "Auto-detected: " + std::to_string(static_cast<int>(std::round(detected))) + " BPM";
+            toast_timer_ = 3.0f;
+        } else {
+            toast_message_ = "Auto-detect failed: signal too quiet or no steady beat";
+            toast_timer_ = 3.0f;
+        }
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Analyze recent input audio to estimate BPM");
+    }
+
+    ImGui::NextColumn();
+
+    // COLUMN 2: METRONOME
+    ImGui::TextColored(Theme::Gold(), "METRONOME");
+    
     bool metronome_on = engine_.get_metronome_enabled();
     if (ImGui::Button(metronome_on ? "Stop" : "Play"))
         engine_.toggle_metronome();
-
-    ImGui::NextColumn();
-
-    int bpm = engine_.get_metronome_bpm();
-    if (ImGui::SliderInt("BPM", &bpm, 40, 240))
-        engine_.set_metronome_bpm(bpm);
-
-    ImGui::NextColumn();
-
+    
+    ImGui::SameLine();
+    ImGui::Text("Volume");
+    ImGui::SameLine();
     float click = engine_.get_metronome_volume();
-    if (ImGui::SliderFloat("Click", &click, 0.0f, 1.0f, "%.2f"))
+    ImGui::SetNextItemWidth(120.0f);
+    if (ImGui::SliderFloat("##MetronomeVolume", &click, 0.0f, 1.0f, "%.2f")) {
         engine_.set_metronome_volume(click);
+    }
 
     ImGui::Columns(1);
     ImGui::EndChild();

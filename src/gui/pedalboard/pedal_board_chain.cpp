@@ -158,10 +158,14 @@ void PedalBoard::render_signal_chain() {
         for (const auto &existing_node : audio_graph.get_nodes()) {
           auto pos_it = ui_state.node_positions.find(existing_node.id);
           if (pos_it != ui_state.node_positions.end()) {
-            float width =
-                (existing_node.routing_type == NodeRoutingType::StandardEffect)
-                    ? 190.0f
-                    : 110.0f;
+            float width = 110.0f;
+            if (existing_node.routing_type == NodeRoutingType::StandardEffect) {
+                if (existing_node.pedal && std::strcmp(existing_node.pedal->name(), "MultiBand Compressor") == 0) {
+                    width = 190.0f * 2.2f;
+                } else {
+                    width = 190.0f;
+                }
+            }
             float right_edge = pos_it->second.position.x + width;
             if (right_edge > max_right) {
               max_right = right_edge;

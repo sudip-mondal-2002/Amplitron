@@ -13,6 +13,7 @@
 #include "gui/views/gui_snapshots.h"
 #include "gui/views/gui_midi.h"
 #include "midi/midi_manager.h"
+#include "audio/engine/tempo_math.h"
 #include <thread>
 #include <mutex>
 #include <string>
@@ -128,6 +129,8 @@ private:
 
     // ── Waveform buffer (filled from recorder, passed to RecordingProps) ──
     float rec_waveform_buf_[512] = {};
+
+    TapTempo master_tap_tempo_;
 };
 
 } // namespace Amplitron

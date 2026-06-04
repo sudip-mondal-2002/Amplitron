@@ -10,7 +10,10 @@ Chorus::Chorus() {
         {"Rate",   1.5f, 0.1f, 10.0f, 1.5f, "Hz", "Speed of the modulation sweep. Higher values create faster wobbling effects."},
         {"Depth",  5.0f, 0.5f, 20.0f, 5.0f, "ms", "Intensity of the modulation. Higher values create a deeper, more pronounced pitch shift."},
         {"Level",  0.5f, 0.0f,  1.0f, 0.5f, "", "Mix volume of the chorus effect. 0 is dry, 1 is fully wet."},
+        {"Sync",   0.0f, 0.0f,  1.0f, 0.0f, "", "BPM Sync. Lock chorus rate to the project tempo."},
+        {"Subdivision",0.0f, 0.0f,  4.0f, 0.0f, "", "Tempo subdivision: 0=1/4, 1=1/8, 2=1/16, 3=1/8D, 4=1/8T"},
     };
+    last_bpm_ = 0.0f;
     set_sample_rate(DEFAULT_SAMPLE_RATE);
 }
 
@@ -23,6 +26,19 @@ void Chorus::set_sample_rate(int sample_rate) {
 
 void Chorus::process(float* buffer, int num_samples) {
     if (!enabled_) return;
+
+    bool sync = params_[3].value >= 0.5f;
+    if (sync && last_bpm_ > 0.0f) {
+        float mult = 1.0f;
+        int subdiv = static_cast<int>(params_[4].value);
+        if (subdiv == 1) mult = 2.0f;
+        else if (subdiv == 2) mult = 4.0f;
+        else if (subdiv == 3) mult = 4.0f / 3.0f;
+        else if (subdiv == 4) mult = 3.0f;
+        
+        float target_rate = (last_bpm_ / 60.0f) * mult;
+        params_[0].value = clamp(target_rate, params_[0].min_val, params_[0].max_val);
+    }
 
     const float alpha = 1.0f - std::exp(-1.0f / (sample_rate_ * 0.020f));
     smoothed_rate_ += alpha * (params_[0].value - smoothed_rate_);
@@ -67,6 +83,20 @@ void Chorus::process_stereo(float* left, float* right, int num_samples) {
     if (!enabled_) {
         return;
     }
+
+    bool sync = params_[3].value >= 0.5f;
+    if (sync && last_bpm_ > 0.0f) {
+        float mult = 1.0f;
+        int subdiv = static_cast<int>(params_[4].value);
+        if (subdiv == 1) mult = 2.0f;
+        else if (subdiv == 2) mult = 4.0f;
+        else if (subdiv == 3) mult = 4.0f / 3.0f;
+        else if (subdiv == 4) mult = 3.0f;
+        
+        float target_rate = (last_bpm_ / 60.0f) * mult;
+        params_[0].value = clamp(target_rate, params_[0].min_val, params_[0].max_val);
+    }
+
     const float alpha = 1.0f - std::exp(-1.0f / (sample_rate_ * 0.020f));
     smoothed_rate_ += alpha * (params_[0].value - smoothed_rate_);
     float rate = smoothed_rate_;
@@ -113,6 +143,21 @@ void Chorus::set_transport_state(float bpm){
     if(!std::isfinite(bpm) || bpm <= 0.0f)return;
     if(bpm == last_bpm_) return;
     last_bpm_ = bpm;
+
+    bool sync = params_[3].value >= 0.5f;
+    if (sync) {
+        float mult = 1.0f;
+        int subdiv = static_cast<int>(params_[4].value);
+        if (subdiv == 1) mult = 2.0f;
+        else if (subdiv == 2) mult = 4.0f;
+        else if (subdiv == 3) mult = 4.0f / 3.0f;
+        else if (subdiv == 4) mult = 3.0f;
+        
+        float target_rate = (bpm / 60.0f) * mult;
+        params_[0].value = clamp(target_rate, params_[0].min_val, params_[0].max_val);
+        return;
+    }
+
     //BPM to Hz
     float target_rate_hz = bpm / 60.0f;
     //set knob
