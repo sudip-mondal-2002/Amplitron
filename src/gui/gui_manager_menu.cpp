@@ -279,6 +279,7 @@ namespace Amplitron
                     show_midi_ = !show_midi_;
                 }
                 ImGui::EndMenu();
+            }
                 if (ImGui::BeginMenu("Help"))
                 {
                     if (ImGui::MenuItem("Keyboard Shortcuts"))
@@ -429,7 +430,6 @@ namespace Amplitron
                 ImGuiWindowFlags_None))
         {
             ImGui::SetWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
-            ImGui::Text("Available Keyboard Shortcuts");
             ImGui::Text("Available Keyboard Shortcuts");
             ImGui::Separator();
 
