@@ -60,13 +60,15 @@ bool GuiManager::initialize(int width, int height) {
         return false;
     }
 
-    gl_context_ = SDL_GL_CreateContext(window_);
-    if (!gl_context_) {
-        std::cerr << "SDL_GL_CreateContext failed: " << SDL_GetError() << std::endl;
-        return false;
-    }
-    SDL_GL_MakeCurrent(window_, gl_context_);
-    SDL_GL_SetSwapInterval(1); // vsync
+    #ifndef AMPLITRON_NO_DESKTOP_SHELL
+        gl_context_ = SDL_GL_CreateContext(window_);
+        if (!gl_context_) {
+            std::cerr << "SDL_GL_CreateContext failed: " << SDL_GetError() << std::endl;
+            return false;
+        }
+        SDL_GL_MakeCurrent(window_, gl_context_);
+        SDL_GL_SetSwapInterval(1); // vsync
+    #endif
 
     // Initialize ImGui
     IMGUI_CHECKVERSION();
@@ -80,13 +82,15 @@ bool GuiManager::initialize(int width, int height) {
 
     // --- DPI scaling and font loading ---
     float dpi_scale = 1.0f;
+    
+    #ifndef AMPLITRON_NO_DESKTOP_SHELL
     {
         int draw_w = window_width_, draw_h = window_height_;
         SDL_GL_GetDrawableSize(window_, &draw_w, &draw_h);
         if (window_width_ > 0)
             dpi_scale = static_cast<float>(draw_w) / static_cast<float>(window_width_);
     }
-
+    #endif
 
     GuiGraphState::get_instance().dpi_scale = dpi_scale;
 
