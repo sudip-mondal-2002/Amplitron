@@ -1,24 +1,24 @@
 #include "test_framework.h"
 #include "test_fixtures.h"
-#include "audio/effects/noise_gate.h"
-#include "audio/effects/compressor.h"
-#include "audio/effects/multiband_compressor.h"
-#include "audio/effects/overdrive.h"
-#include "audio/effects/distortion.h"
-#include "audio/effects/equalizer.h"
-#include "audio/effects/chorus.h"
-#include "audio/effects/delay.h"
-#include "audio/effects/reverb.h"
-#include "audio/effects/cabinet_sim.h"
-#include "audio/effects/amp_simulator.h"
-#include "audio/effects/tuner.h"
-#include "audio/effects/wah.h"
-#include "audio/effects/phaser.h"
-#include "audio/effects/flanger.h"
-#include "audio/effects/octaver.h"
-#include "audio/effects/pitch_shifter.h"
+#include "audio/effects/dynamics/noise_gate.h"
+#include "audio/effects/dynamics/compressor.h"
+#include "audio/effects/dynamics/multiband_compressor.h"
+#include "audio/effects/distortion/overdrive.h"
+#include "audio/effects/distortion/distortion.h"
+#include "audio/effects/eq_filter/equalizer.h"
+#include "audio/effects/modulation/chorus.h"
+#include "audio/effects/delay_reverb/delay.h"
+#include "audio/effects/delay_reverb/reverb.h"
+#include "audio/effects/amp_cab/cabinet_sim.h"
+#include "audio/effects/amp_cab/amp_simulator.h"
+#include "audio/effects/utility/tuner.h"
+#include "audio/effects/eq_filter/wah.h"
+#include "audio/effects/modulation/phaser.h"
+#include "audio/effects/modulation/flanger.h"
+#include "audio/effects/pitch/octaver.h"
+#include "audio/effects/pitch/pitch_shifter.h"
 #include "audio/utils/spsc_queue.h"
-#include "audio/effects/effect_factory.h"
+#include "audio/effects/core/effect_factory.h"
 #include <cstring>
 #include <cmath>
 #include <vector>
@@ -513,6 +513,7 @@ public:
     void reset() override {}
     const char* name() const override { return "MockMixEffect"; }
     std::vector<EffectParam>& params() override { return params_; }
+    const std::vector<EffectParam>& params() const override { return params_; }
 private:
     std::vector<EffectParam> params_;
 };

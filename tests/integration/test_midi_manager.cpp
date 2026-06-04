@@ -4,7 +4,7 @@
 #define VIRTUAL_TEST_HOOK public
 #include "midi/midi_manager.h"
 #include "audio/engine/audio_engine.h"
-#include "audio/effects/effect.h"
+#include "audio/effects/core/effect.h"
 #undef VIRTUAL_TEST_HOOK
 
 #include <cmath>
@@ -28,6 +28,7 @@ public:
     }
     const char* name() const override { return "TestEffect"; }
     std::vector<EffectParam>& params() override { return params_; }
+    const std::vector<EffectParam>& params() const override { return params_; }
     void process(float* /*buffer*/, int /*num_samples*/) override {}
     void reset() override {}
 private:

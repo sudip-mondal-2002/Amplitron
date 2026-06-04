@@ -382,6 +382,343 @@ Effects use `try_lock` on the mutex to avoid blocking the audio thread if the GU
 - **YIN pitch detection** — for chromatic tuner (4096-sample window at 48kHz)
 - **Amp modeling** — per-model tone stacks, saturation curves, power sag simulation
 
+### Class Diagram & Subsystems
+
+Amplitron is structured into modular components separating audio processing, GUI layout, preset management, and MIDI handling. Below are the class diagrams representing the primary subsystems, their class relationships, and design patterns, rendered natively using Mermaid:
+
+#### 1. Core Coordination (Facade & Subsystems)
+
+This diagram shows the system managers and their lifecycles coordinate via the unified `AmplitronSession` facade, which isolates the GUI layer from the implementation details of each subsystem.
+
+```mermaid
+classDiagram
+    direction TB
+    
+    class SessionManager {
+        -fs::path autoSavePath
+        -fs::path tempSavePath
+        -std::chrono::steady_clock::time_point lastSaveTime
+        -const int autoSaveIntervalSeconds
+        +SessionManager(string org, string app)
+        +hasUnsavedSession() bool
+        +shouldSave() bool
+        +saveSession(json state) void
+        +loadSession() json
+        +clearSession() void
+    }
+
+    class AmplitronSession {
+        <<Facade>>
+        -std::unique_ptr~IAudioEngine~ engine_
+        -std::unique_ptr~IMidiManager~ midi_
+        -std::unique_ptr~IPresetManager~ presets_
+        -CommandHistory command_history_
+        -SnapshotManager snapshot_manager_
+        +AmplitronSession(engine, midi, presets)
+        +engine() IAudioEngine&
+        +midi() IMidiManager&
+        +presets() IPresetManager&
+        +concrete_engine() AudioEngine&
+        +concrete_midi() MidiManager&
+        +command_history() CommandHistory&
+        +snapshot_manager() SnapshotManager&
+    }
+
+    class CommandHistory {
+        -std::vector~unique_ptr~Command~~ undo_stack_
+        -std::vector~unique_ptr~Command~~ redo_stack_
+        -size_t max_history_
+        +execute_command(cmd) void
+        +undo() void
+        +redo() void
+        +can_undo() bool
+        +can_redo() bool
+        +clear() void
+    }
+
+    class SnapshotManager {
+        -std::array~PresetData, 4~ slots_
+        -int active_slot_
+        +save_snapshot(slot, preset) void
+        +recall_snapshot(slot) PresetData
+        +get_active_slot() int
+    }
+
+    class IAudioEngine {
+        <<interface>>
+        +initialize() bool
+        +start() bool
+        +stop() void
+        +commit_graph_changes() void
+        +push_param_change(fx, param, val) void
+    }
+
+    class IMidiManager {
+        <<interface>>
+        +initialize() bool
+        +shutdown() void
+        +poll(engine) void
+        +add_mapping(mapping) void
+        +start_learn(type, fx, param) void
+    }
+
+    class IPresetManager {
+        <<interface>>
+        +save_preset(path, name, desc, eng, maps) bool
+        +load_preset(path, eng, midi) bool
+        +list_presets() vector~string~
+    }
+
+    class GuiManager {
+        -AmplitronSession& session_
+        -WindowContext window_context_
+        -std::unique_ptr~PedalBoard~ pedal_board_
+        +GuiManager(session)
+        +initialize(w, h) bool
+        +run_frame() bool
+        +shutdown() void
+    }
+
+    AmplitronSession *-- CommandHistory : owns
+    AmplitronSession *-- SnapshotManager : owns
+    AmplitronSession --> IAudioEngine : references
+    AmplitronSession --> IMidiManager : references
+    AmplitronSession --> IPresetManager : references
+    SessionManager ..> AmplitronSession : manages
+    GuiManager --> AmplitronSession : controls
+```
+
+#### 2. Audio Subsystem & DSP Pipeline
+
+This diagram shows how the `AudioEngine` interfaces with backends (`IAudioBackend`), delegates execution order via `AudioGraph` / `AudioGraphExecutor`, and processes pedal modules which implement the `Effect` base class.
+
+```mermaid
+classDiagram
+    direction TB
+    
+    class IAudioEngine {
+        <<interface>>
+        +initialize()* bool
+        +start()* bool
+        +stop()* void
+        +process_audio(in, out, frames)* void
+        +push_param_change(fx, param, val)* void
+        +add_effect(fx)* void
+        +remove_effect(idx)* void
+    }
+
+    class AudioEngine {
+        -std::unique_ptr~IAudioBackend~ backend_
+        -AudioGraph main_graph_
+        -std::shared_ptr~AudioGraphExecutor~ main_executor_
+        -std::unique_ptr~IRecorder~ recorder_
+        -std::unique_ptr~IMetronome~ metronome_
+        -std::atomic~float~ input_level_
+        -std::atomic~float~ output_level_
+        +initialize() bool
+        +start() bool
+        +stop() void
+        +process_audio(in, out, frames) void
+        +graph() AudioGraph&
+        +commit_graph_changes() void
+    }
+
+    class IAudioBackend {
+        <<interface>>
+        +initialize(engine)* bool
+        +shutdown()* void
+        +start()* bool
+        +stop()* void
+        +get_input_devices()* vector
+        +get_sample_rate()* int
+        +get_buffer_size()* int
+    }
+
+    class PortAudioBackend {
+        +initialize(engine) bool
+    }
+    class OboeBackend {
+        +initialize(engine) bool
+    }
+    class SDLBackend {
+        +initialize(engine) bool
+    }
+    class JackBackend {
+        +initialize(engine) bool
+    }
+
+    class AudioGraph {
+        -std::map~int, DspNode~ nodes_
+        -std::vector~GraphLink~ links_
+        +add_node(node) void
+        +remove_node(id) void
+        +connect(src, dst) void
+        +compile() shared_ptr~AudioGraphExecutor~
+    }
+
+    class AudioGraphExecutor {
+        -std::vector~DspNode*~ execution_order_
+        +process(in, out, frames) void
+        +reset() void
+    }
+
+    class IProcessor {
+        <<interface>>
+        +process(buf, n)* void
+        +reset()* void
+    }
+    class IParameterizable {
+        <<interface>>
+        +params()* vector
+        +get_param_value(name)* float
+    }
+    class ISerializable {
+        <<interface>>
+        +get_params()* json
+        +set_params(json)* void
+    }
+    class IMetadata {
+        <<interface>>
+        +name()* const char*
+        +get_display_name()* const char*
+    }
+
+    class Effect {
+        <<abstract>>
+        #int sample_rate_
+        #std::atomic~bool~ enabled_
+        #std::atomic~float~ mix_
+        +process(buf, n)* void
+        +process_stereo(l, r, n) void
+        +name()* const char*
+        +get_params() json
+        +set_params(json) void
+        #apply_mix(dry, wet, n) void
+    }
+
+    class Overdrive {
+        +process(buf, n) void
+    }
+    class Reverb {
+        +process(buf, n) void
+    }
+    class AmpSimulator {
+        +process(buf, n) void
+    }
+
+    AudioEngine ..|> IAudioEngine : realizes
+    AudioEngine *-- IAudioBackend : owns
+    AudioEngine *-- AudioGraph : owns
+    AudioEngine *-- AudioGraphExecutor : owns
+    
+    PortAudioBackend ..|> IAudioBackend : realizes
+    OboeBackend ..|> IAudioBackend : realizes
+    SDLBackend ..|> IAudioBackend : realizes
+    JackBackend ..|> IAudioBackend : realizes
+    
+    Effect ..|> IProcessor : realizes
+    Effect ..|> IParameterizable : realizes
+    Effect ..|> ISerializable : realizes
+    Effect ..|> IMetadata : realizes
+    
+    Overdrive --|> Effect : inherits
+    Reverb --|> Effect : inherits
+    AmpSimulator --|> Effect : inherits
+    
+    AudioGraph o-- Effect : aggregates
+```
+
+#### 3. GUI Subsystem (Atomic Component Pattern)
+
+This diagram shows the relationship between `GuiManager`, window context handlers, view overlays, and the `PedalBoard` which renders `PedalWidget` components built on top of stateless atomic GUI primitives like `KnobComponent`, `FootswitchComponent`, and `LedComponent`.
+
+```mermaid
+classDiagram
+    direction TB
+    
+    class GuiManager {
+        -AmplitronSession& session_
+        -WindowContext window_context_
+        -std::unique_ptr~PedalBoard~ pedal_board_
+        -float smoothed_input_level_
+        -bool show_settings_
+        -bool show_tuner_
+        +initialize(w, h) bool
+        +run_frame() bool
+        +shutdown() void
+        -render_menu_bar() void
+        -render_master_controls() void
+        -build_tuner_props() TunerProps
+    }
+
+    class WindowContext {
+        -SDL_Window* sdl_window_
+        -SDL_GLContext gl_context_
+        +init_window(title, w, h) bool
+        +swap_buffers() void
+        +destroy_context() void
+    }
+
+    class GUI_Views {
+        <<Static Modules>>
+        -GuiSettings
+        -GuiPresets
+        -GuiRecording
+        -GuiTuner
+        -GuiAnalyzer
+        -GuiSnapshots
+        -GuiMidi
+        +render(props, show) void
+    }
+
+    class PedalBoard {
+        -std::vector~PedalWidget~ active_pedals_
+        -float scroll_x_
+        +render(engine) void
+        +add_pedal(type) void
+        +remove_pedal(idx) void
+        +reorder_pedals(from, to) void
+    }
+
+    class PedalWidget {
+        -std::shared_ptr~Effect~ effect_
+        -float width_
+        -ImVec4 color_
+        +render(props) void
+        -draw_pedal_body() void
+        -draw_parameters() void
+        -handle_footswitch_toggle() void
+    }
+
+    class KnobComponent {
+        <<stateless>>
+        +render(id, KnobProps, center) void
+    }
+
+    class FootswitchComponent {
+        <<stateless>>
+        +render(id, FootswitchProps, center) void
+    }
+
+    class LedComponent {
+        <<stateless>>
+        +render(id, LedProps, center) void
+    }
+
+    class ScreenComponent {
+        <<stateless>>
+        +render(id, ScreenProps, center) void
+    }
+
+    GuiManager *-- WindowContext : owns
+    GuiManager *-- GUI_Views : manages
+    GuiManager *-- PedalBoard : owns
+    PedalBoard *-- PedalWidget : draws
+    PedalWidget ..> KnobComponent : uses
+    PedalWidget ..> FootswitchComponent : uses
+    PedalWidget ..> LedComponent : uses
+```
+
 ---
 
 ## Troubleshooting

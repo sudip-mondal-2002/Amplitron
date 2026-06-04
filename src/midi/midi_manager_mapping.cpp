@@ -3,6 +3,17 @@
 
 namespace Amplitron {
 
+namespace {
+int find_node_id_for_effect(IAudioEngine& engine, const std::shared_ptr<Effect>& effect, int fallback_id) {
+    for (const auto& node : engine.graph().get_nodes()) {
+        if (node.pedal == effect) {
+            return node.id;
+        }
+    }
+    return fallback_id;
+}
+}
+
 // ---------------------------------------------------------------------------
 // Mapping management
 // ---------------------------------------------------------------------------
@@ -166,7 +177,7 @@ void MidiManager::inject_event(const MidiEvent& event) {
     midi_queue_.try_push(event);
 }
 
-void MidiManager::poll(AudioEngine& engine) {
+void MidiManager::poll(IAudioEngine& engine) {
     MidiEvent event{};
     while (midi_queue_.try_pop(event)) {
         uint8_t cc_number = event.data1;
@@ -199,7 +210,7 @@ void MidiManager::poll(AudioEngine& engine) {
 }
 
 void MidiManager::apply_mapping(const MidiMapping& mapping, int cc_value,
-                                AudioEngine& engine) {
+                                IAudioEngine& engine) {
     float normalized = static_cast<float>(cc_value) / 127.0f;
 
     switch (mapping.target_type) {
@@ -223,9 +234,8 @@ void MidiManager::apply_mapping(const MidiMapping& mapping, int cc_value,
                     // Toggle on either edge: press (false→true) or release (true→false)
                     if (is_pressed != mapping.last_state) {
                         effects[i]->set_enabled(!effects[i]->is_enabled());
-                        engine.push_effect_enabled(i, effects[i]->is_enabled() ? 1.0f : 0.0f);
-
-                        printf("[DEBUG] AmpSimulator BYPASS TOGGLED\n");
+                        int node_id = find_node_id_for_effect(engine, effects[i], i);
+                        engine.push_effect_enabled(node_id, effects[i]->is_enabled() ? 1.0f : 0.0f);
                     }
 
                     // Update state for next event
@@ -266,7 +276,8 @@ void MidiManager::apply_mapping(const MidiMapping& mapping, int cc_value,
                     float value = params[p].min_val +
                                   normalized * (params[p].max_val - params[p].min_val);
                     params[p].value = value;  // GUI sync
-                    engine.push_param_change(i, p, value);  // Audio sync
+                    int node_id = find_node_id_for_effect(engine, effects[i], i);
+                    engine.push_param_change(node_id, p, value);  // Audio sync
                     break;
                 }
                 break;  // Only map to the first matching effect

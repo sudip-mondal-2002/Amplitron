@@ -1,12 +1,13 @@
 #include "audio/engine/audio_engine.h"
-#include "audio/effects/cabinet_sim.h"
-#include "audio/effects/compressor.h"
-#include "audio/effects/equalizer.h"
-#include "audio/effects/noise_gate.h"
-#include "audio/effects/overdrive.h"
-#include "audio/effects/reverb.h"
+#include "audio/effects/amp_cab/cabinet_sim.h"
+#include "audio/effects/dynamics/compressor.h"
+#include "audio/effects/eq_filter/equalizer.h"
+#include "audio/effects/dynamics/noise_gate.h"
+#include "audio/effects/distortion/overdrive.h"
+#include "audio/effects/delay_reverb/reverb.h"
 #include "gui/state/gui_graph_state.h"
 #include "preset_manager.h"
+#include "midi/midi_manager.h"
 #include "test_framework.h"
 #include "test_fixtures.h"
 #include <sys/stat.h>
@@ -137,7 +138,7 @@ TEST_F(PresetTest, save_creates_file) {
   engine.set_output_gain(0.6f);
 
   std::string path = "presets/test_save_preset.json";
-  bool ok = PresetManager::save_preset(path, "Test Preset",
+  bool ok = manager.save_preset(path, "Test Preset",
                                        "A test description", engine);
   ASSERT_TRUE(ok);
   ASSERT_TRUE(file_exists(path));
@@ -183,7 +184,7 @@ TEST_F(PresetTest, save_and_load_roundtrip) {
   // Save
   std::string path = "presets/test_roundtrip.json";
   bool saved =
-      PresetManager::save_preset(path, "Roundtrip", "roundtrip test", engine);
+      manager.save_preset(path, "Roundtrip", "roundtrip test", engine);
   ASSERT_TRUE(saved);
 
   // Capture original state
@@ -198,7 +199,7 @@ TEST_F(PresetTest, save_and_load_roundtrip) {
   AudioEngine engine2;
   engine2.initialize();
 
-  bool loaded = PresetManager::load_preset(path, engine2);
+  bool loaded = manager.load_preset(path, engine2);
   ASSERT_TRUE(loaded);
 
   // Verify loaded state matches
@@ -228,7 +229,7 @@ TEST_F(PresetTest, save_and_load_roundtrip) {
 
 TEST_F(PresetTest, load_nonexistent_fails) {
   bool loaded =
-      PresetManager::load_preset("presets/does_not_exist_12345.json", engine);
+      manager.load_preset("presets/does_not_exist_12345.json", engine);
   ASSERT_FALSE(loaded);
 }
 
@@ -238,9 +239,9 @@ TEST_F(PresetTest, list_finds_files) {
   register_temp_file(path);
 
   engine.add_effect(std::make_shared<NoiseGate>());
-  PresetManager::save_preset(path, "ListTest", "", engine);
+  manager.save_preset(path, "ListTest", "", engine);
 
-  auto presets = PresetManager::list_presets();
+  auto presets = manager.list_presets();
   // Should find at least the one we just saved
   bool found = false;
   for (auto &p : presets) {
@@ -257,7 +258,7 @@ TEST_F(PresetTest, save_empty_name_still_works) {
   engine.add_effect(std::make_shared<Compressor>());
 
   std::string path = "presets/test_empty_name.json";
-  bool ok = PresetManager::save_preset(path, "", "", engine);
+  bool ok = manager.save_preset(path, "", "", engine);
   ASSERT_TRUE(ok);
   ASSERT_TRUE(file_exists(path));
 }
@@ -328,7 +329,7 @@ TEST_F(PresetTest, midi_mappings_roundtrip) {
   mappings.push_back(m2);
 
   std::string path = "presets/test_midi_mappings.json";
-  bool saved = PresetManager::save_preset(
+  bool saved = manager.save_preset(
       path, "Midi Test", "Testing midi mappings", engine, mappings);
   ASSERT_TRUE(saved);
 
@@ -343,7 +344,7 @@ TEST_F(PresetTest, midi_mappings_roundtrip) {
 
   MidiManager midi_manager;
   midi_manager.clear_mappings();
-  bool loaded = PresetManager::load_preset(path, engine2, &midi_manager);
+  bool loaded = manager.load_preset(path, engine2, &midi_manager);
   ASSERT_TRUE(loaded);
 
     const auto& loaded_mappings = midi_manager.mappings();
@@ -445,12 +446,12 @@ TEST_F(PresetTest, parallel_amp_rig_integration) {
 
   std::string path = "presets/test_parallel_rig.json";
   bool saved =
-      PresetManager::save_preset(path, "Parallel Rig", "Parallel Amps", engine);
+      manager.save_preset(path, "Parallel Rig", "Parallel Amps", engine);
   ASSERT_TRUE(saved);
 
   AudioEngine engine2;
   engine2.initialize();
-  bool loaded = PresetManager::load_preset(path, engine2);
+  bool loaded = manager.load_preset(path, engine2);
   ASSERT_TRUE(loaded);
 
   int count = 0;
@@ -537,7 +538,7 @@ TEST_F(PresetTest, legacy_ir_cabinet_migration) {
   out << json;
   out.close();
 
-  bool loaded = PresetManager::load_preset(path, engine);
+  bool loaded = manager.load_preset(path, engine);
   ASSERT_TRUE(loaded);
 
   bool found_cab = false;
@@ -645,7 +646,7 @@ TEST_F(PresetTest, config_roundtrip) {
 
 TEST_F(PresetTest, save_preset_data_invalid_path) {
   PresetData p;
-  bool saved = PresetManager::save_preset_data(
+  bool saved = manager.save_preset_data(
       "/invalid_path_that_does_not_exist/preset.json", p);
   ASSERT_FALSE(saved);
 }
@@ -658,7 +659,7 @@ TEST_F(PresetTest, load_preset_invalid_json) {
   f << "{ this is not valid json";
   f.close();
 
-  bool loaded = PresetManager::load_preset(path, engine);
+  bool loaded = manager.load_preset(path, engine);
   ASSERT_FALSE(loaded);
 }
 
@@ -676,7 +677,7 @@ TEST_F(PresetTest, load_preset_graph_failure) {
     })";
   f.close();
 
-  bool loaded = PresetManager::load_preset(path, engine);
+  bool loaded = manager.load_preset(path, engine);
   ASSERT_FALSE(loaded);
 }
 
@@ -920,7 +921,7 @@ TEST_F(PresetTest, load_linear_legacy_conversion) {
   f << json;
   f.close();
 
-  bool loaded = PresetManager::load_preset(path, engine);
+  bool loaded = manager.load_preset(path, engine);
   ASSERT_TRUE(loaded);
 }
 
@@ -938,7 +939,7 @@ TEST_F(PresetTest, save_all_effect_types) {
   engine.add_initial_effects({comp, eq, gate, drive, reverb});
 
   std::string path = "presets/all_effects.json";
-  bool saved = PresetManager::save_preset(path, "All FX", "Test", engine);
+  bool saved = manager.save_preset(path, "All FX", "Test", engine);
   ASSERT_TRUE(saved);
 }
 
@@ -964,7 +965,7 @@ TEST_F(PresetTest, graph_from_json_add_link_failure) {
 }
 
 TEST_F(PresetTest, save_preset_invalid_path) {
-  bool saved = PresetManager::save_preset(
+  bool saved = manager.save_preset(
       "/invalid_path_that_does_not_exist/preset.json", "Name", "Desc", engine);
   ASSERT_FALSE(saved);
 }
@@ -1025,7 +1026,7 @@ TEST_F(PresetTest, load_preset_data_permission_denied) {
   chmod(path.c_str(), 0000);
 #endif
 
-  bool loaded = PresetManager::load_preset(path, engine);
+  bool loaded = manager.load_preset(path, engine);
   ASSERT_FALSE(loaded);
 
 #ifndef _WIN32
@@ -1058,13 +1059,13 @@ TEST_F(PresetTest, save_graph_all_fields) {
   engine.graph().add_node("Cab", NodeRoutingType::StandardEffect, cab, 1);
 
   std::string path = "presets/graph_all_fields.json";
-  bool saved = PresetManager::save_preset(path, "Graph", "Desc", engine);
+  bool saved = manager.save_preset(path, "Graph", "Desc", engine);
   ASSERT_TRUE(saved);
 
   // Roundtrip to test from_ordered_json's metadata processing
   AudioEngine engine2;
   engine2.initialize();
-  bool loaded = PresetManager::load_preset(path, engine2);
+  bool loaded = manager.load_preset(path, engine2);
   ASSERT_TRUE(loaded);
   
   // Verify metadata loaded
@@ -1417,6 +1418,7 @@ TEST(PresetJson, EffectDataRoundtripViaExtHelpers) {
 }
 
 TEST(PresetManagerIO, SavePresetDataToDirectoryFails) {
+    PresetManager manager;
     // Ensure the presets directory exists
     std::string dir = "presets";
     std::filesystem::create_directories(dir);
@@ -1425,12 +1427,13 @@ TEST(PresetManagerIO, SavePresetDataToDirectoryFails) {
     p.name = "ShouldFail";
 
     // Attempt to write to a directory path (should fail)
-    bool ok = PresetManager::save_preset_data(dir, p);
+    bool ok = manager.save_preset_data(dir, p);
     ASSERT_FALSE(ok);
-    ASSERT_TRUE(PresetManager::last_error().find("Could not open file for writing") != std::string::npos);
+    ASSERT_TRUE(manager.get_last_error().find("Could not open file for writing") != std::string::npos);
 }
 
 TEST(PresetManagerIO, LoadPresetWithUnknownEffectTypeSkipsEffect) {
+    PresetManager manager;
     // Create a preset containing an unknown effect type
     PresetData p;
     p.name = "UnknownEffectPreset";
@@ -1440,11 +1443,11 @@ TEST(PresetManagerIO, LoadPresetWithUnknownEffectTypeSkipsEffect) {
     p.effects.push_back(fx);
 
     std::string path = "presets/test_unknown_effect.json";
-    PresetManager::save_preset_data(path, p);
+    manager.save_preset_data(path, p);
 
     AudioEngine engine;
     engine.initialize();
-    bool loaded = PresetManager::load_preset(path, engine);
+    bool loaded = manager.load_preset(path, engine);
     ASSERT_TRUE(loaded);
     // Since effect type was unknown, engine should have zero effects
     ASSERT_EQ(engine.effects().size(), 0u);
@@ -1454,6 +1457,7 @@ TEST(PresetManagerIO, LoadPresetWithUnknownEffectTypeSkipsEffect) {
 }
 
 TEST(PresetManagerIO, LoadLegacyIrCabinetPresetMigratesAndLoadsMetadata) {
+    PresetManager manager;
     PresetData p;
     p.name = "LegacyCabinetPreset";
     PresetData::EffectData fx;
@@ -1464,11 +1468,11 @@ TEST(PresetManagerIO, LoadLegacyIrCabinetPresetMigratesAndLoadsMetadata) {
     p.effects.push_back(fx);
 
     std::string path = "presets/test_legacy_ir_cabinet.json";
-    ASSERT_TRUE(PresetManager::save_preset_data(path, p));
+    ASSERT_TRUE(manager.save_preset_data(path, p));
 
     AudioEngine engine;
     engine.initialize();
-    bool loaded = PresetManager::load_preset(path, engine);
+    bool loaded = manager.load_preset(path, engine);
     ASSERT_TRUE(loaded);
     ASSERT_EQ(engine.effects().size(), 1u);
     ASSERT_EQ(std::string(engine.effects()[0]->name()), std::string("Cabinet"));
@@ -1506,6 +1510,7 @@ TEST(PresetJson, FromJsonExtIgnoresNonNumericParamsAndNonStringMetadata) {
 }
 
 TEST(PresetManagerIO, SavePresetIncludesCabinetIrMetadata) {
+    PresetManager manager;
     AudioEngine engine;
     engine.initialize();
 
@@ -1520,7 +1525,7 @@ TEST(PresetManagerIO, SavePresetIncludesCabinetIrMetadata) {
     engine.add_effect(cab);
 
     std::string path = "presets/test_save_cabinet_meta.json";
-    bool ok = PresetManager::save_preset(path, "CabTest", "desc", engine);
+    bool ok = manager.save_preset(path, "CabTest", "desc", engine);
     ASSERT_TRUE(ok);
 
     std::string content = read_file(path);

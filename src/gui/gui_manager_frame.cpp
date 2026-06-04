@@ -4,7 +4,7 @@
 #include "gui/gl_setup.h"
 #include "gui/commands/command.h"
 #include "gui/state/gui_graph_state.h"
-#include "audio/effects/tuner.h"
+#include "audio/effects/utility/tuner.h"
 #include <imgui.h>
 #include <imgui_impl_opengl3.h>
 #include <imgui_impl_sdl2.h>
@@ -101,11 +101,10 @@ SettingsProps GuiManager::build_settings_props() {
 AnalyzerProps GuiManager::build_analyzer_props() {
     const float dt = std::max(ImGui::GetIO().DeltaTime, 1.0f / 240.0f);
 
-    // Drive DSP updates in the engine (no math in UI thread)
-    engine_.update_level_analyzer(dt);
-    engine_.update_spectrum_analyzer(dt);
+    // Drive DSP updates via decoupled metrics service (no math in UI thread)
+    metrics_service_.update(engine_, dt);
 
-    const auto& la = engine_.level_analyzer();
+    const auto& la = metrics_service_.level_analyzer();
 
     AnalyzerProps p;
     p.smoothed_input_rms  = la.smoothed_input_rms();
@@ -116,7 +115,7 @@ AnalyzerProps GuiManager::build_analyzer_props() {
     p.output_clip_active  = la.output_clip_flash() > 0.01f;
     p.input_clip_flash    = la.input_clip_flash();
     p.output_clip_flash   = la.output_clip_flash();
-    const auto& sa = engine_.spectrum_analyzer();
+    const auto& sa = metrics_service_.spectrum_analyzer();
     p.spectrum.smoothed_input_db  = sa.smoothed_input_db();
     p.spectrum.smoothed_output_db = sa.smoothed_output_db();
     p.spectrum.input_peak_db      = sa.input_peak_db();
@@ -189,21 +188,13 @@ void GuiManager::recallSnapshotFromSlot(int slot) {
 // run_frame — reactive root render loop
 // ─────────────────────────────────────────────────────────────────────────────
 bool GuiManager::run_frame() {
-    SDL_Event event;
-    while (SDL_PollEvent(&event)) {
-        ImGui_ImplSDL2_ProcessEvent(&event);
-        if (event.type == SDL_QUIT) return false;
-        if (event.type == SDL_WINDOWEVENT &&
-            event.window.event == SDL_WINDOWEVENT_CLOSE &&
-            event.window.windowID == SDL_GetWindowID(window_))
-            return false;
+    if (!window_context_.poll_events()) {
+        return false;
     }
 
     midi_manager_.poll(engine_);
 
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplSDL2_NewFrame();
-    ImGui::NewFrame();
+    window_context_.begin_frame();
 
     // ── Keyboard shortcuts ──
     {
@@ -235,10 +226,11 @@ bool GuiManager::run_frame() {
     render_menu_bar();
 
     // ── Full-window layout ──
-    SDL_GetWindowSize(window_, &window_width_, &window_height_);
+    int window_width = window_context_.get_width();
+    int window_height = window_context_.get_height();
     ImGui::SetNextWindowPos(ImVec2(0, 20));
-    ImGui::SetNextWindowSize(ImVec2(static_cast<float>(window_width_),
-                                    static_cast<float>(window_height_) - 20));
+    ImGui::SetNextWindowSize(ImVec2(static_cast<float>(window_width),
+                                    static_cast<float>(window_height) - 20));
     ImGui::Begin("##MainArea", nullptr,
         ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize |
         ImGuiWindowFlags_NoMove     | ImGuiWindowFlags_NoCollapse |
@@ -318,14 +310,7 @@ bool GuiManager::run_frame() {
     }
 
     // ── Render ──
-    ImGui::Render();
-    int display_w, display_h;
-    SDL_GL_GetDrawableSize(window_, &display_w, &display_h);
-    glViewport(0, 0, display_w, display_h);
-    glClearColor(0.078f, 0.071f, 0.063f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    SDL_GL_SwapWindow(window_);
+    window_context_.end_frame();
 
     return true;
 }
@@ -337,7 +322,7 @@ void GuiManager::render_master_controls() {
     smoothed_input_level_  += (engine_.get_input_level()  - smoothed_input_level_)  * 0.3f;
     smoothed_output_level_ += (engine_.get_output_level() - smoothed_output_level_) * 0.3f;
 
-    ImGui::BeginChild("MasterControls", ImVec2(0, 150), true, ImGuiWindowFlags_NoScrollbar);
+    ImGui::BeginChild("MasterControls", ImVec2(0, 110), true, ImGuiWindowFlags_NoScrollbar);
     ImGui::Columns(4, "master_cols", false);
 
     // Input gain
@@ -395,7 +380,9 @@ void GuiManager::render_master_controls() {
     ImGui::Separator();
     ImGui::Columns(3, "metronome_cols", false);
 
+    ImGui::AlignTextToFramePadding();
     ImGui::Text("METRONOME");
+    ImGui::SameLine();
     bool metronome_on = engine_.get_metronome_enabled();
     if (ImGui::Button(metronome_on ? "Stop" : "Play"))
         engine_.toggle_metronome();

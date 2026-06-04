@@ -1,7 +1,7 @@
 #include "test_framework.h"
 #include "audio/engine/audio_engine.h"
-#include "audio/effects/noise_gate.h"
-#include "audio/effects/amp_simulator.h"
+#include "audio/effects/dynamics/noise_gate.h"
+#include "audio/effects/amp_cab/amp_simulator.h"
 #include "cli.h" 
 
 using namespace Amplitron;
