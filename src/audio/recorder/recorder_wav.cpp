@@ -1,5 +1,6 @@
 #include "audio/recorder/recorder.h"
-#include "audio/engine/audio_engine.h"
+#include "audio/engine/i_audio_engine.h"
+#include "audio/effects/core/effect.h"
 #include <nlohmann/json.hpp>
 #include <iostream>
 #include <fstream>
@@ -76,7 +77,7 @@ file_.write(reinterpret_cast<const char*>(&data_size), 4);
     file_.seekp(0, std::ios::end);
 }
 
-void Recorder::write_metadata(const std::string& wav_path, AudioEngine& engine) {
+void Recorder::write_metadata(const std::string& wav_path, IAudioEngine& engine) {
     // Write a JSON sidecar file with recording details
     std::string meta_path = wav_path;
     // Replace .wav with .meta.json

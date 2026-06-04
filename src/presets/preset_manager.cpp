@@ -1,5 +1,6 @@
 #include "preset_manager.h"
 #include "preset_manager_impl.h"
+#include "presets/preset_components.h"
 #include <iostream>
 #include <ctime>
 #include <sys/stat.h>
@@ -29,7 +30,22 @@
 
 namespace Amplitron {
 
-std::string PresetManager::last_error_;
+PresetManager::PresetManager()
+    : PresetManager(nullptr, nullptr, nullptr) {}
+
+PresetManager::PresetManager(std::unique_ptr<IPresetSerializer> serializer,
+                             std::unique_ptr<IPresetStorage> storage,
+                             std::unique_ptr<IPresetMigrator> migrator)
+    : serializer_(std::move(serializer)),
+      storage_(std::move(storage)),
+      migrator_(std::move(migrator)) {
+    if (!serializer_) serializer_ = std::make_unique<PresetSerializer>();
+    if (!storage_) storage_ = std::make_unique<PresetStorage>();
+    if (!migrator_) migrator_ = std::make_unique<PresetMigrator>();
+}
+
+PresetManager::~PresetManager() = default;
+
 std::string PresetManager::custom_presets_dir_;
 
 bool dir_exists(const std::string& path) {
@@ -95,9 +111,11 @@ std::string PresetManager::apply_migrations(const std::string& raw_json_string) 
         return raw_json_string;
     }
 
-    // Look for a "version" key strictly near the root area (e.g., within the first 100 characters)
-    // This stops nested effect parameters from accidentally triggering a false positive bypass.
-    size_t version_pos = raw_json_string.find("\"version\"");
+    // Look for a version key strictly near the root area
+    size_t version_pos = raw_json_string.find("\"format_version\"");
+    if (version_pos == std::string::npos) {
+        version_pos = raw_json_string.find("\"version\"");
+    }
     bool is_root_version = (version_pos != std::string::npos && (version_pos - root_start) < 100);
 
     if (!is_root_version) {
@@ -117,6 +135,7 @@ std::string PresetManager::apply_migrations(const std::string& raw_json_string) 
             if (!is_empty_json) {
                 migration_patch += ",\n";
             }
+            migration_patch += "  \"format_version\": " + std::to_string(CURRENT_PRESET_VERSION) + ",\n";
             migration_patch += "  \"version\": " + std::to_string(CURRENT_PRESET_VERSION) + ",\n";
             migration_patch += "  \"input_gain\": 0.7,\n";
             migration_patch += "  \"output_gain\": 0.8\n";

@@ -1,13 +1,13 @@
 #pragma once
 
 #include "common.h"
-#include "audio/effects/effect.h"
+#include "audio/effects/core/effect.h"
 #include <imgui.h>
 
 namespace Amplitron {
 
 class CommandHistory;
-class AudioEngine;
+class IAudioEngine;
 class GuiMidi;
 
 /**
@@ -26,7 +26,7 @@ public:
      * @param effect Shared pointer to the effect this widget controls.
      * @param index  Position in the signal chain (used for ImGui IDs).
      */
-    PedalWidget(AudioEngine& engine, std::shared_ptr<Effect> effect, int index);
+    PedalWidget(IAudioEngine& engine, std::shared_ptr<Effect> effect, int index);
 
     /**
      * @brief Render the pedal widget for one frame.
@@ -69,7 +69,7 @@ private:
     void render_footswitch_and_extras(ImDrawList* dl, ImVec2 p0, ImVec2 p1, float pedal_width, float pedal_height, bool is_amp, bool enabled, bool& should_remove, float zoom);
 
 
-    AudioEngine& engine_;
+    IAudioEngine& engine_;
     std::shared_ptr<Effect> effect_;
     int index_;
     CommandHistory* history_ = nullptr;

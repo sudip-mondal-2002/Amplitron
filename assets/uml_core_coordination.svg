@@ -1,0 +1,206 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" width="100%" height="100%" style="background-color: #121214; border-radius: 8px;">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="2" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.6" />
+    </filter>
+    <linearGradient id="gradient-accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+    <linearGradient id="gradient-interface" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d9488" />
+      <stop offset="100%" stop-color="#0f766e" />
+    </linearGradient>
+    <linearGradient id="gradient-abstract" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#b45309" />
+      <stop offset="100%" stop-color="#92400e" />
+    </linearGradient>
+    
+    <!-- UML Markers -->
+    <marker id="inheritance" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#121214" stroke="#a1a1aa" stroke-width="1.5"/>
+    </marker>
+    <marker id="realization" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#121214" stroke="#a1a1aa" stroke-width="1.5"/>
+    </marker>
+    <marker id="association" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10" fill="none" stroke="#a1a1aa" stroke-width="1.5"/>
+    </marker>
+    <marker id="composition" viewBox="0 0 12 10" refX="0" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 5 L 6 0 L 12 5 L 6 10 z" fill="#3b82f6" stroke="#3b82f6" stroke-width="1.5"/>
+    </marker>
+    <marker id="aggregation" viewBox="0 0 12 10" refX="0" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 5 L 6 0 L 12 5 L 6 10 z" fill="#121214" stroke="#a1a1aa" stroke-width="1.5"/>
+    </marker>
+  </defs>
+
+  <!-- Title Section -->
+  <g transform="translate(20, 35)">
+    <text font-family="system-ui, sans-serif" font-size="18" font-weight="bold" fill="#f4f4f5">Amplitron Subsystems & Core Coordination</text>
+    <text font-family="system-ui, sans-serif" font-size="11" fill="#71717a" y="18">Unified Facade Pattern coordinating real-time Audio, MIDI, Preset persistence, and Undo/Redo history</text>
+  </g>
+
+  <!-- Content -->
+  
+    <!-- Class: SessionManager -->
+    <g transform="translate(400, 70)" filter="url(#shadow)">
+      <!-- Main Background -->
+      <rect width="240" height="130" rx="6" ry="6" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1.2" />
+      
+      <!-- Top Accent Bar -->
+      <path d="M 1 6 Q 1 1 239 1 Q 239 6 239 30 L 1 30 Z" fill="#27272a" opacity="0.85"/>
+      <line x1="1" y1="30" x2="239" y2="30" stroke="#2c2c30" stroke-width="1"/>
+          <text x="120.0" y="19" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" font-style="normal" fill="#ffffff" text-anchor="middle">SessionManager</text>
+      <text x="10" y="44" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#a1a1aa">- autoSavePath : fs::path</text>
+      <text x="10" y="57" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#a1a1aa">- tempSavePath : fs::path</text>
+      <text x="10" y="70" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#a1a1aa">- lastSaveTime : time_point</text>
+      <line x1="1" y1="86" x2="239" y2="86" stroke="#2c2c30" stroke-width="0.8" opacity="0.6"/>
+      <text x="10" y="100" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ SessionManager(org, app)</text>
+      <text x="10" y="113" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ hasUnsavedSession() : bool</text>
+      <text x="10" y="126" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ shouldSave() : bool</text>
+      <text x="10" y="139" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ saveSession(state : json)</text>
+      <text x="10" y="152" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ loadSession() : json</text>
+      <text x="10" y="165" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ clearSession()</text>
+    </g>
+
+    <!-- Class: AmplitronSession -->
+    <g transform="translate(400, 260)" filter="url(#shadow)">
+      <!-- Main Background -->
+      <rect width="240" height="160" rx="6" ry="6" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1.2" />
+      
+      <!-- Top Accent Bar -->
+      <path d="M 1 6 Q 1 1 239 1 Q 239 6 239 30 L 1 30 Z" fill="url(#gradient-accent)" opacity="0.85"/>
+      <line x1="1" y1="30" x2="239" y2="30" stroke="#2c2c30" stroke-width="1"/>
+          <text x="120.0" y="19" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" font-style="normal" fill="#ffffff" text-anchor="middle">AmplitronSession</text>
+      <text x="10" y="44" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#a1a1aa">- engine_ : unique_ptr<IAudioEngine></text>
+      <text x="10" y="57" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#a1a1aa">- midi_ : unique_ptr<IMidiManager></text>
+      <text x="10" y="70" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#a1a1aa">- presets_ : unique_ptr<IPresetManager></text>
+      <text x="10" y="83" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#a1a1aa">- command_history_ : CommandHistory</text>
+      <text x="10" y="96" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#a1a1aa">- snapshot_manager_ : SnapshotManager</text>
+      <line x1="1" y1="112" x2="239" y2="112" stroke="#2c2c30" stroke-width="0.8" opacity="0.6"/>
+      <text x="10" y="126" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ engine() : IAudioEngine&</text>
+      <text x="10" y="139" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ midi() : IMidiManager&</text>
+      <text x="10" y="152" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ presets() : IPresetManager&</text>
+      <text x="10" y="165" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ command_history() : CommandHistory&</text>
+      <text x="10" y="178" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ snapshot_manager() : SnapshotManager&</text>
+    </g>
+
+    <!-- Class: CommandHistory -->
+    <g transform="translate(50, 200)" filter="url(#shadow)">
+      <!-- Main Background -->
+      <rect width="260" height="120" rx="6" ry="6" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1.2" />
+      
+      <!-- Top Accent Bar -->
+      <path d="M 1 6 Q 1 1 259 1 Q 259 6 259 30 L 1 30 Z" fill="#27272a" opacity="0.85"/>
+      <line x1="1" y1="30" x2="259" y2="30" stroke="#2c2c30" stroke-width="1"/>
+          <text x="130.0" y="19" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" font-style="normal" fill="#ffffff" text-anchor="middle">CommandHistory</text>
+      <text x="10" y="44" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#a1a1aa">- undo_stack_ : vector<unique_ptr<Cmd>></text>
+      <text x="10" y="57" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#a1a1aa">- redo_stack_ : vector<unique_ptr<Cmd>></text>
+      <line x1="1" y1="73" x2="259" y2="73" stroke="#2c2c30" stroke-width="0.8" opacity="0.6"/>
+      <text x="10" y="87" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ execute_command(cmd : unique_ptr<Cmd>)</text>
+      <text x="10" y="100" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ undo()</text>
+      <text x="10" y="113" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ redo()</text>
+      <text x="10" y="126" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ can_undo() : bool</text>
+      <text x="10" y="139" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ can_redo() : bool</text>
+      <text x="10" y="152" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ clear()</text>
+    </g>
+
+    <!-- Class: SnapshotManager -->
+    <g transform="translate(50, 360)" filter="url(#shadow)">
+      <!-- Main Background -->
+      <rect width="260" height="100" rx="6" ry="6" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1.2" />
+      
+      <!-- Top Accent Bar -->
+      <path d="M 1 6 Q 1 1 259 1 Q 259 6 259 30 L 1 30 Z" fill="#27272a" opacity="0.85"/>
+      <line x1="1" y1="30" x2="259" y2="30" stroke="#2c2c30" stroke-width="1"/>
+          <text x="130.0" y="19" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" font-style="normal" fill="#ffffff" text-anchor="middle">SnapshotManager</text>
+      <text x="10" y="44" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#a1a1aa">- slots_ : array<PresetData, 4></text>
+      <text x="10" y="57" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#a1a1aa">- active_slot_ : int</text>
+      <line x1="1" y1="73" x2="259" y2="73" stroke="#2c2c30" stroke-width="0.8" opacity="0.6"/>
+      <text x="10" y="87" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ save_snapshot(slot, preset)</text>
+      <text x="10" y="100" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ recall_snapshot(slot) : PresetData</text>
+      <text x="10" y="113" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ get_active_slot() : int</text>
+    </g>
+
+    <!-- Class: IAudioEngine -->
+    <g transform="translate(730, 140)" filter="url(#shadow)">
+      <!-- Main Background -->
+      <rect width="220" height="110" rx="6" ry="6" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1.2" stroke-dasharray='4,4'/>
+      
+      <!-- Top Accent Bar -->
+      <path d="M 1 6 Q 1 1 219 1 Q 219 6 219 30 L 1 30 Z" fill="url(#gradient-interface)" opacity="0.85"/>
+      <line x1="1" y1="30" x2="219" y2="30" stroke="#2c2c30" stroke-width="1"/>
+          <text x="110.0" y="15" font-family="system-ui, sans-serif" font-size="9" fill="#e4e4e7" text-anchor="middle" font-style="italic" opacity="0.8">&lt;&lt;interface&gt;&gt;</text>
+      <text x="110.0" y="26" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" font-style="italic" fill="#ffffff" text-anchor="middle">IAudioEngine</text>
+      <text x="10" y="44" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ initialize() : bool</text>
+      <text x="10" y="57" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ start() : bool</text>
+      <text x="10" y="70" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ stop()</text>
+      <text x="10" y="83" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ commit_graph_changes()</text>
+      <text x="10" y="96" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ push_param_change(fx, param, val)</text>
+    </g>
+
+    <!-- Class: IMidiManager -->
+    <g transform="translate(730, 270)" filter="url(#shadow)">
+      <!-- Main Background -->
+      <rect width="220" height="110" rx="6" ry="6" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1.2" stroke-dasharray='4,4'/>
+      
+      <!-- Top Accent Bar -->
+      <path d="M 1 6 Q 1 1 219 1 Q 219 6 219 30 L 1 30 Z" fill="url(#gradient-interface)" opacity="0.85"/>
+      <line x1="1" y1="30" x2="219" y2="30" stroke="#2c2c30" stroke-width="1"/>
+          <text x="110.0" y="15" font-family="system-ui, sans-serif" font-size="9" fill="#e4e4e7" text-anchor="middle" font-style="italic" opacity="0.8">&lt;&lt;interface&gt;&gt;</text>
+      <text x="110.0" y="26" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" font-style="italic" fill="#ffffff" text-anchor="middle">IMidiManager</text>
+      <text x="10" y="44" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ initialize() : bool</text>
+      <text x="10" y="57" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ shutdown()</text>
+      <text x="10" y="70" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ poll(engine : IAudioEngine&)</text>
+      <text x="10" y="83" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ add_mapping(map : MidiMapping)</text>
+      <text x="10" y="96" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ start_learn(type, fx, param)</text>
+    </g>
+
+    <!-- Class: IPresetManager -->
+    <g transform="translate(730, 400)" filter="url(#shadow)">
+      <!-- Main Background -->
+      <rect width="220" height="100" rx="6" ry="6" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1.2" stroke-dasharray='4,4'/>
+      
+      <!-- Top Accent Bar -->
+      <path d="M 1 6 Q 1 1 219 1 Q 219 6 219 30 L 1 30 Z" fill="url(#gradient-interface)" opacity="0.85"/>
+      <line x1="1" y1="30" x2="219" y2="30" stroke="#2c2c30" stroke-width="1"/>
+          <text x="110.0" y="15" font-family="system-ui, sans-serif" font-size="9" fill="#e4e4e7" text-anchor="middle" font-style="italic" opacity="0.8">&lt;&lt;interface&gt;&gt;</text>
+      <text x="110.0" y="26" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" font-style="italic" fill="#ffffff" text-anchor="middle">IPresetManager</text>
+      <text x="10" y="44" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ save_preset(path, name, desc, eng, maps)</text>
+      <text x="10" y="57" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ load_preset(path, eng, midi) : bool</text>
+      <text x="10" y="70" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ list_presets() : vector<string></text>
+    </g>
+
+    <!-- Class: GuiManager -->
+    <g transform="translate(400, 480)" filter="url(#shadow)">
+      <!-- Main Background -->
+      <rect width="240" height="95" rx="6" ry="6" fill="#1c1c1f" stroke="#2c2c30" stroke-width="1.2" />
+      
+      <!-- Top Accent Bar -->
+      <path d="M 1 6 Q 1 1 239 1 Q 239 6 239 30 L 1 30 Z" fill="url(#gradient-accent)" opacity="0.85"/>
+      <line x1="1" y1="30" x2="239" y2="30" stroke="#2c2c30" stroke-width="1"/>
+          <text x="120.0" y="19" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" font-style="normal" fill="#ffffff" text-anchor="middle">GuiManager</text>
+      <text x="10" y="44" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#a1a1aa">- session_ : AmplitronSession&</text>
+      <text x="10" y="57" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#a1a1aa">- window_context_ : WindowContext</text>
+      <text x="10" y="70" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#a1a1aa">- pedal_board_ : unique_ptr<PedalBoard></text>
+      <line x1="1" y1="86" x2="239" y2="86" stroke="#2c2c30" stroke-width="0.8" opacity="0.6"/>
+      <text x="10" y="100" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ initialize(width, height) : bool</text>
+      <text x="10" y="113" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ run_frame() : bool</text>
+      <text x="10" y="126" font-family="SFMono-Regular, Consolas, Monaco, monospace" font-size="9" fill="#e4e4e7">+ shutdown()</text>
+    </g>
+    <line x1="520" y1="260" x2="520" y2="200" stroke="#71717a" stroke-width="1.2" stroke-dasharray='4,4'  marker-end="url(#association)"/>
+    <text x="520.0" y="225.0" font-family="system-ui, sans-serif" font-size="9" fill="#a1a1aa" text-anchor="middle">uses</text>
+    <path d="M 400 310 L 310 260" fill="none" stroke="#71717a" stroke-width="1.2"  marker-start="url(#composition)" />
+    <text x="360" y="275" font-family="system-ui, sans-serif" font-size="9" fill="#a1a1aa" text-anchor="middle">owns</text>
+    <path d="M 400 370 L 310 410" fill="none" stroke="#71717a" stroke-width="1.2"  marker-start="url(#composition)" />
+    <text x="360" y="400" font-family="system-ui, sans-serif" font-size="9" fill="#a1a1aa" text-anchor="middle">owns</text>
+    <line x1="640" y1="310" x2="730" y2="220" stroke="#71717a" stroke-width="1.2"   marker-end="url(#association)"/>
+    <text x="685.0" y="260.0" font-family="system-ui, sans-serif" font-size="9" fill="#a1a1aa" text-anchor="middle">controls</text>
+    <line x1="640" y1="340" x2="730" y2="325" stroke="#71717a" stroke-width="1.2"   marker-end="url(#association)"/>
+    <text x="685.0" y="327.5" font-family="system-ui, sans-serif" font-size="9" fill="#a1a1aa" text-anchor="middle">controls</text>
+    <line x1="640" y1="370" x2="730" y2="430" stroke="#71717a" stroke-width="1.2"   marker-end="url(#association)"/>
+    <text x="685.0" y="395.0" font-family="system-ui, sans-serif" font-size="9" fill="#a1a1aa" text-anchor="middle">controls</text>
+    <line x1="520" y1="480" x2="520" y2="420" stroke="#71717a" stroke-width="1.2"   marker-end="url(#association)"/>
+    <text x="520.0" y="445.0" font-family="system-ui, sans-serif" font-size="9" fill="#a1a1aa" text-anchor="middle">updates</text>
+
+</svg>

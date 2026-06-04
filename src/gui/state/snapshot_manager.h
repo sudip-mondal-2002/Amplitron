@@ -1,8 +1,8 @@
 #pragma once
 
 #include "common.h"
-#include "audio/engine/audio_engine.h"
-#include "audio/effects/effect.h"
+#include "audio/engine/i_audio_engine.h"
+#include "audio/effects/core/effect.h"
 #include "gui/commands/command.h"
 #include <array>
 #include <optional>
@@ -43,7 +43,7 @@ public:
     // ------------------------------------------------------------------
 
     /** @brief Capture the current engine state into the given slot (0–3). */
-    void save_slot(int slot, AudioEngine& engine) {
+    void save_slot(int slot, IAudioEngine& engine) {
         if (slot < 0 || slot >= NUM_SLOTS) return;
         slots_[slot] = capture(engine);
     }
@@ -60,7 +60,7 @@ public:
      * For use in tests and headless scenarios. GUI code should call
      * GuiSnapshots::recall_slot() instead to get undo/redo support.
      */
-    void recall_slot_direct(int slot, AudioEngine& engine) {
+    void recall_slot_direct(int slot, IAudioEngine& engine) {
         if (slot < 0 || slot >= NUM_SLOTS) return;
         if (!slots_[slot].has_value()) return;
         apply(*slots_[slot], engine);
@@ -95,7 +95,7 @@ public:
     // ------------------------------------------------------------------
 
     /** @brief Capture the current engine state as a BoardSnapshot. */
-    static BoardSnapshot capture(AudioEngine& engine) {
+    static BoardSnapshot capture(IAudioEngine& engine) {
         BoardSnapshot snap;
         snap.input_gain  = engine.get_input_gain();
         snap.output_gain = engine.get_output_gain();
@@ -120,7 +120,7 @@ public:
      * effect chain swap via AudioEngine::restore_effects_state so the audio
      * thread never sees a partial state.
      */
-    static void apply(const BoardSnapshot& snap, AudioEngine& engine) {
+    static void apply(const BoardSnapshot& snap, IAudioEngine& engine) {
         std::vector<std::shared_ptr<Effect>> new_effects;
         new_effects.reserve(snap.effects.size());
 

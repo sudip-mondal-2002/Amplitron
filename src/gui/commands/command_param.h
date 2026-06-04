@@ -1,8 +1,8 @@
 #pragma once
 
 #include "gui/commands/command_base.h"
-#include "audio/engine/audio_engine.h"
-#include "audio/effects/effect.h"
+#include "audio/engine/i_audio_engine.h"
+#include "audio/effects/core/effect.h"
 #include <chrono>
 
 namespace Amplitron {
@@ -24,7 +24,7 @@ public:
      * @param old_value   Value before the change (used by undo).
      * @param new_value   Value after the change (used by execute).
      */
-    ParameterChangeCommand(AudioEngine& engine, std::shared_ptr<Effect> effect,
+    ParameterChangeCommand(IAudioEngine& engine, std::shared_ptr<Effect> effect,
                            int param_index, float old_value, float new_value)
         : engine_(engine), effect_(std::move(effect)),
           param_index_(param_index), old_value_(old_value), new_value_(new_value) {}
@@ -34,12 +34,17 @@ public:
         auto& params = effect_->params();
         if (param_index_ >= 0 && param_index_ < static_cast<int>(params.size())) {
             params[param_index_].value = new_value_;
-            int idx = -1;
-            auto& fx = engine_.effects();
-            for (int i = 0; i < static_cast<int>(fx.size()); ++i) {
-                if (fx[i] == effect_) { idx = i; break; }
+            int node_id = -1;
+            for (const auto& node : engine_.graph().get_nodes()) {
+                if (node.pedal == effect_) { node_id = node.id; break; }
             }
-            if (idx >= 0) engine_.push_param_change(idx, param_index_, new_value_);
+            if (node_id == -1) {
+                auto& fx = engine_.effects();
+                for (int i = 0; i < static_cast<int>(fx.size()); ++i) {
+                    if (fx[i] == effect_) { node_id = i; break; }
+                }
+            }
+            if (node_id >= 0) engine_.push_param_change(node_id, param_index_, new_value_);
         }
         return true;
     }
@@ -49,12 +54,17 @@ public:
         auto& params = effect_->params();
         if (param_index_ >= 0 && param_index_ < static_cast<int>(params.size())) {
             params[param_index_].value = old_value_;
-            int idx = -1;
-            auto& fx = engine_.effects();
-            for (int i = 0; i < static_cast<int>(fx.size()); ++i) {
-                if (fx[i] == effect_) { idx = i; break; }
+            int node_id = -1;
+            for (const auto& node : engine_.graph().get_nodes()) {
+                if (node.pedal == effect_) { node_id = node.id; break; }
             }
-            if (idx >= 0) engine_.push_param_change(idx, param_index_, old_value_);
+            if (node_id == -1) {
+                auto& fx = engine_.effects();
+                for (int i = 0; i < static_cast<int>(fx.size()); ++i) {
+                    if (fx[i] == effect_) { node_id = i; break; }
+                }
+            }
+            if (node_id >= 0) engine_.push_param_change(node_id, param_index_, old_value_);
         }
     }
 
@@ -98,7 +108,7 @@ public:
     float new_value() const { return new_value_; }
 
 private:
-    AudioEngine& engine_;
+    IAudioEngine& engine_;
     std::shared_ptr<Effect> effect_;
     int param_index_;
     float old_value_;

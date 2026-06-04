@@ -1,4 +1,5 @@
 #include "common.h"
+#include "amplitron_session.h"
 #include "audio/engine/audio_engine.h"
 #ifndef AMPLITRON_HEADLESS
 #include "gui/gui_manager.h"
@@ -11,16 +12,16 @@
 #include "gui/commands/command_graph.h"
 #include "gui/commands/command_history.h"
 
-#include "audio/effects/noise_gate.h"
-#include "audio/effects/compressor.h"
-#include "audio/effects/overdrive.h"
-#include "audio/effects/distortion.h"
-#include "audio/effects/equalizer.h"
-#include "audio/effects/chorus.h"
-#include "audio/effects/delay.h"
-#include "audio/effects/reverb.h"
-#include "audio/effects/cabinet_sim.h"
-#include "audio/effects/amp_simulator.h"
+#include "audio/effects/dynamics/noise_gate.h"
+#include "audio/effects/dynamics/compressor.h"
+#include "audio/effects/distortion/overdrive.h"
+#include "audio/effects/distortion/distortion.h"
+#include "audio/effects/eq_filter/equalizer.h"
+#include "audio/effects/modulation/chorus.h"
+#include "audio/effects/delay_reverb/delay.h"
+#include "audio/effects/delay_reverb/reverb.h"
+#include "audio/effects/amp_cab/cabinet_sim.h"
+#include "audio/effects/amp_cab/amp_simulator.h"
 
 #include <iostream>
 #include <csignal>
@@ -267,8 +268,9 @@ int main(int argc, char* argv[]) {
     std::cout << "=== Amplitron v1.0 - Guitar Amp Simulator ===" << std::endl;
     std::cout << "Starting up..." << std::endl;
 
-    // Initialize audio engine
-    Amplitron::AudioEngine engine;
+    // Initialize session and reference its audio engine
+    Amplitron::AmplitronSession session;
+    auto& engine = session.concrete_engine();
     if (!engine.initialize()) {
         std::cerr << "Failed to initialize audio engine!" << std::endl;
         return 1;
@@ -283,7 +285,7 @@ int main(int argc, char* argv[]) {
         std::cout << "Loading preset: " << cli_opts.preset_path << std::endl;
         
         //Safe preset injection
-        if (!Amplitron::PresetManager::load_preset(cli_opts.preset_path, engine, nullptr)){
+        if (!session.presets().load_preset(cli_opts.preset_path, engine, nullptr)){
             std::cerr << "Fatal Error: Could not load preset for headless mode." << std::endl;
             engine.shutdown();
             return 1;
@@ -344,15 +346,15 @@ int main(int argc, char* argv[]) {
     #ifndef AMPLITRON_HEADLESS
     else {
     // GUI bootup
-        gui = std::make_unique<Amplitron::GuiManager>(engine);
+        gui = std::make_unique<Amplitron::GuiManager>(session);
     // Create a small, automatically wired, and highly playable circuit
-        auto cabinet = std::make_shared<Amplitron::CabinetSim>();
-        cabinet->set_enabled(true);
+        auto reverb = std::make_shared<Amplitron::Reverb>();
+        reverb->set_enabled(true);
 
         auto amp = std::make_shared<Amplitron::AmpSimulator>();
         amp->set_enabled(true);
 
-        engine.add_initial_effects({cabinet, amp});
+        engine.add_initial_effects({reverb, amp});
 
         engine.set_input_gain(0.7f);
 

@@ -20,13 +20,13 @@
 #include "test_framework.h"
 #include <stdexcept>
 
-#include "audio/effects/compressor.h"
-#include "audio/effects/delay.h"
-#include "audio/effects/distortion.h" // Added for autosave test
-#include "audio/effects/equalizer.h"
-#include "audio/effects/noise_gate.h"
-#include "audio/effects/overdrive.h"
-#include "audio/effects/reverb.h"
+#include "audio/effects/dynamics/compressor.h"
+#include "audio/effects/delay_reverb/delay.h"
+#include "audio/effects/distortion/distortion.h" // Added for autosave test
+#include "audio/effects/eq_filter/equalizer.h"
+#include "audio/effects/dynamics/noise_gate.h"
+#include "audio/effects/distortion/overdrive.h"
+#include "audio/effects/delay_reverb/reverb.h"
 #include "midi/midi_manager.h"
 
 #include <cstdio>
@@ -196,6 +196,7 @@ TEST(json_preset_roundtrip_via_string) {
 }
 
 TEST(json_roundtrip_via_file) {
+  PresetManager manager;
   PresetData original = make_test_preset();
   original.name = "FileRoundtripTest";
 
@@ -207,13 +208,13 @@ TEST(json_roundtrip_via_file) {
   std::filesystem::create_directories("presets");
 
   // Save via PresetManager (which calls to_json_ext internally)
-  bool saved = PresetManager::save_preset_data(path, original);
+  bool saved = manager.save_preset_data(path, original);
   ASSERT_TRUE(saved);
 
   // Load via PresetManager (which calls from_json_ext internally)
   AudioEngine engine;
   engine.initialize();
-  bool loaded = PresetManager::load_preset(path, engine);
+  bool loaded = manager.load_preset(path, engine);
   ASSERT_TRUE(loaded);
 
   ASSERT_EQ(static_cast<int>(engine.effects().size()),

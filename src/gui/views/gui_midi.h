@@ -5,14 +5,14 @@
 
 namespace Amplitron {
 
-class MidiManager;
+class IMidiManager;
 
 #ifdef AMPLITRON_NO_MIDI
 
 // Stub implementation for non-desktop platforms
 class GuiMidi {
 public:
-    explicit GuiMidi(MidiManager& midi) : midi_(midi) {}
+    explicit GuiMidi(IMidiManager& midi) : midi_(midi) {}
     void render(bool&) {}
     bool render_learn_menu_item(const std::string&, const std::string&) { return false; }
     bool render_learn_bypass_item(const std::string&) { return false; }
@@ -20,11 +20,11 @@ public:
     bool render_remove_bypass_item(const std::string&) { return false; }
     std::string get_mapping_info(const std::string&, const std::string&) const { return ""; }
 
-    const MidiManager& midi() const { return midi_; }
-    MidiManager& manager() { return midi_; }
+    const IMidiManager& midi() const { return midi_; }
+    IMidiManager& manager() { return midi_; }
 
 private:
-    MidiManager& midi_;
+    IMidiManager& midi_;
 };
 
 #else
@@ -38,7 +38,7 @@ private:
  */
 class GuiMidi {
 public:
-    explicit GuiMidi(MidiManager& midi);
+    explicit GuiMidi(IMidiManager& midi);
 
     /** @brief Render the MIDI settings floating window. */
     void render(bool& show);
@@ -73,13 +73,13 @@ public:
     std::string get_mapping_info(const std::string& effect_name, const std::string& param_name) const;
 
     /** @brief Access the underlying MIDI manager (const). */
-    const MidiManager& midi() const { return midi_; }
+    const IMidiManager& midi() const { return midi_; }
 
     /** @brief Access the underlying MIDI manager (mutable). */
-    MidiManager& manager() { return midi_; }
+    IMidiManager& manager() { return midi_; }
 
 private:
-    MidiManager& midi_;
+    IMidiManager& midi_;
     std::vector<std::string> cached_ports_;
 };
 

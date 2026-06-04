@@ -2,6 +2,7 @@
 
 #include "common.h"
 #include "audio/engine/audio_engine.h"
+#include "audio/engine/audio_metrics_service.h"
 #include "gui/commands/command_history.h"
 #include "gui/state/snapshot_manager.h"
 #include "gui/views/gui_settings.h"
@@ -19,11 +20,14 @@
 
 struct SDL_Window;
 typedef void* SDL_GLContext;
+#include "gui/window_context.h"
+#include "gui/update_checker.h"
 
 namespace Amplitron {
 
 class PedalBoard;
 class TunerPedal;
+class AmplitronSession;
 
 /**
  * @brief Top-level GUI controller — acts as the reactive root component.
@@ -44,15 +48,15 @@ class TunerPedal;
  */
 class GuiManager {
 public:
-    GuiManager(AudioEngine& engine);
+    GuiManager(AmplitronSession& session);
     ~GuiManager();
 
     bool initialize(int width = 1280, int height = 720);
     void shutdown();
     bool run_frame();
 
-    MidiManager& midi_manager() { return midi_manager_; }
-    AudioEngine& audio_engine() { return engine_; }
+    IMidiManager& midi_manager() { return midi_manager_; }
+    IAudioEngine& audio_engine() { return engine_; }
     CommandHistory& command_history() { return command_history_; }
 
 private:
@@ -77,20 +81,18 @@ private:
     // ─────────────────────────────────────────────────────────────────────
     // Core objects
     // ─────────────────────────────────────────────────────────────────────
-    AudioEngine&   engine_;
-    CommandHistory command_history_;
-
-    SDL_Window*    window_     = nullptr;
-    SDL_GLContext  gl_context_ = nullptr;
-
+    AmplitronSession& session_;
+    IAudioEngine&   engine_;
+    CommandHistory& command_history_;
+    IMidiManager&   midi_manager_;
+    SnapshotManager& snapshot_manager_;
+    WindowContext  window_context_;
     std::unique_ptr<PedalBoard> pedal_board_;
 
     // Tuner pedal instance shared between engine tap and TunerProps assembly
     std::shared_ptr<TunerPedal> tuner_pedal_;
 
     bool initialized_      = false;
-    int  window_width_     = 1280;
-    int  window_height_    = 720;
     bool audio_muted_      = false;
 
     // ── Smoothed master level meters (computed in GuiManager, not in children) ──
@@ -104,8 +106,7 @@ private:
     bool show_tuner_         = false;
     bool show_midi_          = false;
 
-    // ── Snapshot manager (state lives in GuiManager; GuiSnapshots is a pure view) ──
-    SnapshotManager snapshot_manager_;
+    // ── Snapshot manager is now referenced from session_ ──
 
     // ── Reactive child components ──
     GuiSettings   gui_settings_;
@@ -114,20 +115,16 @@ private:
     GuiTuner      gui_tuner_;
     GuiAnalyzer   gui_analyzer_;
     GuiSnapshots  gui_snapshots_;
-    MidiManager   midi_manager_;
+    // ── MidiManager is now referenced from session_ ──
     GuiMidi       gui_midi_;
+    AudioMetricsService metrics_service_;
 
     // ── Toast notification ──
     std::string toast_message_;
     float       toast_timer_ = 0.0f;
 
     // ── Update checking ──
-    void check_for_updates();
-    std::thread update_check_thread_;
-    std::mutex  update_mutex_;
-    bool        has_new_release_     = false;
-    std::string new_release_version_;
-    std::string new_release_url_;
+    UpdateChecker update_checker_;
 
     // ── Waveform buffer (filled from recorder, passed to RecordingProps) ──
     float rec_waveform_buf_[512] = {};

@@ -1,15 +1,10 @@
 #include "test_framework.h"
 #include "audio/engine/audio_engine.h"
 #include "audio/backend/audio_backend.h"
+#include "audio/backend/jack_backend.h"
 
 #if defined(AMPLITRON_TESTS) && defined(WITH_JACK) && defined(__unix__) && !defined(__APPLE__)
-#include "../fixtures/jack_mock.cpp"
-
-namespace Amplitron
-{
-    AudioBackendState *create_disconnected_audio_backend_for_test();
-    bool jack_backend_has_active_client_for_test(const AudioBackendState *state);
-}
+#include "../fixtures/jack_mock.h"
 #endif
 
 #if defined(AMPLITRON_TESTS) && defined(WITH_JACK) && defined(__unix__) && !defined(__APPLE__)
@@ -17,19 +12,17 @@ using namespace Amplitron;
 TEST(AudioBackend_Jack_DoesNotStartWithoutBackend)
 {
     // Reset flags
-    g_mock_jack_client_open_fail = false;
+    g_mock_jack_client_open_fail = true;
     g_mock_jack_port_register_fail = false;
     g_mock_jack_activate_fail = false;
     g_mock_jack_process_callback = nullptr;
     g_mock_jack_process_arg = nullptr;
 
     AudioEngine engine;
+    auto backend = std::make_unique<JackBackend>();
+    ASSERT_TRUE(backend->get_client() == nullptr);
+    engine.replace_backend_state_for_test(std::move(backend));
     ASSERT_TRUE(engine.initialize());
-
-    AudioBackendState *state = create_disconnected_audio_backend_for_test();
-    ASSERT_TRUE(state != nullptr);
-    ASSERT_FALSE(jack_backend_has_active_client_for_test(state));
-    engine.replace_backend_for_test(state);
 
     ASSERT_FALSE(engine.start());
     ASSERT_FALSE(engine.is_running());
@@ -46,6 +39,7 @@ TEST(AudioBackend_Jack_FullLifecycle)
     g_mock_jack_process_arg = nullptr;
 
     AudioEngine engine;
+    engine.replace_backend_state_for_test(std::make_unique<JackBackend>());
     
     // Test device query methods on uninitialized / clean engine
     ASSERT_EQ(engine.get_input_device_name(), "JACK in_1");
@@ -109,6 +103,7 @@ TEST(AudioBackend_Jack_PortRegistrationFailure)
     g_mock_jack_activate_fail = false;
 
     AudioEngine engine;
+    engine.replace_backend_state_for_test(std::make_unique<JackBackend>());
     ASSERT_TRUE(engine.initialize());
     ASSERT_FALSE(engine.start());
     ASSERT_FALSE(engine.get_last_error().empty());
@@ -121,6 +116,7 @@ TEST(AudioBackend_Jack_ActivationFailure)
     g_mock_jack_activate_fail = true; // Force activate failure
 
     AudioEngine engine;
+    engine.replace_backend_state_for_test(std::make_unique<JackBackend>());
     ASSERT_TRUE(engine.initialize());
     ASSERT_FALSE(engine.start());
     ASSERT_FALSE(engine.get_last_error().empty());
@@ -133,13 +129,9 @@ TEST(AudioBackend_Jack_ClientOpenFailure)
     g_mock_jack_activate_fail = false;
 
     AudioEngine engine;
+    engine.replace_backend_state_for_test(std::make_unique<JackBackend>());
     ASSERT_TRUE(engine.initialize());
     ASSERT_FALSE(engine.start());
-}
-
-TEST(AudioBackend_Jack_NullStateDestroy)
-{
-    destroy_audio_backend(nullptr);
 }
 #else
 TEST(AudioBackend_Jack_NotAvailable)
