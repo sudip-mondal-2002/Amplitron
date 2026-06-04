@@ -113,7 +113,7 @@ void WindowContext::load_fonts() {
     ImGuiIO& io = ImGui::GetIO();
 
     const float base_font_size = 14.0f;
-    const float scaled_size    = base_font_size * dpi_scale_;
+    const float scaled_size    = base_font_size;
 
     ImFont* loaded_font = nullptr;
     auto try_font = [&](const std::string& path) {
@@ -136,9 +136,8 @@ void WindowContext::load_fonts() {
 
     if (!loaded_font) {
         io.Fonts->AddFontDefault();
-        io.FontGlobalScale = 1.0f;
     } else {
-        io.FontGlobalScale = 1.0f / dpi_scale_;
+        io.FontGlobalScale = 1.0f;
     }
 }
 
