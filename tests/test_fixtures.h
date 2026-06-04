@@ -1,8 +1,8 @@
 #pragma once
 #include "test_framework.h"
-#define private public
+// #define private public
 #include "audio/engine/audio_engine.h"
-#undef private
+// #undef private
 #include "preset_manager.h"
 #include <imgui.h>
 #include <vector>
@@ -73,6 +73,7 @@ public:
 
 protected:
     AudioEngine engine;
+    PresetManager manager;
     std::string original_presets_dir;
     std::vector<std::string> temp_files;
     std::vector<std::string> temp_dirs;

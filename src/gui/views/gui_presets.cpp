@@ -3,7 +3,7 @@
 #include "gui/commands/command.h"
 #include "gui/theme/theme.h"
 #include "preset_json.h"
-#include "audio/effects/cabinet_sim.h"
+#include "audio/effects/amp_cab/cabinet_sim.h"
 #include <cstring>
 #include <imgui.h>
 #include <cstdio>
@@ -29,7 +29,7 @@ namespace Amplitron {
  * @param engine The audio engine whose current setting should be captured.
  * @return PresetData representing the live engine configuration.
  */
-static PresetData capture_current_state(AudioEngine& engine) {
+static PresetData capture_current_state(IAudioEngine& engine) {
     PresetData preset;
     preset.input_gain = engine.get_input_gain();
     preset.output_gain = engine.get_output_gain();
@@ -88,8 +88,8 @@ static bool equal_preset_data(const PresetData& a, const PresetData& b) {
     return true;
 }
 
-GuiPresets::GuiPresets(AudioEngine& engine, CommandHistory& history)
-    : engine_(engine), history_(history) {
+GuiPresets::GuiPresets(IAudioEngine& engine, CommandHistory& history, IPresetManager& presets)
+    : engine_(engine), history_(history), presets_(presets) {
     mark_clean();
 }
 
@@ -129,7 +129,7 @@ std::string GuiPresets::preset_path_from_name(const std::string& preset_name) co
         }
     }
     if (filename.empty()) return "";
-    return PresetManager::get_presets_dir() + "/" + filename + ".json";
+    return presets_.get_presets_directory() + "/" + filename + ".json";
 }
 
 void GuiPresets::refresh_presets(bool preserve_selection) {
@@ -139,7 +139,7 @@ void GuiPresets::refresh_presets(bool preserve_selection) {
         selected_path = preset_files_[selected_preset_index_];
     }
 
-    preset_files_ = PresetManager::list_presets();
+    preset_files_ = presets_.list_presets();
     std::sort(preset_files_.begin(), preset_files_.end());
 
     selected_preset_index_ = -1;
@@ -174,7 +174,7 @@ bool GuiPresets::save_named_preset(const std::string& preset_name,
         return false;
     }
 
-    if (PresetManager::save_preset(path, preset_name, description, engine_,
+    if (presets_.save_preset(path, preset_name, description, engine_,
                                    midi_manager_ ? midi_manager_->mappings() : std::vector<MidiMapping>())) {
         preset_status_msg_ = "Saved: " + preset_name;
         refresh_presets(true);
@@ -207,7 +207,7 @@ bool GuiPresets::save_named_preset(const std::string& preset_name,
         return true;
     }
 
-    preset_status_msg_ = "Error: " + PresetManager::last_error();
+    preset_status_msg_ = "Error: " + presets_.get_last_error();
     return false;
 }
 
@@ -230,7 +230,7 @@ bool GuiPresets::load_preset_by_index(int index) {
     float before_in = engine_.get_input_gain();
     float before_out = engine_.get_output_gain();
 
-    if (PresetManager::load_preset(path, engine_, midi_manager_)) {
+    if (presets_.load_preset(path, engine_, midi_manager_)) {
         std::vector<LoadPresetCommand::EffectSnapshot> after_state;
         for (auto& fx : engine_.effects()) {
             LoadPresetCommand::EffectSnapshot snap;
@@ -258,7 +258,7 @@ bool GuiPresets::load_preset_by_index(int index) {
         return true;
     }
 
-    preset_status_msg_ = "Error: " + PresetManager::last_error();
+    preset_status_msg_ = "Error: " + presets_.get_last_error();
     return false;
 }
 
@@ -286,7 +286,7 @@ bool GuiPresets::delete_preset_by_index(int index) {
 
     std::string path = preset_files_[index];
     std::string display = preset_name_from_path(path);
-    if (std::remove(path.c_str()) == 0) {
+    if (presets_.delete_preset(path)) {
         preset_status_msg_ = "Deleted: " + display;
         refresh_presets(false);
         return true;
@@ -300,7 +300,7 @@ void GuiPresets::ensure_factory_presets() {
     if (factory_presets_initialized_) return;
     factory_presets_initialized_ = true;
 
-    if (!PresetManager::list_presets().empty()) return;
+    if (!presets_.list_presets().empty()) return;
 
     std::vector<PresetData> factory_presets;
 
@@ -349,7 +349,7 @@ void GuiPresets::ensure_factory_presets() {
     factory_presets.push_back(jazz);
 
     for (const auto& preset : factory_presets) {
-        PresetManager::save_preset_data(preset_path_from_name(preset.name), preset);
+        presets_.save_preset_data(preset_path_from_name(preset.name), preset);
     }
 }
 
@@ -465,7 +465,7 @@ void GuiPresets::render_load_popup(bool& show) {
     if (preset_files_.empty()) {
         ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
             "No presets found in '%s/' folder.\nSave a preset first, or place .json files there.",
-            PresetManager::get_presets_dir().c_str());
+            presets_.get_presets_directory().c_str());
     }
 
     for (int i = 0; i < static_cast<int>(preset_files_.size()); ++i) {

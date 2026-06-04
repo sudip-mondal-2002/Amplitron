@@ -2,7 +2,7 @@
 
 // Umbrella header including all command types
 #include "audio/engine/audio_engine.h"
-#include "audio/effects/effect.h"
+#include "audio/effects/core/effect.h"
 #include "gui/commands/command_base.h"
 #include "gui/commands/command_chain.h"
 #include "gui/commands/command_reorder.h"

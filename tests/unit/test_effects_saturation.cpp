@@ -1,8 +1,8 @@
 #include "test_framework.h"
 #include "test_fixtures.h"
-#include "audio/effects/overdrive.h"
-#include "audio/effects/distortion.h"
-#include "audio/effects/amp_simulator.h"
+#include "audio/effects/distortion/overdrive.h"
+#include "audio/effects/distortion/distortion.h"
+#include "audio/effects/amp_cab/amp_simulator.h"
 #include <cstring>
 #include <cmath>
 #include <vector>
