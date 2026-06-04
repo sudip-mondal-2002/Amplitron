@@ -96,12 +96,16 @@ void WindowContext::load_fonts() {
     dpi_scale_ = 1.0f;
     int draw_w = width_, draw_h = height_;
     SDL_GL_GetDrawableSize(window_, &draw_w, &draw_h);
-    if (width_ > 0) dpi_scale_ = static_cast<float>(draw_w) / static_cast<float>(width_);
+    if (width_ > 0) {
+        dpi_scale_ = static_cast<float>(draw_w) / static_cast<float>(width_);
+    }
 
 #ifdef __EMSCRIPTEN__
     if (dpi_scale_ <= 1.0f) {
         dpi_scale_ = emscripten_get_device_pixel_ratio();
-        if (dpi_scale_ <= 0.0f) dpi_scale_ = 1.0f;
+        if (dpi_scale_ <= 0.0f) {
+            dpi_scale_ = 1.0f;
+        }
     }
 #endif
 
@@ -113,7 +117,9 @@ void WindowContext::load_fonts() {
 
     ImFont* loaded_font = nullptr;
     auto try_font = [&](const std::string& path) {
-        if (!loaded_font) loaded_font = io.Fonts->AddFontFromFileTTF(path.c_str(), scaled_size);
+        if (!loaded_font) {
+            loaded_font = io.Fonts->AddFontFromFileTTF(path.c_str(), scaled_size);
+        }
     };
 
     char* base_path = SDL_GetBasePath();
@@ -144,9 +150,16 @@ void WindowContext::load_icon() {
         SDL_free(base);
     }
     NSVGimage* svg = nullptr;
-    if (!icon_path.empty()) svg = nsvgParseFromFile(icon_path.c_str(), "px", 96.0f);
-    if (!svg) svg = nsvgParseFromFile("../assets/icon.svg", "px", 96.0f);
-    if (!svg) svg = nsvgParseFromFile("assets/icon.svg", "px", 96.0f);
+    if (!icon_path.empty()) {
+        svg = nsvgParseFromFile(icon_path.c_str(), "px", 96.0f);
+    }
+    if (!svg) {
+        svg = nsvgParseFromFile("../assets/icon.svg", "px", 96.0f);
+    }
+    if (!svg) {
+        svg = nsvgParseFromFile("assets/icon.svg", "px", 96.0f);
+    }
+
     if (svg) {
         const int icon_size = 64;
         NSVGrasterizer* rast = nsvgCreateRasterizer();
