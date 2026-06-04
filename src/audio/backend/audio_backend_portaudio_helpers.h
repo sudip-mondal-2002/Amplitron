@@ -4,7 +4,7 @@
 
 namespace Amplitron {
 
-// Forward-declared helpers, defined in audio_backend_portaudio.cpp
+// Forward-declared helpers, defined in portaudio_backend.cpp
 bool is_usb_device_name(const std::string& name);
 int get_host_api_priority(int host_api_type);
 bool is_projector_or_hdmi(const std::string& name);

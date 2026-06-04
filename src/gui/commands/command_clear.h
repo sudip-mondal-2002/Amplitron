@@ -1,8 +1,8 @@
 #pragma once
 
 #include "gui/commands/command_base.h"
-#include "audio/engine/audio_engine.h"
-#include "audio/effects/effect.h"
+#include "audio/engine/i_audio_engine.h"
+#include "audio/effects/core/effect.h"
 #include <vector>
 
 namespace Amplitron {
@@ -14,7 +14,7 @@ namespace Amplitron {
  */
 class ClearAllCommand : public Command {
 public:
-    explicit ClearAllCommand(AudioEngine& engine)
+    explicit ClearAllCommand(IAudioEngine& engine)
         : engine_(engine) {
         for (auto& fx : engine_.effects()) {
             saved_.push_back(fx);
@@ -37,7 +37,7 @@ public:
     const char* description() const override { return "Clear All"; }
 
 private:
-    AudioEngine& engine_;
+    IAudioEngine& engine_;
     std::vector<std::shared_ptr<Effect>> saved_;
 };
 

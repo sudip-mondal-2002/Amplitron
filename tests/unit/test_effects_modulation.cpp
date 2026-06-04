@@ -1,8 +1,8 @@
 #include "test_framework.h"
 #include "test_fixtures.h"
-#include "audio/effects/chorus.h"
-#include "audio/effects/phaser.h"
-#include "audio/effects/flanger.h"
+#include "audio/effects/modulation/chorus.h"
+#include "audio/effects/modulation/phaser.h"
+#include "audio/effects/modulation/flanger.h"
 #include <cstring>
 #include <cmath>
 

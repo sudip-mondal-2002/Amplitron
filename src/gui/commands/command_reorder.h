@@ -1,6 +1,6 @@
 #pragma once
 
-#include "audio/engine/audio_engine.h"
+#include "audio/engine/i_audio_engine.h"
 #include "gui/commands/command_base.h"
 
 namespace Amplitron {
@@ -18,7 +18,7 @@ public:
    * @param from    Source index in the effect chain.
    * @param to      Destination index in the effect chain.
    */
-  ReorderEffectCommand(AudioEngine &engine, int from, int to)
+  ReorderEffectCommand(IAudioEngine &engine, int from, int to)
       : engine_(engine), from_(from), to_(to) {}
 
   /** @brief Move the effect from source to destination index. */
@@ -40,7 +40,7 @@ public:
   int to() const { return to_; }
 
 private:
-  AudioEngine &engine_;
+  IAudioEngine &engine_;
   int from_;
   int to_;
 };

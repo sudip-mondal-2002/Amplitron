@@ -10,8 +10,8 @@
 #include "gui/commands/command_reset.h"
 #include "gui/commands/command_clear.h"
 #include "gui/commands/command_history.h"
-#include "audio/effects/overdrive.h"
-#include "audio/effects/reverb.h"
+#include "audio/effects/distortion/overdrive.h"
+#include "audio/effects/delay_reverb/reverb.h"
 #include <memory>
 #include <string>
 

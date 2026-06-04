@@ -6,7 +6,7 @@
 
 namespace Amplitron {
 
-GuiMidi::GuiMidi(MidiManager& midi)
+GuiMidi::GuiMidi(IMidiManager& midi)
     : midi_(midi) {}
 
 // ---------------------------------------------------------------------------

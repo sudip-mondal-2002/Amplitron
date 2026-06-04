@@ -1,8 +1,8 @@
 #include "test_framework.h"
 #include "test_fixtures.h"
-#include "audio/effects/delay.h"
-#include "audio/effects/reverb.h"
-#include "audio/effects/looper.h"
+#include "audio/effects/delay_reverb/delay.h"
+#include "audio/effects/delay_reverb/reverb.h"
+#include "audio/effects/utility/looper.h"
 #include <cstring>
 #include <cmath>
 #include <vector>

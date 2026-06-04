@@ -1,7 +1,7 @@
 #pragma once
 
-#include "audio/engine/audio_engine.h"
-#include "audio/effects/effect.h"
+#include "audio/engine/i_audio_engine.h"
+#include "audio/effects/core/effect.h"
 #include "gui/commands/command_base.h"
 #include <vector>
 #include <utility>
@@ -37,7 +37,7 @@ public:
    * @param after_input_gain   Input gain after the load.
    * @param after_output_gain  Output gain after the load.
    */
-  LoadPresetCommand(AudioEngine &engine,
+  LoadPresetCommand(IAudioEngine &engine,
                     std::vector<EffectSnapshot> before_state,
                     float before_input_gain, float before_output_gain,
                     std::vector<EffectSnapshot> after_state,
@@ -95,7 +95,7 @@ private:
     engine_.set_output_gain(output_gain);
   }
 
-  AudioEngine &engine_;
+  IAudioEngine &engine_;
   std::vector<EffectSnapshot> before_state_;
   float before_input_gain_;
   float before_output_gain_;
@@ -116,7 +116,7 @@ class RecallSnapshotCommand : public Command {
 public:
   using EffectSnapshot = LoadPresetCommand::EffectSnapshot;
 
-  RecallSnapshotCommand(AudioEngine &engine,
+  RecallSnapshotCommand(IAudioEngine &engine,
                         std::vector<EffectSnapshot> before_effects,
                         float before_input_gain, float before_output_gain,
                         std::vector<EffectSnapshot> after_effects,
@@ -163,7 +163,7 @@ private:
     engine_.set_output_gain(output_gain);
   }
 
-  AudioEngine &engine_;
+  IAudioEngine &engine_;
   std::vector<EffectSnapshot> before_effects_;
   float before_input_gain_;
   float before_output_gain_;

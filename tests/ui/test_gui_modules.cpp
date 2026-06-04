@@ -30,8 +30,8 @@
 #include "gui/views/gui_settings.h"
 #include "gui/commands/command_history.h"
 #include "midi/midi_manager.h"
-#include "audio/effects/overdrive.h"
-#include "audio/effects/tuner.h"
+#include "audio/effects/distortion/overdrive.h"
+#include "audio/effects/utility/tuner.h"
 #include "preset_manager.h"
 
 #include <cmath>

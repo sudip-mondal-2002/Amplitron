@@ -1,7 +1,7 @@
 #include "test_framework.h"
 #include "test_fixtures.h"
-#include "audio/effects/octaver.h"
-#include "audio/effects/pitch_shifter.h"
+#include "audio/effects/pitch/octaver.h"
+#include "audio/effects/pitch/pitch_shifter.h"
 #include <cstring>
 #include <cmath>
 #include <vector>

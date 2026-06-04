@@ -1,15 +1,44 @@
 #pragma once
 
 #include "audio/engine/audio_graph.h"
-#include "audio/effects/effect.h"
+#include "audio/effects/core/effect.h"
 #include <vector>
 #include <unordered_map>
 #include <memory>
+#include <cstring>
 
 namespace Amplitron {
 
+class INodeProcessor {
+public:
+    virtual ~INodeProcessor() = default;
+    virtual void process(const float* input, float* output, int num_samples) = 0;
+};
+
+class StandardEffectProcessor : public INodeProcessor {
+public:
+    explicit StandardEffectProcessor(std::shared_ptr<Effect> pedal) : pedal_(std::move(pedal)) {}
+    void process(const float* input, float* output, int num_samples) override {
+        std::memcpy(output, input, static_cast<size_t>(num_samples) * sizeof(float));
+        if (pedal_) {
+            pedal_->process(output, num_samples);
+        }
+    }
+private:
+    std::shared_ptr<Effect> pedal_;
+};
+
+class PassthroughProcessor : public INodeProcessor {
+public:
+    void process(const float* input, float* output, int num_samples) override {
+        std::memcpy(output, input, static_cast<size_t>(num_samples) * sizeof(float));
+    }
+};
+
 class AudioGraphExecutor {
 public:
+    friend class AudioEngine;
+
     AudioGraphExecutor();
     ~AudioGraphExecutor() = default;
 
@@ -28,6 +57,15 @@ public:
     void process(const float* input, float* output, int num_samples);
     void update_mixer_gain(int node_id, int pin_index, float gain);
 
+    std::shared_ptr<Effect> get_effect_by_node_id(int node_id) const {
+        for (const auto& step : execution_plan_) {
+            if (step.node_id == node_id) {
+                return step.pedal;
+            }
+        }
+        return nullptr;
+    }
+
 private:
     int sample_rate_ = 48000;
     int max_block_size_ = 512;
@@ -45,6 +83,7 @@ private:
         NodeRoutingType type;
         std::shared_ptr<Effect> pedal;
         std::vector<InputSource> input_sources; // Which buffers to sum together for the input
+        std::unique_ptr<INodeProcessor> processor; // Polymorphic node executor
         bool is_graph_input = false;
         bool is_graph_output = false;
         bool is_sink = false;

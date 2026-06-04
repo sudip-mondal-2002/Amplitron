@@ -116,33 +116,33 @@ void PedalBoard::render_signal_chain() {
       ui_state.target_zoom = 1.0f;
     }
   }
-  if (ui_state.show_grid) {
-    float GRID_SZ = 32.0f * ui_state.zoom;
-    ImU32 GRID_COLOR = IM_COL32(36, 34, 30, 255);
-    for (float x = std::fmod(ui_state.scrolling.x, GRID_SZ); x < canvas_size.x;
-         x += GRID_SZ) {
-      draw_list->AddLine(ImVec2(canvas_pos.x + x, canvas_pos.y),
-                         ImVec2(canvas_pos.x + x, canvas_end.y), GRID_COLOR);
+  std::vector<int> stale_ids;
+  for (auto it = ui_state.node_positions.begin(); it != ui_state.node_positions.end(); ) {
+    bool found = false;
+    for (const auto &node : audio_graph.get_nodes()) {
+      if (node.id == it->first) { found = true; break; }
     }
-    for (float y = std::fmod(ui_state.scrolling.y, GRID_SZ); y < canvas_size.y;
-         y += GRID_SZ) {
-      draw_list->AddLine(ImVec2(canvas_pos.x, canvas_pos.y + y),
-                         ImVec2(canvas_end.x, canvas_pos.y + y), GRID_COLOR);
-    }
+    if (!found) { stale_ids.push_back(it->first); it = ui_state.node_positions.erase(it); }
+    else ++it;
   }
   draw_list->PushClipRect(canvas_pos, canvas_end, true);
-  ImVec2 offset = ImVec2(canvas_pos.x + ui_state.scrolling.x,
-                         canvas_pos.y + ui_state.scrolling.y);
-  std::unordered_map<int, ImVec2> pin_positions_cache;
-  int node_to_delete = -1; // Safely track deletions outside the render loop
-  // Prune stale nodes from the UI state if the backend graph was reset or
-  // rebuilt
-  std::vector<int> stale_ids;
-  for (auto &pair : ui_state.node_positions) {
-    if (!audio_graph.find_node(pair.first)) {
-      stale_ids.push_back(pair.first);
+
+  if (ui_state.show_grid) {
+    float grid_sz = 32.0f * ui_state.zoom;
+    ImU32 grid_color = IM_COL32(36, 34, 30, 255);
+    for (float x = std::fmod(ui_state.scrolling.x, grid_sz); x < canvas_size.x;
+         x += grid_sz) {
+      draw_list->AddLine(ImVec2(canvas_pos.x + x, canvas_pos.y),
+                         ImVec2(canvas_pos.x + x, canvas_end.y), grid_color);
+    }
+    for (float y = std::fmod(ui_state.scrolling.y, grid_sz); y < canvas_size.y;
+         y += grid_sz) {
+      draw_list->AddLine(ImVec2(canvas_pos.x, canvas_pos.y + y),
+                         ImVec2(canvas_end.x, canvas_pos.y + y), grid_color);
     }
   }
+
+  ImVec2 offset(canvas_pos.x + ui_state.scrolling.x, canvas_pos.y + ui_state.scrolling.y);
   for (int id : stale_ids) {
     ui_state.node_positions.erase(id);
   }
@@ -178,6 +178,8 @@ void PedalBoard::render_signal_chain() {
   float level = engine_.get_output_level();
   float time = (float)ImGui::GetTime();
   bool is_running = engine_.is_running();
+  int node_to_delete = -1;
+  std::unordered_map<int, ImVec2> pin_positions_cache;
   for (const auto &node : audio_graph.get_nodes()) {
     auto &node_layout = ui_state.node_positions[node.id];
     ImVec2 node_screen_pos =
@@ -270,10 +272,6 @@ void PedalBoard::render_signal_chain() {
               node.id, node_layout.drag_start_pos, node_layout.position));
         }
       }
-      ImVec2 text_pos = ImVec2(node_screen_pos.x + 12.0f * ui_state.zoom, node_screen_pos.y + 25.0f * ui_state.zoom);
-      ImGui::SetWindowFontScale(ui_state.zoom);
-      draw_list->AddText(text_pos, IM_COL32(255, 255, 255, 255), node.name.c_str());
-      ImGui::SetWindowFontScale(1.0f);
     }
 
       bool is_mixer = (node.routing_type == NodeRoutingType::Mixer ||
@@ -298,16 +296,18 @@ void PedalBoard::render_signal_chain() {
         ImGui::EndPopup();
       }
 
-      std::string display_name = node.name;
-      if (is_mixer) {
-        display_name = std::to_string(node.input_pin_ids.size()) + "-in Mixer";
+      if (!target_widget) {
+        std::string display_name = node.name;
+        if (is_mixer) {
+          display_name = std::to_string(node.input_pin_ids.size()) + "-in Mixer";
+        }
+        ImVec2 text_pos = ImVec2(node_screen_pos.x + 12.0f * ui_state.zoom,
+                                 node_screen_pos.y + 10.0f * ui_state.zoom);
+        ImGui::SetWindowFontScale(ui_state.zoom);
+        draw_list->AddText(text_pos, IM_COL32(255, 255, 255, 255),
+                           display_name.c_str());
+        ImGui::SetWindowFontScale(1.0f);
       }
-      ImVec2 text_pos = ImVec2(node_screen_pos.x + 12.0f * ui_state.zoom,
-                               node_screen_pos.y + 10.0f * ui_state.zoom);
-      ImGui::SetWindowFontScale(ui_state.zoom);
-      draw_list->AddText(text_pos, IM_COL32(255, 255, 255, 255),
-                         display_name.c_str());
-      ImGui::SetWindowFontScale(1.0f);
 
       if (is_mixer) {
         ImGui::SetWindowFontScale(ui_state.zoom * 0.8f);

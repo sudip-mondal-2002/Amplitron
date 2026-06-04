@@ -5,11 +5,11 @@
 #undef private
 #undef protected
 #include "gui/commands/command_history.h"
-#include "audio/effects/overdrive.h"
-#include "audio/effects/delay.h"
-#include "audio/effects/reverb.h"
-#include "audio/effects/distortion.h"
-#include "audio/effects/chorus.h"
+#include "audio/effects/distortion/overdrive.h"
+#include "audio/effects/delay_reverb/delay.h"
+#include "audio/effects/delay_reverb/reverb.h"
+#include "audio/effects/distortion/distortion.h"
+#include "audio/effects/modulation/chorus.h"
 
 using namespace Amplitron;
 using namespace TestFramework;

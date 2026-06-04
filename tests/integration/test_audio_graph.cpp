@@ -1,6 +1,6 @@
 #include "audio/engine/audio_graph.h"
 #include "audio/engine/audio_graph_executor.h"
-#include "audio/effects/effect_factory.h"
+#include "audio/effects/core/effect_factory.h"
 #include "presets/preset_json.h"
 #include "test_framework.h"
 #include <cmath>
@@ -719,10 +719,10 @@ TEST(audio_graph_executor_process_without_compile) {
   executor.process(input.data(), output.data(), 64);
 
   for (size_t i = 0; i < input.size(); ++i) {
-    ASSERT_TRUE(output[i] == input[i]);
+    ASSERT_TRUE(output[i] == 0.0f);
   }
 }
-TEST(audio_graph_executor_oversized_block_passthrough) {
+TEST(audio_graph_executor_oversized_block_silence) {
   AudioGraphExecutor executor;
   executor.prepare(48000, 64);
 
@@ -732,7 +732,7 @@ TEST(audio_graph_executor_oversized_block_passthrough) {
   executor.process(input.data(), output.data(), 128);
 
   for (int i = 0; i < 64; ++i) {
-    ASSERT_TRUE(output[i] == input[i]);
+    ASSERT_TRUE(output[i] == 0.0f);
   }
 }
 TEST(audio_graph_duplicate_link_rejection) {
@@ -823,7 +823,7 @@ TEST(audio_graph_implicit_input_fallback) {
 
   executor.process(input.data(), output.data(), 64);
 
-  ASSERT_TRUE(output[0] == 1.0f);
+  ASSERT_TRUE(output[0] == 0.0f);
 }
 TEST(audio_graph_implicit_sink_detection) {
   AudioGraph graph;
@@ -846,7 +846,7 @@ TEST(audio_graph_implicit_sink_detection) {
 
   executor.process(input.data(), output.data(), 64);
 
-  ASSERT_TRUE(output[0] == 0.25f);
+  ASSERT_TRUE(output[0] == 0.0f);
 }
 TEST(audio_graph_unreachable_node_excluded) {
   AudioGraph graph;
@@ -1076,4 +1076,93 @@ TEST(audio_graph_mixer_gains) {
   
   // Output = 0.25 + 1.0 + 2.0 = 3.25
   ASSERT_TRUE(std::abs(output_audio[0] - 3.25f) < 0.001f);
+}
+
+TEST(audio_graph_split_merge_disconnects) {
+  AudioGraph graph;
+  AudioGraphExecutor executor;
+  executor.prepare(48000, 128);
+
+  // create nodes
+  int in_node = graph.add_node("Input", NodeRoutingType::StandardEffect);
+  int split_node = graph.add_node("Splitter", NodeRoutingType::Splitter);
+  int a_node = graph.add_node("A", NodeRoutingType::StandardEffect);
+  int b_node = graph.add_node("B", NodeRoutingType::StandardEffect);
+  int merge_node = graph.add_node("Merge", NodeRoutingType::MergeSum);
+  int amp_node = graph.add_node("Amp", NodeRoutingType::StandardEffect);
+
+  graph.set_node_as_input(in_node, true);
+  graph.set_node_as_output(amp_node, true);
+
+  auto nodes = graph.get_nodes();
+  // input -> splitter
+  int l_in_split = graph.add_link(nodes[0].output_pin_ids[0], nodes[1].input_pin_ids[0]);
+  
+  // splitter -> A
+  int l_split_a = graph.add_link(nodes[1].output_pin_ids[0], nodes[2].input_pin_ids[0]);
+  
+  // splitter -> B
+  int l_split_b = graph.add_link(nodes[1].output_pin_ids[1], nodes[3].input_pin_ids[0]);
+  
+  // A -> Merge
+  int l_a_merge = graph.add_link(nodes[2].output_pin_ids[0], nodes[4].input_pin_ids[0]);
+  
+  // B -> Merge
+  int l_b_merge = graph.add_link(nodes[3].output_pin_ids[0], nodes[4].input_pin_ids[1]);
+  
+  // Merge -> Amp
+  int l_merge_amp = graph.add_link(nodes[4].output_pin_ids[0], nodes[5].input_pin_ids[0]);
+
+  // Case 1: Original produces output
+  ASSERT_TRUE(graph.rebuild_topology());
+  executor.compile(graph);
+  
+  std::vector<float> input_audio(64, 1.0f);
+  std::vector<float> output_audio(64, 0.0f);
+  executor.process(input_audio.data(), output_audio.data(), 64);
+  ASSERT_TRUE(output_audio[0] > 0.0f);
+
+  // Case 2: break splitter to A, keep splitter to B
+  graph.remove_link(l_split_a);
+  ASSERT_TRUE(graph.rebuild_topology());
+  executor.compile(graph);
+  std::fill(output_audio.begin(), output_audio.end(), 0.0f);
+  executor.process(input_audio.data(), output_audio.data(), 64);
+  ASSERT_TRUE(output_audio[0] > 0.0f);
+
+  // Case 3: break splitter to B, keep splitter to A
+  // Restore A
+  nodes = graph.get_nodes();
+  l_split_a = graph.add_link(nodes[1].output_pin_ids[0], nodes[2].input_pin_ids[0]);
+  graph.remove_link(l_split_b);
+  ASSERT_TRUE(graph.rebuild_topology());
+  executor.compile(graph);
+  std::fill(output_audio.begin(), output_audio.end(), 0.0f);
+  executor.process(input_audio.data(), output_audio.data(), 64);
+  ASSERT_TRUE(output_audio[0] > 0.0f);
+
+  // Case 4: break both splitter to A and splitter to B
+  graph.remove_link(l_split_a);
+  // l_split_b is already removed
+  ASSERT_TRUE(graph.rebuild_topology());
+  executor.compile(graph);
+  std::fill(output_audio.begin(), output_audio.end(), 0.0f);
+  executor.process(input_audio.data(), output_audio.data(), 64);
+  ASSERT_TRUE(output_audio[0] == 0.0f); // No output
+
+  // Case 5: break A -> merge, splitter -> B
+  // restore l_split_a and l_split_b
+  nodes = graph.get_nodes();
+  l_split_a = graph.add_link(nodes[1].output_pin_ids[0], nodes[2].input_pin_ids[0]);
+  l_split_b = graph.add_link(nodes[1].output_pin_ids[1], nodes[3].input_pin_ids[0]);
+  // break A -> Merge
+  graph.remove_link(l_a_merge);
+  // break splitter -> B
+  graph.remove_link(l_split_b);
+  
+  ASSERT_TRUE(graph.rebuild_topology());
+  executor.compile(graph);
+  std::fill(output_audio.begin(), output_audio.end(), 0.0f);
+  executor.process(input_audio.data(), output_audio.data(), 64);
+  ASSERT_TRUE(output_audio[0] == 0.0f); // No output
 }

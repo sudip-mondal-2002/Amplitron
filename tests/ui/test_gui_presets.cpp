@@ -10,8 +10,8 @@
 #include "test_fixtures.h"
 #include "gui/views/gui_presets.h"
 #include "gui/commands/command_history.h"
-#include "audio/effects/overdrive.h"
-#include "audio/effects/reverb.h"
+#include "audio/effects/distortion/overdrive.h"
+#include "audio/effects/delay_reverb/reverb.h"
 #include "preset_manager.h"
 #include <filesystem>
 #include <string>
@@ -25,31 +25,31 @@ using namespace Amplitron;
 
 TEST_F(PresetTest, gui_presets_initial_preset_count_is_zero) {
     CommandHistory history;
-    GuiPresets gp(engine, history);
+    GuiPresets gp(engine, history, manager);
     ASSERT_EQ(gp.preset_count(), 0);
 }
 
 TEST_F(PresetTest, gui_presets_initial_selection_is_minus_one) {
     CommandHistory history;
-    GuiPresets gp(engine, history);
+    GuiPresets gp(engine, history, manager);
     ASSERT_EQ(gp.selected_preset_index(), -1);
 }
 
 TEST_F(PresetTest, gui_presets_initial_status_message_is_empty) {
     CommandHistory history;
-    GuiPresets gp(engine, history);
+    GuiPresets gp(engine, history, manager);
     ASSERT_TRUE(gp.status_message().empty());
 }
 
 TEST_F(PresetTest, gui_presets_initial_not_dirty) {
     CommandHistory history;
-    GuiPresets gp(engine, history);
+    GuiPresets gp(engine, history, manager);
     ASSERT_FALSE(gp.is_dirty());
 }
 
 TEST_F(PresetTest, gui_presets_default_name_is_my_preset) {
     CommandHistory history;
-    GuiPresets gp(engine, history);
+    GuiPresets gp(engine, history, manager);
     ASSERT_EQ(gp.current_preset_name(), "My Preset");
 }
 
@@ -59,7 +59,7 @@ TEST_F(PresetTest, gui_presets_default_name_is_my_preset) {
 
 TEST_F(PresetTest, gui_presets_dirty_after_adding_effect) {
     CommandHistory history;
-    GuiPresets gp(engine, history);
+    GuiPresets gp(engine, history, manager);
 
     engine.add_effect(std::make_shared<Overdrive>());
     ASSERT_TRUE(gp.is_dirty());
@@ -67,7 +67,7 @@ TEST_F(PresetTest, gui_presets_dirty_after_adding_effect) {
 
 TEST_F(PresetTest, gui_presets_mark_clean_clears_dirty_flag) {
     CommandHistory history;
-    GuiPresets gp(engine, history);
+    GuiPresets gp(engine, history, manager);
 
     engine.add_effect(std::make_shared<Overdrive>());
     ASSERT_TRUE(gp.is_dirty());
@@ -77,7 +77,7 @@ TEST_F(PresetTest, gui_presets_mark_clean_clears_dirty_flag) {
 
 TEST_F(PresetTest, gui_presets_dirty_again_after_further_change) {
     CommandHistory history;
-    GuiPresets gp(engine, history);
+    GuiPresets gp(engine, history, manager);
 
     engine.add_effect(std::make_shared<Overdrive>());
     gp.mark_clean();
@@ -93,7 +93,7 @@ TEST_F(PresetTest, gui_presets_dirty_again_after_further_change) {
 
 TEST_F(PresetTest, gui_presets_begin_new_preset_resets_index) {
     CommandHistory history;
-    GuiPresets gp(engine, history);
+    GuiPresets gp(engine, history, manager);
 
     gp.begin_new_preset();
     ASSERT_EQ(gp.selected_preset_index(), -1);
@@ -101,7 +101,7 @@ TEST_F(PresetTest, gui_presets_begin_new_preset_resets_index) {
 
 TEST_F(PresetTest, gui_presets_begin_save_preset_does_not_crash) {
     CommandHistory history;
-    GuiPresets gp(engine, history);
+    GuiPresets gp(engine, history, manager);
     gp.begin_save_preset();
 }
 
@@ -112,7 +112,7 @@ TEST_F(PresetTest, gui_presets_begin_save_preset_does_not_crash) {
 TEST_F(PresetTest, gui_presets_save_empty_name_fails) {
     PresetManager::set_presets_dir("presets");
     CommandHistory history;
-    GuiPresets gp(engine, history);
+    GuiPresets gp(engine, history, manager);
 
     bool ok = gp.save_named_preset("", "desc");
     ASSERT_FALSE(ok);
@@ -121,7 +121,7 @@ TEST_F(PresetTest, gui_presets_save_empty_name_fails) {
 
 TEST_F(PresetTest, gui_presets_status_message_set_get) {
     CommandHistory history;
-    GuiPresets gp(engine, history);
+    GuiPresets gp(engine, history, manager);
 
     gp.set_status_message("test message");
     ASSERT_EQ(gp.status_message(), "test message");
@@ -137,7 +137,7 @@ TEST_F(PresetTest, gui_presets_save_and_load_roundtrip) {
 
     engine.add_effect(std::make_shared<Overdrive>());
     CommandHistory history;
-    GuiPresets gp(engine, history);
+    GuiPresets gp(engine, history, manager);
 
     ASSERT_TRUE(gp.save_named_preset("GuiPresetsRT", "roundtrip"));
     gp.refresh_presets(false);
@@ -153,7 +153,7 @@ TEST_F(PresetTest, gui_presets_save_and_load_roundtrip) {
 
 TEST_F(PresetTest, gui_presets_load_invalid_index_fails) {
     CommandHistory history;
-    GuiPresets gp(engine, history);
+    GuiPresets gp(engine, history, manager);
 
     ASSERT_FALSE(gp.load_preset_by_index(-1));
     ASSERT_FALSE(gp.load_preset_by_index(9999));
@@ -163,7 +163,7 @@ TEST_F(PresetTest, gui_presets_load_invalid_index_fails) {
 TEST_F(PresetTest, gui_presets_load_nonexistent_path_fails) {
     PresetManager::set_presets_dir("presets");
     CommandHistory history;
-    GuiPresets gp(engine, history);
+    GuiPresets gp(engine, history, manager);
 
     ASSERT_FALSE(gp.load_preset_by_path("presets/__no_such_file__.json"));
     ASSERT_FALSE(gp.status_message().empty());
@@ -178,7 +178,7 @@ TEST_F(PresetTest, gui_presets_delete_reduces_count) {
     register_temp_file("presets/GuiPresetsDel.json");
 
     CommandHistory history;
-    GuiPresets gp(engine, history);
+    GuiPresets gp(engine, history, manager);
 
     gp.save_named_preset("GuiPresetsDel", "delete me");
     gp.refresh_presets(false);
@@ -200,7 +200,7 @@ TEST_F(PresetTest, gui_presets_delete_reduces_count) {
 
 TEST_F(PresetTest, gui_presets_delete_invalid_index_fails) {
     CommandHistory history;
-    GuiPresets gp(engine, history);
+    GuiPresets gp(engine, history, manager);
 
     ASSERT_FALSE(gp.delete_preset_by_index(-1));
     ASSERT_FALSE(gp.delete_preset_by_index(999));
@@ -212,7 +212,7 @@ TEST_F(PresetTest, gui_presets_delete_invalid_index_fails) {
 
 TEST_F(PresetTest, gui_presets_serialise_returns_non_empty_json) {
     CommandHistory history;
-    GuiPresets gp(engine, history);
+    GuiPresets gp(engine, history, manager);
 
     std::string json = gp.serialise_current_preset_to_json();
     ASSERT_FALSE(json.empty());
@@ -227,7 +227,7 @@ TEST_F(PresetTest, gui_presets_serialise_returns_non_empty_json) {
 TEST_F(PresetTest, gui_presets_ensure_factory_presets_idempotent) {
     PresetManager::set_presets_dir("presets");
     CommandHistory history;
-    GuiPresets gp(engine, history);
+    GuiPresets gp(engine, history, manager);
 
     gp.ensure_factory_presets();
     int count1 = gp.preset_count();
@@ -245,7 +245,7 @@ TEST_F(PresetTest, gui_presets_refresh_preserves_valid_selection) {
     register_temp_file("presets/GuiPresetsRefresh.json");
 
     CommandHistory history;
-    GuiPresets gp(engine, history);
+    GuiPresets gp(engine, history, manager);
 
     gp.save_named_preset("GuiPresetsRefresh", "refresh test");
     gp.refresh_presets(false);
@@ -264,7 +264,7 @@ TEST_F(PresetTest, gui_presets_save_special_characters_sanitization) {
     register_temp_file("presets/My___Cool___Presets___.json");
 
     CommandHistory history;
-    GuiPresets gp(engine, history);
+    GuiPresets gp(engine, history, manager);
 
     // Save with spaces, slashes, backslashes, colons, asterisks
     bool ok = gp.save_named_preset("My / Cool : Presets? *", "special chars");
@@ -283,7 +283,7 @@ TEST_F(PresetTest, gui_presets_save_special_characters_sanitization) {
 TEST_F(PresetTest, gui_presets_render_save_popup) {
     ScopedImGuiContext imgui;
     CommandHistory history;
-    GuiPresets gp(engine, history);
+    GuiPresets gp(engine, history, manager);
 
     bool show = true;
     gp.render_save_popup(show);
@@ -292,7 +292,7 @@ TEST_F(PresetTest, gui_presets_render_save_popup) {
 TEST_F(PresetTest, gui_presets_render_load_popup) {
     ScopedImGuiContext imgui;
     CommandHistory history;
-    GuiPresets gp(engine, history);
+    GuiPresets gp(engine, history, manager);
 
     bool show = true;
     gp.render_load_popup(show);
