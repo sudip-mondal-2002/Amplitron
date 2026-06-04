@@ -113,7 +113,7 @@ void WindowContext::load_fonts() {
     ImGuiIO& io = ImGui::GetIO();
 
     const float base_font_size = 14.0f;
-    const float scaled_size    = base_font_size * dpi_scale_;
+    const float scaled_size    = base_font_size;
 
     ImFont* loaded_font = nullptr;
     auto try_font = [&](const std::string& path) {
@@ -127,15 +127,17 @@ void WindowContext::load_fonts() {
         SDL_free(base_path);
     }
     try_font("assets/fonts/Roboto-Medium.ttf");
+    #ifdef __EMSCRIPTEN__
+    try_font("/assets/fonts/Roboto-Medium.ttf");
+    #endif
     try_font("../assets/fonts/Roboto-Medium.ttf");
     try_font("external/imgui/misc/fonts/Roboto-Medium.ttf");
     try_font("../external/imgui/misc/fonts/Roboto-Medium.ttf");
 
     if (!loaded_font) {
         io.Fonts->AddFontDefault();
-        io.FontGlobalScale = 1.0f;
     } else {
-        io.FontGlobalScale = 1.0f / dpi_scale_;
+        io.FontGlobalScale = 1.0f;
     }
 }
 
