@@ -8,10 +8,12 @@
 #include "gui/dialogs/file_dialog.h"
 
 #ifdef _WIN32
+// clang-format off
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <commdlg.h>
 #include <shlobj.h>
+// clang-format on
 #endif
 
 #ifdef __APPLE__
