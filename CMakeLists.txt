@@ -309,6 +309,7 @@ set(APP_SOURCES
     src/audio/engine/audio_graph_executor.cpp
     src/audio/engine/analyzer_capture.cpp
     src/audio/engine/audio_command_dispatcher.cpp
+    src/audio/engine/tempo_engine.cpp
 )
 
 # --- MIDI Support (desktop only) ---
