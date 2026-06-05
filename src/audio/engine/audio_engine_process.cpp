@@ -6,6 +6,7 @@
 
 #include "audio/engine/analyzer_capture.h"
 #include "audio/engine/audio_engine.h"
+#include "audio/recorder/i_recorder.h"
 
 namespace Amplitron {
 

@@ -112,19 +112,23 @@ void Chorus::process_stereo(float* left, float* right, int num_samples) {
     }
 }
 
-void Chorus::set_transport_state(float bpm){
-    if(!std::isfinite(bpm) || bpm <= 0.0f)return;
-    last_bpm_ = bpm;
 void Chorus::set_transport_state(float bpm) {
     if (!std::isfinite(bpm) || bpm <= 0.0f) return;
-    if (bpm == last_bpm_) return;
+
+    bool sync_on = (params_[3].value >= 0.5f);
+    float subdivision_val = params_[4].value;
+
+    if (bpm == last_bpm_ && sync_on == (last_sync_ >= 0.5f) && subdivision_val == last_subdivision_) return;
+
     last_bpm_ = bpm;
+    last_sync_ = sync_on ? 1.0f : 0.0f;
+    last_subdivision_ = subdivision_val;
+
     // BPM to Hz
     float target_rate_hz = bpm / 60.0f;
     // set knob
     params_[0].value = clamp(target_rate_hz, params_[0].min_val, params_[0].max_val);
 
-    bool sync_on = (params_[3].value >= 0.5f);
     if (sync_on) {
         int subdivision_idx = static_cast<int>(std::round(params_[4].value));
         float factor = 1.0f;

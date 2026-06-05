@@ -12,6 +12,7 @@
 #include "audio/engine/audio_graph.h"
 #include "audio/engine/audio_graph_executor.h"
 #include "audio/engine/i_audio_engine.h"
+#include "audio/recorder/i_recorder.h"
 #include "audio/engine/i_metronome.h"
 #include "audio/engine/tempo_engine.h"
 

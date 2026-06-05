@@ -8,6 +8,7 @@
 #include <cmath>
 
 #include "audio/effects/utility/tuner.h"
+#include "audio/recorder/recorder.h"
 #include "gui/commands/command.h"
 #include "gui/gl_setup.h"
 #include "gui/gui_manager.h"

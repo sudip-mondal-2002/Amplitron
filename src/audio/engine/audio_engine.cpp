@@ -2,6 +2,8 @@
 
 #include "audio/backend/audio_backend.h"
 #include "audio/engine/analyzer_capture.h"
+#include "audio/recorder/recorder.h"
+#include "audio/engine/metronome.h"
 #ifdef AMPLITRON_ANDROID_OBOE
 #include "audio/backend/oboe_backend.h"
 #endif
@@ -94,7 +96,6 @@ void AudioEngine::deserialize(const nlohmann::json& j) {
             }
         }
     }
-}
 
 // --- Existing Methods ---
 

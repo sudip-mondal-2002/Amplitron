@@ -28,6 +28,8 @@ class Chorus : public Effect {
     float lfo_phase_ = 0.0f;
     int max_delay_samples_ = 0;
     float last_bpm_ = 0.0f;  // shortcut if bpm not changed.
+    float last_sync_ = -1.0f;
+    float last_subdivision_ = -1.0f;
     float smoothed_rate_ = 1.5f;
 };
 

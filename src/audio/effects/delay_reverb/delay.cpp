@@ -70,13 +70,18 @@ void Delay::reset() {
     tone_lp_.reset();
 }
 
-void Delay::set_transport_state(float bpm){
-    if(bpm <= 0.0f || !std::isfinite(bpm)) return;
 void Delay::set_transport_state(float bpm) {
     if (bpm <= 0.0f || !std::isfinite(bpm)) return;
-    if (bpm == last_bpm_) return;
 
     bool sync_on = (params_[4].value >= 0.5f);
+    float subdivision_val = params_[5].value;
+
+    if (bpm == last_bpm_ && sync_on == (last_sync_ >= 0.5f) && subdivision_val == last_subdivision_) return;
+
+    last_bpm_ = bpm;
+    last_sync_ = sync_on ? 1.0f : 0.0f;
+    last_subdivision_ = subdivision_val;
+
     if (sync_on) {
         int subdivision_idx = static_cast<int>(std::round(params_[5].value));
         float factor = 1.0f;
