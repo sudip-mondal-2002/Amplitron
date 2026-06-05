@@ -1,9 +1,11 @@
 #include "gui/components/knob.h"
-#include "gui/theme/theme.h"
-#include "common.h"
+
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
-#include <algorithm>
+
+#include "common.h"
+#include "gui/theme/theme.h"
 
 namespace Amplitron {
 
@@ -15,7 +17,8 @@ static std::string s_active_knob_id = "";
 static float s_popup_param_value_before_edit = 0.0f;
 static std::string s_active_popup_id = "";
 
-void KnobComponent::render(const char* imgui_id, const KnobProps& props, float zoom, ImVec2 center) {
+void KnobComponent::render(const char* imgui_id, const KnobProps& props, float zoom,
+                           ImVec2 center) {
     ImDrawList* dl = ImGui::GetWindowDrawList();
 
     float knob_radius = Theme::KNOB_RADIUS * zoom;
@@ -26,9 +29,8 @@ void KnobComponent::render(const char* imgui_id, const KnobProps& props, float z
     constexpr float ARC_START = 2.356f;
     constexpr float ARC_RANGE = 4.712f;
 
-    ImGui::SetCursorScreenPos(ImVec2(
-        center.x - knob_hit_size * 0.5f,
-        center.y - knob_hit_size * 0.5f));
+    ImGui::SetCursorScreenPos(
+        ImVec2(center.x - knob_hit_size * 0.5f, center.y - knob_hit_size * 0.5f));
     ImGui::SetNextItemAllowOverlap();
     ImGui::InvisibleButton(imgui_id, ImVec2(knob_hit_size, knob_hit_size));
 
@@ -64,7 +66,7 @@ void KnobComponent::render(const char* imgui_id, const KnobProps& props, float z
                 float prev_angle = std::atan2(prev_y - center.y, prev_x - center.x);
 
                 float angle_delta = curr_angle - prev_angle;
-                if (angle_delta > PI)  angle_delta -= TWO_PI;
+                if (angle_delta > PI) angle_delta -= TWO_PI;
                 if (angle_delta < -PI) angle_delta += TWO_PI;
 
                 value_delta = (angle_delta / ARC_RANGE) * range;
@@ -74,7 +76,7 @@ void KnobComponent::render(const char* imgui_id, const KnobProps& props, float z
             }
 
             if (ImGui::GetIO().KeyShift) value_delta *= 0.2f;
-            if (ImGui::GetIO().KeyCtrl)  value_delta *= 3.0f;
+            if (ImGui::GetIO().KeyCtrl) value_delta *= 3.0f;
 
             float new_val = clamp(props.value + value_delta, props.min_val, props.max_val);
             if (new_val != props.value && props.on_value_changed) {
@@ -98,7 +100,8 @@ void KnobComponent::render(const char* imgui_id, const KnobProps& props, float z
         float old_val = props.value;
         float step = range * 0.03f;
         if (ImGui::GetIO().KeyShift) step *= 0.2f;
-        float new_val = clamp(props.value + ImGui::GetIO().MouseWheel * step, props.min_val, props.max_val);
+        float new_val =
+            clamp(props.value + ImGui::GetIO().MouseWheel * step, props.min_val, props.max_val);
         if (new_val != old_val) {
             if (props.on_value_changed) props.on_value_changed(new_val);
             if (props.on_value_committed) props.on_value_committed(old_val, new_val);
@@ -199,7 +202,8 @@ void KnobComponent::render(const char* imgui_id, const KnobProps& props, float z
         float a1 = ARC_START + t1 * ARC_RANGE;
 
         bool filled = t0 <= normalized;
-        ImU32 seg_color = filled ? ImGui::ColorConvertFloat4ToU32(props.led_color) : Theme::KNOB_TRACK_OFF;
+        ImU32 seg_color =
+            filled ? ImGui::ColorConvertFloat4ToU32(props.led_color) : Theme::KNOB_TRACK_OFF;
 
         dl->AddLine(
             ImVec2(center.x + std::cos(a0) * track_radius, center.y + std::sin(a0) * track_radius),
@@ -207,7 +211,8 @@ void KnobComponent::render(const char* imgui_id, const KnobProps& props, float z
             seg_color, 3.0f * zoom);
     }
 
-    ImU32 knob_bg = is_active ? Theme::KNOB_ACTIVE : (is_hovered ? Theme::KNOB_HOVER : Theme::KNOB_FACE);
+    ImU32 knob_bg =
+        is_active ? Theme::KNOB_ACTIVE : (is_hovered ? Theme::KNOB_HOVER : Theme::KNOB_FACE);
     dl->AddCircleFilled(center, knob_radius, Theme::KNOB_BG);
     dl->AddCircleFilled(center, knob_radius - 1 * zoom, knob_bg);
 
@@ -215,7 +220,8 @@ void KnobComponent::render(const char* imgui_id, const KnobProps& props, float z
     if (props.is_learning) {
         float time = static_cast<float>(ImGui::GetTime());
         float alpha = (std::sin(time * 2.0f * 3.14159f * 10.0f) + 1.0f) * 0.5f;
-        ImU32 outline_col = ImGui::ColorConvertFloat4ToU32(ImVec4(0.2f, 0.6f, 1.0f, 0.4f + alpha * 0.6f));
+        ImU32 outline_col =
+            ImGui::ColorConvertFloat4ToU32(ImVec4(0.2f, 0.6f, 1.0f, 0.4f + alpha * 0.6f));
         dl->AddCircle(center, knob_radius + 4.0f * zoom, outline_col, 0, 3.0f * zoom);
     }
 
@@ -223,8 +229,10 @@ void KnobComponent::render(const char* imgui_id, const KnobProps& props, float z
     float pointer_angle = ARC_START + normalized * ARC_RANGE;
     float ptr_inner = knob_radius * 0.25f;
     float ptr_outer = knob_radius - 3.0f * zoom;
-    ImVec2 ptr_from = ImVec2(center.x + std::cos(pointer_angle) * ptr_inner, center.y + std::sin(pointer_angle) * ptr_inner);
-    ImVec2 ptr_to = ImVec2(center.x + std::cos(pointer_angle) * ptr_outer, center.y + std::sin(pointer_angle) * ptr_outer);
+    ImVec2 ptr_from = ImVec2(center.x + std::cos(pointer_angle) * ptr_inner,
+                             center.y + std::sin(pointer_angle) * ptr_inner);
+    ImVec2 ptr_to = ImVec2(center.x + std::cos(pointer_angle) * ptr_outer,
+                           center.y + std::sin(pointer_angle) * ptr_outer);
 
     ImU32 ptr_color = is_active ? Theme::ACCENT_GOLD_HOT : Theme::ACCENT_GOLD;
     dl->AddLine(ptr_from, ptr_to, ptr_color, 2.5f * zoom);
@@ -237,27 +245,35 @@ void KnobComponent::render(const char* imgui_id, const KnobProps& props, float z
         std::string max_str = Theme::formatParameterValue(props.max_val, props.unit);
 
         if (props.tooltip.empty()) {
-            ImGui::SetTooltip("%s: %s\nRange: [%s, %s]%s\n\nRotate or drag to adjust\nScroll wheel also works\nShift=fine  Ctrl=coarse\nDbl-click=reset  Right-click=edit/MIDI",
-                props.name.c_str(), val_str.c_str(), min_str.c_str(), max_str.c_str(), props.midi_info.c_str());
+            ImGui::SetTooltip(
+                "%s: %s\nRange: [%s, %s]%s\n\nRotate or drag to adjust\nScroll wheel also "
+                "works\nShift=fine  Ctrl=coarse\nDbl-click=reset  Right-click=edit/MIDI",
+                props.name.c_str(), val_str.c_str(), min_str.c_str(), max_str.c_str(),
+                props.midi_info.c_str());
         } else {
-            ImGui::SetTooltip("%s: %s\nRange: [%s, %s]\n\n%s%s\n\nRotate or drag to adjust\nScroll wheel also works\nShift=fine  Ctrl=coarse\nDbl-click=reset  Right-click=edit/MIDI",
-                props.name.c_str(), val_str.c_str(), min_str.c_str(), max_str.c_str(), props.tooltip.c_str(), props.midi_info.c_str());
+            ImGui::SetTooltip(
+                "%s: %s\nRange: [%s, %s]\n\n%s%s\n\nRotate or drag to adjust\nScroll wheel also "
+                "works\nShift=fine  Ctrl=coarse\nDbl-click=reset  Right-click=edit/MIDI",
+                props.name.c_str(), val_str.c_str(), min_str.c_str(), max_str.c_str(),
+                props.tooltip.c_str(), props.midi_info.c_str());
         }
     }
 
     // Parameter names and values text
     ImVec2 text_size = ImGui::CalcTextSize(props.name.c_str());
-    ImGui::SetCursorScreenPos(ImVec2(center.x - text_size.x * 0.5f, center.y + knob_radius + 8 * zoom));
+    ImGui::SetCursorScreenPos(
+        ImVec2(center.x - text_size.x * 0.5f, center.y + knob_radius + 8 * zoom));
     ImGui::PushStyleColor(ImGuiCol_Text, Theme::TextSecondary());
     ImGui::TextUnformatted(props.name.c_str());
     ImGui::PopStyleColor();
 
     std::string val_display = Theme::formatParameterValue(props.value, props.unit);
     ImVec2 val_size = ImGui::CalcTextSize(val_display.c_str());
-    ImGui::SetCursorScreenPos(ImVec2(center.x - val_size.x * 0.5f, center.y - knob_radius - 20 * zoom));
+    ImGui::SetCursorScreenPos(
+        ImVec2(center.x - val_size.x * 0.5f, center.y - knob_radius - 20 * zoom));
     ImGui::PushStyleColor(ImGuiCol_Text, is_active ? Theme::GoldHot() : Theme::TextDim());
     ImGui::TextUnformatted(val_display.c_str());
     ImGui::PopStyleColor();
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

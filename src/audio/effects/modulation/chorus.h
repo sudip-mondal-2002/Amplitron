@@ -9,7 +9,7 @@
 namespace Amplitron {
 
 class Chorus : public Effect {
-public:
+   public:
     Chorus();
     void process(float* buffer, int num_samples) override;
     void process_stereo(float* left, float* right, int num_samples) override;
@@ -21,14 +21,14 @@ public:
     std::vector<EffectParam>& params() override { return params_; }
     const std::vector<EffectParam>& params() const override { return params_; }
 
-private:
+   private:
     std::vector<EffectParam> params_;
     std::vector<float> delay_buffer_;
     int write_pos_ = 0;
     float lfo_phase_ = 0.0f;
     int max_delay_samples_ = 0;
-    float last_bpm_=0.0f; //shortcut if bpm not changed.
+    float last_bpm_ = 0.0f;  // shortcut if bpm not changed.
     float smoothed_rate_ = 1.5f;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

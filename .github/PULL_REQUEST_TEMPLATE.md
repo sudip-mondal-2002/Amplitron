@@ -19,7 +19,7 @@ Fixes #
 ## How Was This Tested?
 
 <!-- Describe how you tested the change -->
-- Platform(s) tested on: 
+- Platform(s) tested on:
 - Test command run: `./amplitron-tests`
 - Manual test steps (if applicable):
 

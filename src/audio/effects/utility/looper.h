@@ -1,12 +1,12 @@
 #pragma once
 
-#include "audio/effects/core/effect.h"
-
-#include<ostream>
 #include <atomic>
 #include <cmath>
 #include <cstdint>
+#include <ostream>
 #include <vector>
+
+#include "audio/effects/core/effect.h"
 
 namespace Amplitron {
 
@@ -19,10 +19,10 @@ namespace Amplitron {
  * - Minimal, predictable state machine for practice workflows.
  */
 class Looper : public Effect {
-public:
+   public:
     enum class State : uint32_t {
-        Empty = 0, // no loop in memory
-        Idle,      // loop exists but not playing
+        Empty = 0,  // no loop in memory
+        Idle,       // loop exists but not playing
         Recording,
         Playing,
         Overdubbing,
@@ -48,19 +48,21 @@ public:
     // --- UI status snapshot (thread-safe) ---
     State state() const { return static_cast<State>(ui_state_.load(std::memory_order_relaxed)); }
     bool has_loop() const { return ui_has_loop_.load(std::memory_order_relaxed) != 0; }
-    int loop_length_samples() const { return ui_loop_length_samples_.load(std::memory_order_relaxed); }
+    int loop_length_samples() const {
+        return ui_loop_length_samples_.load(std::memory_order_relaxed);
+    }
     int playhead_samples() const { return ui_playhead_samples_.load(std::memory_order_relaxed); }
 
-private:
+   private:
     static constexpr int kMaxSeconds = 60;
     static constexpr float kMinLoopSeconds = 0.10f;
     static constexpr float kLoopLevelSmoothingSeconds = 0.02f;
 
     enum CommandBits : uint32_t {
-        CmdRecordToggle  = 1u << 0,
-        CmdPlayToggle    = 1u << 1,
+        CmdRecordToggle = 1u << 0,
+        CmdPlayToggle = 1u << 1,
         CmdOverdubToggle = 1u << 2,
-        CmdClear         = 1u << 3,
+        CmdClear = 1u << 3,
     };
 
     // Params (saved in presets): loop playback level + crossfade length.
@@ -111,5 +113,4 @@ private:
 };
 
 std::ostream& operator<<(std::ostream& os, Looper::State s);
-} // namespace Amplitron
-
+}  // namespace Amplitron

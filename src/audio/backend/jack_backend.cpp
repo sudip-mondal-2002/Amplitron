@@ -1,26 +1,24 @@
 #include "audio/backend/jack_backend.h"
-#include "audio/engine/i_audio_engine.h"
+
 #include <iostream>
 #include <string>
+
+#include "audio/engine/i_audio_engine.h"
 
 namespace Amplitron {
 
 #ifdef WITH_JACK
-static int jack_process(jack_nframes_t nframes, void *arg)
-{
-    auto* backend = static_cast<JackBackend*>(arg);
-    if (!backend || !backend->get_engine())
-        return 0;
+static int jack_process(jack_nframes_t nframes, void *arg) {
+    auto *backend = static_cast<JackBackend *>(arg);
+    if (!backend || !backend->get_engine()) return 0;
 
-    auto* in_port = backend->get_in_port();
-    auto* out_port = backend->get_out_port();
-    if (!in_port || !out_port)
-        return 0;
+    auto *in_port = backend->get_in_port();
+    auto *out_port = backend->get_out_port();
+    if (!in_port || !out_port) return 0;
 
     float *in = static_cast<float *>(jack_port_get_buffer(in_port, nframes));
     float *out = static_cast<float *>(jack_port_get_buffer(out_port, nframes));
-    if (in && out)
-    {
+    if (in && out) {
         backend->get_engine()->process_audio(in, out, static_cast<int>(nframes));
     }
 
@@ -29,11 +27,9 @@ static int jack_process(jack_nframes_t nframes, void *arg)
 #endif
 
 JackBackend::JackBackend() = default;
-JackBackend::~JackBackend() {
-    shutdown();
-}
+JackBackend::~JackBackend() { shutdown(); }
 
-bool JackBackend::initialize(IAudioEngine* engine) {
+bool JackBackend::initialize(IAudioEngine *engine) {
     if (initialized_) return true;
     engine_ = engine;
 
@@ -91,7 +87,8 @@ bool JackBackend::start() {
 
     if (!ports_registered_) {
         in_port_ = jack_port_register(client_, "in_1", JACK_DEFAULT_AUDIO_TYPE, JackPortIsInput, 0);
-        out_port_ = jack_port_register(client_, "out_1", JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
+        out_port_ =
+            jack_port_register(client_, "out_1", JACK_DEFAULT_AUDIO_TYPE, JackPortIsOutput, 0);
         if (!in_port_ || !out_port_) {
             std::cerr << "[Amplitron] JACK: failed to register in/out ports." << std::endl;
             return false;
@@ -129,21 +126,13 @@ std::vector<AudioDeviceInfo> JackBackend::get_output_devices() const {
     return {{0, "JACK out_1", 0, 1, static_cast<double>(get_sample_rate()), false}};
 }
 
-bool JackBackend::set_input_device(int device_index) {
-    return device_index == 0;
-}
+bool JackBackend::set_input_device(int device_index) { return device_index == 0; }
 
-bool JackBackend::set_output_device(int device_index) {
-    return device_index == 0;
-}
+bool JackBackend::set_output_device(int device_index) { return device_index == 0; }
 
-std::string JackBackend::get_input_device_name() const {
-    return "JACK in_1";
-}
+std::string JackBackend::get_input_device_name() const { return "JACK in_1"; }
 
-std::string JackBackend::get_output_device_name() const {
-    return "JACK out_1";
-}
+std::string JackBackend::get_output_device_name() const { return "JACK out_1"; }
 
 int JackBackend::get_sample_rate() const {
 #ifdef WITH_JACK
@@ -163,4 +152,4 @@ int JackBackend::get_buffer_size() const {
     return engine_ ? engine_->get_buffer_size() : 512;
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

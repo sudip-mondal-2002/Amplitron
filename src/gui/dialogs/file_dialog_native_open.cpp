@@ -3,21 +3,25 @@
 // Open dialog implementation
 // =============================================================================
 
-#include "gui/dialogs/file_dialog.h"
 #include <cstring>
 
+#include "gui/dialogs/file_dialog.h"
+
 #ifdef _WIN32
+// clang-format off
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <commdlg.h>
+// clang-format on
 #endif
 
 #ifdef __APPLE__
 #include <TargetConditionals.h>
-#include <cstdio>
-#include <unistd.h>
-#include <sys/wait.h>
 #include <fcntl.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+#include <cstdio>
 #endif
 
 #ifndef _WIN32
@@ -33,8 +37,7 @@ std::string show_open_dialog(const std::string&, const std::string&, const std::
 #else
 
 #ifdef _WIN32
-std::string show_open_dialog(const std::string& title,
-                             const std::string& filter_desc,
+std::string show_open_dialog(const std::string& title, const std::string& filter_desc,
                              const std::string& filter_ext) {
     char filename[MAX_PATH] = "";
 
@@ -66,22 +69,29 @@ std::string show_open_dialog(const std::string& title,
 }
 
 #elif defined(__APPLE__) && !TARGET_OS_IOS
-std::string show_open_dialog(const std::string& title,
-                             const std::string& /*filter_desc*/,
+std::string show_open_dialog(const std::string& title, const std::string& /*filter_desc*/,
                              const std::string& filter_ext) {
     // Sanitize title and filter_ext for AppleScript
     std::string safe_title;
     for (char c : title) {
-        if (c == '\\') { safe_title += "\\\\"; }
-        else if (c == '"') { safe_title += "\\\""; }
-        else { safe_title += c; }
+        if (c == '\\') {
+            safe_title += "\\\\";
+        } else if (c == '"') {
+            safe_title += "\\\"";
+        } else {
+            safe_title += c;
+        }
     }
 
     std::string safe_ext;
     for (char c : filter_ext) {
-        if (c == '\\') { safe_ext += "\\\\"; }
-        else if (c == '"') { safe_ext += "\\\""; }
-        else { safe_ext += c; }
+        if (c == '\\') {
+            safe_ext += "\\\\";
+        } else if (c == '"') {
+            safe_ext += "\\\"";
+        } else {
+            safe_ext += c;
+        }
     }
 
     std::string script = "POSIX path of (choose file of type {\"" + safe_ext +
@@ -103,7 +113,10 @@ std::string show_open_dialog(const std::string& title,
         dup2(pipefd[1], STDOUT_FILENO);
         close(pipefd[1]);
         int devnull = open("/dev/null", O_WRONLY);
-        if (devnull >= 0) { dup2(devnull, STDERR_FILENO); close(devnull); }
+        if (devnull >= 0) {
+            dup2(devnull, STDERR_FILENO);
+            close(devnull);
+        }
         execl("/usr/bin/osascript", "osascript", "-e", script.c_str(), nullptr);
         _exit(1);
     }
@@ -112,29 +125,29 @@ std::string show_open_dialog(const std::string& title,
     char buf[1024];
     std::string result;
     ssize_t n;
-    while ((n = read(pipefd[0], buf, sizeof(buf))) > 0)
-        result.append(buf, static_cast<size_t>(n));
+    while ((n = read(pipefd[0], buf, sizeof(buf))) > 0) result.append(buf, static_cast<size_t>(n));
     close(pipefd[0]);
 
     int status = 0;
     waitpid(pid, &status, 0);
 
-    while (!result.empty() && (result.back() == '\n' || result.back() == '\r'))
-        result.pop_back();
+    while (!result.empty() && (result.back() == '\n' || result.back() == '\r')) result.pop_back();
 
     return result;
 }
 
-#else // Linux
-std::string show_open_dialog(const std::string& title,
-                             const std::string& filter_desc,
+#else  // Linux
+std::string show_open_dialog(const std::string& title, const std::string& filter_desc,
                              const std::string& filter_ext) {
     // Escape single quotes for shell
     auto escape_single_quotes = [](const std::string& s) {
         std::string result;
         for (char c : s) {
-            if (c == '\'') { result += "'\\''"; }
-            else { result += c; }
+            if (c == '\'') {
+                result += "'\\''";
+            } else {
+                result += c;
+            }
         }
         return result;
     };
@@ -143,10 +156,15 @@ std::string show_open_dialog(const std::string& title,
     std::string safe_desc = escape_single_quotes(filter_desc);
     std::string safe_ext = escape_single_quotes(filter_ext);
 
-    std::string cmd = "zenity --file-selection "
-                      "--title='" + safe_title + "' "
-                      "--file-filter='" + safe_desc + " (*." + safe_ext + ")|*." + safe_ext + "' "
-                      "--file-filter='All Files (*)|*' 2>/dev/null";
+    std::string cmd =
+        "zenity --file-selection "
+        "--title='" +
+        safe_title +
+        "' "
+        "--file-filter='" +
+        safe_desc + " (*." + safe_ext + ")|*." + safe_ext +
+        "' "
+        "--file-filter='All Files (*)|*' 2>/dev/null";
 
     FILE* pipe = popen(cmd.c_str(), "r");
     if (!pipe) return "";
@@ -159,8 +177,10 @@ std::string show_open_dialog(const std::string& title,
     int wait_status = pclose(pipe);
 
     if (WIFEXITED(wait_status) && WEXITSTATUS(wait_status) != 0) {
-        cmd = "kdialog --getopenfilename ~/ '*." + safe_ext + "|" + safe_desc + "' "
-              "--title '" + safe_title + "' 2>/dev/null";
+        cmd = "kdialog --getopenfilename ~/ '*." + safe_ext + "|" + safe_desc +
+              "' "
+              "--title '" +
+              safe_title + "' 2>/dev/null";
         pipe = popen(cmd.c_str(), "r");
         if (!pipe) return "";
         result.clear();
@@ -170,13 +190,12 @@ std::string show_open_dialog(const std::string& title,
         pclose(pipe);
     }
 
-    while (!result.empty() && (result.back() == '\n' || result.back() == '\r'))
-        result.pop_back();
+    while (!result.empty() && (result.back() == '\n' || result.back() == '\r')) result.pop_back();
 
     return result;
 }
 #endif
 
-#endif // AMPLITRON_HEADLESS
+#endif  // AMPLITRON_HEADLESS
 
-} // namespace Amplitron
+}  // namespace Amplitron

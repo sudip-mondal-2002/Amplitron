@@ -1,17 +1,19 @@
-#include "test_framework.h"
-#include "test_fixtures.h"
-#include "session_manager.h"
+#include <chrono>
 #include <filesystem>
 #include <thread>
-#include <chrono>
+
+#include "session_manager.h"
+#include "test_fixtures.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 namespace fs = std::filesystem;
 
 TEST_F(PresetTest, session_manager_basic_lifecycle) {
-    // 1. Construct SessionManager (fails back to relative paths if SDL is uninitialized or headless)
+    // 1. Construct SessionManager (fails back to relative paths if SDL is uninitialized or
+    // headless)
     SessionManager manager("TestOrg", "TestApp");
-    
+
     // Clean up any stray test files at start
     manager.clearSession();
     ASSERT_FALSE(manager.hasUnsavedSession());
@@ -39,8 +41,8 @@ TEST_F(PresetTest, session_manager_basic_lifecycle) {
 
 TEST_F(PresetTest, session_manager_should_save_timer) {
     SessionManager manager("TestOrg", "TestApp");
-    
-    // By default, since the last save time was set to now in the constructor, 
+
+    // By default, since the last save time was set to now in the constructor,
     // shouldSave() should return false immediately.
     ASSERT_FALSE(manager.shouldSave());
 }

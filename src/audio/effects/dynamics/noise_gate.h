@@ -5,13 +5,13 @@
 // T, gain approaches 0 with release smoothing, and when e[n]>=T it approaches
 // 1 with attack smoothing, preventing abrupt chopping.
 
-#include "audio/effects/core/effect.h"
 #include "audio/dsp/envelope_follower.h"
+#include "audio/effects/core/effect.h"
 
 namespace Amplitron {
 
 class NoiseGate : public Effect {
-public:
+   public:
     NoiseGate();
     void process(float* buffer, int num_samples) override;
     void reset() override;
@@ -20,10 +20,10 @@ public:
     std::vector<EffectParam>& params() override { return params_; }
     const std::vector<EffectParam>& params() const override { return params_; }
 
-private:
+   private:
     std::vector<EffectParam> params_;
     EnvelopeFollower env_;
     float gain_ = 0.0f;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

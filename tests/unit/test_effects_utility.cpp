@@ -1,28 +1,29 @@
-#include "test_framework.h"
-#include "test_fixtures.h"
-#include "audio/effects/dynamics/noise_gate.h"
-#include "audio/effects/dynamics/compressor.h"
-#include "audio/effects/dynamics/multiband_compressor.h"
-#include "audio/effects/distortion/overdrive.h"
-#include "audio/effects/distortion/distortion.h"
-#include "audio/effects/eq_filter/equalizer.h"
-#include "audio/effects/modulation/chorus.h"
+#include <cmath>
+#include <cstring>
+#include <sstream>
+#include <vector>
+
+#include "audio/effects/amp_cab/amp_simulator.h"
+#include "audio/effects/amp_cab/cabinet_sim.h"
+#include "audio/effects/core/effect_factory.h"
 #include "audio/effects/delay_reverb/delay.h"
 #include "audio/effects/delay_reverb/reverb.h"
-#include "audio/effects/amp_cab/cabinet_sim.h"
-#include "audio/effects/amp_cab/amp_simulator.h"
-#include "audio/effects/utility/tuner.h"
+#include "audio/effects/distortion/distortion.h"
+#include "audio/effects/distortion/overdrive.h"
+#include "audio/effects/dynamics/compressor.h"
+#include "audio/effects/dynamics/multiband_compressor.h"
+#include "audio/effects/dynamics/noise_gate.h"
+#include "audio/effects/eq_filter/equalizer.h"
 #include "audio/effects/eq_filter/wah.h"
-#include "audio/effects/modulation/phaser.h"
+#include "audio/effects/modulation/chorus.h"
 #include "audio/effects/modulation/flanger.h"
+#include "audio/effects/modulation/phaser.h"
 #include "audio/effects/pitch/octaver.h"
 #include "audio/effects/pitch/pitch_shifter.h"
+#include "audio/effects/utility/tuner.h"
 #include "audio/utils/spsc_queue.h"
-#include "audio/effects/core/effect_factory.h"
-#include <cstring>
-#include <cmath>
-#include <vector>
-#include <sstream>
+#include "test_fixtures.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 
@@ -113,7 +114,7 @@ TEST_F(EffectsTest, effect_set_sample_rate) {
     Reverb rv;
     rv.set_sample_rate(44100);
     rv.reset();
-    
+
     float buf[128];
     for (int i = 0; i < 128; ++i) {
         buf[i] = std::sin(2.0f * 3.14159265f * 440.0f * i / 44100.0f);
@@ -207,7 +208,7 @@ TEST_F(EffectsTest, tuner_maps_note_and_octave) {
     }
 
     ASSERT_TRUE(tuner.signal_detected.load());
-    ASSERT_EQ(tuner.detected_note.load(), 9);   // A
+    ASSERT_EQ(tuner.detected_note.load(), 9);    // A
     ASSERT_EQ(tuner.detected_octave.load(), 4);  // octave 4
     ASSERT_LT(std::fabs(tuner.detected_cents.load()), 2.0f);
 }
@@ -246,8 +247,7 @@ TEST_F(EffectsTest, tuner_no_detection_on_silence) {
 
     float buf[256];
     std::memset(buf, 0, sizeof(buf));
-    for (int i = 0; i < 200; ++i)
-        tuner.process(buf, 256);
+    for (int i = 0; i < 200; ++i) tuner.process(buf, 256);
 
     ASSERT_FALSE(tuner.signal_detected.load());
 }
@@ -491,9 +491,8 @@ TEST(effect_base_apply_mix) {
 TEST(effect_factory_duplicate_registration_throws) {
     bool threw = false;
     try {
-        EffectFactory::instance().register_effect("Overdrive", []() {
-            return std::make_shared<Overdrive>();
-        });
+        EffectFactory::instance().register_effect("Overdrive",
+                                                  []() { return std::make_shared<Overdrive>(); });
     } catch (const std::runtime_error&) {
         threw = true;
     }
@@ -501,7 +500,7 @@ TEST(effect_factory_duplicate_registration_throws) {
 }
 
 class MockMixEffect : public Effect {
-public:
+   public:
     void process(float* buffer, int num_samples) override {
         std::vector<float> dry(num_samples);
         std::memcpy(dry.data(), buffer, static_cast<size_t>(num_samples) * sizeof(float));
@@ -514,7 +513,8 @@ public:
     const char* name() const override { return "MockMixEffect"; }
     std::vector<EffectParam>& params() override { return params_; }
     const std::vector<EffectParam>& params() const override { return params_; }
-private:
+
+   private:
     std::vector<EffectParam> params_;
 };
 

@@ -35,7 +35,7 @@ jobs:
           path: web-build
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Download CI coverage report artifact
         uses: actions/download-artifact@v8
         continue-on-error: true
@@ -44,7 +44,7 @@ jobs:
           path: coverage-report
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Resolve PR number from head branch
         id: resolve-pr
         uses: actions/github-script@v9
@@ -71,7 +71,7 @@ jobs:
             core.setOutput('pr_number', pr.number);
             core.setOutput('head_sha',  headSha);
             core.setOutput('short_sha', headSha.slice(0, 7));
-            
+
       - name: Stage preview artifact
         id: preview-meta
         run: |

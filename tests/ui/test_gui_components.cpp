@@ -5,15 +5,15 @@
  * Tests unit-aware parameter formatting, effect color lookups, style applications, and basic
  * settings class rendering using a software ImGui context.
  */
-#include "test_framework.h"
-#include "test_fixtures.h"
 #include <string>
-#include "gui/theme/theme.h"
-#include "gui/dialogs/file_dialog.h"
 
 #include "audio/engine/audio_engine.h"
-#include "gui/views/gui_settings.h"
+#include "gui/dialogs/file_dialog.h"
+#include "gui/theme/theme.h"
 #include "gui/views/gui_analyzer.h"
+#include "gui/views/gui_settings.h"
+#include "test_fixtures.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 
@@ -87,12 +87,10 @@ TEST(theme_rec_blink_values) {
 // ============================================================
 
 TEST(get_effect_color_known_effects) {
-    const char* effects[] = {
-        "Distortion", "Overdrive", "Delay", "Reverb", "Looper",
-        "Chorus", "Phaser", "Flanger", "Equalizer", "Noise Gate",
-        "Compressor", "MultiBand Compressor", "Cabinet", "Octaver",
-        "Pitch Shifter", "Tuner"
-    };
+    const char* effects[] = {"Distortion", "Overdrive",  "Delay",         "Reverb",
+                             "Looper",     "Chorus",     "Phaser",        "Flanger",
+                             "Equalizer",  "Noise Gate", "Compressor",    "MultiBand Compressor",
+                             "Cabinet",    "Octaver",    "Pitch Shifter", "Tuner"};
 
     for (const char* name : effects) {
         const EffectColorEntry* entry = get_effect_color(name);
@@ -160,10 +158,10 @@ TEST_F(PresetTest, gui_analyzer_render) {
     AnalyzerProps props;
     props.smoothed_input_rms = 0.1f;
     props.smoothed_output_rms = 0.2f;
-    props.spectrum.smoothed_input_db  = sa.smoothed_input_db();
+    props.spectrum.smoothed_input_db = sa.smoothed_input_db();
     props.spectrum.smoothed_output_db = sa.smoothed_output_db();
-    props.spectrum.input_peak_db      = sa.input_peak_db();
-    props.spectrum.output_peak_db     = sa.output_peak_db();
+    props.spectrum.input_peak_db = sa.input_peak_db();
+    props.spectrum.output_peak_db = sa.output_peak_db();
 
     analyzer.set_props(props);
 

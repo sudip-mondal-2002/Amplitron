@@ -5,11 +5,12 @@
  * Tests construction, continuous/toggle mapping descriptions, learn popups,
  * and mapping tables using a software ImGui context.
  */
-#include "test_framework.h"
-#include "test_fixtures.h"
+#include <string>
+
 #include "gui/views/gui_midi.h"
 #include "midi/midi_manager.h"
-#include <string>
+#include "test_fixtures.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 
@@ -66,18 +67,17 @@ TEST(gui_midi_mapping_info_found_for_param_mapping) {
     GuiMidi gm(midi);
 
     MidiMapping m;
-    m.cc_number   = 42;
+    m.cc_number = 42;
     m.midi_channel = -1;
-    m.target_type  = MidiTargetType::EffectParam;
-    m.effect_name  = "Overdrive";
-    m.param_name   = "Drive";
-    m.mode         = MidiMappingMode::Continuous;
+    m.target_type = MidiTargetType::EffectParam;
+    m.effect_name = "Overdrive";
+    m.param_name = "Drive";
+    m.mode = MidiMappingMode::Continuous;
     midi.add_mapping(m);
 
     std::string info = gm.get_mapping_info("Overdrive", "Drive");
     ASSERT_FALSE(info.empty());
-    ASSERT_TRUE(info.find("CC") != std::string::npos ||
-                info.find("42") != std::string::npos);
+    ASSERT_TRUE(info.find("CC") != std::string::npos || info.find("42") != std::string::npos);
 }
 
 TEST(gui_midi_mapping_info_contains_cc_number) {
@@ -85,16 +85,15 @@ TEST(gui_midi_mapping_info_contains_cc_number) {
     GuiMidi gm(midi);
 
     MidiMapping m;
-    m.cc_number   = 7;
+    m.cc_number = 7;
     m.midi_channel = -1;
-    m.target_type  = MidiTargetType::EffectParam;
-    m.effect_name  = "Reverb";
-    m.param_name   = "Decay";
-    m.mode         = MidiMappingMode::Continuous;
+    m.target_type = MidiTargetType::EffectParam;
+    m.effect_name = "Reverb";
+    m.param_name = "Decay";
+    m.mode = MidiMappingMode::Continuous;
     midi.add_mapping(m);
 
-    ASSERT_TRUE(gm.get_mapping_info("Reverb", "Decay").find("7") !=
-                std::string::npos);
+    ASSERT_TRUE(gm.get_mapping_info("Reverb", "Decay").find("7") != std::string::npos);
 }
 
 // ============================================================
@@ -106,12 +105,12 @@ TEST(gui_midi_mapping_info_toggle_contains_toggle_label) {
     GuiMidi gm(midi);
 
     MidiMapping m;
-    m.cc_number   = 15;
+    m.cc_number = 15;
     m.midi_channel = -1;
-    m.target_type  = MidiTargetType::EffectParam;
-    m.effect_name  = "Compressor";
-    m.param_name   = "Ratio";
-    m.mode         = MidiMappingMode::Toggle;
+    m.target_type = MidiTargetType::EffectParam;
+    m.effect_name = "Compressor";
+    m.param_name = "Ratio";
+    m.mode = MidiMappingMode::Toggle;
     midi.add_mapping(m);
 
     std::string info = gm.get_mapping_info("Compressor", "Ratio");
@@ -128,12 +127,12 @@ TEST(gui_midi_mapping_info_bypass_not_returned_for_param_query) {
     GuiMidi gm(midi);
 
     MidiMapping m;
-    m.cc_number   = 5;
+    m.cc_number = 5;
     m.midi_channel = -1;
-    m.target_type  = MidiTargetType::EffectBypass;
-    m.effect_name  = "Reverb";
-    m.param_name   = "";
-    m.mode         = MidiMappingMode::Toggle;
+    m.target_type = MidiTargetType::EffectBypass;
+    m.effect_name = "Reverb";
+    m.param_name = "";
+    m.mode = MidiMappingMode::Toggle;
     midi.add_mapping(m);
 
     // Querying as a param (not bypass) must return empty
@@ -149,12 +148,12 @@ TEST(gui_midi_mapping_info_wrong_effect_returns_empty) {
     GuiMidi gm(midi);
 
     MidiMapping m;
-    m.cc_number   = 20;
+    m.cc_number = 20;
     m.midi_channel = -1;
-    m.target_type  = MidiTargetType::EffectParam;
-    m.effect_name  = "Delay";
-    m.param_name   = "Time";
-    m.mode         = MidiMappingMode::Continuous;
+    m.target_type = MidiTargetType::EffectParam;
+    m.effect_name = "Delay";
+    m.param_name = "Time";
+    m.mode = MidiMappingMode::Continuous;
     midi.add_mapping(m);
 
     ASSERT_TRUE(gm.get_mapping_info("Chorus", "Time").empty());
@@ -169,12 +168,12 @@ TEST(gui_midi_mapping_info_wrong_param_returns_empty) {
     GuiMidi gm(midi);
 
     MidiMapping m;
-    m.cc_number   = 11;
+    m.cc_number = 11;
     m.midi_channel = -1;
-    m.target_type  = MidiTargetType::EffectParam;
-    m.effect_name  = "Overdrive";
-    m.param_name   = "Drive";
-    m.mode         = MidiMappingMode::Continuous;
+    m.target_type = MidiTargetType::EffectParam;
+    m.effect_name = "Overdrive";
+    m.param_name = "Drive";
+    m.mode = MidiMappingMode::Continuous;
     midi.add_mapping(m);
 
     ASSERT_TRUE(gm.get_mapping_info("Overdrive", "Tone").empty());
@@ -189,21 +188,21 @@ TEST(gui_midi_mapping_info_first_match_returned) {
     GuiMidi gm(midi);
 
     MidiMapping m1;
-    m1.cc_number   = 1;
+    m1.cc_number = 1;
     m1.midi_channel = -1;
-    m1.target_type  = MidiTargetType::EffectParam;
-    m1.effect_name  = "Overdrive";
-    m1.param_name   = "Drive";
-    m1.mode         = MidiMappingMode::Continuous;
+    m1.target_type = MidiTargetType::EffectParam;
+    m1.effect_name = "Overdrive";
+    m1.param_name = "Drive";
+    m1.mode = MidiMappingMode::Continuous;
     midi.add_mapping(m1);
 
     MidiMapping m2;
-    m2.cc_number   = 2;
+    m2.cc_number = 2;
     m2.midi_channel = -1;
-    m2.target_type  = MidiTargetType::EffectParam;
-    m2.effect_name  = "Overdrive";
-    m2.param_name   = "Drive";
-    m2.mode         = MidiMappingMode::Continuous;
+    m2.target_type = MidiTargetType::EffectParam;
+    m2.effect_name = "Overdrive";
+    m2.param_name = "Drive";
+    m2.mode = MidiMappingMode::Continuous;
     midi.add_mapping(m2);
 
     std::string info = gm.get_mapping_info("Overdrive", "Drive");
@@ -234,7 +233,7 @@ TEST(gui_midi_render_window) {
     // 2. Toggle bypass mapping
     MidiMapping m2;
     m2.cc_number = 11;
-    m2.midi_channel = -1; // "All"
+    m2.midi_channel = -1;  // "All"
     m2.target_type = MidiTargetType::EffectBypass;
     m2.effect_name = "Reverb";
     m2.mode = MidiMappingMode::Toggle;
@@ -276,12 +275,12 @@ TEST(gui_midi_render_learn_menu_items) {
 
     // Add a mapping and call them again to exercise the "Remove Mapping" path!
     MidiMapping m;
-    m.cc_number   = 12;
+    m.cc_number = 12;
     m.midi_channel = -1;
-    m.target_type  = MidiTargetType::EffectParam;
-    m.effect_name  = "Overdrive";
-    m.param_name   = "Drive";
-    m.mode         = MidiMappingMode::Continuous;
+    m.target_type = MidiTargetType::EffectParam;
+    m.effect_name = "Overdrive";
+    m.param_name = "Drive";
+    m.mode = MidiMappingMode::Continuous;
     midi.add_mapping(m);
 
     gm.render_learn_menu_item("Overdrive", "Drive");
@@ -289,12 +288,12 @@ TEST(gui_midi_render_learn_menu_items) {
 
     // Bypass mapping
     MidiMapping mb;
-    mb.cc_number   = 13;
+    mb.cc_number = 13;
     mb.midi_channel = -1;
-    mb.target_type  = MidiTargetType::EffectBypass;
-    mb.effect_name  = "Overdrive";
-    mb.param_name   = "";
-    mb.mode         = MidiMappingMode::Toggle;
+    mb.target_type = MidiTargetType::EffectBypass;
+    mb.effect_name = "Overdrive";
+    mb.param_name = "";
+    mb.mode = MidiMappingMode::Toggle;
     midi.add_mapping(mb);
 
     gm.render_remove_bypass_item("Overdrive");

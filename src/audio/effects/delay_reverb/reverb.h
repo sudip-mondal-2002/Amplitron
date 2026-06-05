@@ -10,7 +10,7 @@
 namespace Amplitron {
 
 class Reverb : public Effect {
-public:
+   public:
     Reverb();
     void process(float* buffer, int num_samples) override;
     void process_stereo(float* left, float* right, int num_samples) override;
@@ -21,7 +21,7 @@ public:
     std::vector<EffectParam>& params() override { return params_; }
     const std::vector<EffectParam>& params() const override { return params_; }
 
-private:
+   private:
     std::vector<EffectParam> params_;
 
     // Schroeder reverb: 4 comb filters + 2 allpass filters
@@ -51,4 +51,4 @@ private:
     void init_filters();
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

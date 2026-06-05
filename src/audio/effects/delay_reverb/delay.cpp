@@ -1,4 +1,5 @@
 #include "audio/effects/delay_reverb/delay.h"
+
 #include "audio/effects/core/effect_factory.h"
 
 namespace Amplitron {
@@ -19,7 +20,7 @@ Delay::Delay() {
 
 void Delay::set_sample_rate(int sample_rate) {
     Effect::set_sample_rate(sample_rate);
-    max_delay_samples_ = static_cast<int>(sample_rate * 2.5f); // max 2.5s
+    max_delay_samples_ = static_cast<int>(sample_rate * 2.5f);  // max 2.5s
     delay_buffer_.resize(max_delay_samples_, 0.0f);
     write_pos_ = 0;
 }
@@ -27,11 +28,11 @@ void Delay::set_sample_rate(int sample_rate) {
 void Delay::process(float* buffer, int num_samples) {
     if (!enabled_) return;
 
-    const float alpha = 1.0f - std::exp(-1.0f / (sample_rate_ * 0.020f)); // 20 ms
+    const float alpha = 1.0f - std::exp(-1.0f / (sample_rate_ * 0.020f));  // 20 ms
     smoothed_time_ms_ += alpha * (params_[0].value - smoothed_time_ms_);
     smoothed_feedback_ += alpha * (params_[1].value - smoothed_feedback_);
-    smoothed_tone_     += alpha * (params_[2].value - smoothed_tone_);
-    smoothed_level_    += alpha * (params_[3].value - smoothed_level_);
+    smoothed_tone_ += alpha * (params_[2].value - smoothed_tone_);
+    smoothed_level_ += alpha * (params_[3].value - smoothed_level_);
 
     float time_ms = smoothed_time_ms_;
     float feedback = smoothed_feedback_;
@@ -116,4 +117,4 @@ void Delay::set_transport_state(float bpm){
     }
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

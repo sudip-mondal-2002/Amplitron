@@ -7,7 +7,7 @@ namespace Amplitron {
  * Satisfies the Dependency Inversion Principle (DIP).
  */
 class IMetronome {
-public:
+   public:
     virtual ~IMetronome() = default;
 
     virtual void set_enabled(bool enabled) = 0;
@@ -27,4 +27,4 @@ public:
     virtual float next_sample() = 0;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

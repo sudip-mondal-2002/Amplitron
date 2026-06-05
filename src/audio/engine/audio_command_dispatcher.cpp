@@ -1,8 +1,10 @@
 #include "audio/engine/audio_command_dispatcher.h"
+
+#include <iostream>
+
+#include "audio/effects/core/effect.h"
 #include "audio/engine/audio_graph.h"
 #include "audio/engine/audio_graph_executor.h"
-#include "audio/effects/core/effect.h"
-#include <iostream>
 
 namespace Amplitron {
 
@@ -18,8 +20,8 @@ void AudioCommandDispatcher::push_param_change(int effect_index, int param_index
 void AudioCommandDispatcher::push_mixer_gain_change(int node_id, int pin_index, float gain) {
     AudioCommand cmd{};
     cmd.type = AudioCommand::SetMixerGain;
-    cmd.effect_index = node_id; // Overload effect_index to mean node_id
-    cmd.param_index = pin_index; // Overload param_index to mean pin_index
+    cmd.effect_index = node_id;   // Overload effect_index to mean node_id
+    cmd.param_index = pin_index;  // Overload param_index to mean pin_index
     cmd.value = gain;
     command_queue_.try_push(cmd);
 }
@@ -83,7 +85,8 @@ void AudioCommandDispatcher::drain_commands(std::atomic<float>& input_gain,
                                             std::vector<std::shared_ptr<Effect>>& dummy_effects) {
     AudioCommand cmd;
     while (command_queue_.try_pop(cmd)) {
-        // Helper to find the effect pointer safely in the compiled executor by node_id, with fallback
+        // Helper to find the effect pointer safely in the compiled executor by node_id, with
+        // fallback
         auto get_effect_by_id = [&](int node_id) -> std::shared_ptr<Effect> {
             if (executor) {
                 if (auto fx = executor->get_effect_by_node_id(node_id)) {
@@ -96,12 +99,15 @@ void AudioCommandDispatcher::drain_commands(std::atomic<float>& input_gain,
                 }
             }
             if (node_id >= 0 && node_id < static_cast<int>(dummy_effects.size())) {
-                // Comments on node_id semantics: node_id is used as a 0-based linear index fallback for the GUI and tests
-                std::cerr << "[AudioCommandDispatcher] Node ID " << node_id 
-                          << " not found in executor or graph; falling back to dummy_effects index." << std::endl;
+                // Comments on node_id semantics: node_id is used as a 0-based linear index fallback
+                // for the GUI and tests
+                std::cerr << "[AudioCommandDispatcher] Node ID " << node_id
+                          << " not found in executor or graph; falling back to dummy_effects index."
+                          << std::endl;
                 return dummy_effects[node_id];
             }
-            std::cerr << "[AudioCommandDispatcher] Node ID " << node_id << " lookup failed completely." << std::endl;
+            std::cerr << "[AudioCommandDispatcher] Node ID " << node_id
+                      << " lookup failed completely." << std::endl;
             return nullptr;
         };
 
@@ -109,8 +115,7 @@ void AudioCommandDispatcher::drain_commands(std::atomic<float>& input_gain,
             case AudioCommand::SetEffectParam: {
                 if (auto fx = get_effect_by_id(cmd.effect_index)) {
                     auto& params = fx->params();
-                    if (cmd.param_index >= 0 &&
-                        cmd.param_index < static_cast<int>(params.size())) {
+                    if (cmd.param_index >= 0 && cmd.param_index < static_cast<int>(params.size())) {
                         params[cmd.param_index].value = cmd.value;
                     }
                 }
@@ -143,4 +148,4 @@ void AudioCommandDispatcher::drain_commands(std::atomic<float>& input_gain,
     }
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

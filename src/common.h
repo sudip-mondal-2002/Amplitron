@@ -1,15 +1,15 @@
 #pragma once
 
-#include <cstdint>
-#include <cmath>
 #include <algorithm>
+#include <array>
+#include <atomic>
+#include <cmath>
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
-#include <array>
-#include <memory>
-#include <atomic>
-#include <functional>
-#include <mutex>
 
 namespace Amplitron {
 
@@ -24,13 +24,9 @@ inline float clamp(float value, float min_val, float max_val) {
     return std::max(min_val, std::min(max_val, value));
 }
 
-inline float db_to_linear(float db) {
-    return std::pow(10.0f, db / 20.0f);
-}
+inline float db_to_linear(float db) { return std::pow(10.0f, db / 20.0f); }
 
-inline float linear_to_db(float linear) {
-    return 20.0f * std::log10(std::max(linear, 1e-10f));
-}
+inline float linear_to_db(float linear) { return 20.0f * std::log10(std::max(linear, 1e-10f)); }
 
 // Fast tanh approximation using Padé approximant.
 // ~3× faster than std::tanh(), perceptually identical for musical signals.
@@ -45,9 +41,7 @@ inline float soft_clip(float x) {
     return x - (x * x * x) / 3.0f;
 }
 
-inline float hard_clip(float x, float threshold) {
-    return clamp(x, -threshold, threshold);
-}
+inline float hard_clip(float x, float threshold) { return clamp(x, -threshold, threshold); }
 
 // Simple one-pole low-pass filter for parameter smoothing
 struct SmoothParam {
@@ -63,4 +57,4 @@ struct SmoothParam {
     void snap() { current = target; }
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

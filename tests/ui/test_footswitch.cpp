@@ -1,11 +1,11 @@
-#include "test_framework.h"
-#include "test_fixtures.h"
-#include <string>
-#include <memory>
 #include <cmath>
 #include <functional>
+#include <memory>
+#include <string>
 
 #include "gui/components/footswitch.h"
+#include "test_fixtures.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 using namespace TestFramework;
@@ -22,9 +22,9 @@ static inline void advance_frame() {
 
 TEST_F(PresetTest, test_footswitch_component_comprehensive) {
     ScopedImGuiContext imgui;
-    
+
     ImGuiIO& io = ImGui::GetIO();
-    
+
     // Position the mouse and set not clicked
     io.MousePos = ImVec2(150, 150);
     io.MouseDown[0] = false;
@@ -41,29 +41,30 @@ TEST_F(PresetTest, test_footswitch_component_comprehensive) {
 
     // Render 1: Initial frame setup (setting the mouse pos on the window)
     FootswitchComponent::render("TestFootswitch1", props, 1.0f, ImVec2(150, 150));
-    
-    // Advance frame so the mouse position (150, 150) is processed and the footswitch becomes hovered!
+
+    // Advance frame so the mouse position (150, 150) is processed and the footswitch becomes
+    // hovered!
     advance_frame();
-    
+
     // Render 2: Hover frame (now fully hovered)
     FootswitchComponent::render("TestFootswitch1", props, 1.0f, ImVec2(150, 150));
-    
+
     // Set mouse down BEFORE advancing to trigger the click
     io.MouseDown[0] = true;
     advance_frame();
-    
+
     // Render 3: Click frame (mouse down processed while hovered -> click triggers)
     FootswitchComponent::render("TestFootswitch1", props, 1.0f, ImVec2(150, 150));
-    
+
     // Set mouse up BEFORE advancing to release the click
     io.MouseDown[0] = false;
     advance_frame();
-    
+
     // Render 4: Release frame
     FootswitchComponent::render("TestFootswitch1", props, 1.0f, ImVec2(150, 150));
-    
+
     ImGui::End();
-    
+
     ASSERT_TRUE(clicked);
 
     // Render in active state (new window frame)

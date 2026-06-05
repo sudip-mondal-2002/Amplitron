@@ -7,18 +7,19 @@
 //  3. Ratio hoisted — process() output is deterministic across instances
 //  4. Wet/dry blend — mix=0 passes dry, mid-mix blends energy correctly
 
-#include "test_framework.h"
-#include "audio/effects/pitch/pitch_shifter.h"
 #include <algorithm>
 #include <cmath>
 #include <vector>
+
+#include "audio/effects/pitch/pitch_shifter.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 
 namespace {
 
-constexpr int   kSampleRate = 48000;
-constexpr float TWO_PI      = 6.28318530718f;
+constexpr int kSampleRate = 48000;
+constexpr float TWO_PI = 6.28318530718f;
 
 void fill_sine(float* buf, int n, float freq) {
     for (int i = 0; i < n; ++i)
@@ -33,20 +34,19 @@ float rms(const float* buf, int n) {
 
 float max_diff(const float* a, const float* b, int n) {
     float m = 0.0f;
-    for (int i = 0; i < n; ++i)
-        m = std::max(m, std::abs(a[i] - b[i]));
+    for (int i = 0; i < n; ++i) m = std::max(m, std::abs(a[i] - b[i]));
     return m;
 }
 
 class TestablePitchShifter : public PitchShifter {
-public:
+   public:
     void set_param(int idx, float v) { params()[idx].value = v; }
 };
 
-} // namespace
+}  // namespace
 
 class PitchShifterTest : public TestFramework::Test {
-public:
+   public:
     TestablePitchShifter ps_;
     void SetUp() override {
         ps_.set_sample_rate(kSampleRate);
@@ -63,8 +63,7 @@ TEST_F(PitchShifterTest, HannLutIsPowerComplementary) {
     std::vector<float> buf(BLOCK, 1.0f);
     ps_.process(buf.data(), BLOCK);
     const int HALF = BLOCK / 2;
-    for (int i = HALF; i < BLOCK; ++i)
-        ASSERT_NEAR(buf[i], 1.0f, 0.01f);
+    for (int i = HALF; i < BLOCK; ++i) ASSERT_NEAR(buf[i], 1.0f, 0.01f);
 }
 
 // 2. Early-exit — mix=0 must not touch the buffer at all.
@@ -153,7 +152,7 @@ TEST_F(PitchShifterTest, SingleSampleLoopProducesNoNaN) {
 
 // Header — name() and type_id() return correct strings
 TEST_F(PitchShifterTest, NameAndTypeIdMatchHeader) {
-    ASSERT_EQ(std::string(ps_.name()),    "Pitch Shifter");
+    ASSERT_EQ(std::string(ps_.name()), "Pitch Shifter");
     ASSERT_EQ(std::string(ps_.type_id()), "Pitch Shifter");
 }
 
@@ -168,8 +167,7 @@ TEST_F(PitchShifterTest, DefaultRatioIsUnity) {
     const int BLOCK = 256;
     std::vector<float> buf(BLOCK, 0.0f);
     ps_.process(buf.data(), BLOCK);
-    for (int i = 0; i < BLOCK; ++i)
-        ASSERT_NEAR(buf[i], 0.0f, 0.001f);
+    for (int i = 0; i < BLOCK; ++i) ASSERT_NEAR(buf[i], 0.0f, 0.001f);
 }
 
 // Header — hann_lut_ array size is 8192 (power-of-2 for bitwise wrapping)
@@ -180,6 +178,5 @@ TEST_F(PitchShifterTest, HannLutSizeIsCorrect) {
     std::vector<float> buf(BLOCK);
     fill_sine(buf.data(), BLOCK, 440.0f);
     ps_.process(buf.data(), BLOCK);
-    for (int i = 0; i < BLOCK; ++i)
-        ASSERT_FALSE(std::isnan(buf[i]));
+    for (int i = 0; i < BLOCK; ++i) ASSERT_FALSE(std::isnan(buf[i]));
 }

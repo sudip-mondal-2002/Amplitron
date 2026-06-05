@@ -1,6 +1,8 @@
 #include "audio/effects/pitch/octaver.h"
-#include "audio/effects/core/effect_factory.h"
+
 #include <cmath>
+
+#include "audio/effects/core/effect_factory.h"
 
 namespace Amplitron {
 
@@ -8,8 +10,8 @@ static EffectRegistrar<Octaver> reg("Octaver");
 
 // Param indices
 static constexpr int P_OCT_DOWN = 0;
-static constexpr int P_OCT_UP   = 1;
-static constexpr int P_DRY      = 2;
+static constexpr int P_OCT_UP = 1;
+static constexpr int P_DRY = 2;
 
 // Hysteresis threshold for the flip-flop zero-crossing detector.
 // The divider only flips when prev_sample_ < -FLIP_HYSTERESIS and the current
@@ -29,7 +31,7 @@ Octaver::Octaver() {
          "Level of the sub-octave (one octave below). Produces a thick, organ-like low tone."},
         {"Oct +1", 0.0f, 0.0f, 1.0f, 0.0f, "",
          "Level of the upper octave (one octave above). Adds a bright, shimmery harmonic."},
-        {"Dry",    0.7f, 0.0f, 1.0f, 0.7f, "",
+        {"Dry", 0.7f, 0.0f, 1.0f, 0.7f, "",
          "Level of the original dry signal blended with the octave voices."},
     };
     set_sample_rate(DEFAULT_SAMPLE_RATE);
@@ -47,7 +49,7 @@ void Octaver::process(float* buffer, int num_samples) {
     const float alpha = 1.0f - std::exp(-1.0f / (sample_rate_ * 0.010f));
 
     // Envelope follower coefficients
-    const float env_attack  = 1.0f - std::exp(-1.0f / (sample_rate_ * 0.002f));  // 2 ms
+    const float env_attack = 1.0f - std::exp(-1.0f / (sample_rate_ * 0.002f));   // 2 ms
     const float env_release = 1.0f - std::exp(-1.0f / (sample_rate_ * 0.020f));  // 20 ms
 
     // DC blocker coefficient (high-pass at ~20 Hz)
@@ -58,8 +60,8 @@ void Octaver::process(float* buffer, int num_samples) {
 
         // Smooth parameters
         oct_down_smooth_ += alpha * (params_[P_OCT_DOWN].value - oct_down_smooth_);
-        oct_up_smooth_   += alpha * (params_[P_OCT_UP].value   - oct_up_smooth_);
-        dry_smooth_      += alpha * (params_[P_DRY].value      - dry_smooth_);
+        oct_up_smooth_ += alpha * (params_[P_OCT_UP].value - oct_up_smooth_);
+        dry_smooth_ += alpha * (params_[P_DRY].value - dry_smooth_);
 
         // --- Envelope follower (tracks input amplitude) ---
         const float abs_in = std::fabs(dry);
@@ -93,9 +95,7 @@ void Octaver::process(float* buffer, int num_samples) {
         float oct_up = dc_out;
 
         // --- Mix ---
-        buffer[i] = dry * dry_smooth_
-                   + oct_down * oct_down_smooth_
-                   + oct_up * oct_up_smooth_;
+        buffer[i] = dry * dry_smooth_ + oct_down * oct_down_smooth_ + oct_up * oct_up_smooth_;
 
         // Safety clamp
         buffer[i] = clamp(buffer[i], -1.0f, 1.0f);
@@ -113,4 +113,4 @@ void Octaver::reset() {
     dry_smooth_ = params_[P_DRY].value;
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

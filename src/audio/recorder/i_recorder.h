@@ -11,7 +11,7 @@ class IAudioEngine;
  * Satisfies the Dependency Inversion Principle (DIP).
  */
 class IRecorder {
-public:
+   public:
     static constexpr int WAVEFORM_SIZE = 512;
 
     virtual ~IRecorder() = default;
@@ -52,4 +52,4 @@ public:
     virtual float get_current_peak() const = 0;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

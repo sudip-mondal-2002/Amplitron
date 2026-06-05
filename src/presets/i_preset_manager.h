@@ -15,7 +15,7 @@ struct MidiMapping;
  * Satisfies the Dependency Inversion Principle (DIP).
  */
 class IPresetManager {
-public:
+   public:
     virtual ~IPresetManager() = default;
 
     virtual bool save_preset_data(const std::string& filepath, const PresetData& preset) = 0;
@@ -30,5 +30,4 @@ public:
     virtual std::string get_presets_directory() const = 0;
 };
 
-} // namespace Amplitron
-
+}  // namespace Amplitron

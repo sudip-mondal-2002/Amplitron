@@ -1,9 +1,10 @@
 #pragma once
 
-#include "gui/commands/command_base.h"
-#include "audio/engine/i_audio_engine.h"
-#include "audio/effects/core/effect.h"
 #include <chrono>
+
+#include "audio/effects/core/effect.h"
+#include "audio/engine/i_audio_engine.h"
+#include "gui/commands/command_base.h"
 
 namespace Amplitron {
 
@@ -15,7 +16,7 @@ namespace Amplitron {
  * against effect chain reordering.
  */
 class ParameterChangeCommand : public Command {
-public:
+   public:
     /**
      * @brief Construct a ParameterChangeCommand.
      * @param engine      Reference to the AudioEngine.
@@ -24,10 +25,13 @@ public:
      * @param old_value   Value before the change (used by undo).
      * @param new_value   Value after the change (used by execute).
      */
-    ParameterChangeCommand(IAudioEngine& engine, std::shared_ptr<Effect> effect,
-                           int param_index, float old_value, float new_value)
-        : engine_(engine), effect_(std::move(effect)),
-          param_index_(param_index), old_value_(old_value), new_value_(new_value) {}
+    ParameterChangeCommand(IAudioEngine& engine, std::shared_ptr<Effect> effect, int param_index,
+                           float old_value, float new_value)
+        : engine_(engine),
+          effect_(std::move(effect)),
+          param_index_(param_index),
+          old_value_(old_value),
+          new_value_(new_value) {}
 
     /** @brief Set the parameter to new_value_. */
     bool execute() override {
@@ -36,12 +40,18 @@ public:
             params[param_index_].value = new_value_;
             int node_id = -1;
             for (const auto& node : engine_.graph().get_nodes()) {
-                if (node.pedal == effect_) { node_id = node.id; break; }
+                if (node.pedal == effect_) {
+                    node_id = node.id;
+                    break;
+                }
             }
             if (node_id == -1) {
                 auto& fx = engine_.effects();
                 for (int i = 0; i < static_cast<int>(fx.size()); ++i) {
-                    if (fx[i] == effect_) { node_id = i; break; }
+                    if (fx[i] == effect_) {
+                        node_id = i;
+                        break;
+                    }
                 }
             }
             if (node_id >= 0) engine_.push_param_change(node_id, param_index_, new_value_);
@@ -56,12 +66,18 @@ public:
             params[param_index_].value = old_value_;
             int node_id = -1;
             for (const auto& node : engine_.graph().get_nodes()) {
-                if (node.pedal == effect_) { node_id = node.id; break; }
+                if (node.pedal == effect_) {
+                    node_id = node.id;
+                    break;
+                }
             }
             if (node_id == -1) {
                 auto& fx = engine_.effects();
                 for (int i = 0; i < static_cast<int>(fx.size()); ++i) {
-                    if (fx[i] == effect_) { node_id = i; break; }
+                    if (fx[i] == effect_) {
+                        node_id = i;
+                        break;
+                    }
                 }
             }
             if (node_id >= 0) engine_.push_param_change(node_id, param_index_, old_value_);
@@ -83,11 +99,10 @@ public:
     bool merge_with(const Command& other) override {
         auto* pc = dynamic_cast<const ParameterChangeCommand*>(&other);
         if (!pc) return false;
-        if (pc->effect_.get() != effect_.get() || pc->param_index_ != param_index_)
-            return false;
+        if (pc->effect_.get() != effect_.get() || pc->param_index_ != param_index_) return false;
 
-        auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(
-            pc->timestamp_ - timestamp_);
+        auto dt =
+            std::chrono::duration_cast<std::chrono::milliseconds>(pc->timestamp_ - timestamp_);
         if (dt.count() > 500) return false;
 
         new_value_ = pc->new_value_;
@@ -107,7 +122,7 @@ public:
     /** @brief Value after the change. */
     float new_value() const { return new_value_; }
 
-private:
+   private:
     IAudioEngine& engine_;
     std::shared_ptr<Effect> effect_;
     int param_index_;
@@ -115,4 +130,4 @@ private:
     float new_value_;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

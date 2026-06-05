@@ -1,22 +1,23 @@
 #pragma once
 
-#include "audio/engine/audio_graph.h"
-#include "audio/effects/core/effect.h"
-#include <vector>
-#include <unordered_map>
-#include <memory>
 #include <cstring>
+#include <memory>
+#include <unordered_map>
+#include <vector>
+
+#include "audio/effects/core/effect.h"
+#include "audio/engine/audio_graph.h"
 
 namespace Amplitron {
 
 class INodeProcessor {
-public:
+   public:
     virtual ~INodeProcessor() = default;
     virtual void process(const float* input, float* output, int num_samples) = 0;
 };
 
 class StandardEffectProcessor : public INodeProcessor {
-public:
+   public:
     explicit StandardEffectProcessor(std::shared_ptr<Effect> pedal) : pedal_(std::move(pedal)) {}
     void process(const float* input, float* output, int num_samples) override {
         std::memcpy(output, input, static_cast<size_t>(num_samples) * sizeof(float));
@@ -24,19 +25,20 @@ public:
             pedal_->process(output, num_samples);
         }
     }
-private:
+
+   private:
     std::shared_ptr<Effect> pedal_;
 };
 
 class PassthroughProcessor : public INodeProcessor {
-public:
+   public:
     void process(const float* input, float* output, int num_samples) override {
         std::memcpy(output, input, static_cast<size_t>(num_samples) * sizeof(float));
     }
 };
 
 class AudioGraphExecutor {
-public:
+   public:
     friend class AudioEngine;
 
     AudioGraphExecutor();
@@ -66,39 +68,39 @@ public:
         return nullptr;
     }
 
-private:
+   private:
     int sample_rate_ = 48000;
     int max_block_size_ = 512;
     int max_nodes_ = 32;
 
     struct InputSource {
-        int buffer_index; // The pool index to read from
+        int buffer_index;  // The pool index to read from
         float gain = 1.0f;
         int pin_index = 0;
     };
 
     struct NodeExecutionStep {
         int node_id;
-        int buffer_index; // The pool index this node writes to
+        int buffer_index;  // The pool index this node writes to
         NodeRoutingType type;
         std::shared_ptr<Effect> pedal;
-        std::vector<InputSource> input_sources; // Which buffers to sum together for the input
-        std::unique_ptr<INodeProcessor> processor; // Polymorphic node executor
+        std::vector<InputSource> input_sources;     // Which buffers to sum together for the input
+        std::unique_ptr<INodeProcessor> processor;  // Polymorphic node executor
         bool is_graph_input = false;
         bool is_graph_output = false;
         bool is_sink = false;
     };
 
     std::vector<NodeExecutionStep> execution_plan_;
-    
+
     bool any_explicit_input_ = false;
     int fallback_input_node_id_ = -1;
 
     // Pre-allocated memory for routing parallel signal streams: [node_capacity][max_block_size]
     std::vector<std::vector<float>> buffer_pool_;
-    
+
     // A dedicated temporary buffer for summing multiple incoming signals
     std::vector<float> sum_buffer_;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

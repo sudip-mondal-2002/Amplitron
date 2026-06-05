@@ -1,9 +1,9 @@
-#include "midi/midi_manager.h"
-
-#include <nlohmann/json.hpp>
-#include <fstream>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <nlohmann/json.hpp>
+
+#include "midi/midi_manager.h"
 
 namespace Amplitron {
 
@@ -37,16 +37,16 @@ std::string MidiManager::get_config_path() {
 
 std::string MidiManager::mappings_to_json() const {
     nlohmann::ordered_json root = nlohmann::ordered_json::object();
-    nlohmann::ordered_json arr  = nlohmann::ordered_json::array();
+    nlohmann::ordered_json arr = nlohmann::ordered_json::array();
 
     for (const auto& m : mappings_) {
         nlohmann::ordered_json jm = nlohmann::ordered_json::object();
-        jm["cc"]      = m.cc_number;
+        jm["cc"] = m.cc_number;
         jm["channel"] = m.midi_channel;
-        jm["target"]  = static_cast<int>(m.target_type);
-        jm["mode"]    = static_cast<int>(m.mode);
-        jm["effect"]  = m.effect_name;
-        jm["param"]   = m.param_name;
+        jm["target"] = static_cast<int>(m.target_type);
+        jm["mode"] = static_cast<int>(m.mode);
+        jm["effect"] = m.effect_name;
+        jm["param"] = m.param_name;
         arr.push_back(std::move(jm));
     }
 
@@ -66,12 +66,12 @@ bool MidiManager::mappings_from_json(const std::string& json_str) {
 
         for (const auto& jm : j["mappings"]) {
             MidiMapping m;
-            m.cc_number    = jm.value("cc",      0);
+            m.cc_number = jm.value("cc", 0);
             m.midi_channel = jm.value("channel", -1);
-            m.target_type  = static_cast<MidiTargetType>(jm.value("target", 0));
-            m.mode         = static_cast<MidiMappingMode>(jm.value("mode",   0));
-            m.effect_name  = jm.value("effect",  std::string{});
-            m.param_name   = jm.value("param",   std::string{});
+            m.target_type = static_cast<MidiTargetType>(jm.value("target", 0));
+            m.mode = static_cast<MidiMappingMode>(jm.value("mode", 0));
+            m.effect_name = jm.value("effect", std::string{});
+            m.param_name = jm.value("param", std::string{});
             mappings_.push_back(m);
         }
 
@@ -94,11 +94,9 @@ void MidiManager::load_config() {
     std::ifstream f(path);
     if (!f.is_open()) return;
 
-    std::string content((std::istreambuf_iterator<char>(f)),
-                         std::istreambuf_iterator<char>());
+    std::string content((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
 
     mappings_from_json(content);
 }
 
-} // namespace Amplitron
-
+}  // namespace Amplitron

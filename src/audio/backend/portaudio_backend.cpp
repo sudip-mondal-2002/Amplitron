@@ -1,11 +1,13 @@
 #include "audio/backend/portaudio_backend.h"
-#include "audio/backend/audio_backend_portaudio_helpers.h"
-#include "audio/engine/i_audio_engine.h"
+
+#include <algorithm>
+#include <cctype>
+#include <cstring>
 #include <iostream>
 #include <vector>
-#include <algorithm>
-#include <cstring>
-#include <cctype>
+
+#include "audio/backend/audio_backend_portaudio_helpers.h"
+#include "audio/engine/i_audio_engine.h"
 #ifdef _WIN32
 #include <pa_win_wasapi.h>
 #endif
@@ -22,11 +24,10 @@ bool is_usb_device_name(const std::string& name) {
                    [](unsigned char c) { return std::tolower(c); });
 
     static const char* usb_keywords[] = {
-        "usb", "guitar", "guitar link", "irig", "scarlett",
-        "behringer", "focusrite", "presonus", "steinberg",
-        "audio interface", "line 6", "rocksmith", "umc",
-        "um2", "uphoria", "podcast", "xenyx"
-    };
+        "usb",       "guitar",    "guitar link", "irig",      "scarlett",
+        "behringer", "focusrite", "presonus",    "steinberg", "audio interface",
+        "line 6",    "rocksmith", "umc",         "um2",       "uphoria",
+        "podcast",   "xenyx"};
 
     for (const auto* keyword : usb_keywords) {
         if (lower.find(keyword) != std::string::npos) {
@@ -40,22 +41,32 @@ int get_host_api_priority(int host_api_type) {
     auto type = static_cast<PaHostApiTypeId>(host_api_type);
 #if defined(__linux__)
     switch (type) {
-        case paJACK:          return 100;
-        case paALSA:          return 70;
-        default:              return 10;
+        case paJACK:
+            return 100;
+        case paALSA:
+            return 70;
+        default:
+            return 10;
     }
 #elif defined(_WIN32)
     switch (type) {
-        case paASIO:          return 100;
-        case paWASAPI:        return 90;
-        case paDirectSound:   return 40;
-        case paMME:           return 10;
-        default:              return 20;
+        case paASIO:
+            return 100;
+        case paWASAPI:
+            return 90;
+        case paDirectSound:
+            return 40;
+        case paMME:
+            return 10;
+        default:
+            return 20;
     }
 #elif defined(__APPLE__)
     switch (type) {
-        case paCoreAudio:     return 100;
-        default:              return 30;
+        case paCoreAudio:
+            return 100;
+        default:
+            return 30;
     }
 #else
     (void)type;
@@ -67,10 +78,10 @@ bool is_projector_or_hdmi(const std::string& name) {
     std::string lower = name;
     std::transform(lower.begin(), lower.end(), lower.begin(),
                    [](unsigned char c) { return std::tolower(c); });
-    return lower.find("epson") != std::string::npos
-        || lower.find("projector") != std::string::npos
-        || lower.find("hdmi") != std::string::npos
-        || lower.find("displayport") != std::string::npos;
+    return lower.find("epson") != std::string::npos ||
+           lower.find("projector") != std::string::npos ||
+           lower.find("hdmi") != std::string::npos ||
+           lower.find("displayport") != std::string::npos;
 }
 
 bool devices_share_host_api(int input_dev, int output_dev) {
@@ -82,13 +93,10 @@ bool devices_share_host_api(int input_dev, int output_dev) {
 
 // -----------------------------------------------------------------------------
 
-
 // Real callback implementation
-int pa_audio_callback(const void* input, void* output,
-                      unsigned long frame_count,
+int pa_audio_callback(const void* input, void* output, unsigned long frame_count,
                       const PaStreamCallbackTimeInfo* /*time_info*/,
-                      PaStreamCallbackFlags /*status_flags*/,
-                      void* user_data) {
+                      PaStreamCallbackFlags /*status_flags*/, void* user_data) {
     auto* engine = static_cast<IAudioEngine*>(user_data);
     const auto* in = static_cast<const float*>(input);
     auto* out = static_cast<float*>(output);
@@ -104,9 +112,7 @@ int pa_audio_callback(const void* input, void* output,
 
 PortAudioBackend::PortAudioBackend() = default;
 
-PortAudioBackend::~PortAudioBackend() {
-    shutdown();
-}
+PortAudioBackend::~PortAudioBackend() { shutdown(); }
 
 bool PortAudioBackend::initialize(IAudioEngine* engine) {
     if (initialized_) return true;
@@ -178,31 +184,23 @@ bool PortAudioBackend::start() {
 
     unsigned long frames = static_cast<unsigned long>(buffer_size);
 
-    PaError err = Pa_OpenStream(
-        &stream_,
-        &input_params,
-        &output_params,
-        sample_rate,
-        frames,
-        paClipOff | paDitherOff,
-        pa_audio_callback,
-        engine_
-    );
+    PaError err = Pa_OpenStream(&stream_, &input_params, &output_params, sample_rate, frames,
+                                paClipOff | paDitherOff, pa_audio_callback, engine_);
 
     if (err != paNoError) {
         std::cerr << "Failed to open PortAudio stream: " << Pa_GetErrorText(err) << std::endl;
-        
+
         // Adjust parameters before retrying: disable WASAPI exclusive and reset latency suggestions
         input_params.hostApiSpecificStreamInfo = nullptr;
         output_params.hostApiSpecificStreamInfo = nullptr;
-        
+
         const PaDeviceInfo* in_info = Pa_GetDeviceInfo(input_device_);
         if (in_info) {
             input_params.suggestedLatency = in_info->defaultLowInputLatency;
         } else {
             input_params.suggestedLatency = 0.0;
         }
-        
+
         const PaDeviceInfo* out_info = Pa_GetDeviceInfo(output_device_);
         if (out_info) {
             output_params.suggestedLatency = out_info->defaultLowOutputLatency;
@@ -211,18 +209,11 @@ bool PortAudioBackend::start() {
         }
 
         // Retry
-        err = Pa_OpenStream(
-            &stream_,
-            &input_params,
-            &output_params,
-            sample_rate,
-            buffer_size,
-            paClipOff | paDitherOff,
-            pa_audio_callback,
-            engine_
-        );
+        err = Pa_OpenStream(&stream_, &input_params, &output_params, sample_rate, buffer_size,
+                            paClipOff | paDitherOff, pa_audio_callback, engine_);
         if (err != paNoError) {
-            std::cerr << "PortAudio open stream retry failed: " << Pa_GetErrorText(err) << std::endl;
+            std::cerr << "PortAudio open stream retry failed: " << Pa_GetErrorText(err)
+                      << std::endl;
             return false;
         }
     }
@@ -257,12 +248,8 @@ std::vector<AudioDeviceInfo> PortAudioBackend::get_input_devices() const {
     for (int i = 0; i < count; ++i) {
         const PaDeviceInfo* info = Pa_GetDeviceInfo(i);
         if (info && info->maxInputChannels > 0) {
-            devices.push_back({
-                i, info->name,
-                info->maxInputChannels, info->maxOutputChannels,
-                info->defaultSampleRate,
-                is_usb_device_name(info->name)
-            });
+            devices.push_back({i, info->name, info->maxInputChannels, info->maxOutputChannels,
+                               info->defaultSampleRate, is_usb_device_name(info->name)});
         }
     }
     return devices;
@@ -275,12 +262,8 @@ std::vector<AudioDeviceInfo> PortAudioBackend::get_output_devices() const {
     for (int i = 0; i < count; ++i) {
         const PaDeviceInfo* info = Pa_GetDeviceInfo(i);
         if (info && info->maxOutputChannels > 0) {
-            devices.push_back({
-                i, info->name,
-                info->maxInputChannels, info->maxOutputChannels,
-                info->defaultSampleRate,
-                is_usb_device_name(info->name)
-            });
+            devices.push_back({i, info->name, info->maxInputChannels, info->maxOutputChannels,
+                               info->defaultSampleRate, is_usb_device_name(info->name)});
         }
     }
     return devices;
@@ -330,9 +313,7 @@ int PortAudioBackend::get_sample_rate() const {
     return engine_ ? engine_->get_sample_rate() : 48000;
 }
 
-int PortAudioBackend::get_buffer_size() const {
-    return engine_ ? engine_->get_buffer_size() : 512;
-}
+int PortAudioBackend::get_buffer_size() const { return engine_ ? engine_->get_buffer_size() : 512; }
 
 void PortAudioBackend::auto_detect_devices() {
     int device_count = Pa_GetDeviceCount();
@@ -368,8 +349,8 @@ void PortAudioBackend::auto_detect_devices() {
             if (is_usb && info->maxInputChannels > 0 && c.usb_input < 0) {
                 c.usb_input = dev_idx;
             }
-            if (!is_usb && !is_projector_or_hdmi(info->name)
-                && info->maxOutputChannels > 0 && c.best_output < 0) {
+            if (!is_usb && !is_projector_or_hdmi(info->name) && info->maxOutputChannels > 0 &&
+                c.best_output < 0) {
                 c.best_output = dev_idx;
             }
         }
@@ -390,9 +371,7 @@ void PortAudioBackend::auto_detect_devices() {
     }
 
     std::sort(candidates.begin(), candidates.end(),
-              [](const ApiCandidate& a, const ApiCandidate& b) {
-                  return a.priority > b.priority;
-              });
+              [](const ApiCandidate& a, const ApiCandidate& b) { return a.priority > b.priority; });
 
     bool found_pair = false;
     for (auto& c : candidates) {
@@ -429,4 +408,4 @@ void PortAudioBackend::auto_detect_devices() {
     }
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

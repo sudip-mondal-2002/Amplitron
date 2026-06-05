@@ -9,7 +9,8 @@ namespace Amplitron {
 // Stub implementation for non-desktop platforms (web, mobile)
 class MidiManager : public IMidiManager {
     friend class TestAccessor;
-public:
+
+   public:
     MidiManager() = default;
     ~MidiManager() = default;
 
@@ -38,8 +39,14 @@ public:
     void cancel_learn() override {}
     bool is_learning() const override { return false; }
     std::string learn_status() const override { return ""; }
-    const std::string& learn_effect_name() const override { static std::string empty; return empty; }
-    const std::string& learn_param_name() const override { static std::string empty; return empty; }
+    const std::string& learn_effect_name() const override {
+        static std::string empty;
+        return empty;
+    }
+    const std::string& learn_param_name() const override {
+        static std::string empty;
+        return empty;
+    }
 
     void poll(IAudioEngine&) override {}
     void save_config() const override {}
@@ -59,7 +66,8 @@ public:
  */
 class MidiManager : public IMidiManager {
     friend class TestAccessor;
-public:
+
+   public:
     MidiManager();
     ~MidiManager();
 
@@ -93,7 +101,8 @@ public:
 
     void add_mapping(const MidiMapping& mapping) override;
     void remove_mapping(int index) override;
-    void remove_mapping_for_param(const std::string& effect_name, const std::string& param_name) override;
+    void remove_mapping_for_param(const std::string& effect_name,
+                                  const std::string& param_name) override;
     void clear_mappings() override;
     const std::vector<MidiMapping>& mappings() const override { return mappings_; }
 
@@ -105,7 +114,8 @@ public:
     /**
      * @brief Enter learn mode: the next CC event received will be bound to the given target.
      */
-    void start_learn(MidiTargetType type, const std::string& effect_name, const std::string& param_name) override;
+    void start_learn(MidiTargetType type, const std::string& effect_name,
+                     const std::string& param_name) override;
 
     /** @brief Cancel learn mode without creating a mapping. */
     void cancel_learn() override;
@@ -145,12 +155,13 @@ public:
      */
     void inject_event(const MidiEvent& event) override;
 
-private:
-    static void midi_callback(double timestamp, std::vector<unsigned char>* message, void* user_data);
+   private:
+    static void midi_callback(double timestamp, std::vector<unsigned char>* message,
+                              void* user_data);
 
     static std::string get_config_path();
 
-    void* midi_in_ = nullptr; // RtMidiIn* (opaque to avoid header dependency)
+    void* midi_in_ = nullptr;  // RtMidiIn* (opaque to avoid header dependency)
     int current_port_ = -1;
     std::string current_port_name_;
 
@@ -169,6 +180,6 @@ private:
     bool mappings_from_json(const std::string& json);
 };
 
-#endif // AMPLITRON_NO_MIDI
+#endif  // AMPLITRON_NO_MIDI
 
-} // namespace Amplitron
+}  // namespace Amplitron

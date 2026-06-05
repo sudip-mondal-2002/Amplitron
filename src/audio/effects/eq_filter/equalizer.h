@@ -4,13 +4,13 @@
 // The Equalizer cascades active biquads H(z)=H_lowShelf(z)*H_peakMid(z)*H_highShelf(z),
 // giving independent low-shelf, peaking-mid, and high-shelf gain control.
 
-#include "audio/effects/core/effect.h"
 #include "audio/dsp/biquad.h"
+#include "audio/effects/core/effect.h"
 
 namespace Amplitron {
 
 class Equalizer : public Effect {
-public:
+   public:
     Equalizer();
     void process(float* buffer, int num_samples) override;
     void set_sample_rate(int sample_rate) override;
@@ -20,7 +20,7 @@ public:
     std::vector<EffectParam>& params() override { return params_; }
     const std::vector<EffectParam>& params() const override { return params_; }
 
-private:
+   private:
     std::vector<EffectParam> params_;
 
     Biquad low_shelf_;
@@ -42,4 +42,4 @@ private:
     void recompute_coefficients_if_dirty();
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

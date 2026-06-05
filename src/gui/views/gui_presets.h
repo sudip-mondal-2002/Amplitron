@@ -1,10 +1,11 @@
 #pragma once
 
+#include <string>
+#include <vector>
+
 #include "audio/engine/i_audio_engine.h"
 #include "gui/commands/command_history.h"
 #include "preset_manager.h"
-#include <string>
-#include <vector>
 
 namespace Amplitron {
 
@@ -16,7 +17,7 @@ class IMidiManager;
  * Extracted from GuiManager for single-responsibility.
  */
 class GuiPresets {
-public:
+   public:
     /**
      * @brief Construct a GuiPresets helper for the given audio engine and undo history.
      * @param engine Reference to the engine used for preset state capture.
@@ -44,8 +45,7 @@ public:
 
     // Preset management methods
     void refresh_presets(bool preserve_selection = true);
-    bool save_named_preset(const std::string& preset_name,
-                           const std::string& description);
+    bool save_named_preset(const std::string& preset_name, const std::string& description);
     bool load_preset_by_index(int index);
     bool load_preset_by_path(const std::string& path);
     bool delete_preset_by_index(int index);
@@ -69,7 +69,7 @@ public:
     /** @brief Record the current engine state as the clean saved preset state. */
     void mark_clean();
 
-private:
+   private:
     std::string preset_name_from_path(const std::string& filepath) const;
     std::string preset_path_from_name(const std::string& preset_name) const;
 
@@ -91,4 +91,4 @@ private:
     std::string preset_status_msg_;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

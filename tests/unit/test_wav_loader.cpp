@@ -1,66 +1,70 @@
-#include "test_framework.h"
-#include "audio/dsp/wav_loader.h"
-#include "common.h"
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <string>
 #include <vector>
-#include <filesystem>
+
+#include "audio/dsp/wav_loader.h"
+#include "common.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 using namespace TestFramework;
 static void wle16(std::ofstream& f, uint16_t v) {
-    uint8_t b[2] = { uint8_t(v), uint8_t(v >> 8) };
+    uint8_t b[2] = {uint8_t(v), uint8_t(v >> 8)};
     f.write(reinterpret_cast<char*>(b), 2);
 }
 static void wle32(std::ofstream& f, uint32_t v) {
-    uint8_t b[4] = { uint8_t(v), uint8_t(v>>8),
-                     uint8_t(v>>16), uint8_t(v>>24) };
+    uint8_t b[4] = {uint8_t(v), uint8_t(v >> 8), uint8_t(v >> 16), uint8_t(v >> 24)};
     f.write(reinterpret_cast<char*>(b), 4);
 }
-static bool write_pcm16_wav(const std::string& path,
-                             uint16_t num_channels,
-                             uint32_t sample_rate,
-                             const std::vector<int16_t>& samples) {
-    std::filesystem::create_directories("tests/assets");                           
+static bool write_pcm16_wav(const std::string& path, uint16_t num_channels, uint32_t sample_rate,
+                            const std::vector<int16_t>& samples) {
+    std::filesystem::create_directories("tests/assets");
     std::ofstream f(path, std::ios::binary);
     if (!f.is_open()) return false;
-    const uint16_t bits        = 16;
+    const uint16_t bits = 16;
     const uint16_t block_align = num_channels * (bits / 8);
-    const uint32_t byte_rate   = sample_rate * block_align;
-    const uint32_t data_bytes  =
-        static_cast<uint32_t>(samples.size()) * sizeof(int16_t);
-    const uint32_t riff_size   = 36 + data_bytes;
-    f.write("RIFF", 4);  wle32(f, riff_size);  f.write("WAVE", 4);
-    f.write("fmt ", 4);  wle32(f, 16);
-    wle16(f, 1);                    
+    const uint32_t byte_rate = sample_rate * block_align;
+    const uint32_t data_bytes = static_cast<uint32_t>(samples.size()) * sizeof(int16_t);
+    const uint32_t riff_size = 36 + data_bytes;
+    f.write("RIFF", 4);
+    wle32(f, riff_size);
+    f.write("WAVE", 4);
+    f.write("fmt ", 4);
+    wle32(f, 16);
+    wle16(f, 1);
     wle16(f, num_channels);
     wle32(f, sample_rate);
     wle32(f, byte_rate);
     wle16(f, block_align);
     wle16(f, bits);
-    f.write("data", 4);  wle32(f, data_bytes);
+    f.write("data", 4);
+    wle32(f, data_bytes);
     for (int16_t s : samples) wle16(f, static_cast<uint16_t>(s));
     return f.good();
 }
-static bool write_zero_frame_wav(const std::string& path,
-                                  uint32_t sample_rate = 44100) {
-    std::filesystem::create_directories("tests/assets");                               
+static bool write_zero_frame_wav(const std::string& path, uint32_t sample_rate = 44100) {
+    std::filesystem::create_directories("tests/assets");
     std::ofstream f(path, std::ios::binary);
     if (!f.is_open()) return false;
     const uint32_t riff_size = 36;
-    f.write("RIFF", 4);  wle32(f, riff_size);  f.write("WAVE", 4);
-    f.write("fmt ", 4);  wle32(f, 16);
-    wle16(f, 1);           
-    wle16(f, 1);           
+    f.write("RIFF", 4);
+    wle32(f, riff_size);
+    f.write("WAVE", 4);
+    f.write("fmt ", 4);
+    wle32(f, 16);
+    wle16(f, 1);
+    wle16(f, 1);
     wle32(f, sample_rate);
-    wle32(f, sample_rate * 2);  
-    wle16(f, 2);           
-    wle16(f, 16);          
-    f.write("data", 4);  wle32(f, 0);   
+    wle32(f, sample_rate * 2);
+    wle16(f, 2);
+    wle16(f, 16);
+    f.write("data", 4);
+    wle32(f, 0);
     return f.good();
 }
 struct TempFile {
@@ -68,7 +72,6 @@ struct TempFile {
     ~TempFile() { std::remove(path.c_str()); }
     const std::string path;
 };
-
 
 TEST(WavLoader_EmptyFrames_ReturnsEmpty) {
     const std::string path = "tests/assets/wl_test_empty_frames.wav";
@@ -84,23 +87,26 @@ TEST(WavLoader_EmptyFrames_NonStandardRate_ReturnsEmpty) {
     WavData wav = load_wav_file(path, 48000);
     ASSERT_TRUE(wav.samples.empty());
 }
-static bool write_header_only_wav(const std::string& path,
-                                   uint32_t claimed_frames = 64,
-                                   uint32_t sample_rate    = 44100) {
-    std::filesystem::create_directories("tests/assets");                                
+static bool write_header_only_wav(const std::string& path, uint32_t claimed_frames = 64,
+                                  uint32_t sample_rate = 44100) {
+    std::filesystem::create_directories("tests/assets");
     std::ofstream f(path, std::ios::binary);
     if (!f.is_open()) return false;
-    const uint32_t fake_data_bytes = claimed_frames * 2; 
-    const uint32_t riff_size       = 36 + fake_data_bytes;
-    f.write("RIFF", 4);  wle32(f, riff_size);  f.write("WAVE", 4);
-    f.write("fmt ", 4);  wle32(f, 16);
-    wle16(f, 1);              
-    wle16(f, 1);              
+    const uint32_t fake_data_bytes = claimed_frames * 2;
+    const uint32_t riff_size = 36 + fake_data_bytes;
+    f.write("RIFF", 4);
+    wle32(f, riff_size);
+    f.write("WAVE", 4);
+    f.write("fmt ", 4);
+    wle32(f, 16);
+    wle16(f, 1);
+    wle16(f, 1);
     wle32(f, sample_rate);
     wle32(f, sample_rate * 2);
     wle16(f, 2);
     wle16(f, 16);
-    f.write("data", 4);  wle32(f, fake_data_bytes);
+    f.write("data", 4);
+    wle32(f, fake_data_bytes);
     return f.good();
 }
 TEST(WavLoader_TruncatedData_FramesReadZero_ReturnsEmpty) {
@@ -118,13 +124,10 @@ TEST(WavLoader_TruncatedData_WithResampleTarget_ReturnsEmpty) {
     ASSERT_TRUE(wav.samples.empty());
 }
 
-static bool write_constant_mono_wav(const std::string& path,
-                                     float value,
-                                     int total_frames,
-                                     uint32_t sample_rate) {
+static bool write_constant_mono_wav(const std::string& path, float value, int total_frames,
+                                    uint32_t sample_rate) {
     const int16_t pcm =
-        static_cast<int16_t>(std::lrint(
-            std::fmax(-1.f, std::fmin(1.f, value)) * 32767.f));
+        static_cast<int16_t>(std::lrint(std::fmax(-1.f, std::fmin(1.f, value)) * 32767.f));
     std::vector<int16_t> s(total_frames, pcm);
     return write_pcm16_wav(path, 1, sample_rate, s);
 }
@@ -158,8 +161,7 @@ TEST(WavLoader_Truncation_AfterResample) {
     WavData wav = load_wav_file(path, 44100, limit);
     ASSERT_EQ(static_cast<int>(wav.samples.size()), limit);
     ASSERT_EQ(wav.sample_rate, 44100);
-    for (float s : wav.samples)
-        ASSERT_NEAR(s, 0.3f, 5e-3f);
+    for (float s : wav.samples) ASSERT_NEAR(s, 0.3f, 5e-3f);
 }
 TEST(WavLoader_Truncation_LimitEqualsLength_NoTruncation) {
     const std::string path = "tests/assets/wl_test_truncation_exact_match.wav";

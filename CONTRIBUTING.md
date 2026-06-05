@@ -34,6 +34,17 @@ Thank you for your interest in contributing to Amplitron! This document provides
    ```bash
    git checkout -b feature/your-feature-name develop
    ```
+2.5. **Set Up Pre-commit Hooks (Crucial for C++ & Formatting)**
+   We enforce strict formatting rules using `pre-commit` and `clang-format`. You must set this up before committing code.
+   ```bash
+   # Install the pre-commit tool (requires Python)
+   pip install pre-commit
+
+   # Install the git hook scripts in your local repository
+   pre-commit install
+   ```
+   Now, `clang-format` will automatically check and format your C++ files every time you run `git commit`.
+
 3. **Make your changes**:
    - Follow the existing code style
    - Add tests for new functionality
@@ -80,6 +91,11 @@ All tests must pass before submitting a PR (105+ unit tests + Playwright e2e tes
 
 ## Code Style
 
+### 🛠️ C++ Standards (Core Engine)
+- Follow **Google C++ Style Guide** for all `.cpp`, `.h`, `.cc`, and `.hpp` files.
+- Ensure strict adherence to our formatting rules using `clang-format`.
+- Use modern C++ features where applicable but maintain performance and memory safety.
+
 - **Indentation**: 4 spaces (no tabs)
 - **Naming**:
   - Classes: `PascalCase`
@@ -98,7 +114,7 @@ class AudioEffect {
 public:
     void process(float* buffer, int num_samples);
     void set_enabled(bool enabled) { enabled_ = enabled; }
-    
+
 private:
     bool enabled_ = true;
     float mix_ = 1.0f;
@@ -119,11 +135,11 @@ TEST(effect_processes_without_nan) {
     Overdrive od;
     od.set_sample_rate(48000);
     od.reset();
-    
+
     float buf[512];
     fill_sine(buf, 512, 440.0f, 48000);
     od.process(buf, 512);
-    
+
     ASSERT_TRUE(buffer_is_finite(buf, 512));
 }
 ```
@@ -161,6 +177,7 @@ Use clear, descriptive commit messages:
 - `Refactor: Code improvement description`
 - `Test: Test addition/modification`
 - `Docs: Documentation update`
+- `ci: setup clang-format pre-commit hook and workflows – CI/CD or automation changes.`
 
 ## Questions?
 

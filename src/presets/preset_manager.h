@@ -1,14 +1,15 @@
 #pragma once
 
-#include "common.h"
-#include "audio/engine/i_audio_engine.h"
-#include "midi/i_midi_manager.h"
-#include "presets/i_preset_manager.h"
-#include <nlohmann/json_fwd.hpp>
 #include <fstream>
 #include <map>
-#include <sstream>
 #include <memory>
+#include <nlohmann/json_fwd.hpp>
+#include <sstream>
+
+#include "audio/engine/i_audio_engine.h"
+#include "common.h"
+#include "midi/i_midi_manager.h"
+#include "presets/i_preset_manager.h"
 
 namespace Amplitron {
 
@@ -70,7 +71,7 @@ void from_json(const nlohmann::json& j, PresetData& preset);
 std::string get_user_presets_dir();
 
 class PresetManager : public IPresetManager {
-public:
+   public:
     friend class PresetSerializer;
     friend class PresetStorage;
     friend class PresetMigrator;
@@ -82,19 +83,15 @@ public:
     ~PresetManager() override;
 
     // Save provided preset data to JSON file
-    bool save_preset_data(const std::string& filepath,
-                          const PresetData& preset) override;
+    bool save_preset_data(const std::string& filepath, const PresetData& preset) override;
 
     // Save current engine state to JSON file
-    bool save_preset(const std::string& filepath,
-                     const std::string& preset_name,
-                     const std::string& description,
-                     IAudioEngine& engine,
+    bool save_preset(const std::string& filepath, const std::string& preset_name,
+                     const std::string& description, IAudioEngine& engine,
                      const std::vector<MidiMapping>& midi_mappings = {}) override;
 
     // Load preset from JSON file and apply to engine
-    bool load_preset(const std::string& filepath,
-                     IAudioEngine& engine,
+    bool load_preset(const std::string& filepath, IAudioEngine& engine,
                      IMidiManager* midi_manager = nullptr) override;
 
     // Serialize current graph to JSON
@@ -119,7 +116,7 @@ public:
     // Public migration hooks so test targets can validate behavior
     static std::string apply_migrations(const std::string& raw_json_string);
 
-private:
+   private:
     std::unique_ptr<IPresetSerializer> serializer_;
     std::unique_ptr<IPresetStorage> storage_;
     std::unique_ptr<IPresetMigrator> migrator_;
@@ -135,4 +132,4 @@ private:
 // Compatibility alias to avoid breaking code referencing PresetManagerService
 using PresetManagerService = PresetManager;
 
-} // namespace Amplitron
+}  // namespace Amplitron

@@ -1,10 +1,11 @@
 #pragma once
 
-#include "audio/effects/core/effect.h"
 #include <functional>
 #include <stdexcept>
-#include <unordered_map>
 #include <string>
+#include <unordered_map>
+
+#include "audio/effects/core/effect.h"
 
 namespace Amplitron {
 
@@ -14,7 +15,7 @@ namespace Amplitron {
  * All effect types self-register via EffectRegistrar.
  */
 class EffectFactory {
-public:
+   public:
     using Creator = std::function<std::shared_ptr<Effect>()>;
 
     static EffectFactory& instance() {
@@ -50,11 +51,9 @@ public:
         return create(type_name);
     }
 
-    std::vector<std::string> get_all_type_names() const {
-        return registered_types();
-    }
+    std::vector<std::string> get_all_type_names() const { return registered_types(); }
 
-private:
+   private:
     EffectFactory() = default;
     std::unordered_map<std::string, Creator> creators_;
 };
@@ -67,12 +66,9 @@ private:
 template <typename T>
 struct EffectRegistrar {
     explicit EffectRegistrar(const std::string& type_name) {
-        EffectFactory::instance().register_effect(type_name, []() {
-            return std::make_shared<T>();
-        });
+        EffectFactory::instance().register_effect(type_name,
+                                                  []() { return std::make_shared<T>(); });
     }
 };
 
-
-
-} // namespace Amplitron
+}  // namespace Amplitron

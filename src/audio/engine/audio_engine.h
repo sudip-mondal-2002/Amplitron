@@ -1,22 +1,17 @@
 #pragma once
 
-#include "common.h"
-#include "audio/engine/i_audio_engine.h"
-#include "audio/effects/core/effect.h"
-#include "audio/recorder/recorder.h"
-#include "audio/recorder/i_recorder.h"
-#include "audio/engine/audio_command_dispatcher.h"
+#include <chrono>
+#include <memory>
+#include <nlohmann/json.hpp>
+
+#include "audio/backend/audio_backend.h"
 #include "audio/dsp/level_analyzer.h"
 #include "audio/dsp/spectrum_analyzer.h"
-#include <chrono>
-
+#include "audio/effects/core/effect.h"
+#include "audio/engine/audio_command_dispatcher.h"
 #include "audio/engine/audio_graph.h"
 #include "audio/engine/audio_graph_executor.h"
-#include <memory>
-
-#include <nlohmann/json.hpp>
-#include "audio/backend/audio_backend.h"
-#include "audio/engine/metronome.h"
+#include "audio/engine/i_audio_engine.h"
 #include "audio/engine/i_metronome.h"
 #include "audio/engine/tempo_engine.h"
 
@@ -41,9 +36,9 @@ class AnalyzerCapture;
  *   the caller or test fixture is responsible for managing its lifetime.
  */
 class AudioEngine : public IAudioEngine {
-public:
+   public:
     friend class PortAudioTestSaboteur;
-    
+
     /** @brief Construct the engine with default settings. */
     AudioEngine(std::unique_ptr<IRecorder> recorder = nullptr,
                 std::unique_ptr<IMetronome> metronome = nullptr);
@@ -104,10 +99,12 @@ public:
      */
     bool set_output_device(int device_index) override;
 
-    /** @brief Return the current input device index (delegates to backend so auto-detection is reflected). */
+    /** @brief Return the current input device index (delegates to backend so auto-detection is
+     * reflected). */
     int get_input_device() const override { return backend_ ? backend_->get_input_device() : -1; }
 
-    /** @brief Return the current output device index (delegates to backend so auto-detection is reflected). */
+    /** @brief Return the current output device index (delegates to backend so auto-detection is
+     * reflected). */
     int get_output_device() const override { return backend_ ? backend_->get_output_device() : -1; }
 
     /** @brief Return the human-readable input device name. */
@@ -137,8 +134,7 @@ public:
     void add_effect(std::shared_ptr<Effect> fx) override;
     void add_initial_effects(const std::vector<std::shared_ptr<Effect>>& fxs) override {
         dummy_effects_.clear();
-        for (const auto& fx : fxs)
-            dummy_effects_.push_back(fx);
+        for (const auto& fx : fxs) dummy_effects_.push_back(fx);
         sync_graph_with_dummy_effects(true);
     }
     void insert_effect(int index, std::shared_ptr<Effect> fx) override;
@@ -146,7 +142,6 @@ public:
     void clear_effects() override;
     void move_effect(int from, int to) override;
     void restore_effects_state(std::vector<std::shared_ptr<Effect>> state) override;
-
 
     /**
      * @brief Set the audio buffer size (takes effect on next stream restart).
@@ -185,10 +180,14 @@ public:
     float get_output_rms() const override { return output_rms_.load(std::memory_order_relaxed); }
 
     /** @brief Consume one-shot input clipping flag set by audio thread. */
-    bool consume_input_clipped() override { return input_clipped_.exchange(false, std::memory_order_acq_rel); }
+    bool consume_input_clipped() override {
+        return input_clipped_.exchange(false, std::memory_order_acq_rel);
+    }
 
     /** @brief Consume one-shot output clipping flag set by audio thread. */
-    bool consume_output_clipped() override { return output_clipped_.exchange(false, std::memory_order_acq_rel); }
+    bool consume_output_clipped() override {
+        return output_clipped_.exchange(false, std::memory_order_acq_rel);
+    }
 
     /** @brief Enable/disable analyzer capture in the audio callback (GUI thread). */
     void set_analyzer_enabled(bool enabled) override;
@@ -206,9 +205,8 @@ public:
      * @param sample_count Number of samples to copy (clamped to ANALYZER_FFT_SIZE).
      * @return true if at least one snapshot has been published.
      */
-    bool copy_analyzer_snapshot(float* input_dest, float* output_dest, int sample_count) const override;
-
-
+    bool copy_analyzer_snapshot(float* input_dest, float* output_dest,
+                                int sample_count) const override;
 
     /**
      * @brief Set the master input gain (enqueued to audio thread via SPSC queue).
@@ -222,7 +220,6 @@ public:
      */
     void set_output_gain(float gain) override;
 
-    
     /** @brief Return the current input gain (atomic relaxed read). */
     float get_input_gain() const override { return input_gain_.load(std::memory_order_relaxed); }
 
@@ -321,7 +318,7 @@ public:
 
     // MIDI instance is managed by the GUI thread's MidiManager.
 
-private:
+   private:
     // Platform backend state
     std::unique_ptr<IAudioBackend> backend_;
 
@@ -332,7 +329,7 @@ private:
     int output_device_ = -1;
     int sample_rate_ = DEFAULT_SAMPLE_RATE;
     int buffer_size_ = DEFAULT_BUFFER_SIZE;
-    //global transport
+    // global transport
     std::atomic<float> input_gain_{1.0f};
     std::atomic<float> output_gain_{0.8f};
     std::unique_ptr<IMetronome> metronome_;
@@ -344,9 +341,8 @@ private:
     std::atomic<bool> input_clipped_{false};
     std::atomic<bool> output_clipped_{false};
 
-
     // std::vector<std::shared_ptr<Effect>> effects_;
-    std::vector<float>     process_buffer_;
+    std::vector<float> process_buffer_;
     std::vector<float> process_buffer_right_;
     std::mutex effect_mutex_;
     std::unique_ptr<IRecorder> recorder_;
@@ -355,15 +351,15 @@ private:
     std::atomic<float> global_bpm_{120.0f};
     std::unique_ptr<TempoEngine> tempo_engine_;
 
-    std::shared_ptr<Effect>      audio_shadow_tuner_;
-    std::atomic<bool>            topology_dirty_{true};
+    std::shared_ptr<Effect> audio_shadow_tuner_;
+    std::atomic<bool> topology_dirty_{true};
 
     // The main graph data model (Edited by the GUI/Main thread)
     AudioGraph main_graph_;
-    
+
     // The compiled executor (Built by the GUI thread)
     std::shared_ptr<AudioGraphExecutor> main_executor_;
-    
+
     // The shadow executor (Safely copied by the Audio thread)
     std::shared_ptr<AudioGraphExecutor> audio_shadow_executor_;
 
@@ -378,9 +374,7 @@ private:
 
     std::unique_ptr<AnalyzerCapture> analyzer_capture_;
 
-
-
     // (MIDI instance removed - use MidiManager)
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

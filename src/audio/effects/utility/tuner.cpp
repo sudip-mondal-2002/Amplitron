@@ -1,17 +1,15 @@
 #include "audio/effects/utility/tuner.h"
-#include "audio/effects/core/effect_factory.h"
 
 #include <cmath>
 #include <cstring>
+
+#include "audio/effects/core/effect_factory.h"
 
 namespace Amplitron {
 
 static EffectRegistrar<TunerPedal> reg("Tuner");
 
-static const char* NOTE_NAMES[] = {
-    "C", "C#", "D", "D#", "E", "F",
-    "F#", "G", "G#", "A", "A#", "B"
-};
+static const char* NOTE_NAMES[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 
 const char* TunerPedal::note_name(int note_index) {
     if (note_index < 0 || note_index > 11) return "?";
@@ -20,8 +18,10 @@ const char* TunerPedal::note_name(int note_index) {
 
 TunerPedal::TunerPedal() {
     params_ = {
-        {"Mute",    1.0f, 0.0f, 1.0f, 1.0f, "", "When fully engaged (1.0), the tuner silences the audio output while you tune."},
-        {"A4 Ref", 440.0f, 430.0f, 450.0f, 440.0f, "Hz", "Calibration frequency for the note A4. Default is standard 440Hz."},
+        {"Mute", 1.0f, 0.0f, 1.0f, 1.0f, "",
+         "When fully engaged (1.0), the tuner silences the audio output while you tune."},
+        {"A4 Ref", 440.0f, 430.0f, 450.0f, 440.0f, "Hz",
+         "Calibration frequency for the note A4. Default is standard 440Hz."},
     };
     yin_buffer_.resize(YIN_BUFFER_SIZE, 0.0f);
     yin_buf_.resize(YIN_BUFFER_SIZE, 0.0f);
@@ -37,8 +37,7 @@ void TunerPedal::set_sample_rate(int sample_rate) {
 void TunerPedal::recalc_update_interval() {
     // ~15 updates per second for responsive display
     update_interval_ = sample_rate_ / 15;
-    if (update_interval_ < YIN_BUFFER_SIZE)
-        update_interval_ = YIN_BUFFER_SIZE;
+    if (update_interval_ < YIN_BUFFER_SIZE) update_interval_ = YIN_BUFFER_SIZE;
 }
 
 void TunerPedal::reset() {
@@ -107,10 +106,9 @@ float TunerPedal::yin_detect_pitch(float /*a4_ref*/) {
 
     // Check if there's enough signal energy (RMS gate)
     float energy = 0.0f;
-    for (int i = 0; i < YIN_BUFFER_SIZE; ++i)
-        energy += yin_buf_[i] * yin_buf_[i];
+    for (int i = 0; i < YIN_BUFFER_SIZE; ++i) energy += yin_buf_[i] * yin_buf_[i];
     float rms_val = std::sqrt(energy / YIN_BUFFER_SIZE);
-    if (rms_val < 0.01f) return -1.0f; // Too quiet — no pitch
+    if (rms_val < 0.01f) return -1.0f;  // Too quiet — no pitch
 
     // Step 1 & 2: Difference function d(tau) and cumulative mean normalized
     // difference function d'(tau)
@@ -216,7 +214,7 @@ void TunerPedal::freq_to_note(float freq, float a4_ref) {
 
     // A4 = MIDI note 69 (note index 9 = A, octave 4)
     int midi_note = 69 + nearest;
-    int note_index = ((midi_note % 12) + 12) % 12; // 0=C .. 11=B
+    int note_index = ((midi_note % 12) + 12) % 12;  // 0=C .. 11=B
     int octave = (midi_note / 12) - 1;
 
     detected_note.store(note_index, std::memory_order_relaxed);
@@ -224,4 +222,4 @@ void TunerPedal::freq_to_note(float freq, float a4_ref) {
     detected_cents.store(cents, std::memory_order_relaxed);
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

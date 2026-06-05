@@ -1,10 +1,13 @@
 #include "gui/components/footswitch.h"
-#include "gui/theme/theme.h"
+
 #include <cstdio>
+
+#include "gui/theme/theme.h"
 
 namespace Amplitron {
 
-void FootswitchComponent::render(const char* imgui_id, const FootswitchProps& props, float zoom, ImVec2 center) {
+void FootswitchComponent::render(const char* imgui_id, const FootswitchProps& props, float zoom,
+                                 ImVec2 center) {
     ImDrawList* dl = ImGui::GetWindowDrawList();
 
     float radius = 18.0f * zoom;
@@ -14,7 +17,8 @@ void FootswitchComponent::render(const char* imgui_id, const FootswitchProps& pr
 
     dl->AddCircleFilled(center, radius, Theme::SWITCH_BODY);
     dl->AddCircle(center, radius, Theme::SWITCH_RING, 0, 2.0f * zoom);
-    dl->AddCircleFilled(center, inner_radius, props.enabled ? Theme::SWITCH_ACTIVE : Theme::SWITCH_IDLE);
+    dl->AddCircleFilled(center, inner_radius,
+                        props.enabled ? Theme::SWITCH_ACTIVE : Theme::SWITCH_IDLE);
 
     ImGui::SetCursorScreenPos(ImVec2(center.x - hit_w * 0.5f, center.y - hit_h * 0.5f));
     ImGui::SetNextItemAllowOverlap();
@@ -26,9 +30,10 @@ void FootswitchComponent::render(const char* imgui_id, const FootswitchProps& pr
 
     if (ImGui::IsItemHovered()) {
         char tip[128];
-        std::snprintf(tip, sizeof(tip), "%s%s", props.tooltip_prefix, props.enabled ? "Click to bypass" : "Click to enable");
+        std::snprintf(tip, sizeof(tip), "%s%s", props.tooltip_prefix,
+                      props.enabled ? "Click to bypass" : "Click to enable");
         ImGui::SetTooltip("%s", tip);
     }
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

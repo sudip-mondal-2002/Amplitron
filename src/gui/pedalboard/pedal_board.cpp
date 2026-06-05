@@ -1,15 +1,17 @@
 #include "gui/pedalboard/pedal_board.h"
+
+#include <imgui.h>
+
+#include <algorithm>
+#include <cstring>
+#include <set>
+
+#include "audio/effects/amp_cab/amp_simulator.h"
+#include "gui/commands/command.h"
 #include "gui/pedalboard/pedal_widget.h"
 #include "gui/theme/theme.h"
-#include "gui/commands/command.h"
-#include "audio/effects/amp_cab/amp_simulator.h"
 #include "gui/views/gui_midi.h"
 #include "midi/midi_manager.h"
-
-#include <cstring>
-#include <imgui.h>
-#include <set>
-#include <algorithm>
 
 namespace Amplitron {
 
@@ -45,7 +47,7 @@ void PedalBoard::rebuild_widgets() {
                 break;
             }
         }
-        if (node_id == -1) node_id = i; // Fallback to index if not found in graph
+        if (node_id == -1) node_id = i;  // Fallback to index if not found in graph
 
         auto w = std::make_unique<PedalWidget>(engine_, effects[i], node_id);
         w->set_history(&history_);
@@ -77,9 +79,10 @@ int PedalBoard::find_amp_index() const {
 
 /** @brief Render the toolbar (add/reset) and the scrollable signal chain area. */
 void PedalBoard::render() {
-    float bar_height = ImGui::GetFrameHeight() + ImGui::GetStyle().WindowPadding.y * 2.0f + ImGui::GetStyle().WindowBorderSize * 2.0f;
+    float bar_height = ImGui::GetFrameHeight() + ImGui::GetStyle().WindowPadding.y * 2.0f +
+                       ImGui::GetStyle().WindowBorderSize * 2.0f;
     ImGui::BeginChild("PedalToolbar", ImVec2(0, bar_height), true,
-                       ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+                      ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
     {
         float avail = ImGui::GetContentRegionAvail().y;
@@ -87,7 +90,7 @@ void PedalBoard::render() {
         float offset = std::max(0.0f, (avail - row_h) * 0.5f);
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() + offset);
     }
-    
+
     render_add_pedal_menu();
     ImGui::SameLine();
 
@@ -113,8 +116,11 @@ void PedalBoard::render() {
         show_confirm_clear_ = false;
     }
 
-    if (ImGui::BeginPopupModal("Confirm Reset##Modal", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::Text("Are you sure you want to reset ALL parameters to their default values?\nThis will affect every pedal on the board.");
+    if (ImGui::BeginPopupModal("Confirm Reset##Modal", nullptr,
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text(
+            "Are you sure you want to reset ALL parameters to their default values?\nThis will "
+            "affect every pedal on the board.");
         ImGui::Separator();
         if (ImGui::Button("Reset", ImVec2(120, 0))) {
             history_.execute(std::make_unique<ResetAllCommand>(engine_));
@@ -128,8 +134,11 @@ void PedalBoard::render() {
         ImGui::EndPopup();
     }
 
-    if (ImGui::BeginPopupModal("Confirm Clear##Modal", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::Text("Are you sure you want to remove ALL pedals from the signal chain?\nThis cannot be undone easily if you have many complex settings.");
+    if (ImGui::BeginPopupModal("Confirm Clear##Modal", nullptr,
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text(
+            "Are you sure you want to remove ALL pedals from the signal chain?\nThis cannot be "
+            "undone easily if you have many complex settings.");
         ImGui::Separator();
         if (ImGui::Button("Clear All", ImVec2(120, 0))) {
             history_.execute(std::make_unique<ClearAllCommand>(engine_));
@@ -149,7 +158,8 @@ void PedalBoard::render() {
         show_confirm_midi_clear_ = false;
     }
 
-    if (ImGui::BeginPopupModal("Confirm MIDI Clear##Modal", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal("Confirm MIDI Clear##Modal", nullptr,
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("Are you sure you want to clear ALL MIDI CC mappings?");
         ImGui::TextColored(Theme::Gold(), "This action cannot be undone.");
         ImGui::Spacing();
@@ -174,14 +184,13 @@ void PedalBoard::render() {
 
     ImGui::SameLine();
     int pedal_count = static_cast<int>(engine_.effects().size());
-    ImGui::TextColored(Theme::TextSecondary(),
-        "  %d effects | Drag headers to route", pedal_count);
+    ImGui::TextColored(Theme::TextSecondary(), "  %d effects | Drag headers to route", pedal_count);
 
     ImGui::EndChild();
 
     // Canvas Window Viewport Layout Setup
     ImGui::BeginChild("PedalArea", ImVec2(0, 0), true,
-        ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+                      ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
     render_signal_chain();
 
@@ -194,4 +203,4 @@ void PedalBoard::add_effect_and_show(std::shared_ptr<Effect> effect) {
     rebuild_widgets();
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

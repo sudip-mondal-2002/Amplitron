@@ -1,9 +1,10 @@
 #pragma once
 
-#include "audio/engine/i_audio_engine.h"
 #include <array>
-#include <mutex>
 #include <atomic>
+#include <mutex>
+
+#include "audio/engine/i_audio_engine.h"
 
 namespace Amplitron {
 
@@ -12,7 +13,7 @@ namespace Amplitron {
  * Satisfies Single Responsibility Principle (SRP).
  */
 class AnalyzerCapture : public IAnalyzerProvider {
-public:
+   public:
     static constexpr int ANALYZER_FFT_SIZE = 2048;
     static constexpr int ANALYZER_FFT_MASK = ANALYZER_FFT_SIZE - 1;
     static constexpr int ANALYZER_HOP_SIZE = 1024;
@@ -24,13 +25,14 @@ public:
     void set_analyzer_enabled(bool enabled) override;
     bool is_analyzer_enabled() const override;
     uint64_t get_analyzer_sequence() const override;
-    bool copy_analyzer_snapshot(float* input_dest, float* output_dest, int sample_count) const override;
+    bool copy_analyzer_snapshot(float* input_dest, float* output_dest,
+                                int sample_count) const override;
 
     // Audio thread capture methods
     void capture_input(const float* input, int count);
     void capture_output(const float* output, int count);
 
-private:
+   private:
     std::atomic<bool> enabled_{false};
 
     // Ring buffers (written on audio thread only)
@@ -46,4 +48,4 @@ private:
     std::atomic<uint64_t> sequence_{0};
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

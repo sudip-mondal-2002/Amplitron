@@ -5,7 +5,7 @@
 namespace Amplitron {
 
 class OboeBackend : public IAudioBackend {
-public:
+   public:
     OboeBackend();
     ~OboeBackend() override;
 
@@ -31,7 +31,7 @@ public:
 
     const char* get_oboe_sharing_mode_label() const;
 
-private:
+   private:
     IAudioEngine* engine_ = nullptr;
     bool initialized_ = false;
     bool running_ = false;
@@ -40,4 +40,4 @@ private:
     void* impl_ = nullptr;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

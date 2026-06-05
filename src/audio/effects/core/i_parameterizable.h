@@ -1,13 +1,14 @@
 #pragma once
 
-#include "audio/effects/core/effect_param.h"
-#include <vector>
 #include <string>
+#include <vector>
+
+#include "audio/effects/core/effect_param.h"
 
 namespace Amplitron {
 
 class IParameterizable {
-public:
+   public:
     virtual ~IParameterizable() = default;
     virtual std::vector<EffectParam>& params() = 0;
     virtual const std::vector<EffectParam>& params() const = 0;
@@ -16,4 +17,4 @@ public:
     virtual void set_param_by_name(const std::string& name, float value) = 0;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

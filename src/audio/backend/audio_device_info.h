@@ -13,4 +13,4 @@ struct AudioDeviceInfo {
     bool is_usb_device = false;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron
