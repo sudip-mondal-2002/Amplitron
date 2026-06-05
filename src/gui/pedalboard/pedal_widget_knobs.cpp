@@ -10,197 +10,214 @@
 
 namespace Amplitron {
 
-void PedalWidget::render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, bool is_amp,
-                               bool is_tuner, bool is_ir_cab, float zoom) {
-    float knob_y_start = p0.y + Theme::KNOB_Y_START * zoom;
-    if (is_ir_cab) knob_y_start = p0.y + 180 * zoom;
-    auto& params = effect_->params();
-    int num_params = is_tuner ? 0 : static_cast<int>(params.size());
-    int param_offset = 0;
-    if (is_amp) {
-        param_offset = 1;
-        num_params = std::max(0, num_params - 1);
+void PedalWidget::render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width,
+                               bool is_amp, bool is_tuner, bool is_ir_cab,
+                               float zoom) {
+  float knob_y_start = p0.y + Theme::KNOB_Y_START * zoom;
+  if (is_ir_cab) knob_y_start = p0.y + 180 * zoom;
+  auto& params = effect_->params();
+  int num_params = is_tuner ? 0 : static_cast<int>(params.size());
+  int param_offset = 0;
+  if (is_amp) {
+    param_offset = 1;
+    num_params = std::max(0, num_params - 1);
+  }
+
+  bool is_delay = (std::strcmp(effect_->name(), "Delay") == 0);
+  bool is_chorus = (std::strcmp(effect_->name(), "Chorus") == 0);
+  if (is_delay) {
+    num_params = 4;
+  } else if (is_chorus) {
+    num_params = 3;
+  }
+
+  float knob_radius = Theme::KNOB_RADIUS * zoom;
+  float knob_spacing_x = Theme::KNOB_SPACING_X * zoom;
+  float knob_spacing_y = Theme::KNOB_SPACING_Y * zoom;
+
+  float knob_grid_left = p0.x + (pedal_width - 2.0f * knob_spacing_x) * 0.5f;
+
+  for (int i = 0; i < num_params && i < 6; ++i) {
+    int pi = i + param_offset;
+    int col = i % 2;
+    int row = i / 2;
+
+    bool is_last_alone = (i == num_params - 1) && (num_params % 2 == 1);
+    float kx = is_last_alone ? p0.x + (pedal_width - knob_spacing_x) * 0.5f
+                             : knob_grid_left + col * knob_spacing_x;
+    float ky = knob_y_start + row * knob_spacing_y;
+
+    ImVec2 knob_center =
+        ImVec2(kx + knob_spacing_x * 0.5f, ky + knob_radius + 2 * zoom);
+
+    char label[64];
+    snprintf(label, sizeof(label), "##knob_%s_%d_%d", effect_->name(), index_,
+             pi);
+
+    KnobProps props;
+    props.name = params[pi].name;
+    props.value = params[pi].value;
+    props.min_val = params[pi].min_val;
+    props.max_val = params[pi].max_val;
+    props.default_val = params[pi].default_val;
+    props.unit = params[pi].unit;
+    props.tooltip = params[pi].tooltip;
+
+    // MIDI learn integration
+    if (gui_midi_) {
+      props.is_learning =
+          gui_midi_->midi().is_learning() &&
+          gui_midi_->midi().learn_effect_name() == effect_->name() &&
+          gui_midi_->midi().learn_param_name() == params[pi].name;
+      props.midi_info =
+          gui_midi_->get_mapping_info(effect_->name(), params[pi].name);
+
+      // Capture pointers for lambda closures
+      std::string eff_name = effect_->name();
+      std::string param_name = params[pi].name;
+      GuiMidi* gm = gui_midi_;
+
+      props.on_midi_learn_param = [gm, eff_name, param_name]() {
+        gm->manager().start_learn(MidiTargetType::EffectParam, eff_name,
+                                  param_name);
+      };
+      props.on_midi_clear_param = [gm, eff_name, param_name]() {
+        gm->manager().remove_mapping_for_param(eff_name, param_name);
+      };
+      props.on_midi_learn_bypass = [gm, eff_name]() {
+        gm->manager().start_learn(MidiTargetType::EffectBypass, eff_name, "");
+      };
+      props.on_midi_clear_bypass = [gm, eff_name]() {
+        int remove_idx = -1;
+        const auto& mappings = gm->manager().mappings();
+        for (int i = 0; i < static_cast<int>(mappings.size()); ++i) {
+          if (mappings[i].target_type == MidiTargetType::EffectBypass &&
+              mappings[i].effect_name == eff_name) {
+            remove_idx = i;
+            break;
+          }
+        }
+        if (remove_idx >= 0) {
+          gm->manager().remove_mapping(remove_idx);
+        }
+      };
     }
 
-    bool is_delay = (std::strcmp(effect_->name(), "Delay") == 0);
-    bool is_chorus = (std::strcmp(effect_->name(), "Chorus") == 0);
-    if (is_delay) {
-        num_params = 4;
-    } else if (is_chorus) {
-        num_params = 3;
+    props.led_color = led_color_;
+
+    // Events committed back to effect and engine
+    props.on_value_changed = [this, pi](float new_val) {
+      effect_->params()[pi].value = new_val;
+      engine_.push_param_change(index_, pi, new_val);
+    };
+    props.on_value_committed = [this, pi](float old_val, float new_val) {
+      commit_param_change(pi, old_val, new_val);
+    };
+
+    KnobComponent::render(label, props, zoom, knob_center);
+  }
+
+  if (is_delay || is_chorus) {
+    float mid_x = p0.x + pedal_width * 0.5f;
+    int sync_param_idx = is_delay ? 4 : 3;
+    int sub_param_idx = is_delay ? 5 : 4;
+
+    // Render Sync checkbox
+    ImGui::SetCursorScreenPos(
+        ImVec2(mid_x - 32.0f * zoom, knob_y_start + 10.0f * zoom));
+    bool sync = (params[sync_param_idx].value >= 0.5f);
+    if (ImGui::Checkbox("Sync", &sync)) {
+      float new_val = sync ? 1.0f : 0.0f;
+      params[sync_param_idx].value = new_val;
+      engine_.push_param_change(index_, sync_param_idx, new_val);
+      commit_param_change(sync_param_idx, 1.0f - new_val, new_val);
+    }
+    if (ImGui::IsItemHovered()) {
+      ImGui::SetTooltip("Lock delay/modulation time to global BPM");
     }
 
-    float knob_radius    = Theme::KNOB_RADIUS * zoom;
-    float knob_spacing_x = Theme::KNOB_SPACING_X * zoom;
-    float knob_spacing_y = Theme::KNOB_SPACING_Y * zoom;
-
-    float knob_grid_left = p0.x + (pedal_width - 2.0f * knob_spacing_x) * 0.5f;
-
-    for (int i = 0; i < num_params && i < 6; ++i) {
-        int pi = i + param_offset;
-        int col = i % 2;
-        int row = i / 2;
-
-        bool is_last_alone = (i == num_params - 1) && (num_params % 2 == 1);
-        float kx = is_last_alone ? p0.x + (pedal_width - knob_spacing_x) * 0.5f
-                                 : knob_grid_left + col * knob_spacing_x;
-        float ky = knob_y_start + row * knob_spacing_y;
-
-        ImVec2 knob_center = ImVec2(kx + knob_spacing_x * 0.5f, ky + knob_radius + 2 * zoom);
-
-        char label[64];
-        snprintf(label, sizeof(label), "##knob_%s_%d_%d", effect_->name(), index_, pi);
-
-        KnobProps props;
-        props.name = params[pi].name;
-        props.value = params[pi].value;
-        props.min_val = params[pi].min_val;
-        props.max_val = params[pi].max_val;
-        props.default_val = params[pi].default_val;
-        props.unit = params[pi].unit;
-        props.tooltip = params[pi].tooltip;
-
-        // MIDI learn integration
-        if (gui_midi_) {
-            props.is_learning = gui_midi_->midi().is_learning() &&
-                                gui_midi_->midi().learn_effect_name() == effect_->name() &&
-                                gui_midi_->midi().learn_param_name() == params[pi].name;
-            props.midi_info = gui_midi_->get_mapping_info(effect_->name(), params[pi].name);
-
-            // Capture pointers for lambda closures
-            std::string eff_name = effect_->name();
-            std::string param_name = params[pi].name;
-            GuiMidi* gm = gui_midi_;
-
-            props.on_midi_learn_param = [gm, eff_name, param_name]() {
-                gm->manager().start_learn(MidiTargetType::EffectParam, eff_name, param_name);
-            };
-            props.on_midi_clear_param = [gm, eff_name, param_name]() {
-                gm->manager().remove_mapping_for_param(eff_name, param_name);
-            };
-            props.on_midi_learn_bypass = [gm, eff_name]() {
-                gm->manager().start_learn(MidiTargetType::EffectBypass, eff_name, "");
-            };
-            props.on_midi_clear_bypass = [gm, eff_name]() {
-                int remove_idx = -1;
-                const auto& mappings = gm->manager().mappings();
-                for (int i = 0; i < static_cast<int>(mappings.size()); ++i) {
-                    if (mappings[i].target_type == MidiTargetType::EffectBypass &&
-                        mappings[i].effect_name == eff_name) {
-                        remove_idx = i;
-                        break;
-                    }
-                }
-                if (remove_idx >= 0) {
-                    gm->manager().remove_mapping(remove_idx);
-                }
-            };
+    // Render Tap button
+    ImGui::SetCursorScreenPos(
+        ImVec2(mid_x - 22.0f * zoom, knob_y_start + 40.0f * zoom));
+    if (ImGui::Button("Tap", ImVec2(44.0f * zoom, 20.0f * zoom))) {
+      auto now = std::chrono::steady_clock::now();
+      if (!tap_times_.empty()) {
+        auto diff = std::chrono::duration_cast<std::chrono::seconds>(
+                        now - tap_times_.back())
+                        .count();
+        if (diff >= 4) {
+          tap_times_.clear();
         }
-
-        props.led_color = led_color_;
-
-        // Events committed back to effect and engine
-        props.on_value_changed = [this, pi](float new_val) {
-            effect_->params()[pi].value = new_val;
-            engine_.push_param_change(index_, pi, new_val);
-        };
-        props.on_value_committed = [this, pi](float old_val, float new_val) {
-            commit_param_change(pi, old_val, new_val);
-        };
-
-        KnobComponent::render(label, props, zoom, knob_center);
-    }
-
-    if (is_delay || is_chorus) {
-        float mid_x = p0.x + pedal_width * 0.5f;
-        int sync_param_idx = is_delay ? 4 : 3;
-        int sub_param_idx = is_delay ? 5 : 4;
-
-        // Render Sync checkbox
-        ImGui::SetCursorScreenPos(ImVec2(mid_x - 32.0f * zoom, knob_y_start + 10.0f * zoom));
-        bool sync = (params[sync_param_idx].value >= 0.5f);
-        if (ImGui::Checkbox("Sync", &sync)) {
-            float new_val = sync ? 1.0f : 0.0f;
-            params[sync_param_idx].value = new_val;
-            engine_.push_param_change(index_, sync_param_idx, new_val);
-            commit_param_change(sync_param_idx, 1.0f - new_val, new_val);
+      }
+      tap_times_.push_back(now);
+      if (tap_times_.size() >= 2) {
+        std::vector<double> intervals;
+        for (size_t idx = 1; idx < tap_times_.size(); ++idx) {
+          double ms = std::chrono::duration<double, std::milli>(
+                          tap_times_[idx] - tap_times_[idx - 1])
+                          .count();
+          intervals.push_back(ms);
         }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Lock delay/modulation time to global BPM");
+        if (intervals.size() > 8) {
+          intervals.erase(intervals.begin(), intervals.end() - 8);
         }
-
-        // Render Tap button
-        ImGui::SetCursorScreenPos(ImVec2(mid_x - 22.0f * zoom, knob_y_start + 40.0f * zoom));
-        if (ImGui::Button("Tap", ImVec2(44.0f * zoom, 20.0f * zoom))) {
-            auto now = std::chrono::steady_clock::now();
-            if (!tap_times_.empty()) {
-                auto diff = std::chrono::duration_cast<std::chrono::seconds>(now - tap_times_.back()).count();
-                if (diff >= 4) {
-                    tap_times_.clear();
-                }
-            }
-            tap_times_.push_back(now);
-            if (tap_times_.size() >= 2) {
-                std::vector<double> intervals;
-                for (size_t idx = 1; idx < tap_times_.size(); ++idx) {
-                    double ms = std::chrono::duration<double, std::milli>(tap_times_[idx] - tap_times_[idx - 1]).count();
-                    intervals.push_back(ms);
-                }
-                if (intervals.size() > 8) {
-                    intervals.erase(intervals.begin(), intervals.end() - 8);
-                }
-                double avg_interval_ms = 0.0;
-                if (intervals.size() >= 4) {
-                    std::sort(intervals.begin(), intervals.end());
-                    double sum = 0.0;
-                    for (size_t idx = 1; idx < intervals.size() - 1; ++idx) {
-                        sum += intervals[idx];
-                    }
-                    avg_interval_ms = sum / (intervals.size() - 2);
-                } else {
-                    double sum = 0.0;
-                    for (double val : intervals) {
-                        sum += val;
-                    }
-                    avg_interval_ms = sum / intervals.size();
-                }
-                float tapped_bpm = static_cast<float>(60000.0 / avg_interval_ms);
-                engine_.set_global_bpm(tapped_bpm);
-            }
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Tap repeatedly in time to set global BPM");
-        }
-
-        // Render Subdivision selection or current BPM display
-        if (sync) {
-            ImGui::SetCursorScreenPos(ImVec2(mid_x - 30.0f * zoom, knob_y_start + 70.0f * zoom));
-            int sub = static_cast<int>(std::round(params[sub_param_idx].value));
-            const char* items[] = { "1/4", "1/8", "1/16", "1/8." };
-            const char* chorus_items[] = { "1/1", "1/2", "1/4", "1/8" };
-            ImGui::SetNextItemWidth(60.0f * zoom);
-            if (is_chorus) {
-                if (ImGui::Combo("##Subdiv", &sub, chorus_items, IM_ARRAYSIZE(chorus_items))) {
-                    float new_val = static_cast<float>(sub);
-                    params[sub_param_idx].value = new_val;
-                    engine_.push_param_change(index_, sub_param_idx, new_val);
-                    commit_param_change(sub_param_idx, params[sub_param_idx].value, new_val);
-                }
-            } else {
-                if (ImGui::Combo("##Subdiv", &sub, items, IM_ARRAYSIZE(items))) {
-                    float new_val = static_cast<float>(sub);
-                    params[sub_param_idx].value = new_val;
-                    engine_.push_param_change(index_, sub_param_idx, new_val);
-                    commit_param_change(sub_param_idx, params[sub_param_idx].value, new_val);
-                }
-            }
+        double avg_interval_ms = 0.0;
+        if (intervals.size() >= 4) {
+          std::sort(intervals.begin(), intervals.end());
+          double sum = 0.0;
+          for (size_t idx = 1; idx < intervals.size() - 1; ++idx) {
+            sum += intervals[idx];
+          }
+          avg_interval_ms = sum / (intervals.size() - 2);
         } else {
-            ImGui::SetCursorScreenPos(ImVec2(mid_x - 30.0f * zoom, knob_y_start + 70.0f * zoom));
-            ImGui::PushStyleColor(ImGuiCol_Text, Theme::TextDim());
-            ImGui::Text("♫=%.0f", engine_.get_global_bpm());
-            ImGui::PopStyleColor();
+          double sum = 0.0;
+          for (double val : intervals) {
+            sum += val;
+          }
+          avg_interval_ms = sum / intervals.size();
         }
+        float tapped_bpm = static_cast<float>(60000.0 / avg_interval_ms);
+        engine_.set_global_bpm(tapped_bpm);
+      }
     }
+    if (ImGui::IsItemHovered()) {
+      ImGui::SetTooltip("Tap repeatedly in time to set global BPM");
+    }
+
+    // Render Subdivision selection or current BPM display
+    if (sync) {
+      ImGui::SetCursorScreenPos(
+          ImVec2(mid_x - 30.0f * zoom, knob_y_start + 70.0f * zoom));
+      int sub = static_cast<int>(std::round(params[sub_param_idx].value));
+      const char* items[] = {"1/4", "1/8", "1/16", "1/8."};
+      const char* chorus_items[] = {"1/1", "1/2", "1/4", "1/8"};
+      ImGui::SetNextItemWidth(60.0f * zoom);
+      if (is_chorus) {
+        if (ImGui::Combo("##Subdiv", &sub, chorus_items,
+                         IM_ARRAYSIZE(chorus_items))) {
+          float new_val = static_cast<float>(sub);
+          params[sub_param_idx].value = new_val;
+          engine_.push_param_change(index_, sub_param_idx, new_val);
+          commit_param_change(sub_param_idx, params[sub_param_idx].value,
+                              new_val);
+        }
+      } else {
+        if (ImGui::Combo("##Subdiv", &sub, items, IM_ARRAYSIZE(items))) {
+          float new_val = static_cast<float>(sub);
+          params[sub_param_idx].value = new_val;
+          engine_.push_param_change(index_, sub_param_idx, new_val);
+          commit_param_change(sub_param_idx, params[sub_param_idx].value,
+                              new_val);
+        }
+      }
+    } else {
+      ImGui::SetCursorScreenPos(
+          ImVec2(mid_x - 30.0f * zoom, knob_y_start + 70.0f * zoom));
+      ImGui::PushStyleColor(ImGuiCol_Text, Theme::TextDim());
+      ImGui::Text("♫=%.0f", engine_.get_global_bpm());
+      ImGui::PopStyleColor();
+    }
+  }
 }
 
 }  // namespace Amplitron
