@@ -19,6 +19,8 @@ namespace Amplitron
     {
         if (!recorder_) recorder_ = std::make_unique<Recorder>();
         if (!metronome_) metronome_ = std::make_unique<Metronome>();
+        tempo_engine_ = std::make_unique<TempoEngine>();
+        tempo_engine_->set_sample_rate(sample_rate_);
 
         process_buffer_.resize(16384, 0.0f);
         process_buffer_right_.resize(16384, 0.0f);
@@ -54,6 +56,7 @@ namespace Amplitron
 
         // Read atomic variables safely
         j["input_gain"] = input_gain_.load(std::memory_order_relaxed);
+        j["global_bpm"] = global_bpm_.load(std::memory_order_relaxed);
 
         auto effects_array = nlohmann::json::array();
         for (const auto &fx : dummy_effects_)
@@ -77,6 +80,11 @@ namespace Amplitron
         if (j.contains("input_gain"))
         {
             set_input_gain(j["input_gain"]);
+        }
+
+        if (j.contains("global_bpm"))
+        {
+            set_global_bpm(j["global_bpm"].get<float>());
         }
 
         if (j.contains("effects"))
@@ -154,6 +162,7 @@ namespace Amplitron
             }
             metronome_->set_sample_rate(rate);
             metronome_->reset();
+            tempo_engine_->set_sample_rate(rate);
         }
 
         if (was_running)
@@ -181,6 +190,7 @@ namespace Amplitron
                 }
                 metronome_->set_sample_rate(prev_rate);
                 metronome_->reset();
+                tempo_engine_->set_sample_rate(prev_rate);
                 start();
             }
             else
@@ -299,6 +309,7 @@ namespace Amplitron
                         tuner_tap_->set_sample_rate(sample_rate_);
                         tuner_tap_->reset();
                     }
+                    tempo_engine_->set_sample_rate(sample_rate_);
                 }
 
                 // Recompile graph executor with actual sample_rate and buffer_size from audio hardware

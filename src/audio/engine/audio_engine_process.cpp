@@ -19,6 +19,8 @@ void AudioEngine::process_audio(const float* input, float* output, int frame_cou
         process_buffer_right_.resize(frame_count, 0.0f);
     }
 
+    tempo_engine_->write_input(input, frame_count);
+
     const bool analyzer_on = analyzer_capture_->is_analyzer_enabled();
 
     float in_gain = input_gain_.load(std::memory_order_relaxed);
@@ -69,7 +71,7 @@ void AudioEngine::process_audio(const float* input, float* output, int frame_cou
     // The executor handles all the looping, routing, and processing internally!
     if (audio_shadow_executor_) {
         // Broadcast tempo/bpm
-        audio_shadow_executor_->update_transport_state(static_cast<float>(metronome_->get_bpm()));
+        audio_shadow_executor_->update_transport_state(global_bpm_.load(std::memory_order_relaxed));
         
         // Pass your mono/stereo buffers to the executor we built
         audio_shadow_executor_->process(process_buffer_.data(), process_buffer_right_.data(), frame_count);

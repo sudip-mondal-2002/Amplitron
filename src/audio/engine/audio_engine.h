@@ -18,6 +18,7 @@
 #include "audio/backend/audio_backend.h"
 #include "audio/engine/metronome.h"
 #include "audio/engine/i_metronome.h"
+#include "audio/engine/tempo_engine.h"
 
 namespace Amplitron {
 
@@ -237,6 +238,10 @@ public:
     /** @brief Set the metronome click volume (atomic update). */
     void set_metronome_volume(float volume) override;
 
+    float get_global_bpm() const override;
+    void set_global_bpm(float bpm) override;
+    float detect_bpm() override;
+
     /** @brief Return the current metronome enabled state (atomic relaxed read). */
     bool get_metronome_enabled() const override { return metronome_->is_enabled(); }
 
@@ -347,6 +352,8 @@ private:
     std::unique_ptr<IRecorder> recorder_;
     std::shared_ptr<Effect> tuner_tap_;
     std::string last_error_;
+    std::atomic<float> global_bpm_{120.0f};
+    std::unique_ptr<TempoEngine> tempo_engine_;
 
     std::shared_ptr<Effect>      audio_shadow_tuner_;
     std::atomic<bool>            topology_dirty_{true};

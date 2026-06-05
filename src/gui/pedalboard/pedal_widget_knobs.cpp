@@ -21,6 +21,14 @@ void PedalWidget::render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, boo
         num_params = std::max(0, num_params - 1);
     }
 
+    bool is_delay = (std::strcmp(effect_->name(), "Delay") == 0);
+    bool is_chorus = (std::strcmp(effect_->name(), "Chorus") == 0);
+    if (is_delay) {
+        num_params = 4;
+    } else if (is_chorus) {
+        num_params = 3;
+    }
+
     float knob_radius    = Theme::KNOB_RADIUS * zoom;
     float knob_spacing_x = Theme::KNOB_SPACING_X * zoom;
     float knob_spacing_y = Theme::KNOB_SPACING_Y * zoom;
@@ -101,6 +109,97 @@ void PedalWidget::render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, boo
         };
 
         KnobComponent::render(label, props, zoom, knob_center);
+    }
+
+    if (is_delay || is_chorus) {
+        float mid_x = p0.x + pedal_width * 0.5f;
+        int sync_param_idx = is_delay ? 4 : 3;
+        int sub_param_idx = is_delay ? 5 : 4;
+
+        // Render Sync checkbox
+        ImGui::SetCursorScreenPos(ImVec2(mid_x - 32.0f * zoom, knob_y_start + 10.0f * zoom));
+        bool sync = (params[sync_param_idx].value >= 0.5f);
+        if (ImGui::Checkbox("Sync", &sync)) {
+            float new_val = sync ? 1.0f : 0.0f;
+            params[sync_param_idx].value = new_val;
+            engine_.push_param_change(index_, sync_param_idx, new_val);
+            commit_param_change(sync_param_idx, 1.0f - new_val, new_val);
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Lock delay/modulation time to global BPM");
+        }
+
+        // Render Tap button
+        ImGui::SetCursorScreenPos(ImVec2(mid_x - 22.0f * zoom, knob_y_start + 40.0f * zoom));
+        if (ImGui::Button("Tap", ImVec2(44.0f * zoom, 20.0f * zoom))) {
+            auto now = std::chrono::steady_clock::now();
+            if (!tap_times_.empty()) {
+                auto diff = std::chrono::duration_cast<std::chrono::seconds>(now - tap_times_.back()).count();
+                if (diff >= 4) {
+                    tap_times_.clear();
+                }
+            }
+            tap_times_.push_back(now);
+            if (tap_times_.size() >= 2) {
+                std::vector<double> intervals;
+                for (size_t idx = 1; idx < tap_times_.size(); ++idx) {
+                    double ms = std::chrono::duration<double, std::milli>(tap_times_[idx] - tap_times_[idx - 1]).count();
+                    intervals.push_back(ms);
+                }
+                if (intervals.size() > 8) {
+                    intervals.erase(intervals.begin(), intervals.end() - 8);
+                }
+                double avg_interval_ms = 0.0;
+                if (intervals.size() >= 4) {
+                    std::sort(intervals.begin(), intervals.end());
+                    double sum = 0.0;
+                    for (size_t idx = 1; idx < intervals.size() - 1; ++idx) {
+                        sum += intervals[idx];
+                    }
+                    avg_interval_ms = sum / (intervals.size() - 2);
+                } else {
+                    double sum = 0.0;
+                    for (double val : intervals) {
+                        sum += val;
+                    }
+                    avg_interval_ms = sum / intervals.size();
+                }
+                float tapped_bpm = static_cast<float>(60000.0 / avg_interval_ms);
+                engine_.set_global_bpm(tapped_bpm);
+            }
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Tap repeatedly in time to set global BPM");
+        }
+
+        // Render Subdivision selection or current BPM display
+        if (sync) {
+            ImGui::SetCursorScreenPos(ImVec2(mid_x - 30.0f * zoom, knob_y_start + 70.0f * zoom));
+            int sub = static_cast<int>(std::round(params[sub_param_idx].value));
+            const char* items[] = { "1/4", "1/8", "1/16", "1/8." };
+            const char* chorus_items[] = { "1/1", "1/2", "1/4", "1/8" };
+            ImGui::SetNextItemWidth(60.0f * zoom);
+            if (is_chorus) {
+                if (ImGui::Combo("##Subdiv", &sub, chorus_items, IM_ARRAYSIZE(chorus_items))) {
+                    float new_val = static_cast<float>(sub);
+                    params[sub_param_idx].value = new_val;
+                    engine_.push_param_change(index_, sub_param_idx, new_val);
+                    commit_param_change(sub_param_idx, params[sub_param_idx].value, new_val);
+                }
+            } else {
+                if (ImGui::Combo("##Subdiv", &sub, items, IM_ARRAYSIZE(items))) {
+                    float new_val = static_cast<float>(sub);
+                    params[sub_param_idx].value = new_val;
+                    engine_.push_param_change(index_, sub_param_idx, new_val);
+                    commit_param_change(sub_param_idx, params[sub_param_idx].value, new_val);
+                }
+            }
+        } else {
+            ImGui::SetCursorScreenPos(ImVec2(mid_x - 30.0f * zoom, knob_y_start + 70.0f * zoom));
+            ImGui::PushStyleColor(ImGuiCol_Text, Theme::TextDim());
+            ImGui::Text("♫=%.0f", engine_.get_global_bpm());
+            ImGui::PopStyleColor();
+        }
     }
 }
 

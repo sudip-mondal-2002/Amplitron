@@ -605,6 +605,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         src/audio/engine/audio_graph_executor.cpp
         src/audio/engine/analyzer_capture.cpp
         src/audio/engine/audio_command_dispatcher.cpp
+        src/audio/engine/tempo_engine.cpp
         # Recorder
         src/audio/recorder/recorder.cpp
         src/audio/recorder/recorder_session.cpp
@@ -755,6 +756,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/unit/test_theme.cpp
         tests/unit/test_command_history.cpp
         tests/unit/test_cabinet_sim_ir.cpp
+        tests/unit/test_tempo_engine.cpp
         tests/unit/test_wav_loader.cpp
         tests/unit/test_convolution_engine.cpp
         tests/unit/test_level_analyzer.cpp

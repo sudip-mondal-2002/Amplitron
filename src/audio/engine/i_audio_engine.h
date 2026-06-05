@@ -108,6 +108,9 @@ public:
     virtual float get_input_gain() const = 0;
     virtual float get_output_gain() const = 0;
 
+    virtual float get_global_bpm() const = 0;
+    virtual void set_global_bpm(float bpm) = 0;
+
     virtual void toggle_metronome() = 0;
     virtual void set_metronome_bpm(int bpm) = 0;
     virtual void set_metronome_volume(float volume) = 0;
@@ -203,6 +206,8 @@ public:
     virtual void set_tuner_tap(std::shared_ptr<Effect> tap) = 0;
     virtual void clear_tuner_tap() = 0;
     virtual bool has_tuner_tap() const = 0;
+
+    virtual float detect_bpm() = 0;
 
 #ifdef AMPLITRON_ANDROID_OBOE
     virtual const char* get_oboe_sharing_mode_label() const = 0;

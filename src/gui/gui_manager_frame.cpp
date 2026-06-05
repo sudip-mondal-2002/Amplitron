@@ -378,26 +378,85 @@ void GuiManager::render_master_controls() {
 
     ImGui::Columns(1);
     ImGui::Separator();
-    ImGui::Columns(3, "metronome_cols", false);
+    ImGui::Columns(4, "metronome_cols", false);
 
+    // Column 0: TEMPO Label & DragFloat
     ImGui::AlignTextToFramePadding();
-    ImGui::Text("METRONOME");
+    ImGui::Text("TEMPO");
+    ImGui::SameLine();
+    float bpm = engine_.get_global_bpm();
+    ImGui::PushItemWidth(100.0f);
+    if (ImGui::DragFloat("##BPM", &bpm, 0.1f, 40.0f, 240.0f, "%.1f")) {
+        engine_.set_global_bpm(bpm);
+    }
+    ImGui::PopItemWidth();
+
+    ImGui::NextColumn();
+
+    // Column 1: Tap & Auto-Detect buttons
+    static std::vector<std::chrono::steady_clock::time_point> s_global_tap_times;
+    if (ImGui::Button("Tap")) {
+        auto now = std::chrono::steady_clock::now();
+        if (!s_global_tap_times.empty()) {
+            auto diff = std::chrono::duration_cast<std::chrono::seconds>(now - s_global_tap_times.back()).count();
+            if (diff >= 4) {
+                s_global_tap_times.clear();
+            }
+        }
+        s_global_tap_times.push_back(now);
+        if (s_global_tap_times.size() >= 2) {
+            std::vector<double> intervals;
+            for (size_t idx = 1; idx < s_global_tap_times.size(); ++idx) {
+                double ms = std::chrono::duration<double, std::milli>(s_global_tap_times[idx] - s_global_tap_times[idx - 1]).count();
+                intervals.push_back(ms);
+            }
+            if (intervals.size() > 8) {
+                intervals.erase(intervals.begin(), intervals.end() - 8);
+            }
+            double avg_interval_ms = 0.0;
+            if (intervals.size() >= 4) {
+                std::sort(intervals.begin(), intervals.end());
+                double sum = 0.0;
+                for (size_t idx = 1; idx < intervals.size() - 1; ++idx) {
+                    sum += intervals[idx];
+                }
+                avg_interval_ms = sum / (intervals.size() - 2);
+            } else {
+                double sum = 0.0;
+                for (double val : intervals) {
+                    sum += val;
+                }
+                avg_interval_ms = sum / intervals.size();
+            }
+            float tapped_bpm = static_cast<float>(60000.0 / avg_interval_ms);
+            engine_.set_global_bpm(tapped_bpm);
+        }
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Auto-Detect")) {
+        engine_.detect_bpm();
+    }
+
+    ImGui::NextColumn();
+
+    // Column 2: Metronome play/stop toggle
+    ImGui::AlignTextToFramePadding();
+    ImGui::Text("Metronome");
     ImGui::SameLine();
     bool metronome_on = engine_.get_metronome_enabled();
-    if (ImGui::Button(metronome_on ? "Stop" : "Play"))
+    if (ImGui::Button(metronome_on ? "Stop" : "Play")) {
         engine_.toggle_metronome();
+    }
 
     ImGui::NextColumn();
 
-    int bpm = engine_.get_metronome_bpm();
-    if (ImGui::SliderInt("BPM", &bpm, 40, 240))
-        engine_.set_metronome_bpm(bpm);
-
-    ImGui::NextColumn();
-
+    // Column 3: Metronome Volume
     float click = engine_.get_metronome_volume();
-    if (ImGui::SliderFloat("Click", &click, 0.0f, 1.0f, "%.2f"))
+    ImGui::PushItemWidth(120.0f);
+    if (ImGui::SliderFloat("Volume", &click, 0.0f, 1.0f, "%.2f")) {
         engine_.set_metronome_volume(click);
+    }
+    ImGui::PopItemWidth();
 
     ImGui::Columns(1);
     ImGui::EndChild();

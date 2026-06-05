@@ -11,6 +11,8 @@ Delay::Delay() {
         {"Feedback",   0.4f,  0.0f,    0.95f,  0.4f, "", "Amount of the delayed signal fed back into the input. Higher values create more repeats."},
         {"Tone",       0.7f,  0.0f,    1.0f,   0.7f, "", "High-frequency damping on the repeats. Lower values create darker, tape-like echoes."},
         {"Level",      0.5f,  0.0f,    1.0f,   0.5f, "", "Mix volume of the delay repeats added to your dry signal."},
+        {"Sync",       0.0f,  0.0f,    1.0f,   0.0f, "", "Lock delay time to global BPM."},
+        {"Subdivision", 0.0f,  0.0f,    3.0f,   0.0f, "", "Subdivision: 0=1/4, 1=1/8, 2=1/16, 3=Dotted 1/8."}
     };
     set_sample_rate(DEFAULT_SAMPLE_RATE);
 }
@@ -69,28 +71,49 @@ void Delay::reset() {
 
 void Delay::set_transport_state(float bpm){
     if(bpm <= 0.0f || !std::isfinite(bpm)) return;
-    if(bpm == last_bpm_) return;
-    last_bpm_=bpm;
+    last_bpm_ = bpm;
 
-    //Quarter-note duration
-    float quarter_note_ms = 60000.0f / bpm;
-    //Check current knob
-    float current_knob_time = params_[0].value;
-    //Distance to nearest subdivisions
-    float diff_quarter = std::fabs(current_knob_time - quarter_note_ms);
-    float diff_eighth = std::fabs(current_knob_time - (quarter_note_ms * 0.5f));
-    float diff_sixteenth = std::fabs(current_knob_time - (quarter_note_ms * 0.25f));
-    //Check closest
-    float target_time = quarter_note_ms; //default to 1/4 note
-    if(diff_eighth < diff_quarter && diff_eighth < diff_sixteenth){
-        target_time = quarter_note_ms * 0.5f; // 1/8 note
+    bool sync_on = (params_[4].value >= 0.5f);
+    if (sync_on) {
+        int subdivision_idx = static_cast<int>(std::round(params_[5].value));
+        float factor = 1.0f;
+        if (subdivision_idx == 0) factor = 1.0f;       // 1/4
+        else if (subdivision_idx == 1) factor = 0.5f;  // 1/8
+        else if (subdivision_idx == 2) factor = 0.25f; // 1/16
+        else if (subdivision_idx == 3) factor = 0.75f; // Dotted 1/8
+        
+        float target_time = (60000.0f / bpm) * factor;
+        params_[0].value = clamp(target_time, params_[0].min_val, params_[0].max_val);
+    } else {
+        static float last_snap_bpm = 0.0f;
+        if (bpm == last_snap_bpm) return;
+        last_snap_bpm = bpm;
+
+        //Quarter-note duration
+        float quarter_note_ms = 60000.0f / bpm;
+        //Check current knob
+        float current_knob_time = params_[0].value;
+        //Distance to nearest subdivisions
+        float diff_quarter = std::fabs(current_knob_time - quarter_note_ms);
+        float diff_eighth = std::fabs(current_knob_time - (quarter_note_ms * 0.5f));
+        float diff_sixteenth = std::fabs(current_knob_time - (quarter_note_ms * 0.25f));
+        float diff_dotted_eighth = std::fabs(current_knob_time - (quarter_note_ms * 0.75f));
+        
+        //Check closest
+        float target_time = quarter_note_ms; //default to 1/4 note
+        if(diff_eighth < diff_quarter && diff_eighth < diff_sixteenth && diff_eighth < diff_dotted_eighth){
+            target_time = quarter_note_ms * 0.5f; // 1/8 note
+        }
+        else if(diff_sixteenth < diff_quarter && diff_sixteenth < diff_eighth && diff_sixteenth < diff_dotted_eighth){
+            target_time = quarter_note_ms * 0.25f; // 1/16 note
+        }
+        else if(diff_dotted_eighth < diff_quarter && diff_dotted_eighth < diff_eighth && diff_dotted_eighth < diff_sixteenth){
+            target_time = quarter_note_ms * 0.75f; // Dotted 1/8 note
+        }
+        
+        //Set knob
+        params_[0].value = clamp(target_time, params_[0].min_val, params_[0].max_val);
     }
-    else if(diff_sixteenth < diff_quarter && diff_sixteenth < diff_eighth){
-        target_time = quarter_note_ms * 0.25f; // 1/16 note
-    }
-    
-    //Set knob
-    params_[0].value = clamp(target_time, params_[0].min_val, params_[0].max_val);
 }
 
 } // namespace Amplitron

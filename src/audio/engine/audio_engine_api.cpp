@@ -20,7 +20,7 @@ void AudioEngine::toggle_metronome() {
 }
 
 void AudioEngine::set_metronome_bpm(int bpm) {
-    metronome_->set_bpm(bpm);
+    set_global_bpm(static_cast<float>(bpm));
 }
 
 void AudioEngine::set_metronome_volume(float volume) {
@@ -78,5 +78,22 @@ bool AudioEngine::copy_analyzer_snapshot(float* input_dest,
     return analyzer_capture_->copy_analyzer_snapshot(input_dest, output_dest, sample_count);
 }
 
+float AudioEngine::get_global_bpm() const {
+    return global_bpm_.load(std::memory_order_relaxed);
+}
+
+void AudioEngine::set_global_bpm(float bpm) {
+    float clamped_bpm = std::max(40.0f, std::min(bpm, 240.0f));
+    global_bpm_.store(clamped_bpm, std::memory_order_relaxed);
+    metronome_->set_bpm(static_cast<int>(std::round(clamped_bpm)));
+}
+
+float AudioEngine::detect_bpm() {
+    float detected = tempo_engine_->detect_bpm();
+    if (detected > 0.0f) {
+        set_global_bpm(detected);
+    }
+    return detected;
+}
 
 } // namespace Amplitron

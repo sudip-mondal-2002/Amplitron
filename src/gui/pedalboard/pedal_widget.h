@@ -74,6 +74,7 @@ private:
     int index_;
     CommandHistory* history_ = nullptr;
     GuiMidi* gui_midi_ = nullptr;
+    std::vector<std::chrono::steady_clock::time_point> tap_times_;
 
     // Knob drag tracking for undo coalescing
     bool knob_was_active_ = false;

@@ -10,6 +10,8 @@ Chorus::Chorus() {
         {"Rate",   1.5f, 0.1f, 10.0f, 1.5f, "Hz", "Speed of the modulation sweep. Higher values create faster wobbling effects."},
         {"Depth",  5.0f, 0.5f, 20.0f, 5.0f, "ms", "Intensity of the modulation. Higher values create a deeper, more pronounced pitch shift."},
         {"Level",  0.5f, 0.0f,  1.0f, 0.5f, "", "Mix volume of the chorus effect. 0 is dry, 1 is fully wet."},
+        {"Sync",   0.0f, 0.0f,  1.0f, 0.0f, "", "Lock rate to global BPM."},
+        {"Subdivision", 2.0f, 0.0f,  3.0f, 2.0f, "", "Subdivision: 0=1/1, 1=1/2, 2=1/4, 3=1/8."}
     };
     set_sample_rate(DEFAULT_SAMPLE_RATE);
 }
@@ -111,12 +113,27 @@ void Chorus::process_stereo(float* left, float* right, int num_samples) {
 
 void Chorus::set_transport_state(float bpm){
     if(!std::isfinite(bpm) || bpm <= 0.0f)return;
-    if(bpm == last_bpm_) return;
     last_bpm_ = bpm;
-    //BPM to Hz
-    float target_rate_hz = bpm / 60.0f;
-    //set knob
-    params_[0].value = clamp(target_rate_hz, params_[0].min_val, params_[0].max_val);
+
+    bool sync_on = (params_[3].value >= 0.5f);
+    if (sync_on) {
+        int subdivision_idx = static_cast<int>(std::round(params_[4].value));
+        float factor = 1.0f;
+        if (subdivision_idx == 0) factor = 0.25f; // 1/1
+        else if (subdivision_idx == 1) factor = 0.5f;  // 1/2
+        else if (subdivision_idx == 2) factor = 1.0f;  // 1/4
+        else if (subdivision_idx == 3) factor = 2.0f;  // 1/8
+        
+        float target_rate_hz = (bpm / 60.0f) * factor;
+        params_[0].value = clamp(target_rate_hz, params_[0].min_val, params_[0].max_val);
+    } else {
+        static float last_snap_bpm = 0.0f;
+        if (bpm == last_snap_bpm) return;
+        last_snap_bpm = bpm;
+        
+        float target_rate_hz = bpm / 60.0f;
+        params_[0].value = clamp(target_rate_hz, params_[0].min_val, params_[0].max_val);
+    }
 }
 
 void Chorus::reset() {
