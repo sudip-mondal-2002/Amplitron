@@ -9,8 +9,8 @@
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
-#include <commdlg.h>
 #include <windows.h>
+#include <commdlg.h>
 #endif
 
 #ifdef __APPLE__
