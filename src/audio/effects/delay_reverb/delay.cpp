@@ -72,7 +72,9 @@ void Delay::reset() {
 
 void Delay::set_transport_state(float bpm){
     if(bpm <= 0.0f || !std::isfinite(bpm)) return;
-    last_bpm_ = bpm;
+void Delay::set_transport_state(float bpm) {
+    if (bpm <= 0.0f || !std::isfinite(bpm)) return;
+    if (bpm == last_bpm_) return;
 
     bool sync_on = (params_[4].value >= 0.5f);
     if (sync_on) {
