@@ -51,11 +51,11 @@ if (typeof window === 'undefined') {
             headers: newHeaders,
           });
         })
-        .catch((e) => { 
-          console.error("Fetch failed:", e); 
-          return new Response("Network error", 
-            { status: 503, 
-              statusText: "Service Unavailable", 
+        .catch((e) => {
+          console.error("Fetch failed:", e);
+          return new Response("Network error",
+            { status: 503,
+              statusText: "Service Unavailable",
               headers: { "Content-Type": "text/plain", },
             });
         })
@@ -65,14 +65,14 @@ if (typeof window === 'undefined') {
   // Window context — register the service worker
   (async function () {
     if (!("serviceWorker" in navigator)){
-      console.warn("Service workers are not supported in this browser."); 
+      console.warn("Service workers are not supported in this browser.");
       return;
     }
     if (window.crossOriginIsolated !== false) {
       sessionStorage.removeItem("coiReloaded");
       return;
     }
-    
+
     const scriptUrl = window.document.currentScript?.src;
 
 if (!scriptUrl) {
