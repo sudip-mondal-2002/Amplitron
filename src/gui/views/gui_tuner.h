@@ -1,23 +1,24 @@
 #pragma once
 
-#include "audio/engine/audio_engine.h"
-#include "audio/effects/utility/tuner.h"
-#include "gui/ui_component.h"
 #include <functional>
 #include <memory>
+
+#include "audio/effects/utility/tuner.h"
+#include "audio/engine/audio_engine.h"
+#include "gui/ui_component.h"
 
 namespace Amplitron {
 
 struct TunerProps {
     bool has_signal = false;
-    int  note_idx   = -1;
-    int  octave     = 4;
-    float cents     = 0.0f;
-    float freq      = 0.0f;
-    bool mute_on    = false;
-    float a4_ref    = 440.0f;
+    int note_idx = -1;
+    int octave = 4;
+    float cents = 0.0f;
+    float freq = 0.0f;
+    bool mute_on = false;
+    float a4_ref = 440.0f;
 
-    std::function<void(bool)>  on_mute_changed;  // arg: new mute state
+    std::function<void(bool)> on_mute_changed;  // arg: new mute state
     std::function<void(float)> on_a4_ref_changed;
 
     // Needed to get note name string
@@ -31,7 +32,7 @@ struct TunerProps {
  * Callbacks handle mute toggle and A4 reference changes.
  */
 class GuiTuner : public UIComponent<TunerProps> {
-public:
+   public:
     GuiTuner() = default;
 
     /**
@@ -43,8 +44,8 @@ public:
     /** @brief Render with an external show flag (GuiManager holds authoritative state). */
     void render(bool& show);
 
-private:
+   private:
     bool show_ = true;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

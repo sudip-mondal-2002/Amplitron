@@ -12,7 +12,7 @@ namespace Amplitron {
  * in a CommandHistory and invoked via execute() / undo().
  */
 class Command {
-public:
+   public:
     virtual ~Command() = default;
 
     /** @brief Apply this command's action. Returns true if a mutation occurred. */
@@ -35,8 +35,8 @@ public:
     /** @brief Return the steady-clock time point when this command was created. */
     auto timestamp() const { return timestamp_; }
 
-protected:
+   protected:
     std::chrono::steady_clock::time_point timestamp_ = std::chrono::steady_clock::now();
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

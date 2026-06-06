@@ -4,12 +4,12 @@
 #include "gui/commands/command.h"
 #undef private
 #undef protected
-#include "gui/commands/command_history.h"
-#include "audio/effects/distortion/overdrive.h"
 #include "audio/effects/delay_reverb/delay.h"
 #include "audio/effects/delay_reverb/reverb.h"
 #include "audio/effects/distortion/distortion.h"
+#include "audio/effects/distortion/overdrive.h"
 #include "audio/effects/modulation/chorus.h"
+#include "gui/commands/command_history.h"
 
 using namespace Amplitron;
 using namespace TestFramework;
@@ -178,7 +178,8 @@ TEST(ParameterChangeCommand_Execute) {
     float new_val = original + 1.0f;
 
     CommandHistory history;
-    history.execute(std::make_unique<ParameterChangeCommand>(test_engine(), fx, 0, original, new_val));
+    history.execute(
+        std::make_unique<ParameterChangeCommand>(test_engine(), fx, 0, original, new_val));
     ASSERT_NEAR(params[0].value, new_val, 0.001f);
 }
 
@@ -189,7 +190,8 @@ TEST(ParameterChangeCommand_Undo) {
     float new_val = original + 1.0f;
 
     CommandHistory history;
-    history.execute(std::make_unique<ParameterChangeCommand>(test_engine(), fx, 0, original, new_val));
+    history.execute(
+        std::make_unique<ParameterChangeCommand>(test_engine(), fx, 0, original, new_val));
     ASSERT_NEAR(params[0].value, new_val, 0.001f);
 
     history.undo();
@@ -204,13 +206,16 @@ TEST(ParameterChangeCommand_Coalescing) {
     CommandHistory history;
     // Simulate rapid knob turns — these should coalesce
     params[0].value = original + 0.1f;
-    history.push_executed(std::make_unique<ParameterChangeCommand>(test_engine(), fx, 0, original, original + 0.1f));
+    history.push_executed(
+        std::make_unique<ParameterChangeCommand>(test_engine(), fx, 0, original, original + 0.1f));
 
     params[0].value = original + 0.2f;
-    history.push_executed(std::make_unique<ParameterChangeCommand>(test_engine(), fx, 0, original + 0.1f, original + 0.2f));
+    history.push_executed(std::make_unique<ParameterChangeCommand>(
+        test_engine(), fx, 0, original + 0.1f, original + 0.2f));
 
     params[0].value = original + 0.3f;
-    history.push_executed(std::make_unique<ParameterChangeCommand>(test_engine(), fx, 0, original + 0.2f, original + 0.3f));
+    history.push_executed(std::make_unique<ParameterChangeCommand>(
+        test_engine(), fx, 0, original + 0.2f, original + 0.3f));
 
     // All three should have been coalesced into one entry
     ASSERT_EQ(history.undo_size(), 1);
@@ -230,10 +235,12 @@ TEST(ParameterChangeCommand_NoCoalescing_DifferentParams) {
 
     CommandHistory history;
     params[0].value = orig0 + 0.5f;
-    history.push_executed(std::make_unique<ParameterChangeCommand>(test_engine(), fx, 0, orig0, orig0 + 0.5f));
+    history.push_executed(
+        std::make_unique<ParameterChangeCommand>(test_engine(), fx, 0, orig0, orig0 + 0.5f));
 
     params[1].value = orig1 + 0.5f;
-    history.push_executed(std::make_unique<ParameterChangeCommand>(test_engine(), fx, 1, orig1, orig1 + 0.5f));
+    history.push_executed(
+        std::make_unique<ParameterChangeCommand>(test_engine(), fx, 1, orig1, orig1 + 0.5f));
 
     // Different params should NOT coalesce
     ASSERT_EQ(history.undo_size(), 2);
@@ -290,8 +297,7 @@ TEST(LoadPresetCommand_UndoRedo) {
 
     CommandHistory history;
     history.push_executed(std::make_unique<LoadPresetCommand>(
-        engine, std::move(before), before_in, before_out,
-        std::move(after), after_in, after_out));
+        engine, std::move(before), before_in, before_out, std::move(after), after_in, after_out));
 
     // Currently: Delay + Reverb
     ASSERT_EQ(static_cast<int>(engine.effects().size()), 2);
@@ -466,7 +472,7 @@ TEST(CommandHistory_EdgeCases_And_Out_Of_Bounds) {
         // Construct with out of bounds indices
         auto cmd1 = std::make_unique<ParameterChangeCommand>(engine, fx, -1, 0.0f, 1.0f);
         auto cmd2 = std::make_unique<ParameterChangeCommand>(engine, fx, 999, 0.0f, 1.0f);
-        
+
         ASSERT_EQ(cmd1->param_index(), -1);
         ASSERT_EQ(cmd2->param_index(), 999);
         ASSERT_EQ(cmd1->effect(), fx);
@@ -482,11 +488,11 @@ TEST(CommandHistory_EdgeCases_And_Out_Of_Bounds) {
     {
         auto fx1 = std::make_shared<Overdrive>();
         auto fx2 = std::make_shared<Delay>();
-        
+
         ParameterChangeCommand cmd1(engine, fx1, 0, 0.0f, 0.5f);
         ParameterChangeCommand cmd_diff_fx(engine, fx2, 0, 0.0f, 0.5f);
         ParameterChangeCommand cmd_diff_param(engine, fx1, 1, 0.0f, 0.5f);
-        
+
         // Mismatched command type
         AddEffectCommand dummy_cmd(engine, fx1);
         ASSERT_FALSE(cmd1.merge_with(dummy_cmd));
@@ -508,7 +514,7 @@ TEST(CommandHistory_EdgeCases_And_Out_Of_Bounds) {
     {
         engine.add_effect(std::make_shared<Overdrive>());
         engine.add_effect(std::make_shared<Delay>());
-        
+
         CommandHistory history;
         // Reset All
         history.execute(std::make_unique<ResetAllCommand>(engine));
@@ -518,11 +524,10 @@ TEST(CommandHistory_EdgeCases_And_Out_Of_Bounds) {
         // Clear All
         history.execute(std::make_unique<ClearAllCommand>(engine));
         ASSERT_EQ(static_cast<int>(engine.effects().size()), 0);
-        
+
         history.undo();
         ASSERT_EQ(static_cast<int>(engine.effects().size()), 2);
     }
 
     clear_engine(engine);
 }
-

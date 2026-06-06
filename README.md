@@ -393,7 +393,7 @@ This diagram shows the system managers and their lifecycles coordinate via the u
 ```mermaid
 classDiagram
     direction TB
-    
+
     class SessionManager {
         -fs::path autoSavePath
         -fs::path tempSavePath
@@ -495,7 +495,7 @@ This diagram shows how the `AudioEngine` interfaces with backends (`IAudioBacken
 ```mermaid
 classDiagram
     direction TB
-    
+
     class IAudioEngine {
         <<interface>>
         +initialize()* bool
@@ -610,21 +610,21 @@ classDiagram
     AudioEngine *-- IAudioBackend : owns
     AudioEngine *-- AudioGraph : owns
     AudioEngine *-- AudioGraphExecutor : owns
-    
+
     PortAudioBackend ..|> IAudioBackend : realizes
     OboeBackend ..|> IAudioBackend : realizes
     SDLBackend ..|> IAudioBackend : realizes
     JackBackend ..|> IAudioBackend : realizes
-    
+
     Effect ..|> IProcessor : realizes
     Effect ..|> IParameterizable : realizes
     Effect ..|> ISerializable : realizes
     Effect ..|> IMetadata : realizes
-    
+
     Overdrive --|> Effect : inherits
     Reverb --|> Effect : inherits
     AmpSimulator --|> Effect : inherits
-    
+
     AudioGraph o-- Effect : aggregates
 ```
 
@@ -635,7 +635,7 @@ This diagram shows the relationship between `GuiManager`, window context handler
 ```mermaid
 classDiagram
     direction TB
-    
+
     class GuiManager {
         -AmplitronSession& session_
         -WindowContext window_context_

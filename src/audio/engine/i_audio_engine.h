@@ -1,9 +1,10 @@
 #pragma once
 
-#include <vector>
-#include <string>
 #include <memory>
 #include <nlohmann/json.hpp>
+#include <string>
+#include <vector>
+
 #include "audio/backend/audio_device_info.h"
 
 namespace Amplitron {
@@ -17,7 +18,7 @@ class IRecorder;
  * @note Threading Contract: Call only from the GUI/Main thread.
  */
 class ILifecycle {
-public:
+   public:
     virtual ~ILifecycle() = default;
     virtual bool initialize() = 0;
     virtual void shutdown() = 0;
@@ -34,7 +35,7 @@ public:
  * @note Threading Contract: Call only from the GUI/Main thread.
  */
 class IDeviceManager {
-public:
+   public:
     virtual ~IDeviceManager() = default;
 
     virtual std::vector<AudioDeviceInfo> get_input_devices() const = 0;
@@ -61,10 +62,11 @@ public:
 /**
  * @brief Abstract interface for audio level, RMS, clipping, and CPU load metrics.
  * Satisfies the Interface Segregation Principle (ISP) and Dependency Inversion Principle (DIP).
- * @note Threading Contract: Safe to call from the GUI/Main thread. Reads atomic variables updated by the audio thread.
+ * @note Threading Contract: Safe to call from the GUI/Main thread. Reads atomic variables updated
+ * by the audio thread.
  */
 class IAudioMetricsService {
-public:
+   public:
     virtual ~IAudioMetricsService() = default;
 
     virtual float get_input_level() const = 0;
@@ -84,7 +86,7 @@ public:
  * @note Threading Contract: Call only from the GUI/Main thread. Modifies graph structure.
  */
 class IEffectChain {
-public:
+   public:
     virtual ~IEffectChain() = default;
     virtual std::vector<std::shared_ptr<Effect>>& effects() = 0;
     virtual void add_effect(std::shared_ptr<Effect> fx) = 0;
@@ -101,7 +103,7 @@ public:
  * @note Threading Contract: Call only from the GUI/Main thread.
  */
 class ITransportControl {
-public:
+   public:
     virtual ~ITransportControl() = default;
     virtual void set_input_gain(float gain) = 0;
     virtual void set_output_gain(float gain) = 0;
@@ -118,28 +120,30 @@ public:
 
 /**
  * @brief Interface for driving real-time audio block processing.
- * @note Threading Contract: Called exclusively from the high-priority real-time audio callback thread.
- *       Must be lock-free and memory-allocation-free.
+ * @note Threading Contract: Called exclusively from the high-priority real-time audio callback
+ * thread. Must be lock-free and memory-allocation-free.
  */
 class IAudioProcessor {
-public:
+   public:
     virtual ~IAudioProcessor() = default;
     virtual void process_audio(const float* input, float* output, int frame_count) = 0;
 };
 
 /**
  * @brief Interface for configuring and retrieving FFT analyzer snapshots.
- * @note Threading Contract: Safe to call from the GUI/Main thread. Uses locks to copy shared buffers.
+ * @note Threading Contract: Safe to call from the GUI/Main thread. Uses locks to copy shared
+ * buffers.
  */
 class IAnalyzerProvider {
-public:
+   public:
     static constexpr int ANALYZER_FFT_SIZE = 2048;
 
     virtual ~IAnalyzerProvider() = default;
     virtual void set_analyzer_enabled(bool enabled) = 0;
     virtual bool is_analyzer_enabled() const = 0;
     virtual uint64_t get_analyzer_sequence() const = 0;
-    virtual bool copy_analyzer_snapshot(float* input_dest, float* output_dest, int sample_count) const = 0;
+    virtual bool copy_analyzer_snapshot(float* input_dest, float* output_dest,
+                                        int sample_count) const = 0;
 };
 
 /**
@@ -147,7 +151,7 @@ public:
  * @note Threading Contract: Safe to call from any thread (non-blocking lock-free SPSC queue).
  */
 class IParameterDispatch {
-public:
+   public:
     virtual ~IParameterDispatch() = default;
     virtual void push_param_change(int effect_index, int param_index, float value) = 0;
     virtual void push_mixer_gain_change(int node_id, int pin_index, float gain) = 0;
@@ -160,7 +164,7 @@ public:
  * @note Threading Contract: Call only from the GUI/Main thread.
  */
 class ISessionSerializer {
-public:
+   public:
     virtual ~ISessionSerializer() = default;
     virtual nlohmann::json serialize() = 0;
     virtual void deserialize(const nlohmann::json& j) = 0;
@@ -171,7 +175,7 @@ public:
  * @note Threading Contract: Call only from the GUI/Main thread.
  */
 class IGraphProvider {
-public:
+   public:
     virtual ~IGraphProvider() = default;
     virtual AudioGraph& graph() = 0;
     virtual const AudioGraph& graph() const = 0;
@@ -192,7 +196,7 @@ class IAudioEngine : public ILifecycle,
                      public IParameterDispatch,
                      public ISessionSerializer,
                      public IGraphProvider {
-public:
+   public:
     virtual ~IAudioEngine() = default;
 
     virtual int get_suggested_buffer_size() const = 0;
@@ -209,5 +213,4 @@ public:
 #endif
 };
 
-} // namespace Amplitron
-
+}  // namespace Amplitron

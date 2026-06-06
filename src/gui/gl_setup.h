@@ -28,16 +28,16 @@ namespace GLSetup {
 
 #if defined(__EMSCRIPTEN__) || defined(__ANDROID__) || \
     (defined(__APPLE__) && defined(TARGET_OS_IOS) && TARGET_OS_IOS)
-    inline constexpr int GL_CONTEXT_PROFILE   = SDL_GL_CONTEXT_PROFILE_ES;
-    inline constexpr int GL_MAJOR             = 3;
-    inline constexpr int GL_MINOR             = 0;
-    inline constexpr const char* GLSL_VERSION = "#version 300 es";
+inline constexpr int GL_CONTEXT_PROFILE = SDL_GL_CONTEXT_PROFILE_ES;
+inline constexpr int GL_MAJOR = 3;
+inline constexpr int GL_MINOR = 0;
+inline constexpr const char* GLSL_VERSION = "#version 300 es";
 #else
-    inline constexpr int GL_CONTEXT_PROFILE   = SDL_GL_CONTEXT_PROFILE_CORE;
-    inline constexpr int GL_MAJOR             = 3;
-    inline constexpr int GL_MINOR             = 3;
-    inline constexpr const char* GLSL_VERSION = "#version 330";
+inline constexpr int GL_CONTEXT_PROFILE = SDL_GL_CONTEXT_PROFILE_CORE;
+inline constexpr int GL_MAJOR = 3;
+inline constexpr int GL_MINOR = 3;
+inline constexpr const char* GLSL_VERSION = "#version 330";
 #endif
 
-} // namespace GLSetup
-} // namespace Amplitron
+}  // namespace GLSetup
+}  // namespace Amplitron

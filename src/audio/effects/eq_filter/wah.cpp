@@ -1,4 +1,5 @@
 #include "audio/effects/eq_filter/wah.h"
+
 #include "audio/effects/core/effect_factory.h"
 
 namespace Amplitron {
@@ -7,12 +8,20 @@ static EffectRegistrar<WahPedal> reg("Wah");
 
 WahPedal::WahPedal() {
     params_ = {
-        {"Mode",        0.0f,  0.0f,   1.0f,  0.0f, "",   "0 = Manual sweep; 1 = Auto-wah driven by envelope follower."},
-        {"Sweep",       0.5f,  0.0f,   1.0f,  0.5f, "",   "Manual wah sweep position. Heel-down (0) = low frequency; toe-down (1) = high frequency. Active in Manual mode."},
-        {"Resonance",   3.5f,  1.0f,   8.0f,  3.5f, "Q",  "Bandpass filter Q factor. Higher values give a sharper, more vocal wah character."},
-        {"Sensitivity", 0.5f,  0.0f,   1.0f,  0.5f, "",   "How strongly the input signal amplitude drives the sweep in Auto-wah mode."},
-        {"Attack",      5.0f,  1.0f,  50.0f,  5.0f, "ms", "Envelope follower attack time. Faster values track transients more aggressively."},
-        {"Release",   100.0f, 20.0f, 500.0f, 100.0f, "ms", "Envelope follower release time. Controls how quickly the filter falls back after a note dies."},
+        {"Mode", 0.0f, 0.0f, 1.0f, 0.0f, "",
+         "0 = Manual sweep; 1 = Auto-wah driven by envelope follower."},
+        {"Sweep", 0.5f, 0.0f, 1.0f, 0.5f, "",
+         "Manual wah sweep position. Heel-down (0) = low frequency; toe-down (1) = high frequency. "
+         "Active in Manual mode."},
+        {"Resonance", 3.5f, 1.0f, 8.0f, 3.5f, "Q",
+         "Bandpass filter Q factor. Higher values give a sharper, more vocal wah character."},
+        {"Sensitivity", 0.5f, 0.0f, 1.0f, 0.5f, "",
+         "How strongly the input signal amplitude drives the sweep in Auto-wah mode."},
+        {"Attack", 5.0f, 1.0f, 50.0f, 5.0f, "ms",
+         "Envelope follower attack time. Faster values track transients more aggressively."},
+        {"Release", 100.0f, 20.0f, 500.0f, 100.0f, "ms",
+         "Envelope follower release time. Controls how quickly the filter falls back after a note "
+         "dies."},
     };
 }
 
@@ -21,12 +30,12 @@ void WahPedal::process(float* buffer, int num_samples) {
 
     const float mix = mix_.load(std::memory_order_relaxed);
 
-    bool is_auto   = (params_[0].value > 0.5f);
-    float sweep    = params_[1].value;
-    float q        = params_[2].value;
-    float sens     = params_[3].value;
-    float atk_ms   = params_[4].value;
-    float rel_ms   = params_[5].value;
+    bool is_auto = (params_[0].value > 0.5f);
+    float sweep = params_[1].value;
+    float q = params_[2].value;
+    float sens = params_[3].value;
+    float atk_ms = params_[4].value;
+    float rel_ms = params_[5].value;
 
     float atk_coeff = EnvelopeFollower::time_to_coeff(atk_ms, sample_rate_);
     float rel_coeff = EnvelopeFollower::time_to_coeff(rel_ms, sample_rate_);
@@ -51,7 +60,7 @@ void WahPedal::process(float* buffer, int num_samples) {
 
         // Smooth sweep and Q positions to prevent discontinuities
         sweep_smooth_ += (1.0f - smooth_coeff) * (target_sweep - sweep_smooth_);
-        q_smooth_     += (1.0f - smooth_coeff) * (q           - q_smooth_);
+        q_smooth_ += (1.0f - smooth_coeff) * (q - q_smooth_);
 
         // Damping factor for SVF (inverse of smoothed Q)
         float q_damp = 1.0f / q_smooth_;
@@ -64,9 +73,9 @@ void WahPedal::process(float* buffer, int num_samples) {
         // --- Chamberlin state-variable filter ---
         float f_coeff = 2.0f * std::sin(PI * fc / static_cast<float>(sample_rate_));
 
-        float hp    = dry - q_damp * svf_bp_ - svf_lp_;
-        svf_bp_     = f_coeff * hp   + svf_bp_;
-        svf_lp_     = f_coeff * svf_bp_ + svf_lp_;
+        float hp = dry - q_damp * svf_bp_ - svf_lp_;
+        svf_bp_ = f_coeff * hp + svf_bp_;
+        svf_lp_ = f_coeff * svf_bp_ + svf_lp_;
 
         // Bandpass output boosted by Q for the classic resonant wah peak
         float wet = svf_bp_ * q_smooth_ * 0.5f;
@@ -76,11 +85,11 @@ void WahPedal::process(float* buffer, int num_samples) {
 }
 
 void WahPedal::reset() {
-    svf_lp_       = 0.0f;
-    svf_bp_       = 0.0f;
+    svf_lp_ = 0.0f;
+    svf_bp_ = 0.0f;
     env_.reset();
     sweep_smooth_ = 0.5f;
-    q_smooth_     = 3.5f;
+    q_smooth_ = 3.5f;
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

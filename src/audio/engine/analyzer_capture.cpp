@@ -1,6 +1,7 @@
 #include "audio/engine/analyzer_capture.h"
-#include <cstring>
+
 #include <algorithm>
+#include <cstring>
 
 namespace Amplitron {
 
@@ -23,7 +24,8 @@ uint64_t AnalyzerCapture::get_analyzer_sequence() const {
     return sequence_.load(std::memory_order_acquire);
 }
 
-bool AnalyzerCapture::copy_analyzer_snapshot(float* input_dest, float* output_dest, int sample_count) const {
+bool AnalyzerCapture::copy_analyzer_snapshot(float* input_dest, float* output_dest,
+                                             int sample_count) const {
     if (!input_dest || !output_dest || sample_count <= 0) {
         return false;
     }
@@ -65,17 +67,13 @@ void AnalyzerCapture::capture_output(const float* output, int count) {
         if (mutex_.try_lock()) {
             const int start = capture_index_;
             const int first_chunk = ANALYZER_FFT_SIZE - start;
-            std::memcpy(snapshot_input_.data(),
-                        capture_input_.data() + start,
+            std::memcpy(snapshot_input_.data(), capture_input_.data() + start,
                         static_cast<size_t>(first_chunk) * sizeof(float));
-            std::memcpy(snapshot_input_.data() + first_chunk,
-                        capture_input_.data(),
+            std::memcpy(snapshot_input_.data() + first_chunk, capture_input_.data(),
                         static_cast<size_t>(start) * sizeof(float));
-            std::memcpy(snapshot_output_.data(),
-                        capture_output_.data() + start,
+            std::memcpy(snapshot_output_.data(), capture_output_.data() + start,
                         static_cast<size_t>(first_chunk) * sizeof(float));
-            std::memcpy(snapshot_output_.data() + first_chunk,
-                        capture_output_.data(),
+            std::memcpy(snapshot_output_.data() + first_chunk, capture_output_.data(),
                         static_cast<size_t>(start) * sizeof(float));
             sequence_.fetch_add(1, std::memory_order_release);
             samples_since_publish_ = 0;
@@ -84,4 +82,4 @@ void AnalyzerCapture::capture_output(const float* output, int count) {
     }
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

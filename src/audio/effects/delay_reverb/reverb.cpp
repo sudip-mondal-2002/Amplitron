@@ -1,4 +1,5 @@
 #include "audio/effects/delay_reverb/reverb.h"
+
 #include "audio/effects/core/effect_factory.h"
 
 namespace Amplitron {
@@ -6,19 +7,24 @@ namespace Amplitron {
 static EffectRegistrar<Reverb> reg("Reverb");
 
 // Comb filter delay lengths (in samples at 44100Hz, will be scaled)
-static const int COMB_LENGTHS[]   = {1116, 1188, 1277, 1356};
+static const int COMB_LENGTHS[] = {1116, 1188, 1277, 1356};
 static const int ALLPASS_LENGTHS[] = {556, 441};
 // Right-channel lengths add a prime offset for decorrelation (classic Freeverb technique)
 static constexpr int STEREO_SPREAD = 23;
-static const int COMB_LENGTHS_R[]   = {1116 + STEREO_SPREAD, 1188 + STEREO_SPREAD,
-                                        1277 + STEREO_SPREAD, 1356 + STEREO_SPREAD};
+static const int COMB_LENGTHS_R[] = {1116 + STEREO_SPREAD, 1188 + STEREO_SPREAD,
+                                     1277 + STEREO_SPREAD, 1356 + STEREO_SPREAD};
 static const int ALLPASS_LENGTHS_R[] = {556 + STEREO_SPREAD, 441 + STEREO_SPREAD};
 
 Reverb::Reverb() {
     params_ = {
-        {"Decay",  0.6f, 0.1f, 0.99f, 0.6f, "", "Length of the reverb tail. Higher values simulate larger acoustic spaces like halls or caves."},
-        {"Damp",   0.4f, 0.0f, 1.0f,  0.4f, "", "High-frequency damping. Higher values absorb treble faster, simulating softer room materials."},
-        {"Level",  0.3f, 0.0f, 1.0f,  0.3f, "", "Mix volume of the reverb effect. Controls how wet or distant the overall sound feels."},
+        {"Decay", 0.6f, 0.1f, 0.99f, 0.6f, "",
+         "Length of the reverb tail. Higher values simulate larger acoustic spaces like halls or "
+         "caves."},
+        {"Damp", 0.4f, 0.0f, 1.0f, 0.4f, "",
+         "High-frequency damping. Higher values absorb treble faster, simulating softer room "
+         "materials."},
+        {"Level", 0.3f, 0.0f, 1.0f, 0.3f, "",
+         "Mix volume of the reverb effect. Controls how wet or distant the overall sound feels."},
     };
     init_filters();
 }
@@ -109,11 +115,11 @@ void Reverb::process_stereo(float* left, float* right, int num_samples) {
     }
 
     const float decay = params_[0].value;
-    const float damp  = params_[1].value;
+    const float damp = params_[1].value;
     const float level = params_[2].value;
 
     for (int i = 0; i < num_samples; ++i) {
-        const float input_l = left[i]  * 0.2f;
+        const float input_l = left[i] * 0.2f;
         const float input_r = right[i] * 0.2f;
         float out_l = 0.0f;
         float out_r = 0.0f;
@@ -160,7 +166,7 @@ void Reverb::process_stereo(float* left, float* right, int num_samples) {
             ap.write_pos = (ap.write_pos + 1) % buf_len;
         }
 
-        left[i]  = left[i]  * (1.0f - level) + out_l * level;
+        left[i] = left[i] * (1.0f - level) + out_l * level;
         right[i] = right[i] * (1.0f - level) + out_r * level;
     }
 }
@@ -186,4 +192,4 @@ void Reverb::reset() {
     }
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

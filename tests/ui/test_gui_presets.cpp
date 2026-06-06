@@ -6,16 +6,17 @@
  * for filename-unsafe special characters, and ImGui rendering dialogs
  * using a software ImGui context.
  */
-#include "test_framework.h"
-#include "test_fixtures.h"
-#include "gui/views/gui_presets.h"
-#include "gui/commands/command_history.h"
-#include "audio/effects/distortion/overdrive.h"
-#include "audio/effects/delay_reverb/reverb.h"
-#include "preset_manager.h"
 #include <filesystem>
-#include <string>
 #include <memory>
+#include <string>
+
+#include "audio/effects/delay_reverb/reverb.h"
+#include "audio/effects/distortion/overdrive.h"
+#include "gui/commands/command_history.h"
+#include "gui/views/gui_presets.h"
+#include "preset_manager.h"
+#include "test_fixtures.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 
@@ -146,7 +147,10 @@ TEST_F(PresetTest, gui_presets_save_and_load_roundtrip) {
     // Load should succeed
     bool loaded = false;
     for (int i = 0; i < gp.preset_count(); ++i) {
-        if (gp.load_preset_by_index(i)) { loaded = true; break; }
+        if (gp.load_preset_by_index(i)) {
+            loaded = true;
+            break;
+        }
     }
     ASSERT_TRUE(loaded);
 }
@@ -231,7 +235,7 @@ TEST_F(PresetTest, gui_presets_ensure_factory_presets_idempotent) {
 
     gp.ensure_factory_presets();
     int count1 = gp.preset_count();
-    gp.ensure_factory_presets(); // second call must be a no-op
+    gp.ensure_factory_presets();  // second call must be a no-op
     int count2 = gp.preset_count();
     ASSERT_EQ(count1, count2);
 }
@@ -271,7 +275,7 @@ TEST_F(PresetTest, gui_presets_save_special_characters_sanitization) {
     ASSERT_TRUE(ok);
 
     gp.refresh_presets(false);
-    
+
     // Verify it was correctly sanitized and exists on disk
     ASSERT_TRUE(std::filesystem::exists("presets/My___Cool___Presets___.json"));
 }

@@ -1,8 +1,9 @@
 #pragma once
 
-#include "common.h"
-#include "audio/effects/core/effect.h"
 #include <imgui.h>
+
+#include "audio/effects/core/effect.h"
+#include "common.h"
 
 namespace Amplitron {
 
@@ -19,7 +20,8 @@ class GuiMidi;
  */
 class PedalWidget {
     friend class TestAccessor;
-public:
+
+   public:
     /**
      * @brief Construct a PedalWidget.
      * @param engine Reference to the audio engine.
@@ -55,7 +57,7 @@ public:
      */
     void set_gui_midi(GuiMidi* gm) { gui_midi_ = gm; }
 
-private:
+   private:
     /** @brief Render a single rotary knob (unused legacy helper). */
     void render_knob(const char* label, float* value, float min_val, float max_val,
                      float default_val, const char* format = "%.1f");
@@ -63,11 +65,15 @@ private:
     /** @brief Render a toggle switch (unused legacy helper). */
     void render_toggle(const char* label, bool* value);
 
-    void render_amp_cabinet(ImDrawList* dl, ImVec2 p0, ImVec2 p1, float pedal_width, float pedal_height, float zoom);
-    void render_standard_pedal(ImDrawList* dl, ImVec2 p0, ImVec2 p1, float pedal_width, bool enabled, float zoom);
-    void render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, bool is_amp, bool is_tuner, bool is_ir_cab, float zoom);
-    void render_footswitch_and_extras(ImDrawList* dl, ImVec2 p0, ImVec2 p1, float pedal_width, float pedal_height, bool is_amp, bool enabled, bool& should_remove, float zoom);
-
+    void render_amp_cabinet(ImDrawList* dl, ImVec2 p0, ImVec2 p1, float pedal_width,
+                            float pedal_height, float zoom);
+    void render_standard_pedal(ImDrawList* dl, ImVec2 p0, ImVec2 p1, float pedal_width,
+                               bool enabled, float zoom);
+    void render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, bool is_amp, bool is_tuner,
+                      bool is_ir_cab, float zoom);
+    void render_footswitch_and_extras(ImDrawList* dl, ImVec2 p0, ImVec2 p1, float pedal_width,
+                                      float pedal_height, bool is_amp, bool enabled,
+                                      bool& should_remove, float zoom);
 
     IAudioEngine& engine_;
     std::shared_ptr<Effect> effect_;
@@ -99,4 +105,4 @@ private:
     void commit_param_change(int param_index, float old_val, float new_val);
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

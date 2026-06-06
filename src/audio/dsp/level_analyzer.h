@@ -7,7 +7,7 @@ namespace Amplitron {
  * Moves level computation and smoothing math outside of the UI thread.
  */
 class LevelAnalyzer {
-public:
+   public:
     LevelAnalyzer() = default;
 
     /**
@@ -18,7 +18,8 @@ public:
      * @param output_clipped True if clipping was detected in the output.
      * @param dt Time delta since last update.
      */
-    void update(float input_rms, float output_rms, bool input_clipped, bool output_clipped, float dt);
+    void update(float input_rms, float output_rms, bool input_clipped, bool output_clipped,
+                float dt);
 
     float smoothed_input_rms() const { return smoothed_input_rms_; }
     float smoothed_output_rms() const { return smoothed_output_rms_; }
@@ -27,7 +28,7 @@ public:
     float input_clip_flash() const { return input_clip_flash_; }
     float output_clip_flash() const { return output_clip_flash_; }
 
-private:
+   private:
     float smoothed_input_rms_ = 0.0f;
     float smoothed_output_rms_ = 0.0f;
     float input_peak_hold_ = 0.0f;
@@ -36,4 +37,4 @@ private:
     float output_clip_flash_ = 0.0f;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

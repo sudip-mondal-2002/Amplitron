@@ -5,10 +5,11 @@
  * Covers toggles, instances, and full visual tuner states (disabled, active without signal,
  * active with signal) using a software ImGui context.
  */
-#include "test_framework.h"
-#include "test_fixtures.h"
-#include "gui/views/gui_tuner.h"
 #include <memory>
+
+#include "gui/views/gui_tuner.h"
+#include "test_fixtures.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 

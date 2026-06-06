@@ -1,4 +1,5 @@
 #include "audio/engine/audio_graph.h"
+
 #include <algorithm>
 #include <unordered_map>
 #include <unordered_set>
@@ -7,51 +8,52 @@ namespace Amplitron {
 
 int AudioGraph::add_node(const std::string &name, NodeRoutingType type,
                          std::shared_ptr<Effect> pedal, int num_inputs) {
-  DSPNode node;
-  node.id = next_id_++; // Uses your unified member counter
-  node.name = name;
-  node.routing_type = type;
-  node.pedal = pedal;
+    DSPNode node;
+    node.id = next_id_++;  // Uses your unified member counter
+    node.name = name;
+    node.routing_type = type;
+    node.pedal = pedal;
 
-  // Dynamically configure pin structures using the same unified ID pool
-  if (type == NodeRoutingType::Mixer || type == NodeRoutingType::MergeSum) {
-    int inputs_to_create = std::clamp((num_inputs > 0) ? num_inputs : 2, 2, 8);
-    for (int i = 0; i < inputs_to_create; ++i) {
-      node.input_pin_ids.push_back(next_id_++);
+    // Dynamically configure pin structures using the same unified ID pool
+    if (type == NodeRoutingType::Mixer || type == NodeRoutingType::MergeSum) {
+        int inputs_to_create = std::clamp((num_inputs > 0) ? num_inputs : 2, 2, 8);
+        for (int i = 0; i < inputs_to_create; ++i) {
+            node.input_pin_ids.push_back(next_id_++);
+        }
+        node.input_gains.assign(inputs_to_create, 1.0f);
+        node.output_pin_ids.push_back(next_id_++);  // 1 Output Pin
+    } else if (type == NodeRoutingType::Splitter) {
+        node.input_pin_ids.push_back(next_id_++);   // 1 Input Pin
+        node.output_pin_ids.push_back(next_id_++);  // Output Pin Branch A
+        node.output_pin_ids.push_back(next_id_++);  // Output Pin Branch B
+    } else {
+        node.input_pin_ids.push_back(next_id_++);
+        node.output_pin_ids.push_back(next_id_++);
     }
-    node.input_gains.assign(inputs_to_create, 1.0f);
-    node.output_pin_ids.push_back(next_id_++); // 1 Output Pin
-  } else if (type == NodeRoutingType::Splitter) {
-    node.input_pin_ids.push_back(next_id_++);  // 1 Input Pin
-    node.output_pin_ids.push_back(next_id_++); // Output Pin Branch A
-    node.output_pin_ids.push_back(next_id_++); // Output Pin Branch B
-  } else {
-    node.input_pin_ids.push_back(next_id_++);
-    node.output_pin_ids.push_back(next_id_++);
-  }
 
-  nodes_.push_back(node);
+    nodes_.push_back(node);
 
-  // Auto-recompile topology order whenever a structural block changes
-  rebuild_topology();
+    // Auto-recompile topology order whenever a structural block changes
+    rebuild_topology();
 
-  return node.id;
+    return node.id;
 }
 
 int AudioGraph::add_link(int source_pin_id, int dest_pin_id) {
     // Prevent duplicate connections between the exact same pair of pins
-    for (const auto& existing_link : links_) {
-        if (existing_link.source_pin_id == source_pin_id && existing_link.dest_pin_id == dest_pin_id) {
+    for (const auto &existing_link : links_) {
+        if (existing_link.source_pin_id == source_pin_id &&
+            existing_link.dest_pin_id == dest_pin_id) {
             printf("add_link failed: duplicate link\n");
-            return existing_link.id; 
+            return existing_link.id;
         }
     }
 
     // Enforce that each input pin can only have ONE incoming link
-    for (const auto& existing_link : links_) {
+    for (const auto &existing_link : links_) {
         if (existing_link.dest_pin_id == dest_pin_id) {
             printf("add_link failed: Input pin %d already in use!\n", dest_pin_id);
-            return -1; // Pin already in use!
+            return -1;  // Pin already in use!
         }
     }
 
@@ -64,21 +66,22 @@ int AudioGraph::add_link(int source_pin_id, int dest_pin_id) {
             int out_count = 0;
             for (const auto &existing_link : links_) {
                 if (existing_link.source_pin_id == source_pin_id) {
-                    printf("add_link failed: Output pin %d already has an outgoing connection!\n", source_pin_id);
+                    printf("add_link failed: Output pin %d already has an outgoing connection!\n",
+                           source_pin_id);
                     out_count++;
                 }
             }
             if (out_count >= 1) {
-                return -1; // Each output pin can only have 1 outgoing connection!
+                return -1;  // Each output pin can only have 1 outgoing connection!
             }
         }
     }
 
     GraphLink link;
-    link.id = next_id_++; // Uses your unified member counter
+    link.id = next_id_++;  // Uses your unified member counter
     link.source_pin_id = source_pin_id;
     link.dest_pin_id = dest_pin_id;
-    
+
     links_.push_back(link);
 
     // Validate if the new patch wire forms an impossible audio loop feedback cycle
@@ -87,407 +90,397 @@ int AudioGraph::add_link(int source_pin_id, int dest_pin_id) {
         // If a feedback loop is detected, pop the dangerous link back off to keep the engine safe
         links_.pop_back();
         rebuild_topology();
-        return -1; 
+        return -1;
     }
 
     return link.id;
 }
 
 void AudioGraph::set_node_as_input(int node_id, bool is_input) {
-  for (auto &node : nodes_) {
-    if (node.id == node_id) {
-      node.is_graph_input = is_input;
-      rebuild_topology();
-      break;
+    for (auto &node : nodes_) {
+        if (node.id == node_id) {
+            node.is_graph_input = is_input;
+            rebuild_topology();
+            break;
+        }
     }
-  }
 }
 
 void AudioGraph::set_node_as_output(int node_id, bool is_output) {
-  for (auto &node : nodes_) {
-    if (node.id == node_id) {
-      node.is_graph_output = is_output;
-      rebuild_topology();
-      break;
+    for (auto &node : nodes_) {
+        if (node.id == node_id) {
+            node.is_graph_output = is_output;
+            rebuild_topology();
+            break;
+        }
     }
-  }
 }
 
 void AudioGraph::set_node_position(int node_id, float x, float y) {
-  for (auto &node : nodes_) {
-    if (node.id == node_id) {
-      node.x = x;
-      node.y = y;
-      break;
+    for (auto &node : nodes_) {
+        if (node.id == node_id) {
+            node.x = x;
+            node.y = y;
+            break;
+        }
     }
-  }
 }
 
 int AudioGraph::get_node_from_pin(int pin_id) const {
-  // Search through all nodes to find which one owns the given Pin ID
-  for (const auto &node : nodes_) {
-    for (int p : node.input_pin_ids) {
-      if (p == pin_id)
-        return node.id;
+    // Search through all nodes to find which one owns the given Pin ID
+    for (const auto &node : nodes_) {
+        for (int p : node.input_pin_ids) {
+            if (p == pin_id) return node.id;
+        }
+        for (int p : node.output_pin_ids) {
+            if (p == pin_id) return node.id;
+        }
     }
-    for (int p : node.output_pin_ids) {
-      if (p == pin_id)
-        return node.id;
-    }
-  }
-  return -1; // Pin ID not found in any registered node
+    return -1;  // Pin ID not found in any registered node
 }
 
 bool AudioGraph::rebuild_topology() {
-  // Kahn's algorithm or DFS to topologically sort the nodes based on links.
-  // Since your test suite cases are already passing, we can use a basic
-  // Kahn's sort dependency tracker to map links to execution order.
+    // Kahn's algorithm or DFS to topologically sort the nodes based on links.
+    // Since your test suite cases are already passing, we can use a basic
+    // Kahn's sort dependency tracker to map links to execution order.
 
-  sorted_node_ids_.clear();
+    sorted_node_ids_.clear();
 
-  // 1. Forward Reachability BFS
-  std::unordered_set<int> forward_reachable;
-  std::vector<int> queue;
-  for (const auto &node : nodes_) {
-    if (node.is_graph_input) {
-      queue.push_back(node.id);
-      forward_reachable.insert(node.id);
-    }
-  }
-  size_t head = 0;
-  while (head < queue.size()) {
-    int curr = queue[head++];
-    auto it = std::find_if(nodes_.begin(), nodes_.end(),
-                           [&](const DSPNode &n) { return n.id == curr; });
-    if (it != nodes_.end()) {
-      for (int out_pin : it->output_pin_ids) {
-        for (const auto &link : links_) {
-          if (link.source_pin_id == out_pin) {
-            int dest = get_node_from_pin(link.dest_pin_id);
-            if (dest != -1 &&
-                forward_reachable.find(dest) == forward_reachable.end()) {
-              forward_reachable.insert(dest);
-              queue.push_back(dest);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // 2. Backward Reachability BFS
-  std::unordered_set<int> backward_reachable;
-  queue.clear();
-  for (const auto &node : nodes_) {
-    if (node.is_graph_output) {
-      queue.push_back(node.id);
-      backward_reachable.insert(node.id);
-    }
-  }
-  head = 0;
-  while (head < queue.size()) {
-    int curr = queue[head++];
-    auto it = std::find_if(nodes_.begin(), nodes_.end(),
-                           [&](const DSPNode &n) { return n.id == curr; });
-    if (it != nodes_.end()) {
-      for (int in_pin : it->input_pin_ids) {
-        for (const auto &link : links_) {
-          if (link.dest_pin_id == in_pin) {
-            int src = get_node_from_pin(link.source_pin_id);
-            if (src != -1 &&
-                backward_reachable.find(src) == backward_reachable.end()) {
-              backward_reachable.insert(src);
-              queue.push_back(src);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // 3. Update is_reachable for all nodes
-  for (auto &node : nodes_) {
-    node.is_reachable = (forward_reachable.count(node.id) > 0 &&
-                         backward_reachable.count(node.id) > 0);
-  }
-
-  std::unordered_map<int, int> in_degree;
-
-  // Initialize in-degree count for all active nodes
-  for (const auto &node : nodes_) {
-    in_degree[node.id] = 0;
-  }
-
-  // Calculate how many incoming cables are hooked up to each node
-  for (const auto &link : links_) {
-    int dest_node = get_node_from_pin(link.dest_pin_id);
-    if (dest_node != -1) {
-      in_degree[dest_node]++;
-    }
-  }
-
-  // Gather all source nodes that have 0 dependencies
-  std::vector<int> process_queue;
-  for (const auto &node : nodes_) {
-    if (in_degree[node.id] == 0) {
-      process_queue.push_back(node.id);
-    }
-  }
-
-  // Topologically extract nodes from the dependency queue
-  head = 0;
-  while (head < process_queue.size()) {
-    int current_node_id = process_queue[head++];
-    sorted_node_ids_.push_back(current_node_id);
-
-    // Decrement dependencies for downstream targets linked to this node
+    // 1. Forward Reachability BFS
+    std::unordered_set<int> forward_reachable;
+    std::vector<int> queue;
     for (const auto &node : nodes_) {
-      if (node.id != current_node_id)
-        continue;
-
-      for (int out_pin : node.output_pin_ids) {
-        for (const auto &link : links_) {
-          if (link.source_pin_id == out_pin) {
-            int target_node = get_node_from_pin(link.dest_pin_id);
-            if (target_node != -1) {
-              in_degree[target_node]--;
-              if (in_degree[target_node] == 0) {
-                process_queue.push_back(target_node);
-              }
-            }
-          }
+        if (node.is_graph_input) {
+            queue.push_back(node.id);
+            forward_reachable.insert(node.id);
         }
-      }
     }
-  }
+    size_t head = 0;
+    while (head < queue.size()) {
+        int curr = queue[head++];
+        auto it = std::find_if(nodes_.begin(), nodes_.end(),
+                               [&](const DSPNode &n) { return n.id == curr; });
+        if (it != nodes_.end()) {
+            for (int out_pin : it->output_pin_ids) {
+                for (const auto &link : links_) {
+                    if (link.source_pin_id == out_pin) {
+                        int dest = get_node_from_pin(link.dest_pin_id);
+                        if (dest != -1 && forward_reachable.find(dest) == forward_reachable.end()) {
+                            forward_reachable.insert(dest);
+                            queue.push_back(dest);
+                        }
+                    }
+                }
+            }
+        }
+    }
 
-  // If the sorted list length doesn't match total nodes, an impossible feedback
-  // loop exists!
-  if (sorted_node_ids_.size() != nodes_.size()) {
-    return false; // Rejects connection modifications to protect engine
-                  // stability
-  }
+    // 2. Backward Reachability BFS
+    std::unordered_set<int> backward_reachable;
+    queue.clear();
+    for (const auto &node : nodes_) {
+        if (node.is_graph_output) {
+            queue.push_back(node.id);
+            backward_reachable.insert(node.id);
+        }
+    }
+    head = 0;
+    while (head < queue.size()) {
+        int curr = queue[head++];
+        auto it = std::find_if(nodes_.begin(), nodes_.end(),
+                               [&](const DSPNode &n) { return n.id == curr; });
+        if (it != nodes_.end()) {
+            for (int in_pin : it->input_pin_ids) {
+                for (const auto &link : links_) {
+                    if (link.dest_pin_id == in_pin) {
+                        int src = get_node_from_pin(link.source_pin_id);
+                        if (src != -1 && backward_reachable.find(src) == backward_reachable.end()) {
+                            backward_reachable.insert(src);
+                            queue.push_back(src);
+                        }
+                    }
+                }
+            }
+        }
+    }
 
-  return true; // Topology built successfully!
+    // 3. Update is_reachable for all nodes
+    for (auto &node : nodes_) {
+        node.is_reachable =
+            (forward_reachable.count(node.id) > 0 && backward_reachable.count(node.id) > 0);
+    }
+
+    std::unordered_map<int, int> in_degree;
+
+    // Initialize in-degree count for all active nodes
+    for (const auto &node : nodes_) {
+        in_degree[node.id] = 0;
+    }
+
+    // Calculate how many incoming cables are hooked up to each node
+    for (const auto &link : links_) {
+        int dest_node = get_node_from_pin(link.dest_pin_id);
+        if (dest_node != -1) {
+            in_degree[dest_node]++;
+        }
+    }
+
+    // Gather all source nodes that have 0 dependencies
+    std::vector<int> process_queue;
+    for (const auto &node : nodes_) {
+        if (in_degree[node.id] == 0) {
+            process_queue.push_back(node.id);
+        }
+    }
+
+    // Topologically extract nodes from the dependency queue
+    head = 0;
+    while (head < process_queue.size()) {
+        int current_node_id = process_queue[head++];
+        sorted_node_ids_.push_back(current_node_id);
+
+        // Decrement dependencies for downstream targets linked to this node
+        for (const auto &node : nodes_) {
+            if (node.id != current_node_id) continue;
+
+            for (int out_pin : node.output_pin_ids) {
+                for (const auto &link : links_) {
+                    if (link.source_pin_id == out_pin) {
+                        int target_node = get_node_from_pin(link.dest_pin_id);
+                        if (target_node != -1) {
+                            in_degree[target_node]--;
+                            if (in_degree[target_node] == 0) {
+                                process_queue.push_back(target_node);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // If the sorted list length doesn't match total nodes, an impossible feedback
+    // loop exists!
+    if (sorted_node_ids_.size() != nodes_.size()) {
+        return false;  // Rejects connection modifications to protect engine
+                       // stability
+    }
+
+    return true;  // Topology built successfully!
 }
 
 bool AudioGraph::remove_node(int node_id) {
-  auto it =
-      std::find_if(nodes_.begin(), nodes_.end(),
-                   [node_id](const DSPNode &n) { return n.id == node_id; });
+    auto it = std::find_if(nodes_.begin(), nodes_.end(),
+                           [node_id](const DSPNode &n) { return n.id == node_id; });
 
-  if (it != nodes_.end()) {
-    // 1. Destroy all cables attached to this node's Input Pins
-    for (int pin : it->input_pin_ids) {
-      links_.erase(std::remove_if(links_.begin(), links_.end(),
-                                  [pin](const GraphLink &l) {
-                                    return l.dest_pin_id == pin;
-                                  }),
-                   links_.end());
-    }
-    // 2. Destroy all cables attached to this node's Output Pins
-    for (int pin : it->output_pin_ids) {
-      links_.erase(std::remove_if(links_.begin(), links_.end(),
-                                  [pin](const GraphLink &l) {
-                                    return l.source_pin_id == pin;
-                                  }),
-                   links_.end());
-    }
+    if (it != nodes_.end()) {
+        // 1. Destroy all cables attached to this node's Input Pins
+        for (int pin : it->input_pin_ids) {
+            links_.erase(std::remove_if(links_.begin(), links_.end(),
+                                        [pin](const GraphLink &l) { return l.dest_pin_id == pin; }),
+                         links_.end());
+        }
+        // 2. Destroy all cables attached to this node's Output Pins
+        for (int pin : it->output_pin_ids) {
+            links_.erase(
+                std::remove_if(links_.begin(), links_.end(),
+                               [pin](const GraphLink &l) { return l.source_pin_id == pin; }),
+                links_.end());
+        }
 
-    // 3. Erase the node and recompile the audio thread topology
-    nodes_.erase(it);
-    rebuild_topology();
-    return true;
-  }
-  return false;
+        // 3. Erase the node and recompile the audio thread topology
+        nodes_.erase(it);
+        rebuild_topology();
+        return true;
+    }
+    return false;
 }
 bool AudioGraph::remove_link(int link_id) {
-  auto it =
-      std::remove_if(links_.begin(), links_.end(),
-                     [link_id](const GraphLink &l) { return l.id == link_id; });
-  if (it != links_.end()) {
-    links_.erase(it, links_.end());
-    rebuild_topology();
-    return true;
-  }
-  return false;
+    auto it = std::remove_if(links_.begin(), links_.end(),
+                             [link_id](const GraphLink &l) { return l.id == link_id; });
+    if (it != links_.end()) {
+        links_.erase(it, links_.end());
+        rebuild_topology();
+        return true;
+    }
+    return false;
 }
 
 const DSPNode *AudioGraph::find_node(int node_id) const {
-  for (const auto &node : nodes_) {
-    if (node.id == node_id)
-      return &node;
-  }
-  return nullptr;
+    for (const auto &node : nodes_) {
+        if (node.id == node_id) return &node;
+    }
+    return nullptr;
 }
 
-void AudioGraph::restore_node(const DSPNode& node) {
-  nodes_.push_back(node);
-  if (node.id >= next_id_) next_id_ = node.id + 1;
-  for (int pin : node.input_pin_ids) {
-      if (pin >= next_id_) next_id_ = pin + 1;
-  }
-  for (int pin : node.output_pin_ids) {
-      if (pin >= next_id_) next_id_ = pin + 1;
-  }
-  rebuild_topology();
+void AudioGraph::restore_node(const DSPNode &node) {
+    nodes_.push_back(node);
+    if (node.id >= next_id_) next_id_ = node.id + 1;
+    for (int pin : node.input_pin_ids) {
+        if (pin >= next_id_) next_id_ = pin + 1;
+    }
+    for (int pin : node.output_pin_ids) {
+        if (pin >= next_id_) next_id_ = pin + 1;
+    }
+    rebuild_topology();
 }
 
-void AudioGraph::restore_link(const GraphLink& link) {
-  int prev_next_id = next_id_;
-  links_.push_back(link);
-  if (link.id >= next_id_) next_id_ = link.id + 1;
-  if (!rebuild_topology()) {
-      links_.pop_back();
-      next_id_ = prev_next_id;
-      rebuild_topology();
-  }
+void AudioGraph::restore_link(const GraphLink &link) {
+    int prev_next_id = next_id_;
+    links_.push_back(link);
+    if (link.id >= next_id_) next_id_ = link.id + 1;
+    if (!rebuild_topology()) {
+        links_.pop_back();
+        next_id_ = prev_next_id;
+        rebuild_topology();
+    }
 }
 bool AudioGraph::add_input_pin(int node_id) {
-  for (auto &node : nodes_) {
-    if (node.id == node_id && node.routing_type == NodeRoutingType::Mixer) {
-      if (node.input_pin_ids.size() < 8) {
-        node.input_pin_ids.push_back(next_id_++);
-        node.input_gains.push_back(1.0f);
-        // Do not necessarily need to rebuild topology if we just added an unconnected pin
-        return true;
-      }
-      return false;
+    for (auto &node : nodes_) {
+        if (node.id == node_id && node.routing_type == NodeRoutingType::Mixer) {
+            if (node.input_pin_ids.size() < 8) {
+                node.input_pin_ids.push_back(next_id_++);
+                node.input_gains.push_back(1.0f);
+                // Do not necessarily need to rebuild topology if we just added an unconnected pin
+                return true;
+            }
+            return false;
+        }
     }
-  }
-  return false;
+    return false;
 }
 
 bool AudioGraph::remove_input_pin(int node_id, int pin_id) {
-  for (auto &node : nodes_) {
-    if (node.id == node_id && (node.routing_type == NodeRoutingType::Mixer || node.routing_type == NodeRoutingType::MergeSum)) {
-      if (node.input_pin_ids.size() > 2) {
-        if (node.input_gains.size() < node.input_pin_ids.size()) {
-            node.input_gains.resize(node.input_pin_ids.size(), 1.0f);
-        }
-        int index_to_remove = -1;
-        if (pin_id == -1) {
-           index_to_remove = node.input_pin_ids.size() - 1;
-        } else {
-           for (size_t i = 0; i < node.input_pin_ids.size(); ++i) {
-               if (node.input_pin_ids[i] == pin_id) {
-                   index_to_remove = i;
-                   break;
-               }
-           }
-        }
-        if (index_to_remove != -1) {
-            int pin_to_remove = node.input_pin_ids[index_to_remove];
-            // Prevent removal if the pin is linked
-            for (const auto &link : links_) {
-              if (link.dest_pin_id == pin_to_remove) {
-                return false;
-              }
+    for (auto &node : nodes_) {
+        if (node.id == node_id && (node.routing_type == NodeRoutingType::Mixer ||
+                                   node.routing_type == NodeRoutingType::MergeSum)) {
+            if (node.input_pin_ids.size() > 2) {
+                if (node.input_gains.size() < node.input_pin_ids.size()) {
+                    node.input_gains.resize(node.input_pin_ids.size(), 1.0f);
+                }
+                int index_to_remove = -1;
+                if (pin_id == -1) {
+                    index_to_remove = node.input_pin_ids.size() - 1;
+                } else {
+                    for (size_t i = 0; i < node.input_pin_ids.size(); ++i) {
+                        if (node.input_pin_ids[i] == pin_id) {
+                            index_to_remove = i;
+                            break;
+                        }
+                    }
+                }
+                if (index_to_remove != -1) {
+                    int pin_to_remove = node.input_pin_ids[index_to_remove];
+                    // Prevent removal if the pin is linked
+                    for (const auto &link : links_) {
+                        if (link.dest_pin_id == pin_to_remove) {
+                            return false;
+                        }
+                    }
+                    node.input_pin_ids.erase(node.input_pin_ids.begin() + index_to_remove);
+                    node.input_gains.erase(node.input_gains.begin() + index_to_remove);
+                    return true;
+                }
             }
-            node.input_pin_ids.erase(node.input_pin_ids.begin() + index_to_remove);
-            node.input_gains.erase(node.input_gains.begin() + index_to_remove);
-            return true;
+            return false;
         }
-      }
-      return false;
     }
-  }
-  return false;
+    return false;
 }
 
 void AudioGraph::restore_input_pin(int node_id, int pin_id, int index, float gain) {
-  for (auto &node : nodes_) {
-    if (node.id == node_id) {
-        if (index >= 0) {
-            size_t idx = static_cast<size_t>(index);
-            if (idx <= node.input_pin_ids.size()) {
-                node.input_pin_ids.insert(node.input_pin_ids.begin() + idx, pin_id);
-                while (node.input_gains.size() < idx) {
-                    node.input_gains.push_back(1.0f);
+    for (auto &node : nodes_) {
+        if (node.id == node_id) {
+            if (index >= 0) {
+                size_t idx = static_cast<size_t>(index);
+                if (idx <= node.input_pin_ids.size()) {
+                    node.input_pin_ids.insert(node.input_pin_ids.begin() + idx, pin_id);
+                    while (node.input_gains.size() < idx) {
+                        node.input_gains.push_back(1.0f);
+                    }
+                    node.input_gains.insert(node.input_gains.begin() + idx, gain);
+                } else {
+                    node.input_pin_ids.push_back(pin_id);
+                    node.input_gains.push_back(gain);
                 }
-                node.input_gains.insert(node.input_gains.begin() + idx, gain);
             } else {
                 node.input_pin_ids.push_back(pin_id);
                 node.input_gains.push_back(gain);
             }
-        } else {
-            node.input_pin_ids.push_back(pin_id);
-            node.input_gains.push_back(gain);
+            if (pin_id >= next_id_) next_id_ = pin_id + 1;
+            break;
         }
-        if (pin_id >= next_id_) next_id_ = pin_id + 1;
-        break;
     }
-  }
 }
 
 void AudioGraph::set_mixer_input_gain(int node_id, size_t pin_index, float gain) {
-  for (auto &node : nodes_) {
-    if (node.id == node_id && node.routing_type == NodeRoutingType::Mixer) {
-      if (pin_index < node.input_gains.size()) {
-        node.input_gains[pin_index] = std::clamp(gain, 0.0f, 2.0f);
-      }
-      break;
+    for (auto &node : nodes_) {
+        if (node.id == node_id && node.routing_type == NodeRoutingType::Mixer) {
+            if (pin_index < node.input_gains.size()) {
+                node.input_gains[pin_index] = std::clamp(gain, 0.0f, 2.0f);
+            }
+            break;
+        }
     }
-  }
 }
 
 bool AudioGraph::add_output_pin(int node_id) {
-  for (auto &node : nodes_) {
-    if (node.id == node_id && node.routing_type == NodeRoutingType::Splitter) {
-      if (node.output_pin_ids.size() < 8) {
-        node.output_pin_ids.push_back(next_id_++);
-        return true;
-      }
-      return false;
+    for (auto &node : nodes_) {
+        if (node.id == node_id && node.routing_type == NodeRoutingType::Splitter) {
+            if (node.output_pin_ids.size() < 8) {
+                node.output_pin_ids.push_back(next_id_++);
+                return true;
+            }
+            return false;
+        }
     }
-  }
-  return false;
+    return false;
 }
 
 bool AudioGraph::remove_output_pin(int node_id, int pin_id) {
-  for (auto &node : nodes_) {
-    if (node.id == node_id && node.routing_type == NodeRoutingType::Splitter) {
-      if (node.output_pin_ids.size() > 2) {
-        int index_to_remove = -1;
-        if (pin_id == -1) {
-           index_to_remove = node.output_pin_ids.size() - 1;
-        } else {
-           for (size_t i = 0; i < node.output_pin_ids.size(); ++i) {
-               if (node.output_pin_ids[i] == pin_id) {
-                   index_to_remove = i;
-                   break;
-               }
-           }
-        }
-        if (index_to_remove != -1) {
-            int pin_to_remove = node.output_pin_ids[index_to_remove];
-            for (const auto &link : links_) {
-              if (link.source_pin_id == pin_to_remove) {
-                return false;
-              }
+    for (auto &node : nodes_) {
+        if (node.id == node_id && node.routing_type == NodeRoutingType::Splitter) {
+            if (node.output_pin_ids.size() > 2) {
+                int index_to_remove = -1;
+                if (pin_id == -1) {
+                    index_to_remove = node.output_pin_ids.size() - 1;
+                } else {
+                    for (size_t i = 0; i < node.output_pin_ids.size(); ++i) {
+                        if (node.output_pin_ids[i] == pin_id) {
+                            index_to_remove = i;
+                            break;
+                        }
+                    }
+                }
+                if (index_to_remove != -1) {
+                    int pin_to_remove = node.output_pin_ids[index_to_remove];
+                    for (const auto &link : links_) {
+                        if (link.source_pin_id == pin_to_remove) {
+                            return false;
+                        }
+                    }
+                    node.output_pin_ids.erase(node.output_pin_ids.begin() + index_to_remove);
+                    return true;
+                }
             }
-            node.output_pin_ids.erase(node.output_pin_ids.begin() + index_to_remove);
-            return true;
+            return false;
         }
-      }
-      return false;
     }
-  }
-  return false;
+    return false;
 }
 
 void AudioGraph::restore_output_pin(int node_id, int pin_id, int index) {
-  for (auto &node : nodes_) {
-    if (node.id == node_id && node.routing_type == NodeRoutingType::Splitter) {
-        if (index >= 0 && index <= node.output_pin_ids.size()) {
-            node.output_pin_ids.insert(node.output_pin_ids.begin() + index, pin_id);
-        } else {
-            node.output_pin_ids.push_back(pin_id);
+    for (auto &node : nodes_) {
+        if (node.id == node_id && node.routing_type == NodeRoutingType::Splitter) {
+            if (index >= 0 && index <= node.output_pin_ids.size()) {
+                node.output_pin_ids.insert(node.output_pin_ids.begin() + index, pin_id);
+            } else {
+                node.output_pin_ids.push_back(pin_id);
+            }
+            if (pin_id >= next_id_) next_id_ = pin_id + 1;
+            break;
         }
-        if (pin_id >= next_id_) next_id_ = pin_id + 1;
-        break;
     }
-  }
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

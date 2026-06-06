@@ -8,7 +8,7 @@ typedef union SDL_Event SDL_Event;
 namespace Amplitron {
 
 class WindowContext {
-public:
+   public:
     WindowContext();
     ~WindowContext();
 
@@ -17,7 +17,7 @@ public:
 
     // Polls SDL events and passes them to ImGui. Returns false if a quit event is received.
     bool poll_events();
-    
+
     void begin_frame();
     void end_frame();
 
@@ -26,7 +26,7 @@ public:
     int get_height() const { return height_; }
     float get_dpi_scale() const { return dpi_scale_; }
 
-private:
+   private:
     void load_fonts();
     void load_icon();
 
@@ -38,4 +38,4 @@ private:
     bool initialized_ = false;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

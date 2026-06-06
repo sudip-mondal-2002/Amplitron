@@ -3,13 +3,14 @@
 // Folder dialog implementation
 // =============================================================================
 
-#include "gui/dialogs/file_dialog.h"
 #include <cstring>
+
+#include "gui/dialogs/file_dialog.h"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
 #include <shlobj.h>
+#include <windows.h>
 #else
 // Required for popen, pclose, fgets, FILE on non-Windows builds
 #include <cstdio>
@@ -17,9 +18,9 @@
 
 #ifdef __APPLE__
 #include <TargetConditionals.h>
-#include <unistd.h>
-#include <sys/wait.h>
 #include <fcntl.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #endif
 
 #ifndef _WIN32
@@ -29,9 +30,7 @@
 namespace Amplitron {
 
 #ifdef AMPLITRON_HEADLESS
-std::string show_folder_dialog(const std::string&) {
-    return "";
-}
+std::string show_folder_dialog(const std::string&) { return ""; }
 #else
 
 #ifdef _WIN32
@@ -56,9 +55,13 @@ std::string show_folder_dialog(const std::string& title) {
     // escape backslashes first, then double-quotes.
     std::string safe_title;
     for (char c : title) {
-        if (c == '\\') { safe_title += "\\\\"; }
-        else if (c == '"') { safe_title += "\\\""; }
-        else { safe_title += c; }
+        if (c == '\\') {
+            safe_title += "\\\\";
+        } else if (c == '"') {
+            safe_title += "\\\"";
+        } else {
+            safe_title += c;
+        }
     }
 
     std::string script = "POSIX path of (choose folder with prompt \"" + safe_title + "\")";
@@ -81,7 +84,10 @@ std::string show_folder_dialog(const std::string& title) {
         dup2(pipefd[1], STDOUT_FILENO);
         close(pipefd[1]);
         int devnull = open("/dev/null", O_WRONLY);
-        if (devnull >= 0) { dup2(devnull, STDERR_FILENO); close(devnull); }
+        if (devnull >= 0) {
+            dup2(devnull, STDERR_FILENO);
+            close(devnull);
+        }
         execl("/usr/bin/osascript", "osascript", "-e", script.c_str(), nullptr);
         _exit(1);
     }
@@ -91,32 +97,35 @@ std::string show_folder_dialog(const std::string& title) {
     char buf[1024];
     std::string result;
     ssize_t n;
-    while ((n = read(pipefd[0], buf, sizeof(buf))) > 0)
-        result.append(buf, static_cast<size_t>(n));
+    while ((n = read(pipefd[0], buf, sizeof(buf))) > 0) result.append(buf, static_cast<size_t>(n));
     close(pipefd[0]);
 
     int status = 0;
     waitpid(pid, &status, 0);
 
-    while (!result.empty() && (result.back() == '\n' || result.back() == '\r'))
-        result.pop_back();
+    while (!result.empty() && (result.back() == '\n' || result.back() == '\r')) result.pop_back();
     // osascript returns paths with trailing slash; strip it for consistency
     if (!result.empty() && result.back() == '/') result.pop_back();
 
     return result;
 }
 
-#else // Linux
+#else  // Linux
 std::string show_folder_dialog(const std::string& title) {
     // Sanitize title for single-quote shell embedding: replace ' with '\''
     std::string safe_title;
     for (char c : title) {
-        if (c == '\'') { safe_title += "'\\''"; }
-        else { safe_title += c; }
+        if (c == '\'') {
+            safe_title += "'\\''";
+        } else {
+            safe_title += c;
+        }
     }
 
-    std::string cmd = "zenity --file-selection --directory "
-                      "--title='" + safe_title + "' 2>/dev/null";
+    std::string cmd =
+        "zenity --file-selection --directory "
+        "--title='" +
+        safe_title + "' 2>/dev/null";
 
     FILE* pipe = popen(cmd.c_str(), "r");
     if (!pipe) return "";
@@ -144,13 +153,12 @@ std::string show_folder_dialog(const std::string& title) {
         pclose(pipe);
     }
 
-    while (!result.empty() && (result.back() == '\n' || result.back() == '\r'))
-        result.pop_back();
+    while (!result.empty() && (result.back() == '\n' || result.back() == '\r')) result.pop_back();
 
     return result;
 }
 #endif
 
-#endif // AMPLITRON_HEADLESS
+#endif  // AMPLITRON_HEADLESS
 
-} // namespace Amplitron
+}  // namespace Amplitron

@@ -14,8 +14,10 @@ struct Biquad {
 
     float process(float x) {
         float y = b0 * x + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
-        x2 = x1; x1 = x;
-        y2 = y1; y1 = y;
+        x2 = x1;
+        x1 = x;
+        y2 = y1;
+        y1 = y;
         return y;
     }
 
@@ -90,4 +92,4 @@ struct OnePole {
     void reset() { state = 0.0f; }
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

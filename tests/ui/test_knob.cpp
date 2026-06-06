@@ -1,11 +1,11 @@
-#include "test_framework.h"
-#include "test_fixtures.h"
-#include <string>
-#include <memory>
 #include <cmath>
 #include <functional>
+#include <memory>
+#include <string>
 
 #include "gui/components/knob.h"
+#include "test_fixtures.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 using namespace TestFramework;
@@ -69,7 +69,7 @@ TEST_F(PresetTest, test_knob_component_comprehensive) {
 
     // 2. Double click to reset
     props.value = 80.0f;
-    io.MousePos = center; // Hovered
+    io.MousePos = center;  // Hovered
     io.MouseDoubleClicked[0] = true;
     KnobComponent::render("Knob1", props, 1.0f, center);
     advance_frame();
@@ -79,14 +79,14 @@ TEST_F(PresetTest, test_knob_component_comprehensive) {
     ASSERT_NEAR(current_val, 50.0f, 0.01f);
 
     // 3. Scroll Wheel updates (no shift)
-    io.MousePos = center; // Hovered
+    io.MousePos = center;  // Hovered
     io.MouseWheel = 1.0f;
     KnobComponent::render("Knob1", props, 1.0f, center);
     advance_frame();
     io.MouseWheel = 0.0f;
 
     // Scroll Wheel with Shift
-    io.MousePos = center; // Hovered
+    io.MousePos = center;  // Hovered
     io.MouseWheel = -1.0f;
     io.KeyShift = true;
     KnobComponent::render("Knob1", props, 1.0f, center);
@@ -99,19 +99,22 @@ TEST_F(PresetTest, test_knob_component_comprehensive) {
     io.MouseDown[0] = true;
     io.MouseClicked[0] = true;
     KnobComponent::render("Knob1", props, 1.0f, center);
-    printf("COMP START: active=%d hovered=%d val=%f\n", ImGui::IsItemActive(), ImGui::IsItemHovered(), props.value);
+    printf("COMP START: active=%d hovered=%d val=%f\n", ImGui::IsItemActive(),
+           ImGui::IsItemHovered(), props.value);
     advance_frame();
-    
+
     // drag downwards
     io.MouseClicked[0] = false;
     io.MouseDelta = ImVec2(0.0f, 10.0f);
     io.MousePos = ImVec2(center.x, center.y + 10.0f);
     KnobComponent::render("Knob1", props, 1.0f, center);
-    printf("COMP DRAG: active=%d hovered=%d val=%f mdy=%f\n", ImGui::IsItemActive(), ImGui::IsItemHovered(), props.value, ImGui::GetIO().MousePos.y - ImGui::GetIO().MousePosPrev.y);
+    printf("COMP DRAG: active=%d hovered=%d val=%f mdy=%f\n", ImGui::IsItemActive(),
+           ImGui::IsItemHovered(), props.value,
+           ImGui::GetIO().MousePos.y - ImGui::GetIO().MousePosPrev.y);
     advance_frame();
-    
+
     io.MouseDown[0] = false;
-    KnobComponent::render("Knob1", props, 1.0f, center); // Triggers commit
+    KnobComponent::render("Knob1", props, 1.0f, center);  // Triggers commit
     advance_frame();
     ASSERT_NEAR(committed_new, current_val, 0.01f);
 
@@ -121,14 +124,14 @@ TEST_F(PresetTest, test_knob_component_comprehensive) {
     io.MouseClicked[0] = true;
     KnobComponent::render("Knob1", props, 1.0f, center);
     advance_frame();
-    
+
     // rotate mouse position
     io.MouseClicked[0] = false;
     io.MouseDelta = ImVec2(1.0f, 5.0f);
     io.MousePos = ImVec2(center.x + 21.0f, center.y + 5.0f);
     KnobComponent::render("Knob1", props, 1.0f, center);
     advance_frame();
-    
+
     io.MouseDown[0] = false;
     KnobComponent::render("Knob1", props, 1.0f, center);
     advance_frame();
@@ -179,8 +182,15 @@ TEST_F(PresetTest, KnobComponent_LinearFallbackDrag_WhenMouseTooCloseToCenter) {
 
     float val = 50.0f;
     KnobProps props;
-    props.name = "Gain"; props.value = val; props.min_val = 0.0f; props.max_val = 100.0f; props.default_val = 50.0f;
-    props.on_value_changed = [&](float v) { val = v; props.value = v; };
+    props.name = "Gain";
+    props.value = val;
+    props.min_val = 0.0f;
+    props.max_val = 100.0f;
+    props.default_val = 50.0f;
+    props.on_value_changed = [&](float v) {
+        val = v;
+        props.value = v;
+    };
 
     ImVec2 center = ImGui::GetCursorScreenPos();
     center.x += 100;
@@ -191,13 +201,14 @@ TEST_F(PresetTest, KnobComponent_LinearFallbackDrag_WhenMouseTooCloseToCenter) {
     io.MousePos = center;
     KnobComponent::render("K1", props, 1.0f, center);
     advance_frame();
-    
+
     // Start drag at center
     io.MousePos = center;
     io.MouseDown[0] = true;
     io.MouseClicked[0] = true;
     KnobComponent::render("K1", props, 1.0f, center);
-    printf("START DRAG: active=%d hovered=%d val=%f\n", ImGui::IsItemActive(), ImGui::IsItemHovered(), val);
+    printf("START DRAG: active=%d hovered=%d val=%f\n", ImGui::IsItemActive(),
+           ImGui::IsItemHovered(), val);
     advance_frame();
 
     // Drag down by 4 pixels (dist = 4, which is < 5.0f)
@@ -205,7 +216,8 @@ TEST_F(PresetTest, KnobComponent_LinearFallbackDrag_WhenMouseTooCloseToCenter) {
     io.MouseDelta = ImVec2(0, 4);
     io.MousePos = ImVec2(center.x, center.y + 4.0f);
     KnobComponent::render("K1", props, 1.0f, center);
-    printf("DRAG FRAME: active=%d hovered=%d val=%f mdy=%f\n", ImGui::IsItemActive(), ImGui::IsItemHovered(), val, ImGui::GetIO().MousePos.y - ImGui::GetIO().MousePosPrev.y);
+    printf("DRAG FRAME: active=%d hovered=%d val=%f mdy=%f\n", ImGui::IsItemActive(),
+           ImGui::IsItemHovered(), val, ImGui::GetIO().MousePos.y - ImGui::GetIO().MousePosPrev.y);
     advance_frame();
 
     // Release
@@ -227,8 +239,15 @@ TEST_F(PresetTest, KnobComponent_LinearFallbackDrag_WhenMouseTooFarFromCenter) {
 
     float val = 50.0f;
     KnobProps props;
-    props.name = "Gain"; props.value = val; props.min_val = 0.0f; props.max_val = 100.0f; props.default_val = 50.0f;
-    props.on_value_changed = [&](float v) { val = v; props.value = v; };
+    props.name = "Gain";
+    props.value = val;
+    props.min_val = 0.0f;
+    props.max_val = 100.0f;
+    props.default_val = 50.0f;
+    props.on_value_changed = [&](float v) {
+        val = v;
+        props.value = v;
+    };
 
     ImVec2 center = ImGui::GetCursorScreenPos();
     center.x += 100;
@@ -275,15 +294,22 @@ TEST_F(PresetTest, KnobComponent_DoubleClick_ResetsToDefault_CallsBothCallbacks)
     float val = 80.0f;
     bool committed = false;
     KnobProps props;
-    props.name = "Gain"; props.value = val; props.min_val = 0.0f; props.max_val = 100.0f; props.default_val = 50.0f;
-    props.on_value_changed = [&](float v) { val = v; props.value = v; };
+    props.name = "Gain";
+    props.value = val;
+    props.min_val = 0.0f;
+    props.max_val = 100.0f;
+    props.default_val = 50.0f;
+    props.on_value_changed = [&](float v) {
+        val = v;
+        props.value = v;
+    };
     props.on_value_committed = [&](float, float) { committed = true; };
 
     ImVec2 center = ImGui::GetCursorScreenPos();
     center.x += 100;
     center.y += 100;
     ImGuiIO& io = ImGui::GetIO();
-    
+
     // Initial render frame
     io.MousePos = center;
     KnobComponent::render("K3", props, 1.0f, center);
@@ -309,7 +335,7 @@ TEST_F(PresetTest, KnobComponent_DoubleClick_ResetsToDefault_CallsBothCallbacks)
     io.MouseDoubleClicked[0] = true;
     KnobComponent::render("K3", props, 1.0f, center);
     advance_frame();
-    
+
     io.MouseDown[0] = false;
     io.MouseDoubleClicked[0] = false;
     KnobComponent::render("K3", props, 1.0f, center);
@@ -330,7 +356,11 @@ TEST_F(PresetTest, KnobComponent_DoubleClick_WhenValueAlreadyDefault_NoCallbackF
     bool changed = false;
     bool committed = false;
     KnobProps props;
-    props.name = "Gain"; props.value = val; props.min_val = 0.0f; props.max_val = 100.0f; props.default_val = 50.0f;
+    props.name = "Gain";
+    props.value = val;
+    props.min_val = 0.0f;
+    props.max_val = 100.0f;
+    props.default_val = 50.0f;
     props.on_value_changed = [&](float v) { changed = true; };
     props.on_value_committed = [&](float, float) { committed = true; };
 
@@ -338,7 +368,7 @@ TEST_F(PresetTest, KnobComponent_DoubleClick_WhenValueAlreadyDefault_NoCallbackF
     center.x += 100;
     center.y += 100;
     ImGuiIO& io = ImGui::GetIO();
-    
+
     // Initial render frame
     KnobComponent::render("K", props, 1.0f, center);
     advance_frame();
@@ -363,22 +393,26 @@ TEST_F(PresetTest, KnobComponent_RightClick_OpensPopup) {
     ImGui::Begin("TestWindow");
 
     KnobProps props;
-    props.name = "Gain"; props.value = 50.0f; props.min_val = 0.0f; props.max_val = 100.0f; props.default_val = 50.0f;
+    props.name = "Gain";
+    props.value = 50.0f;
+    props.min_val = 0.0f;
+    props.max_val = 100.0f;
+    props.default_val = 50.0f;
 
     ImVec2 center = ImGui::GetCursorScreenPos();
     center.x += 100;
     center.y += 100;
-    
+
     // Initial render frame
     KnobComponent::render("K", props, 1.0f, center);
-    
+
     // Manually open the popup to test the inner menu rendering and logic
     ImGui::PushID("K");
     ImGui::OpenPopup("Popup_K");
     ImGui::PopID();
-    
+
     advance_frame();
-    
+
     ImGui::PushID("K");
     ASSERT_TRUE(ImGui::IsPopupOpen("Popup_K"));
     ImGui::PopID();
@@ -397,9 +431,19 @@ TEST_F(PresetTest, KnobComponent_Popup_SliderInteractions) {
     bool learn = false, clear = false, learn_byp = false, clear_byp = false;
 
     KnobProps props;
-    props.name = "Gain"; props.value = val; props.min_val = 0.0f; props.max_val = 100.0f; props.default_val = 25.0f;
-    props.on_value_changed = [&](float v) { val = v; props.value = v; };
-    props.on_value_committed = [&](float o, float n) { commit_old = o; commit_new = n; };
+    props.name = "Gain";
+    props.value = val;
+    props.min_val = 0.0f;
+    props.max_val = 100.0f;
+    props.default_val = 25.0f;
+    props.on_value_changed = [&](float v) {
+        val = v;
+        props.value = v;
+    };
+    props.on_value_committed = [&](float o, float n) {
+        commit_old = o;
+        commit_new = n;
+    };
     props.on_midi_learn_param = [&]() { learn = true; };
     props.on_midi_clear_param = [&]() { clear = true; };
     props.on_midi_learn_bypass = [&]() { learn_byp = true; };
@@ -444,13 +488,17 @@ TEST_F(PresetTest, KnobComponent_Hover_EmptyTooltip_ShowsGenericTooltip) {
     ImGui::Begin("TestWindow");
 
     KnobProps props;
-    props.name = "Gain"; props.value = 50.0f; props.min_val = 0.0f; props.max_val = 100.0f; props.default_val = 50.0f;
+    props.name = "Gain";
+    props.value = 50.0f;
+    props.min_val = 0.0f;
+    props.max_val = 100.0f;
+    props.default_val = 50.0f;
     props.tooltip = "";
 
     ImVec2 center(200, 200);
     ImGuiIO& io = ImGui::GetIO();
     io.MousePos = center;
-    
+
     KnobComponent::render("K", props, 1.0f, center);
     advance_frame();
 

@@ -1,18 +1,19 @@
 #include "gui/components/screen.h"
-#include "gui/theme/theme.h"
-#include "gui/dialogs/file_dialog.h"
-#include "gui/views/gui_midi.h"
-#include "audio/engine/audio_engine.h"
-#include "audio/effects/utility/tuner.h"
-#include "audio/effects/amp_cab/cabinet_sim.h"
-#include "audio/effects/utility/looper.h"
-#include "audio/effects/dynamics/multiband_compressor.h"
-#include "midi/midi_manager.h"
-#include "common.h"
 
-#include <cstdio>
-#include <cmath>
 #include <algorithm>
+#include <cmath>
+#include <cstdio>
+
+#include "audio/effects/amp_cab/cabinet_sim.h"
+#include "audio/effects/dynamics/multiband_compressor.h"
+#include "audio/effects/utility/looper.h"
+#include "audio/effects/utility/tuner.h"
+#include "audio/engine/audio_engine.h"
+#include "common.h"
+#include "gui/dialogs/file_dialog.h"
+#include "gui/theme/theme.h"
+#include "gui/views/gui_midi.h"
+#include "midi/midi_manager.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -38,7 +39,8 @@ static int s_popup_active_param_index = -1;
 static float s_popup_param_value_before_edit = 0.0f;
 static std::string s_active_popup_id = "";
 
-void ScreenComponent::render(ImDrawList* dl, ImVec2 p0, float pedal_width, float zoom, const ScreenProps& props) {
+void ScreenComponent::render(ImDrawList* dl, ImVec2 p0, float pedal_width, float zoom,
+                             const ScreenProps& props) {
     if (!props.effect) return;
 
     switch (props.type) {
@@ -57,7 +59,8 @@ void ScreenComponent::render(ImDrawList* dl, ImVec2 p0, float pedal_width, float
     }
 }
 
-void ScreenComponent::render_tuner_display(ImDrawList* dl, ImVec2 p0, float pedal_width, float zoom, const ScreenProps& props) {
+void ScreenComponent::render_tuner_display(ImDrawList* dl, ImVec2 p0, float pedal_width, float zoom,
+                                           const ScreenProps& props) {
     auto* tuner = dynamic_cast<TunerPedal*>(props.effect.get());
     if (tuner) {
         float cx = p0.x + pedal_width * 0.5f;
@@ -72,13 +75,11 @@ void ScreenComponent::render_tuner_display(ImDrawList* dl, ImVec2 p0, float peda
 
         if (has_signal && note_idx >= 0) {
             char note_buf[16];
-            snprintf(note_buf, sizeof(note_buf), "%s%d",
-                     TunerPedal::note_name(note_idx), octave);
+            snprintf(note_buf, sizeof(note_buf), "%s%d", TunerPedal::note_name(note_idx), octave);
             ImVec2 note_size = ImGui::CalcTextSize(note_buf);
             float note_x = cx - note_size.x * 1.5f;
-            dl->AddText(ImGui::GetFont(), ImGui::GetFontSize() * 2.0f,
-                ImVec2(note_x, display_y),
-                Theme::TEXT_PRIMARY, note_buf);
+            dl->AddText(ImGui::GetFont(), ImGui::GetFontSize() * 2.0f, ImVec2(note_x, display_y),
+                        Theme::TEXT_PRIMARY, note_buf);
 
             display_y += 45 * zoom;
 
@@ -87,11 +88,9 @@ void ScreenComponent::render_tuner_display(ImDrawList* dl, ImVec2 p0, float peda
             ImVec2 cents_text_size = ImGui::CalcTextSize(cents_buf);
             ImGui::SetCursorScreenPos(ImVec2(cx - cents_text_size.x * 0.5f, display_y));
             float abs_cents = std::fabs(cents);
-            ImVec4 cents_col = (abs_cents < 2.0f)
-                ? ImVec4(0.2f, 0.9f, 0.3f, 1.0f)
-                : (abs_cents < 15.0f)
-                    ? ImVec4(0.9f, 0.8f, 0.2f, 1.0f)
-                    : ImVec4(0.9f, 0.2f, 0.2f, 1.0f);
+            ImVec4 cents_col = (abs_cents < 2.0f)    ? ImVec4(0.2f, 0.9f, 0.3f, 1.0f)
+                               : (abs_cents < 15.0f) ? ImVec4(0.9f, 0.8f, 0.2f, 1.0f)
+                                                     : ImVec4(0.9f, 0.2f, 0.2f, 1.0f);
             ImGui::PushStyleColor(ImGuiCol_Text, cents_col);
             ImGui::TextUnformatted(cents_buf);
             ImGui::PopStyleColor();
@@ -102,22 +101,17 @@ void ScreenComponent::render_tuner_display(ImDrawList* dl, ImVec2 p0, float peda
             float bar_h = 10 * zoom;
             float bar_x = p0.x + 15 * zoom;
             float bar_y = display_y;
-            dl->AddRectFilled(
-                ImVec2(bar_x, bar_y),
-                ImVec2(bar_x + bar_w, bar_y + bar_h),
-                Theme::KNOB_BG, 3.0f * zoom);
+            dl->AddRectFilled(ImVec2(bar_x, bar_y), ImVec2(bar_x + bar_w, bar_y + bar_h),
+                              Theme::KNOB_BG, 3.0f * zoom);
             float center_x = bar_x + bar_w * 0.5f;
-            dl->AddLine(
-                ImVec2(center_x, bar_y - 1 * zoom),
-                ImVec2(center_x, bar_y + bar_h + 1 * zoom),
-                Theme::TEXT_DIM, 1.5f * zoom);
+            dl->AddLine(ImVec2(center_x, bar_y - 1 * zoom),
+                        ImVec2(center_x, bar_y + bar_h + 1 * zoom), Theme::TEXT_DIM, 1.5f * zoom);
             float needle_norm = clamp(cents / 50.0f, -1.0f, 1.0f);
             float needle_x = center_x + needle_norm * (bar_w * 0.5f);
             ImU32 needle_col = ImGui::ColorConvertFloat4ToU32(cents_col);
-            dl->AddRectFilled(
-                ImVec2(needle_x - 3 * zoom, bar_y - 2 * zoom),
-                ImVec2(needle_x + 3 * zoom, bar_y + bar_h + 2 * zoom),
-                needle_col, 2.0f * zoom);
+            dl->AddRectFilled(ImVec2(needle_x - 3 * zoom, bar_y - 2 * zoom),
+                              ImVec2(needle_x + 3 * zoom, bar_y + bar_h + 2 * zoom), needle_col,
+                              2.0f * zoom);
 
             display_y += bar_h + 14 * zoom;
 
@@ -134,8 +128,7 @@ void ScreenComponent::render_tuner_display(ImDrawList* dl, ImVec2 p0, float peda
             const char* no_sig = "---";
             ImVec2 ns_size = ImGui::CalcTextSize(no_sig);
             dl->AddText(ImGui::GetFont(), ImGui::GetFontSize() * 2.0f,
-                ImVec2(cx - ns_size.x * 1.5f, display_y),
-                Theme::TEXT_DIM, no_sig);
+                        ImVec2(cx - ns_size.x * 1.5f, display_y), Theme::TEXT_DIM, no_sig);
             display_y += 45 * zoom;
 
             const char* waiting = "Play a note...";
@@ -153,8 +146,8 @@ void ScreenComponent::render_tuner_display(ImDrawList* dl, ImVec2 p0, float peda
         const char* mute_label = mute_on ? "[MUTE ON]" : "[MUTE OFF]";
         ImVec2 ml_size = ImGui::CalcTextSize(mute_label);
         ImGui::SetCursorScreenPos(ImVec2(cx - ml_size.x * 0.5f, display_y));
-        ImGui::PushStyleColor(ImGuiCol_Text,
-            mute_on ? ImVec4(0.9f, 0.3f, 0.3f, 1.0f) : ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_Text, mute_on ? ImVec4(0.9f, 0.3f, 0.3f, 1.0f)
+                                                     : ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
         ImGui::TextUnformatted(mute_label);
         ImGui::PopStyleColor();
 
@@ -170,7 +163,8 @@ void ScreenComponent::render_tuner_display(ImDrawList* dl, ImVec2 p0, float peda
         }
         if (ImGui::IsItemHovered()) {
             if (!props.effect->params()[0].tooltip.empty()) {
-                ImGui::SetTooltip("Click to toggle mute\n\n%s", props.effect->params()[0].tooltip.c_str());
+                ImGui::SetTooltip("Click to toggle mute\n\n%s",
+                                  props.effect->params()[0].tooltip.c_str());
             } else {
                 ImGui::SetTooltip("Click to toggle mute");
             }
@@ -178,7 +172,8 @@ void ScreenComponent::render_tuner_display(ImDrawList* dl, ImVec2 p0, float peda
     }
 }
 
-void ScreenComponent::render_ir_cabinet_display(ImDrawList* dl, ImVec2 p0, float pedal_width, float zoom, const ScreenProps& props) {
+void ScreenComponent::render_ir_cabinet_display(ImDrawList* dl, ImVec2 p0, float pedal_width,
+                                                float zoom, const ScreenProps& props) {
     auto* ir_cab = dynamic_cast<CabinetSim*>(props.effect.get());
     if (ir_cab) {
         float cx = p0.x + pedal_width * 0.5f;
@@ -193,27 +188,29 @@ void ScreenComponent::render_ir_cabinet_display(ImDrawList* dl, ImVec2 p0, float
         snprintf(load_id, sizeof(load_id), "Load IR##ir_load_%d", props.index);
         if (ImGui::Button(load_id, ImVec2(btn_w, 22 * zoom))) {
 #ifdef __EMSCRIPTEN__
-            EM_ASM({
-                var cab_ptr = $0;
-                var input = document.createElement('input');
-                input.type = 'file';
-                input.accept = '.wav';
-                input.onchange = function(e) {
-                    var file = e.target.files[0];
-                    var reader = new FileReader();
-                    reader.onload = function(re) {
-                        var data = new Uint8Array(re.target.result);
-                        var path = "/ir_" + file.name;
-                        FS.writeFile(path, data);
-                        Module.ccall('load_ir_callback_screen', 'v', ['number', 'string'], [cab_ptr, path]);
+            EM_ASM(
+                {
+                    var cab_ptr = $0;
+                    var input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.wav';
+                    input.onchange = function(e) {
+                        var file = e.target.files[0];
+                        var reader = new FileReader();
+                        reader.onload = function(re) {
+                            var data = new Uint8Array(re.target.result);
+                            var path = "/ir_" + file.name;
+                            FS.writeFile(path, data);
+                            Module.ccall('load_ir_callback_screen', 'v', [ 'number', 'string' ],
+                                         [ cab_ptr, path ]);
+                        };
+                        reader.readAsArrayBuffer(file);
                     };
-                    reader.readAsArrayBuffer(file);
-                };
-                input.click();
-            }, (uintptr_t)ir_cab);
+                    input.click();
+                },
+                (uintptr_t)ir_cab);
 #else
-            std::string path = show_open_dialog("Load Impulse Response",
-                                               "WAV Audio", "wav");
+            std::string path = show_open_dialog("Load Impulse Response", "WAV Audio", "wav");
             if (!path.empty()) {
                 ir_cab->load_ir(path);
             }
@@ -268,7 +265,8 @@ void ScreenComponent::render_ir_cabinet_display(ImDrawList* dl, ImVec2 p0, float
     }
 }
 
-void ScreenComponent::render_looper_display(ImDrawList* dl, ImVec2 p0, float pedal_width, float zoom, const ScreenProps& props) {
+void ScreenComponent::render_looper_display(ImDrawList* dl, ImVec2 p0, float pedal_width,
+                                            float zoom, const ScreenProps& props) {
     auto* looper = dynamic_cast<Looper*>(props.effect.get());
     if (!looper) return;
 
@@ -283,11 +281,26 @@ void ScreenComponent::render_looper_display(ImDrawList* dl, ImVec2 p0, float ped
     const char* state_label = "EMPTY";
     ImVec4 state_col = Theme::TextDim();
     switch (st) {
-        case Looper::State::Empty:      state_label = "EMPTY";  state_col = Theme::TextDim(); break;
-        case Looper::State::Idle:       state_label = "STOP";   state_col = Theme::TextSecondary(); break;
-        case Looper::State::Recording:  state_label = "REC";    state_col = ImVec4(1.0f, 0.2f, 0.2f, 1.0f); break;
-        case Looper::State::Playing:    state_label = "PLAY";   state_col = ImVec4(0.2f, 0.9f, 0.3f, 1.0f); break;
-        case Looper::State::Overdubbing:state_label = "DUB";    state_col = ImVec4(0.95f, 0.80f, 0.25f, 1.0f); break;
+        case Looper::State::Empty:
+            state_label = "EMPTY";
+            state_col = Theme::TextDim();
+            break;
+        case Looper::State::Idle:
+            state_label = "STOP";
+            state_col = Theme::TextSecondary();
+            break;
+        case Looper::State::Recording:
+            state_label = "REC";
+            state_col = ImVec4(1.0f, 0.2f, 0.2f, 1.0f);
+            break;
+        case Looper::State::Playing:
+            state_label = "PLAY";
+            state_col = ImVec4(0.2f, 0.9f, 0.3f, 1.0f);
+            break;
+        case Looper::State::Overdubbing:
+            state_label = "DUB";
+            state_col = ImVec4(0.95f, 0.80f, 0.25f, 1.0f);
+            break;
     }
 
     ImVec2 st_size = ImGui::CalcTextSize(state_label);
@@ -354,7 +367,8 @@ void ScreenComponent::render_looper_display(ImDrawList* dl, ImVec2 p0, float ped
         looper->request_overdub_toggle();
     }
     ImGui::PopStyleColor(3);
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Toggle overdub mode (record over existing loop)");
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Toggle overdub mode (record over existing loop)");
 
     ImGui::SameLine(0.0f, btn_gap);
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.22f, 0.12f, 0.10f, 1.0f));
@@ -392,7 +406,8 @@ void ScreenComponent::render_looper_display(ImDrawList* dl, ImVec2 p0, float ped
             s_popup_active_param_index = 0;
             s_popup_param_value_before_edit = level;
         }
-        if (ImGui::IsItemDeactivatedAfterEdit() && s_popup_active_param_index == 0 && s_active_popup_id == popup_id) {
+        if (ImGui::IsItemDeactivatedAfterEdit() && s_popup_active_param_index == 0 &&
+            s_active_popup_id == popup_id) {
             if (level != s_popup_param_value_before_edit && props.on_commit_param_change) {
                 props.on_commit_param_change(0, s_popup_param_value_before_edit, level);
             }
@@ -405,7 +420,9 @@ void ScreenComponent::render_looper_display(ImDrawList* dl, ImVec2 p0, float ped
     }
 }
 
-void ScreenComponent::render_multiband_compressor_display(ImDrawList* dl, ImVec2 p0, float pedal_width, float zoom, const ScreenProps& props) {
+void ScreenComponent::render_multiband_compressor_display(ImDrawList* dl, ImVec2 p0,
+                                                          float pedal_width, float zoom,
+                                                          const ScreenProps& props) {
     auto* mb_comp = dynamic_cast<MultiBandCompressor*>(props.effect.get());
     if (!mb_comp) return;
 
@@ -419,20 +436,24 @@ void ScreenComponent::render_multiband_compressor_display(ImDrawList* dl, ImVec2
     ImVec2 p1 = ImVec2(p0.x + pedal_width, p0.y + Theme::PEDAL_HEIGHT * zoom);
 
     // Dynamic horizontal divider separating header/plate and controls
-    dl->AddLine(ImVec2(p0.x + 8.0f * zoom, p0.y + 48.0f * zoom), ImVec2(p1.x - 8.0f * zoom, p0.y + 48.0f * zoom), Theme::BORDER_DARK, 1.0f * zoom);
+    dl->AddLine(ImVec2(p0.x + 8.0f * zoom, p0.y + 48.0f * zoom),
+                ImVec2(p1.x - 8.0f * zoom, p0.y + 48.0f * zoom), Theme::BORDER_DARK, 1.0f * zoom);
 
     float col_width = (pedal_width - 24.0f * zoom) / 3.0f;
 
     // --- REUSABLE KNOB HELPER (LAMBDA) ---
-    auto render_mb_knob = [&](ImDrawList* dl, ImVec2 center, int pi, float radius, const char* label_prefix) {
+    auto render_mb_knob = [&](ImDrawList* dl, ImVec2 center, int pi, float radius,
+                              const char* label_prefix) {
         auto& param = params[pi];
         char label[64];
-        std::snprintf(label, sizeof(label), "##knob_%s_%d_%d_%s", props.effect->name(), props.index, pi, label_prefix);
+        std::snprintf(label, sizeof(label), "##knob_%s_%d_%d_%s", props.effect->name(), props.index,
+                      pi, label_prefix);
 
         float r = radius * zoom;
         float knob_hit_size = r * Theme::KNOB_HIT_MULT;
 
-        ImGui::SetCursorScreenPos(ImVec2(center.x - knob_hit_size * 0.5f, center.y - knob_hit_size * 0.5f));
+        ImGui::SetCursorScreenPos(
+            ImVec2(center.x - knob_hit_size * 0.5f, center.y - knob_hit_size * 0.5f));
         ImGui::SetNextItemAllowOverlap();
         ImGui::InvisibleButton(label, ImVec2(knob_hit_size, knob_hit_size));
 
@@ -455,7 +476,7 @@ void ScreenComponent::render_multiband_compressor_display(ImDrawList* dl, ImVec2
                 float sensitivity = 0.005f;
                 float value_delta = -mdy * sensitivity * range;
                 if (ImGui::GetIO().KeyShift) value_delta *= 0.2f;
-                if (ImGui::GetIO().KeyCtrl)  value_delta *= 3.0f;
+                if (ImGui::GetIO().KeyCtrl) value_delta *= 3.0f;
 
                 float new_val = clamp(param.value + value_delta, param.min_val, param.max_val);
                 if (new_val != param.value) {
@@ -467,7 +488,8 @@ void ScreenComponent::render_multiband_compressor_display(ImDrawList* dl, ImVec2
             }
         }
 
-        if (s_knob_was_active && !is_active && s_active_param_index == pi && s_active_knob_id == label) {
+        if (s_knob_was_active && !is_active && s_active_param_index == pi &&
+            s_active_knob_id == label) {
             float new_val = param.value;
             if (new_val != s_param_value_before_drag && props.on_commit_param_change) {
                 props.on_commit_param_change(pi, s_param_value_before_drag, new_val);
@@ -481,7 +503,8 @@ void ScreenComponent::render_multiband_compressor_display(ImDrawList* dl, ImVec2
             float old_val = param.value;
             float step = range * 0.03f;
             if (ImGui::GetIO().KeyShift) step *= 0.2f;
-            float new_val = clamp(param.value + ImGui::GetIO().MouseWheel * step, param.min_val, param.max_val);
+            float new_val =
+                clamp(param.value + ImGui::GetIO().MouseWheel * step, param.min_val, param.max_val);
             if (new_val != old_val) {
                 param.value = new_val;
                 if (props.engine) {
@@ -525,8 +548,10 @@ void ScreenComponent::render_multiband_compressor_display(ImDrawList* dl, ImVec2
                 s_popup_active_param_index = pi;
                 s_popup_param_value_before_edit = param.value;
             }
-            if (ImGui::IsItemDeactivatedAfterEdit() && s_popup_active_param_index == pi && s_active_popup_id == label) {
-                if (param.value != s_popup_param_value_before_edit && props.on_commit_param_change) {
+            if (ImGui::IsItemDeactivatedAfterEdit() && s_popup_active_param_index == pi &&
+                s_active_popup_id == label) {
+                if (param.value != s_popup_param_value_before_edit &&
+                    props.on_commit_param_change) {
                     props.on_commit_param_change(pi, s_popup_param_value_before_edit, param.value);
                 }
                 s_popup_active_param_index = -1;
@@ -581,15 +606,18 @@ void ScreenComponent::render_multiband_compressor_display(ImDrawList* dl, ImVec2
             float a1 = ARC_START + t1 * ARC_RANGE;
 
             bool filled = t0 <= normalized;
-            ImU32 seg_color = filled ? ImGui::ColorConvertFloat4ToU32(led_color) : Theme::KNOB_TRACK_OFF;
+            ImU32 seg_color =
+                filled ? ImGui::ColorConvertFloat4ToU32(led_color) : Theme::KNOB_TRACK_OFF;
 
-            dl->AddLine(
-                ImVec2(center.x + std::cos(a0) * track_radius, center.y + std::sin(a0) * track_radius),
-                ImVec2(center.x + std::cos(a1) * track_radius, center.y + std::sin(a1) * track_radius),
-                seg_color, 2.0f * zoom);
+            dl->AddLine(ImVec2(center.x + std::cos(a0) * track_radius,
+                               center.y + std::sin(a0) * track_radius),
+                        ImVec2(center.x + std::cos(a1) * track_radius,
+                               center.y + std::sin(a1) * track_radius),
+                        seg_color, 2.0f * zoom);
         }
 
-        ImU32 knob_bg = is_active ? Theme::KNOB_ACTIVE : (is_hovered ? Theme::KNOB_HOVER : Theme::KNOB_FACE);
+        ImU32 knob_bg =
+            is_active ? Theme::KNOB_ACTIVE : (is_hovered ? Theme::KNOB_HOVER : Theme::KNOB_FACE);
         dl->AddCircleFilled(center, r, Theme::KNOB_BG);
         dl->AddCircleFilled(center, r - 1.0f * zoom, knob_bg);
 
@@ -599,7 +627,8 @@ void ScreenComponent::render_multiband_compressor_display(ImDrawList* dl, ImVec2
             props.gui_midi->midi().learn_param_name() == param.name) {
             float time = static_cast<float>(ImGui::GetTime());
             float alpha = (std::sin(time * 2.0f * 3.14159f * 10.0f) + 1.0f) * 0.5f;
-            ImU32 outline_col = ImGui::ColorConvertFloat4ToU32(ImVec4(0.2f, 0.6f, 1.0f, 0.4f + alpha * 0.6f));
+            ImU32 outline_col =
+                ImGui::ColorConvertFloat4ToU32(ImVec4(0.2f, 0.6f, 1.0f, 0.4f + alpha * 0.6f));
             dl->AddCircle(center, r + 3.0f * zoom, outline_col, 0, 2.0f * zoom);
         }
 #endif
@@ -607,8 +636,10 @@ void ScreenComponent::render_multiband_compressor_display(ImDrawList* dl, ImVec2
         float pointer_angle = ARC_START + normalized * ARC_RANGE;
         float ptr_inner = r * 0.25f;
         float ptr_outer = r - 2.0f * zoom;
-        ImVec2 ptr_from = ImVec2(center.x + std::cos(pointer_angle) * ptr_inner, center.y + std::sin(pointer_angle) * ptr_inner);
-        ImVec2 ptr_to = ImVec2(center.x + std::cos(pointer_angle) * ptr_outer, center.y + std::sin(pointer_angle) * ptr_outer);
+        ImVec2 ptr_from = ImVec2(center.x + std::cos(pointer_angle) * ptr_inner,
+                                 center.y + std::sin(pointer_angle) * ptr_inner);
+        ImVec2 ptr_to = ImVec2(center.x + std::cos(pointer_angle) * ptr_outer,
+                               center.y + std::sin(pointer_angle) * ptr_outer);
         ImU32 ptr_color = is_active ? Theme::ACCENT_GOLD_HOT : Theme::ACCENT_GOLD;
         dl->AddLine(ptr_from, ptr_to, ptr_color, 2.0f * zoom);
 
@@ -617,20 +648,28 @@ void ScreenComponent::render_multiband_compressor_display(ImDrawList* dl, ImVec2
             std::string val_str = Theme::formatParameterValue(param.value, param.unit);
             std::string min_str = Theme::formatParameterValue(param.min_val, param.unit);
             std::string max_str = Theme::formatParameterValue(param.max_val, param.unit);
-            std::string midi_info = props.gui_midi ? props.gui_midi->get_mapping_info(props.effect->name(), param.name) : "";
-            
+            std::string midi_info =
+                props.gui_midi ? props.gui_midi->get_mapping_info(props.effect->name(), param.name)
+                               : "";
+
             if (param.tooltip.empty()) {
-                ImGui::SetTooltip("%s: %s\nRange: [%s, %s]%s", param.name.c_str(), val_str.c_str(), min_str.c_str(), max_str.c_str(), midi_info.c_str());
+                ImGui::SetTooltip("%s: %s\nRange: [%s, %s]%s", param.name.c_str(), val_str.c_str(),
+                                  min_str.c_str(), max_str.c_str(), midi_info.c_str());
             } else {
-                ImGui::SetTooltip("%s: %s\nRange: [%s, %s]\n\n%s%s", param.name.c_str(), val_str.c_str(), min_str.c_str(), max_str.c_str(), param.tooltip.c_str(), midi_info.c_str());
+                ImGui::SetTooltip("%s: %s\nRange: [%s, %s]\n\n%s%s", param.name.c_str(),
+                                  val_str.c_str(), min_str.c_str(), max_str.c_str(),
+                                  param.tooltip.c_str(), midi_info.c_str());
             }
         }
 
         // Labels
         const char* short_name = param.name.c_str();
-        if (std::strncmp(short_name, "Low ", 4) == 0) short_name += 4;
-        else if (std::strncmp(short_name, "Mid ", 4) == 0) short_name += 4;
-        else if (std::strncmp(short_name, "High ", 5) == 0) short_name += 5;
+        if (std::strncmp(short_name, "Low ", 4) == 0)
+            short_name += 4;
+        else if (std::strncmp(short_name, "Mid ", 4) == 0)
+            short_name += 4;
+        else if (std::strncmp(short_name, "High ", 5) == 0)
+            short_name += 5;
 
         ImVec2 text_size = ImGui::CalcTextSize(short_name);
         dl->AddText(ImGui::GetFont(), ImGui::GetFontSize() * 0.85f,
@@ -645,11 +684,13 @@ void ScreenComponent::render_multiband_compressor_display(ImDrawList* dl, ImVec2
     };
 
     // --- REUSABLE SLIDER HELPER (LAMBDA) ---
-    auto render_xover_slider = [&](ImDrawList* dl, float track_x, int pi, const char* label_prefix, bool ticks_on_left) {
+    auto render_xover_slider = [&](ImDrawList* dl, float track_x, int pi, const char* label_prefix,
+                                   bool ticks_on_left) {
         (void)ticks_on_left;
         auto& param = params[pi];
         char label[64];
-        std::snprintf(label, sizeof(label), "##slider_%s_%d_%d_%s", props.effect->name(), props.index, pi, label_prefix);
+        std::snprintf(label, sizeof(label), "##slider_%s_%d_%d_%s", props.effect->name(),
+                      props.index, pi, label_prefix);
 
         float track_top = p0.y + 90.0f * zoom;
         float track_bottom = p0.y + 260.0f * zoom;
@@ -696,7 +737,8 @@ void ScreenComponent::render_multiband_compressor_display(ImDrawList* dl, ImVec2
             }
         }
 
-        if (s_knob_was_active && !is_active && s_active_param_index == pi && s_active_knob_id == label) {
+        if (s_knob_was_active && !is_active && s_active_param_index == pi &&
+            s_active_knob_id == label) {
             float new_val = param.value;
             if (new_val != s_param_value_before_drag && props.on_commit_param_change) {
                 props.on_commit_param_change(pi, s_param_value_before_drag, new_val);
@@ -710,7 +752,8 @@ void ScreenComponent::render_multiband_compressor_display(ImDrawList* dl, ImVec2
             float old_val = param.value;
             float step = range * 0.02f;
             if (ImGui::GetIO().KeyShift) step *= 0.2f;
-            float new_val = clamp(param.value + ImGui::GetIO().MouseWheel * step, param.min_val, param.max_val);
+            float new_val =
+                clamp(param.value + ImGui::GetIO().MouseWheel * step, param.min_val, param.max_val);
 
             // Prevent crossover overlap
             if (pi == 0) {
@@ -757,51 +800,66 @@ void ScreenComponent::render_multiband_compressor_display(ImDrawList* dl, ImVec2
         }
 
         // Draw track vertical line
-        dl->AddRectFilled(ImVec2(track_x - 1.5f * zoom, track_top), ImVec2(track_x + 1.5f * zoom, track_bottom), Theme::KNOB_TRACK_OFF, 1.5f * zoom);
+        dl->AddRectFilled(ImVec2(track_x - 1.5f * zoom, track_top),
+                          ImVec2(track_x + 1.5f * zoom, track_bottom), Theme::KNOB_TRACK_OFF,
+                          1.5f * zoom);
 
         // Draw Ticks & Labels
-        if (pi == 0) { // Low crossover (50 to 1000 Hz)
-            float tick_hzs[] = { 50.0f, 200.0f, 500.0f, 1000.0f };
+        if (pi == 0) {  // Low crossover (50 to 1000 Hz)
+            float tick_hzs[] = {50.0f, 200.0f, 500.0f, 1000.0f};
             for (float hz : tick_hzs) {
                 float norm = (hz - param.min_val) / range;
                 float ty = track_bottom - norm * (track_bottom - track_top);
-                dl->AddLine(ImVec2(track_x - 4.0f * zoom, ty), ImVec2(track_x, ty), Theme::BORDER_LIGHT, 1.0f * zoom);
-                
+                dl->AddLine(ImVec2(track_x - 4.0f * zoom, ty), ImVec2(track_x, ty),
+                            Theme::BORDER_LIGHT, 1.0f * zoom);
+
                 char tick_lbl[16];
-                if (hz >= 1000.0f) std::snprintf(tick_lbl, sizeof(tick_lbl), "1k");
-                else std::snprintf(tick_lbl, sizeof(tick_lbl), "%.0f", hz);
+                if (hz >= 1000.0f)
+                    std::snprintf(tick_lbl, sizeof(tick_lbl), "1k");
+                else
+                    std::snprintf(tick_lbl, sizeof(tick_lbl), "%.0f", hz);
 
                 ImVec2 tsz = ImGui::CalcTextSize(tick_lbl);
                 dl->AddText(ImGui::GetFont(), ImGui::GetFontSize() * 0.65f,
                             ImVec2(track_x - 6.0f * zoom - tsz.x, ty - tsz.y * 0.5f),
                             Theme::TEXT_DIM, tick_lbl);
             }
-        } else { // High crossover (1000 to 15000 Hz)
-            float tick_hzs[] = { 1000.0f, 4000.0f, 8000.0f, 12000.0f, 15000.0f };
+        } else {  // High crossover (1000 to 15000 Hz)
+            float tick_hzs[] = {1000.0f, 4000.0f, 8000.0f, 12000.0f, 15000.0f};
             for (float hz : tick_hzs) {
                 float norm = (hz - param.min_val) / range;
                 float ty = track_bottom - norm * (track_bottom - track_top);
-                dl->AddLine(ImVec2(track_x, ty), ImVec2(track_x + 4.0f * zoom, ty), Theme::BORDER_LIGHT, 1.0f * zoom);
+                dl->AddLine(ImVec2(track_x, ty), ImVec2(track_x + 4.0f * zoom, ty),
+                            Theme::BORDER_LIGHT, 1.0f * zoom);
 
                 char tick_lbl[16];
-                if (hz >= 1000.0f) std::snprintf(tick_lbl, sizeof(tick_lbl), "%.0fk", hz / 1000.0f);
-                else std::snprintf(tick_lbl, sizeof(tick_lbl), "%.0f", hz);
+                if (hz >= 1000.0f)
+                    std::snprintf(tick_lbl, sizeof(tick_lbl), "%.0fk", hz / 1000.0f);
+                else
+                    std::snprintf(tick_lbl, sizeof(tick_lbl), "%.0f", hz);
 
                 ImVec2 tsz = ImGui::CalcTextSize(tick_lbl);
                 dl->AddText(ImGui::GetFont(), ImGui::GetFontSize() * 0.65f,
-                            ImVec2(track_x + 6.0f * zoom, ty - tsz.y * 0.5f),
-                            Theme::TEXT_DIM, tick_lbl);
+                            ImVec2(track_x + 6.0f * zoom, ty - tsz.y * 0.5f), Theme::TEXT_DIM,
+                            tick_lbl);
             }
         }
 
         // Draw pill handle
         ImVec2 handle_center = ImVec2(track_x, handle_y);
-        ImU32 handle_bg = is_active ? Theme::KNOB_ACTIVE : (is_hovered ? Theme::KNOB_HOVER : Theme::KNOB_FACE);
+        ImU32 handle_bg =
+            is_active ? Theme::KNOB_ACTIVE : (is_hovered ? Theme::KNOB_HOVER : Theme::KNOB_FACE);
         ImU32 border_col = (is_active || is_hovered) ? Theme::ACCENT_GOLD_HOT : Theme::ACCENT_GOLD;
 
-        dl->AddRectFilled(ImVec2(track_x - 8.0f * zoom, handle_y - 5.0f * zoom), ImVec2(track_x + 8.0f * zoom, handle_y + 5.0f * zoom), Theme::KNOB_BG, 3.0f * zoom);
-        dl->AddRectFilled(ImVec2(track_x - 7.0f * zoom, handle_y - 4.0f * zoom), ImVec2(track_x + 7.0f * zoom, handle_y + 4.0f * zoom), handle_bg, 2.0f * zoom);
-        dl->AddRect(ImVec2(track_x - 8.0f * zoom, handle_y - 5.0f * zoom), ImVec2(track_x + 8.0f * zoom, handle_y + 5.0f * zoom), border_col, 3.0f * zoom, 0, 1.5f * zoom);
+        dl->AddRectFilled(ImVec2(track_x - 8.0f * zoom, handle_y - 5.0f * zoom),
+                          ImVec2(track_x + 8.0f * zoom, handle_y + 5.0f * zoom), Theme::KNOB_BG,
+                          3.0f * zoom);
+        dl->AddRectFilled(ImVec2(track_x - 7.0f * zoom, handle_y - 4.0f * zoom),
+                          ImVec2(track_x + 7.0f * zoom, handle_y + 4.0f * zoom), handle_bg,
+                          2.0f * zoom);
+        dl->AddRect(ImVec2(track_x - 8.0f * zoom, handle_y - 5.0f * zoom),
+                    ImVec2(track_x + 8.0f * zoom, handle_y + 5.0f * zoom), border_col, 3.0f * zoom,
+                    0, 1.5f * zoom);
         dl->AddCircleFilled(handle_center, 2.0f * zoom, border_col);
 
         // Value text at the top of the track
@@ -819,18 +877,21 @@ void ScreenComponent::render_multiband_compressor_display(ImDrawList* dl, ImVec2
                     Theme::TEXT_DIM, s_name);
 
         if (is_hovered || is_active) {
-            std::string midi_info = props.gui_midi ? props.gui_midi->get_mapping_info(props.effect->name(), param.name) : "";
-            ImGui::SetTooltip("%s: %s\nRange: [%s, %s]%s\n\nDrag vertically to adjust\nShift=fine, Ctrl=coarse\nDbl-click to reset",
-                              param.name.c_str(), val_str.c_str(),
-                              Theme::formatParameterValue(param.min_val, param.unit).c_str(),
-                              Theme::formatParameterValue(param.max_val, param.unit).c_str(),
-                              midi_info.c_str());
+            std::string midi_info =
+                props.gui_midi ? props.gui_midi->get_mapping_info(props.effect->name(), param.name)
+                               : "";
+            ImGui::SetTooltip(
+                "%s: %s\nRange: [%s, %s]%s\n\nDrag vertically to adjust\nShift=fine, "
+                "Ctrl=coarse\nDbl-click to reset",
+                param.name.c_str(), val_str.c_str(),
+                Theme::formatParameterValue(param.min_val, param.unit).c_str(),
+                Theme::formatParameterValue(param.max_val, param.unit).c_str(), midi_info.c_str());
         }
     };
 
     // --- RENDER 3 COLUMNS & THEIR METERS/KNOBS ---
-    const char* titles[3] = { "LOW BAND", "MID BAND", "HIGH BAND" };
-    int band_param_offsets[3] = { 2, 7, 12 };
+    const char* titles[3] = {"LOW BAND", "MID BAND", "HIGH BAND"};
+    int band_param_offsets[3] = {2, 7, 12};
 
     for (int b = 0; b < 3; ++b) {
         float col_left = p0.x + 12.0f * zoom + b * col_width;
@@ -839,8 +900,8 @@ void ScreenComponent::render_multiband_compressor_display(ImDrawList* dl, ImVec2
         // Title
         ImVec2 tsz = ImGui::CalcTextSize(titles[b]);
         dl->AddText(ImGui::GetFont(), ImGui::GetFontSize() * 0.9f,
-                    ImVec2(col_center - tsz.x * 0.5f, p0.y + 55.0f * zoom),
-                    Theme::TEXT_PRIMARY, titles[b]);
+                    ImVec2(col_center - tsz.x * 0.5f, p0.y + 55.0f * zoom), Theme::TEXT_PRIMARY,
+                    titles[b]);
 
         // Horizontal Gain Reduction Meter
         float meter_y = p0.y + 76.0f * zoom;
@@ -848,8 +909,10 @@ void ScreenComponent::render_multiband_compressor_display(ImDrawList* dl, ImVec2
         float meter_w = col_width - 24.0f * zoom;
         float meter_x = col_left + 12.0f * zoom;
 
-        dl->AddRectFilled(ImVec2(meter_x, meter_y), ImVec2(meter_x + meter_w, meter_y + meter_h), Theme::METER_BG, 3.0f * zoom);
-        dl->AddRect(ImVec2(meter_x, meter_y), ImVec2(meter_x + meter_w, meter_y + meter_h), Theme::BORDER_DARK, 3.0f * zoom, 0, 1.0f * zoom);
+        dl->AddRectFilled(ImVec2(meter_x, meter_y), ImVec2(meter_x + meter_w, meter_y + meter_h),
+                          Theme::METER_BG, 3.0f * zoom);
+        dl->AddRect(ImVec2(meter_x, meter_y), ImVec2(meter_x + meter_w, meter_y + meter_h),
+                    Theme::BORDER_DARK, 3.0f * zoom, 0, 1.0f * zoom);
 
         float gr_db = mb_comp->get_gain_reduction_db(b);
         float norm_gr = clamp(gr_db / 20.0f, 0.0f, 1.0f);
@@ -858,18 +921,23 @@ void ScreenComponent::render_multiband_compressor_display(ImDrawList* dl, ImVec2
             float fill_x1 = meter_x + meter_w;
             float fill_x0 = meter_x + meter_w - norm_gr * meter_w;
             ImU32 fill_color = Theme::METER_GREEN;
-            if (gr_db > 12.0f) fill_color = Theme::METER_RED;
-            else if (gr_db > 6.0f) fill_color = Theme::METER_YELLOW;
+            if (gr_db > 12.0f)
+                fill_color = Theme::METER_RED;
+            else if (gr_db > 6.0f)
+                fill_color = Theme::METER_YELLOW;
 
-            dl->AddRectFilled(ImVec2(fill_x0, meter_y + 1.0f * zoom), ImVec2(fill_x1 - 1.0f * zoom, meter_y + meter_h - 1.0f * zoom), fill_color, 2.0f * zoom);
+            dl->AddRectFilled(ImVec2(fill_x0, meter_y + 1.0f * zoom),
+                              ImVec2(fill_x1 - 1.0f * zoom, meter_y + meter_h - 1.0f * zoom),
+                              fill_color, 2.0f * zoom);
         }
 
         // GR Meter Ticks
-        float tick_dbs[] = { 0.0f, -3.0f, -6.0f, -12.0f, -20.0f };
+        float tick_dbs[] = {0.0f, -3.0f, -6.0f, -12.0f, -20.0f};
         for (float db : tick_dbs) {
             float t_norm = -db / 20.0f;
             float tx = meter_x + meter_w * (1.0f - t_norm);
-            dl->AddLine(ImVec2(tx, meter_y), ImVec2(tx, meter_y + meter_h + 2.0f * zoom), Theme::BORDER_MID, 1.0f * zoom);
+            dl->AddLine(ImVec2(tx, meter_y), ImVec2(tx, meter_y + meter_h + 2.0f * zoom),
+                        Theme::BORDER_MID, 1.0f * zoom);
         }
 
         // Render Knobs
@@ -885,10 +953,12 @@ void ScreenComponent::render_multiband_compressor_display(ImDrawList* dl, ImVec2
 
         // Row 2: Attack & Release
         render_mb_knob(dl, ImVec2(kx_left, p0.y + 185.0f * zoom), p_offset + 2, k_radius, "attack");
-        render_mb_knob(dl, ImVec2(kx_right, p0.y + 185.0f * zoom), p_offset + 3, k_radius, "release");
+        render_mb_knob(dl, ImVec2(kx_right, p0.y + 185.0f * zoom), p_offset + 3, k_radius,
+                       "release");
 
         // Row 3: Makeup (Centered)
-        render_mb_knob(dl, ImVec2(col_center, p0.y + 248.0f * zoom), p_offset + 4, k_radius, "makeup");
+        render_mb_knob(dl, ImVec2(col_center, p0.y + 248.0f * zoom), p_offset + 4, k_radius,
+                       "makeup");
     }
 
     // --- RENDER 2 INTERACTIVE CROSSOVER SLIDERS ---
@@ -899,7 +969,11 @@ void ScreenComponent::render_multiband_compressor_display(ImDrawList* dl, ImVec2
     render_xover_slider(dl, x2, 1, "high", false);
 
     // --- RENDER GLOBAL OUT GAIN ---
-    render_mb_knob(dl, ImVec2(p0.x + pedal_width - 40.0f * zoom, p0.y + Theme::PEDAL_HEIGHT * zoom - Theme::SWITCH_BOTTOM_OFFSET * zoom + 10.0f * zoom), 17, 13.0f, "outgain");
+    render_mb_knob(dl,
+                   ImVec2(p0.x + pedal_width - 40.0f * zoom,
+                          p0.y + Theme::PEDAL_HEIGHT * zoom - Theme::SWITCH_BOTTOM_OFFSET * zoom +
+                              10.0f * zoom),
+                   17, 13.0f, "outgain");
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

@@ -1,7 +1,9 @@
 #include "audio/effects/amp_cab/cabinet_sim.h"
-#include "audio/effects/core/effect_factory.h"
-#include "audio/dsp/wav_loader.h"
+
 #include <algorithm>
+
+#include "audio/dsp/wav_loader.h"
+#include "audio/effects/core/effect_factory.h"
 
 namespace Amplitron {
 
@@ -9,21 +11,34 @@ static EffectRegistrar<CabinetSim> reg("Cabinet");
 
 CabinetSim::CabinetSim() {
     params_ = {
-        {"Type",    0.0f, 0.0f, 2.0f, 0.0f, "", "Speaker cabinet type. 0 = 1x12 (bright/focused), 1 = 2x12 (balanced), 2 = 4x12 (huge low-end)."},
-        {"Bright",  0.5f, 0.0f, 1.0f, 0.5f, "", "Simulates microphone placement. Higher values add a high-frequency resonance peak for more cut."},
+        {"Type", 0.0f, 0.0f, 2.0f, 0.0f, "",
+         "Speaker cabinet type. 0 = 1x12 (bright/focused), 1 = 2x12 (balanced), 2 = 4x12 (huge "
+         "low-end)."},
+        {"Bright", 0.5f, 0.0f, 1.0f, 0.5f, "",
+         "Simulates microphone placement. Higher values add a high-frequency resonance peak for "
+         "more cut."},
     };
 
     // Default LP at ~5kHz (speaker rolloff)
-    lp_.b0 = 0.067455f; lp_.b1 = 0.134911f; lp_.b2 = 0.067455f;
-    lp_.a1 = -1.14298f; lp_.a2 = 0.41280f;
+    lp_.b0 = 0.067455f;
+    lp_.b1 = 0.134911f;
+    lp_.b2 = 0.067455f;
+    lp_.a1 = -1.14298f;
+    lp_.a2 = 0.41280f;
 
     // Default HP at ~80Hz (low cut)
-    hp_.b0 = 0.99262f; hp_.b1 = -1.98524f; hp_.b2 = 0.99262f;
-    hp_.a1 = -1.98519f; hp_.a2 = 0.98529f;
+    hp_.b0 = 0.99262f;
+    hp_.b1 = -1.98524f;
+    hp_.b2 = 0.99262f;
+    hp_.a1 = -1.98519f;
+    hp_.a2 = 0.98529f;
 
     // Resonance peak ~2kHz
-    peak_.b0 = 1.05f; peak_.b1 = -1.65f; peak_.b2 = 0.65f;
-    peak_.a1 = -1.65f; peak_.a2 = 0.70f;
+    peak_.b0 = 1.05f;
+    peak_.b1 = -1.65f;
+    peak_.b2 = 0.65f;
+    peak_.a1 = -1.65f;
+    peak_.a2 = 0.70f;
 
     bright_smooth_ = params_[1].value;
     const float sr = static_cast<float>(std::max(sample_rate_, 1));
@@ -59,8 +74,8 @@ bool CabinetSim::load_ir(const std::string& filepath) {
     // Extract filename from path
     size_t sep = filepath.find_last_of("/\\");
     ir_name_ = (sep != std::string::npos) ? filepath.substr(sep + 1) : filepath;
-    ir_duration_ms_ = static_cast<float>(raw_ir_samples_.size()) /
-                      static_cast<float>(sample_rate_) * 1000.0f;
+    ir_duration_ms_ =
+        static_cast<float>(raw_ir_samples_.size()) / static_cast<float>(sample_rate_) * 1000.0f;
 
     // Build kernel with current expected block size, or a reasonable default
     int bs = expected_block_size_.load();
@@ -87,7 +102,8 @@ void CabinetSim::clear_ir() {
 
 bool CabinetSim::has_ir() const {
     // Sweep and clean up any old kernels on the GUI thread (thread-safe, lock-free GC)
-    const ConvolutionKernel* to_delete = old_kernel_to_delete_.exchange(nullptr, std::memory_order_acquire);
+    const ConvolutionKernel* to_delete =
+        old_kernel_to_delete_.exchange(nullptr, std::memory_order_acquire);
     delete to_delete;
 
     return !raw_ir_samples_.empty();
@@ -97,7 +113,8 @@ void CabinetSim::build_kernel(int block_size) {
     if (raw_ir_samples_.empty() || block_size <= 0) return;
 
     // Perform a GC sweep on the GUI thread here as well
-    const ConvolutionKernel* to_delete = old_kernel_to_delete_.exchange(nullptr, std::memory_order_acquire);
+    const ConvolutionKernel* to_delete =
+        old_kernel_to_delete_.exchange(nullptr, std::memory_order_acquire);
     delete to_delete;
 
     auto* kernel = new ConvolutionKernel(raw_ir_samples_, block_size);
@@ -118,7 +135,8 @@ void CabinetSim::check_pending_kernel() {
         active_kernel_ = nullptr;
         conv_engine_.set_kernel(nullptr);
         if (old) {
-            const ConvolutionKernel* prev_old = old_kernel_to_delete_.exchange(old, std::memory_order_release);
+            const ConvolutionKernel* prev_old =
+                old_kernel_to_delete_.exchange(old, std::memory_order_release);
             if (prev_old) {
                 delete prev_old;
             }
@@ -126,15 +144,15 @@ void CabinetSim::check_pending_kernel() {
     }
 
     // 2. Process pending kernel updates
-    ConvolutionKernel* pending = pending_kernel_.exchange(nullptr,
-                                                          std::memory_order_acquire);
+    ConvolutionKernel* pending = pending_kernel_.exchange(nullptr, std::memory_order_acquire);
     if (pending) {
         const ConvolutionKernel* old = active_kernel_;
         active_kernel_ = pending;
         conv_engine_.set_kernel(active_kernel_);
         expected_block_size_.store(pending->block_size(), std::memory_order_release);
         if (old) {
-            const ConvolutionKernel* prev_old = old_kernel_to_delete_.exchange(old, std::memory_order_release);
+            const ConvolutionKernel* prev_old =
+                old_kernel_to_delete_.exchange(old, std::memory_order_release);
             if (prev_old) {
                 delete prev_old;
             }
@@ -218,4 +236,4 @@ void CabinetSim::reset() {
     }
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

@@ -6,10 +6,11 @@
  * states (Ready, Recording, Unsaved, and Save dialog triggers) using a software-only
  * ImGui context.
  */
-#include "test_framework.h"
-#include "test_fixtures.h"
-#include "gui/views/gui_recording.h"
 #include <string>
+
+#include "gui/views/gui_recording.h"
+#include "test_fixtures.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 
@@ -65,14 +66,10 @@ TEST_F(PresetTest, gui_recording_render_save_dialog_triggers_safely) {
     ScopedImGuiContext imgui;
     GuiRecording gr;
 
-    gr.set_state([](RecordingState& s) {
-        s.needs_save = true;
-    });
+    gr.set_state([](RecordingState& s) { s.needs_save = true; });
 
     std::string saved_path = "";
-    gr.render_save_dialog([&](const std::string& path) {
-        saved_path = path;
-    });
+    gr.render_save_dialog([&](const std::string& path) { saved_path = path; });
 
     // In headless test environment, the native dialog handles gracefully and should
     // clear needs_save.

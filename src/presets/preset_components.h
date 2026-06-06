@@ -1,13 +1,13 @@
 #pragma once
 
+#include "presets/i_preset_migrator.h"
 #include "presets/i_preset_serializer.h"
 #include "presets/i_preset_storage.h"
-#include "presets/i_preset_migrator.h"
 
 namespace Amplitron {
 
 class PresetSerializer : public IPresetSerializer {
-public:
+   public:
     PresetSerializer() = default;
     ~PresetSerializer() override = default;
     std::string serialize(const PresetData& preset) override;
@@ -15,7 +15,7 @@ public:
 };
 
 class PresetStorage : public IPresetStorage {
-public:
+   public:
     PresetStorage() = default;
     ~PresetStorage() override = default;
     bool save(const std::string& filepath, const std::string& data) override;
@@ -25,10 +25,10 @@ public:
 };
 
 class PresetMigrator : public IPresetMigrator {
-public:
+   public:
     PresetMigrator() = default;
     ~PresetMigrator() override = default;
     std::string migrate(const std::string& raw_json) override;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

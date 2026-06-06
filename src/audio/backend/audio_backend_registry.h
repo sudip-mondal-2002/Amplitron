@@ -1,11 +1,12 @@
 #pragma once
 
-#include "audio/backend/i_audio_backend.h"
 #include <functional>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
+
+#include "audio/backend/i_audio_backend.h"
 
 namespace Amplitron {
 
@@ -14,7 +15,7 @@ namespace Amplitron {
  * Satisfies the Open/Closed Principle (OCP) and Registry pattern.
  */
 class AudioBackendRegistry {
-public:
+   public:
     using Creator = std::function<std::unique_ptr<IAudioBackend>()>;
 
     static AudioBackendRegistry& instance() {
@@ -22,9 +23,7 @@ public:
         return inst;
     }
 
-    void register_backend(const std::string& name, Creator creator) {
-        creators_[name] = creator;
-    }
+    void register_backend(const std::string& name, Creator creator) { creators_[name] = creator; }
 
     std::unique_ptr<IAudioBackend> create(const std::string& name) {
         auto it = creators_.find(name);
@@ -43,7 +42,7 @@ public:
         return keys;
     }
 
-private:
+   private:
     AudioBackendRegistry() = default;
     ~AudioBackendRegistry() = default;
     AudioBackendRegistry(const AudioBackendRegistry&) = delete;
@@ -54,12 +53,11 @@ private:
 
 template <typename T>
 class BackendRegistrar {
-public:
+   public:
     BackendRegistrar(const std::string& name) {
-        AudioBackendRegistry::instance().register_backend(name, []() {
-            return std::make_unique<T>();
-        });
+        AudioBackendRegistry::instance().register_backend(name,
+                                                          []() { return std::make_unique<T>(); });
     }
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

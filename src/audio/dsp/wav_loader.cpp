@@ -1,20 +1,18 @@
 #define DR_WAV_IMPLEMENTATION
-#include "dr_wav.h"
-
 #include "audio/dsp/wav_loader.h"
-#include <iostream>
+
 #include <cmath>
+#include <iostream>
+
+#include "dr_wav.h"
 
 namespace Amplitron {
 
-std::vector<float> resample_linear(const std::vector<float>& input,
-                                   int from_rate, int to_rate) {
-    if (input.empty() || from_rate <= 0 || to_rate <= 0 || from_rate == to_rate)
-        return input;
+std::vector<float> resample_linear(const std::vector<float>& input, int from_rate, int to_rate) {
+    if (input.empty() || from_rate <= 0 || to_rate <= 0 || from_rate == to_rate) return input;
 
     double ratio = static_cast<double>(from_rate) / static_cast<double>(to_rate);
-    size_t out_len = static_cast<size_t>(
-        std::ceil(static_cast<double>(input.size()) / ratio));
+    size_t out_len = static_cast<size_t>(std::ceil(static_cast<double>(input.size()) / ratio));
     if (out_len == 0) return {};
 
     std::vector<float> output(out_len);
@@ -24,8 +22,7 @@ std::vector<float> resample_linear(const std::vector<float>& input,
         double frac = src_idx - static_cast<double>(idx0);
 
         if (idx0 + 1 < input.size()) {
-            output[i] = static_cast<float>(
-                input[idx0] * (1.0 - frac) + input[idx0 + 1] * frac);
+            output[i] = static_cast<float>(input[idx0] * (1.0 - frac) + input[idx0 + 1] * frac);
         } else if (idx0 < input.size()) {
             output[i] = input[idx0];
         } else {
@@ -35,9 +32,7 @@ std::vector<float> resample_linear(const std::vector<float>& input,
     return output;
 }
 
-WavData load_wav_file(const std::string& filepath,
-                      int target_sample_rate,
-                      int max_length_samples) {
+WavData load_wav_file(const std::string& filepath, int target_sample_rate, int max_length_samples) {
     WavData result;
 
     drwav wav;
@@ -57,13 +52,12 @@ WavData load_wav_file(const std::string& filepath,
     }
 
     // Bound frame count to max_length_samples before allocation
-    drwav_uint64 frames_to_read = std::min(total_frames,
-        static_cast<drwav_uint64>(max_length_samples));
+    drwav_uint64 frames_to_read =
+        std::min(total_frames, static_cast<drwav_uint64>(max_length_samples));
 
     // Read bounded frames as interleaved float
     std::vector<float> interleaved(static_cast<size_t>(frames_to_read * wav.channels));
-    drwav_uint64 frames_read = drwav_read_pcm_frames_f32(&wav, frames_to_read,
-                                                          interleaved.data());
+    drwav_uint64 frames_read = drwav_read_pcm_frames_f32(&wav, frames_to_read, interleaved.data());
     drwav_uninit(&wav);
 
     if (frames_read == 0) {
@@ -91,21 +85,18 @@ WavData load_wav_file(const std::string& filepath,
 
     // Resample if needed
     if (target_sample_rate > 0 && target_sample_rate != result.sample_rate) {
-        result.samples = resample_linear(result.samples,
-                                         result.sample_rate, target_sample_rate);
+        result.samples = resample_linear(result.samples, result.sample_rate, target_sample_rate);
         result.sample_rate = target_sample_rate;
     }
 
     // Cap length
-    if (max_length_samples > 0 &&
-        static_cast<int>(result.samples.size()) > max_length_samples) {
-        std::cerr << "Cabinet IR: IR truncated from "
-                  << result.samples.size() << " to " << max_length_samples
-                  << " samples" << std::endl;
+    if (max_length_samples > 0 && static_cast<int>(result.samples.size()) > max_length_samples) {
+        std::cerr << "Cabinet IR: IR truncated from " << result.samples.size() << " to "
+                  << max_length_samples << " samples" << std::endl;
         result.samples.resize(static_cast<size_t>(max_length_samples));
     }
 
     return result;
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

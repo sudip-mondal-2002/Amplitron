@@ -1,8 +1,8 @@
 #pragma once
 
-#include <vector>
 #include <memory>
 #include <string>
+#include <vector>
 
 // Forward-declare kiss_fft types to avoid exposing the C header
 struct kiss_fft_state;
@@ -15,7 +15,7 @@ namespace Amplitron {
 // =============================================================================
 
 class ConvolutionKernel {
-public:
+   public:
     // Construct from time-domain IR samples.
     // block_size is the audio buffer size (e.g. 64, 128, 256).
     ConvolutionKernel(const std::vector<float>& ir_samples, int block_size);
@@ -38,9 +38,9 @@ public:
     std::string source_name;  // filename only
     float duration_ms = 0.0f;
 
-private:
+   private:
     int block_size_;
-    int fft_size_;        // = 2 * block_size (for linear convolution via overlap-add)
+    int fft_size_;  // = 2 * block_size (for linear convolution via overlap-add)
     int num_partitions_;
     int ir_length_;
 
@@ -57,7 +57,7 @@ private:
 // =============================================================================
 
 class ConvolutionEngine {
-public:
+   public:
     ConvolutionEngine();
     ~ConvolutionEngine();
 
@@ -72,7 +72,7 @@ public:
 
     bool has_kernel() const { return kernel_ != nullptr; }
 
-private:
+   private:
     const ConvolutionKernel* kernel_ = nullptr;
 
     // Frequency-domain delay line (circular buffer of past input blocks in freq domain)
@@ -103,4 +103,4 @@ private:
     std::vector<float> direct_overlap_;  // tail from direct convolution
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

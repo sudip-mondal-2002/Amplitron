@@ -1,7 +1,8 @@
-#include "audio/engine/audio_engine.h"
-#include "audio/engine/analyzer_capture.h"
-#include <cstring>
 #include <algorithm>
+#include <cstring>
+
+#include "audio/engine/analyzer_capture.h"
+#include "audio/engine/audio_engine.h"
 
 namespace Amplitron {
 
@@ -15,17 +16,11 @@ void AudioEngine::set_output_gain(float gain) {
     output_gain_.store(gain, std::memory_order_relaxed);
 }
 
-void AudioEngine::toggle_metronome() {
-    metronome_->toggle();
-}
+void AudioEngine::toggle_metronome() { metronome_->toggle(); }
 
-void AudioEngine::set_metronome_bpm(int bpm) {
-    metronome_->set_bpm(bpm);
-}
+void AudioEngine::set_metronome_bpm(int bpm) { metronome_->set_bpm(bpm); }
 
-void AudioEngine::set_metronome_volume(float volume) {
-    metronome_->set_volume(volume);
-}
+void AudioEngine::set_metronome_volume(float volume) { metronome_->set_volume(volume); }
 
 void AudioEngine::push_param_change(int effect_index, int param_index, float value) {
     command_dispatcher_.push_param_change(effect_index, param_index, value);
@@ -64,19 +59,15 @@ void AudioEngine::set_analyzer_enabled(bool enabled) {
     analyzer_capture_->set_analyzer_enabled(enabled);
 }
 
-bool AudioEngine::is_analyzer_enabled() const {
-    return analyzer_capture_->is_analyzer_enabled();
-}
+bool AudioEngine::is_analyzer_enabled() const { return analyzer_capture_->is_analyzer_enabled(); }
 
 uint64_t AudioEngine::get_analyzer_sequence() const {
     return analyzer_capture_->get_analyzer_sequence();
 }
 
-bool AudioEngine::copy_analyzer_snapshot(float* input_dest,
-                                         float* output_dest,
+bool AudioEngine::copy_analyzer_snapshot(float* input_dest, float* output_dest,
                                          int sample_count) const {
     return analyzer_capture_->copy_analyzer_snapshot(input_dest, output_dest, sample_count);
 }
 
-
-} // namespace Amplitron
+}  // namespace Amplitron

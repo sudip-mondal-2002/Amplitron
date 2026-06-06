@@ -9,9 +9,9 @@ namespace Amplitron {
  * Satisfies Single Responsibility Principle (SRP) and Dependency Inversion Principle (DIP).
  */
 class IPresetMigrator {
-public:
+   public:
     virtual ~IPresetMigrator() = default;
     virtual std::string migrate(const std::string& raw_json) = 0;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

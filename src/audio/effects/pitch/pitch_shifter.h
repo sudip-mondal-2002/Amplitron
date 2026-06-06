@@ -5,9 +5,10 @@
 // line/resampling window at rate r and crossfades windows to reduce clicks,
 // producing y[n] from time-scaled input samples.
 
-#include "audio/effects/core/effect.h"
-#include <vector>
 #include <array>
+#include <vector>
+
+#include "audio/effects/core/effect.h"
 
 namespace Amplitron {
 
@@ -22,7 +23,7 @@ namespace Amplitron {
  * Controls: Shift (semitones), Fine (cents), Mix.
  */
 class PitchShifter : public Effect {
-public:
+   public:
     PitchShifter();
     void process(float* buffer, int num_samples) override;
     void set_sample_rate(int sample_rate) override;
@@ -32,7 +33,7 @@ public:
     std::vector<EffectParam>& params() override { return params_; }
     const std::vector<EffectParam>& params() const override { return params_; }
 
-private:
+   private:
     std::vector<EffectParam> params_;
 
     // Grain buffer
@@ -54,12 +55,12 @@ private:
     void build_hann_lut();
 
     // 8192 is a power of 2 (allows fast bitwise wrapping) and fits easily in L1 cache
-    std::array<float, 8192> hann_lut_; 
-    
+    std::array<float, 8192> hann_lut_;
+
     // Cached pitch ratio to avoid per-sample pow()
     float ratio_ = 1.0f;
 
     float read_linear(float phase) const;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

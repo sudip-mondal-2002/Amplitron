@@ -5,13 +5,13 @@
 // x[n] + feedback*y_delay[n]; output is y[n]=(1-mix)*x[n]+mix*y_delay[n], with
 // a one-pole tone filter shaping repeated echoes.
 
-#include "audio/effects/core/effect.h"
 #include "audio/dsp/biquad.h"
+#include "audio/effects/core/effect.h"
 
 namespace Amplitron {
 
 class Delay : public Effect {
-public:
+   public:
     Delay();
     void process(float* buffer, int num_samples) override;
     void set_sample_rate(int sample_rate) override;
@@ -22,7 +22,7 @@ public:
     std::vector<EffectParam>& params() override { return params_; }
     const std::vector<EffectParam>& params() const override { return params_; }
 
-private:
+   private:
     std::vector<EffectParam> params_;
     std::vector<float> delay_buffer_;
     int write_pos_ = 0;
@@ -35,8 +35,8 @@ private:
     float smoothed_tone_ = 0.7f;
     float smoothed_level_ = 0.5f;
 
-    //shortcut if bpm hasn't changed
+    // shortcut if bpm hasn't changed
     float last_bpm_ = 0.0f;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

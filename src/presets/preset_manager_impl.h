@@ -12,6 +12,6 @@ std::string get_user_presets_dir();
 void append_json_files(const std::string& dir, std::vector<std::string>& result);
 std::string get_bundled_presets_dir();
 
-} // namespace Amplitron
+}  // namespace Amplitron
 
-#endif // AMPLITRON_PRESET_MANAGER_IMPL_H
+#endif  // AMPLITRON_PRESET_MANAGER_IMPL_H

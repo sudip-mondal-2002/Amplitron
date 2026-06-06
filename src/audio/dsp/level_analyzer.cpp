@@ -1,8 +1,9 @@
 #include "audio/dsp/level_analyzer.h"
+
 #include <algorithm>
 #include <cmath>
-#include <cstring>
 #include <cstdint>
+#include <cstring>
 
 namespace Amplitron {
 
@@ -10,9 +11,9 @@ namespace {
 inline bool is_invalid_rms(float x) {
     uint32_t bits;
     std::memcpy(&bits, &x, sizeof(float));
-    volatile uint32_t vbits = bits; // Bypass -ffast-math optimizations
+    volatile uint32_t vbits = bits;  // Bypass -ffast-math optimizations
     if ((vbits & 0x7F800000) == 0x7F800000) {
-        return true; // NaN or Infinity
+        return true;  // NaN or Infinity
     }
     return x < 0.0f;
 }
@@ -20,15 +21,16 @@ inline bool is_invalid_rms(float x) {
 inline bool is_invalid_dt(float x) {
     uint32_t bits;
     std::memcpy(&bits, &x, sizeof(float));
-    volatile uint32_t vbits = bits; // Bypass -ffast-math optimizations
+    volatile uint32_t vbits = bits;  // Bypass -ffast-math optimizations
     if ((vbits & 0x7F800000) == 0x7F800000) {
-        return true; // NaN or Infinity
+        return true;  // NaN or Infinity
     }
     return x <= 0.0f;
 }
-} // namespace
+}  // namespace
 
-void LevelAnalyzer::update(float input_rms, float output_rms, bool input_clipped, bool output_clipped, float dt) {
+void LevelAnalyzer::update(float input_rms, float output_rms, bool input_clipped,
+                           bool output_clipped, float dt) {
     if (is_invalid_dt(dt) || is_invalid_rms(input_rms) || is_invalid_rms(output_rms)) {
         return;
     }
@@ -54,4 +56,4 @@ void LevelAnalyzer::update(float input_rms, float output_rms, bool input_clipped
     output_clip_flash_ = std::max(0.0f, output_clip_flash_ - dt * 2.0f);
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

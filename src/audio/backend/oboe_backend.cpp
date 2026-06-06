@@ -1,33 +1,34 @@
 #include "audio/backend/oboe_backend.h"
+
 #include "audio/engine/i_audio_engine.h"
 
 #ifdef AMPLITRON_ANDROID_OBOE
 
-#include <oboe/Oboe.h>
 #include <android/log.h>
-#include <vector>
+#include <oboe/Oboe.h>
+
 #include <array>
-#include <cstring>
 #include <atomic>
+#include <cstring>
+#include <vector>
 
 #define LOG_TAG "Amplitron/Oboe"
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO,  LOG_TAG, __VA_ARGS__)
-#define LOGW(...) __android_log_print(ANDROID_LOG_WARN,  LOG_TAG, __VA_ARGS__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
+#define LOGW(...) __android_log_print(ANDROID_LOG_WARN, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 namespace Amplitron {
 
 class OboeCallback : public oboe::AudioStreamDataCallback {
-public:
+   public:
     explicit OboeCallback(IAudioEngine* engine) : engine_(engine) {}
 
     void preallocate(int framesPerCallback) {
         capture_buffer_.assign(static_cast<size_t>(framesPerCallback), 0.0f);
     }
 
-    oboe::DataCallbackResult onAudioReady(oboe::AudioStream* /*stream*/,
-                                           void* audioData,
-                                           int32_t numFrames) override {
+    oboe::DataCallbackResult onAudioReady(oboe::AudioStream* /*stream*/, void* audioData,
+                                          int32_t numFrames) override {
         auto* output = static_cast<float*>(audioData);
 
         const int bufSize = static_cast<int>(capture_buffer_.size());
@@ -40,20 +41,17 @@ public:
         if (available >= numFrames) {
             int read_pos = capture_read_pos_.load(std::memory_order_acquire);
             int firstChunk = std::min(numFrames, kRingSize - read_pos);
-            std::memcpy(capture_buffer_.data(),
-                        capture_ring_.data() + read_pos,
+            std::memcpy(capture_buffer_.data(), capture_ring_.data() + read_pos,
                         static_cast<size_t>(firstChunk) * sizeof(float));
             if (firstChunk < numFrames) {
                 int secondChunk = numFrames - firstChunk;
-                std::memcpy(capture_buffer_.data() + firstChunk,
-                            capture_ring_.data(),
+                std::memcpy(capture_buffer_.data() + firstChunk, capture_ring_.data(),
                             static_cast<size_t>(secondChunk) * sizeof(float));
             }
             capture_read_pos_.store((read_pos + numFrames) % kRingSize, std::memory_order_release);
             capture_filled_.fetch_sub(numFrames, std::memory_order_release);
         } else {
-            std::memset(capture_buffer_.data(), 0,
-                        static_cast<size_t>(numFrames) * sizeof(float));
+            std::memset(capture_buffer_.data(), 0, static_cast<size_t>(numFrames) * sizeof(float));
         }
 
         engine_->process_audio(capture_buffer_.data(), output, numFrames);
@@ -67,13 +65,11 @@ public:
 
         int write_pos = capture_write_pos_.load(std::memory_order_acquire);
         int firstChunk = std::min(toCopy, kRingSize - write_pos);
-        std::memcpy(capture_ring_.data() + write_pos,
-                    data,
+        std::memcpy(capture_ring_.data() + write_pos, data,
                     static_cast<size_t>(firstChunk) * sizeof(float));
         if (firstChunk < toCopy) {
             int secondChunk = toCopy - firstChunk;
-            std::memcpy(capture_ring_.data(),
-                        data + firstChunk,
+            std::memcpy(capture_ring_.data(), data + firstChunk,
                         static_cast<size_t>(secondChunk) * sizeof(float));
         }
         capture_write_pos_.store((write_pos + toCopy) % kRingSize, std::memory_order_release);
@@ -83,7 +79,7 @@ public:
     oboe::SharingMode get_sharing_mode() const { return negotiated_sharing_mode_; }
     void set_sharing_mode(oboe::SharingMode m) { negotiated_sharing_mode_ = m; }
 
-private:
+   private:
     IAudioEngine* engine_;
     std::vector<float> capture_buffer_;
 
@@ -97,17 +93,16 @@ private:
 };
 
 class OboeCaptureCallback : public oboe::AudioStreamDataCallback {
-public:
+   public:
     explicit OboeCaptureCallback(OboeCallback* sink) : sink_(sink) {}
 
-    oboe::DataCallbackResult onAudioReady(oboe::AudioStream* /*stream*/,
-                                           void* audioData,
-                                           int32_t numFrames) override {
+    oboe::DataCallbackResult onAudioReady(oboe::AudioStream* /*stream*/, void* audioData,
+                                          int32_t numFrames) override {
         sink_->feedCaptureData(static_cast<const float*>(audioData), numFrames);
         return oboe::DataCallbackResult::Continue;
     }
 
-private:
+   private:
     OboeCallback* sink_;
 };
 
@@ -115,15 +110,15 @@ struct OboeBackendImpl {
     std::shared_ptr<oboe::AudioStream> playbackStream;
     std::shared_ptr<oboe::AudioStream> captureStream;
 
-    std::unique_ptr<OboeCallback>        playbackCallback;
+    std::unique_ptr<OboeCallback> playbackCallback;
     std::unique_ptr<OboeCaptureCallback> captureCallback;
 
     double measured_latency_ms = -1.0;
 
-    int usb_input_device_id  = -1;
+    int usb_input_device_id = -1;
     int usb_output_device_id = -1;
 
-    std::string input_device_name  = "Android Microphone";
+    std::string input_device_name = "Android Microphone";
     std::string output_device_name = "Android Speaker";
 };
 
@@ -135,9 +130,7 @@ static void close_stream(std::shared_ptr<oboe::AudioStream>& stream) {
     }
 }
 
-OboeBackend::OboeBackend() {
-    impl_ = new OboeBackendImpl();
-}
+OboeBackend::OboeBackend() { impl_ = new OboeBackendImpl(); }
 
 OboeBackend::~OboeBackend() {
     shutdown();
@@ -162,7 +155,7 @@ bool OboeBackend::start() {
 
     auto* impl = static_cast<OboeBackendImpl*>(impl_);
     impl->playbackCallback = std::make_unique<OboeCallback>(engine_);
-    impl->captureCallback  = std::make_unique<OboeCaptureCallback>(impl->playbackCallback.get());
+    impl->captureCallback = std::make_unique<OboeCaptureCallback>(impl->playbackCallback.get());
 
     int target_buffer = engine_->get_buffer_size();
     int target_rate = engine_->get_sample_rate();
@@ -248,7 +241,8 @@ std::vector<AudioDeviceInfo> OboeBackend::get_input_devices() const {
     std::vector<AudioDeviceInfo> devices;
     devices.push_back({0, "Default (Auto-select)", 1, 0, static_cast<double>(sample_rate_), false});
     if (impl->usb_input_device_id >= 0) {
-        devices.push_back({impl->usb_input_device_id, "USB Guitar Cable", 1, 0, static_cast<double>(sample_rate_), true});
+        devices.push_back({impl->usb_input_device_id, "USB Guitar Cable", 1, 0,
+                           static_cast<double>(sample_rate_), true});
     }
     return devices;
 }
@@ -258,7 +252,8 @@ std::vector<AudioDeviceInfo> OboeBackend::get_output_devices() const {
     std::vector<AudioDeviceInfo> devices;
     devices.push_back({0, "Default (Auto-select)", 0, 2, static_cast<double>(sample_rate_), false});
     if (impl->usb_output_device_id >= 0) {
-        devices.push_back({impl->usb_output_device_id, "USB Guitar Cable (output)", 0, 2, static_cast<double>(sample_rate_), true});
+        devices.push_back({impl->usb_output_device_id, "USB Guitar Cable (output)", 0, 2,
+                           static_cast<double>(sample_rate_), true});
     }
     return devices;
 }
@@ -266,14 +261,14 @@ std::vector<AudioDeviceInfo> OboeBackend::get_output_devices() const {
 bool OboeBackend::set_input_device(int device_index) {
     auto* impl = static_cast<OboeBackendImpl*>(impl_);
     impl->usb_input_device_id = (device_index > 0) ? device_index : -1;
-    impl->input_device_name   = (device_index > 0) ? "USB Guitar Cable" : "Android Microphone";
+    impl->input_device_name = (device_index > 0) ? "USB Guitar Cable" : "Android Microphone";
     return true;
 }
 
 bool OboeBackend::set_output_device(int device_index) {
     auto* impl = static_cast<OboeBackendImpl*>(impl_);
     impl->usb_output_device_id = (device_index > 0) ? device_index : -1;
-    impl->output_device_name   = (device_index > 0) ? "USB Guitar Cable (output)" : "Android Speaker";
+    impl->output_device_name = (device_index > 0) ? "USB Guitar Cable (output)" : "Android Speaker";
     return true;
 }
 
@@ -285,23 +280,19 @@ std::string OboeBackend::get_output_device_name() const {
     return static_cast<OboeBackendImpl*>(impl_)->output_device_name;
 }
 
-int OboeBackend::get_sample_rate() const {
-    return sample_rate_;
-}
+int OboeBackend::get_sample_rate() const { return sample_rate_; }
 
-int OboeBackend::get_buffer_size() const {
-    return buffer_size_;
-}
+int OboeBackend::get_buffer_size() const { return buffer_size_; }
 
 const char* OboeBackend::get_oboe_sharing_mode_label() const {
     auto* impl = static_cast<OboeBackendImpl*>(impl_);
     if (!impl || !impl->playbackCallback) return "Oboe";
     return (impl->playbackCallback->get_sharing_mode() == oboe::SharingMode::Exclusive)
-           ? "AAudio exclusive mode"
-           : "OpenSL ES (shared mode)";
+               ? "AAudio exclusive mode"
+               : "OpenSL ES (shared mode)";
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron
 
 #else
 
@@ -323,6 +314,6 @@ int OboeBackend::get_sample_rate() const { return sample_rate_; }
 int OboeBackend::get_buffer_size() const { return buffer_size_; }
 const char* OboeBackend::get_oboe_sharing_mode_label() const { return ""; }
 
-} // namespace Amplitron
+}  // namespace Amplitron
 
 #endif

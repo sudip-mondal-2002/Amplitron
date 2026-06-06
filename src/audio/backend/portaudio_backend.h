@@ -1,12 +1,13 @@
 #pragma once
 
-#include "audio/backend/i_audio_backend.h"
 #include <portaudio.h>
+
+#include "audio/backend/i_audio_backend.h"
 
 namespace Amplitron {
 
 class PortAudioBackend : public IAudioBackend {
-public:
+   public:
     PortAudioBackend();
     ~PortAudioBackend() override;
 
@@ -30,7 +31,7 @@ public:
     int get_input_device() const override { return input_device_; }
     int get_output_device() const override { return output_device_; }
 
-private:
+   private:
     void auto_detect_devices();
 
     IAudioEngine* engine_ = nullptr;
@@ -41,4 +42,4 @@ private:
     int output_device_ = -1;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

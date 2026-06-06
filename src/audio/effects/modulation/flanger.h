@@ -14,7 +14,7 @@ namespace Amplitron {
  * Feedback through the delay line creates the classic "comb filter sweep" sound.
  */
 class Flanger : public Effect {
-public:
+   public:
     Flanger();
     void process(float* buffer, int num_samples) override;
     void process_stereo(float* left, float* right, int num_samples) override;
@@ -25,7 +25,7 @@ public:
     std::vector<EffectParam>& params() override { return params_; }
     const std::vector<EffectParam>& params() const override { return params_; }
 
-private:
+   private:
     std::vector<EffectParam> params_;
     std::vector<float> delay_buffer_;
     int write_pos_ = 0;
@@ -36,4 +36,4 @@ private:
     int write_pos_r_ = 0;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

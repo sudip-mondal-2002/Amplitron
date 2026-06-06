@@ -1,9 +1,11 @@
-#include "preset_manager.h"
-#include "preset_manager_impl.h"
-#include <iostream>
+#include <sys/stat.h>
+
 #include <cstdlib>
 #include <filesystem>
-#include <sys/stat.h>
+#include <iostream>
+
+#include "preset_manager.h"
+#include "preset_manager_impl.h"
 
 #ifdef _WIN32
 #include <direct.h>
@@ -23,23 +25,19 @@
 #include <emscripten.h>
 
 namespace Amplitron {
-    std::string PresetManager::get_user_presets_dir() {
-        char* result = (char*)EM_ASM_PTR({
-            return stringToNewUTF8(
-                window._amplitronPresetDir || 'preset'
-            );
-        });
-        std::string dir(result);
-        free(result);
-        return dir;
-    }
+std::string PresetManager::get_user_presets_dir() {
+    char* result =
+        (char*)EM_ASM_PTR({ return stringToNewUTF8(window._amplitronPresetDir || 'preset'); });
+    std::string dir(result);
+    free(result);
+    return dir;
 }
+}  // namespace Amplitron
 #endif
 
 namespace Amplitron {
 
-void append_json_files(const std::string& dir,
-                       std::vector<std::string>& result) {
+void append_json_files(const std::string& dir, std::vector<std::string>& result) {
     try {
         for (const auto& entry : std::filesystem::directory_iterator(dir)) {
             if (!entry.is_regular_file()) continue;
@@ -72,7 +70,8 @@ std::string get_bundled_presets_dir() {
 
         // Dev/CMake layout: executable under build dir, presets at repo root.
         std::string repo_root_presets = (exe_dir / ".." / "presets").string();
-        if (dir_exists(repo_root_presets) && has_json_presets(repo_root_presets)) return repo_root_presets;
+        if (dir_exists(repo_root_presets) && has_json_presets(repo_root_presets))
+            return repo_root_presets;
     }
 
     // Fallback: relative to current working directory (useful for local runs).
@@ -133,9 +132,12 @@ void PresetManager::save_config() {
     f << "{\n";
     f << "  \"presets_dir\": \"";
     for (char c : custom_presets_dir_) {
-        if (c == '\\') f << "\\\\";
-        else if (c == '"') f << "\\\"";
-        else f << c;
+        if (c == '\\')
+            f << "\\\\";
+        else if (c == '"')
+            f << "\\\"";
+        else
+            f << c;
     }
     f << "\"\n}\n";
 }
@@ -145,8 +147,7 @@ void PresetManager::load_config() {
     std::ifstream f(path);
     if (!f.is_open()) return;
 
-    std::string content((std::istreambuf_iterator<char>(f)),
-                        std::istreambuf_iterator<char>());
+    std::string content((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
 
     const std::string key = "\"presets_dir\"";
     size_t key_pos = content.find(key);
@@ -163,10 +164,16 @@ void PresetManager::load_config() {
     while (i < content.size() && content[i] != '"') {
         if (content[i] == '\\' && i + 1 < content.size()) {
             ++i;
-            if (content[i] == '\\') value += '\\';
-            else if (content[i] == '"') value += '"';
-            else if (content[i] == 'n') value += '\n';
-            else { value += '\\'; value += content[i]; }
+            if (content[i] == '\\')
+                value += '\\';
+            else if (content[i] == '"')
+                value += '"';
+            else if (content[i] == 'n')
+                value += '\n';
+            else {
+                value += '\\';
+                value += content[i];
+            }
         } else {
             value += content[i];
         }
@@ -215,8 +222,8 @@ void PresetManager::save_factory_presets(const std::string& dir) {
 
     for (const auto& src_path : preset_files) {
         size_t last_slash = src_path.find_last_of("/\\");
-        std::string filename = (last_slash != std::string::npos) ?
-                                src_path.substr(last_slash + 1) : src_path;
+        std::string filename =
+            (last_slash != std::string::npos) ? src_path.substr(last_slash + 1) : src_path;
 
 #ifdef _WIN32
         std::string dest_path = dir + "\\" + filename;
@@ -231,7 +238,7 @@ void PresetManager::save_factory_presets(const std::string& dir) {
         }
 
         std::string content((std::istreambuf_iterator<char>(src_file)),
-                           std::istreambuf_iterator<char>());
+                            std::istreambuf_iterator<char>());
         src_file.close();
 
         std::ofstream dest_file(dest_path);
@@ -245,4 +252,4 @@ void PresetManager::save_factory_presets(const std::string& dir) {
     }
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

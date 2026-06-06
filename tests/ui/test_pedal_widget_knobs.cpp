@@ -1,15 +1,15 @@
-#include "test_framework.h"
-#include "test_fixtures.h"
 #include <memory>
 
-#include "midi/midi_manager.h"
-#include "gui/pedalboard/pedal_widget.h"
-#include "gui/views/gui_midi.h"
-#include "gui/commands/command_history.h"
-#include "audio/effects/distortion/overdrive.h"
 #include "audio/effects/amp_cab/amp_simulator.h"
 #include "audio/effects/amp_cab/cabinet_sim.h"
+#include "audio/effects/distortion/overdrive.h"
 #include "audio/effects/utility/tuner.h"
+#include "gui/commands/command_history.h"
+#include "gui/pedalboard/pedal_widget.h"
+#include "gui/views/gui_midi.h"
+#include "midi/midi_manager.h"
+#include "test_fixtures.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 using namespace TestFramework;
@@ -20,11 +20,12 @@ struct TestAccessor {
     static std::string& learn_effect_name(MidiManager& m) { return m.learn_effect_name_; }
     static std::string& learn_param_name(MidiManager& m) { return m.learn_param_name_; }
 
-    static void render_knobs(PedalWidget& w, ImDrawList* dl, ImVec2 p0, float pedal_width, bool is_amp, bool is_tuner, bool is_ir_cab, float zoom) {
+    static void render_knobs(PedalWidget& w, ImDrawList* dl, ImVec2 p0, float pedal_width,
+                             bool is_amp, bool is_tuner, bool is_ir_cab, float zoom) {
         w.render_knobs(dl, p0, pedal_width, is_amp, is_tuner, is_ir_cab, zoom);
     }
 };
-}
+}  // namespace Amplitron
 
 // Reusable helper to complete the current frame and begin a new one within a TestWindow context
 static inline void advance_frame() {

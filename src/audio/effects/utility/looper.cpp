@@ -1,9 +1,10 @@
 #include "audio/effects/utility/looper.h"
-#include "audio/effects/core/effect_factory.h"
 
-#include <ostream>
 #include <algorithm>
 #include <cmath>
+#include <ostream>
+
+#include "audio/effects/core/effect_factory.h"
 
 namespace Amplitron {
 
@@ -11,8 +12,10 @@ static EffectRegistrar<Looper> reg("Looper");
 
 Looper::Looper() {
     params_ = {
-        {"Loop Level", 0.80f, 0.0f, 1.0f, 0.80f, "", "Playback volume of the recorded loop mixed with live input."},
-        {"Crossfade",  5.0f,  0.0f, 20.0f, 5.0f,  "ms", "Crossfade length at the loop boundary to reduce clicks/pops."},
+        {"Loop Level", 0.80f, 0.0f, 1.0f, 0.80f, "",
+         "Playback volume of the recorded loop mixed with live input."},
+        {"Crossfade", 5.0f, 0.0f, 20.0f, 5.0f, "ms",
+         "Crossfade length at the loop boundary to reduce clicks/pops."},
     };
     ensure_capacity();
     const float sr = static_cast<float>(std::max(sample_rate_, 1));
@@ -63,9 +66,7 @@ void Looper::request_overdub_toggle() {
     pending_commands_.fetch_or(CmdOverdubToggle, std::memory_order_relaxed);
 }
 
-void Looper::request_clear() {
-    pending_commands_.fetch_or(CmdClear, std::memory_order_relaxed);
-}
+void Looper::request_clear() { pending_commands_.fetch_or(CmdClear, std::memory_order_relaxed); }
 
 int Looper::crossfade_samples_rt(float ms) const {
     const int xf = static_cast<int>(std::round((ms / 1000.0f) * static_cast<float>(sample_rate_)));
@@ -97,7 +98,8 @@ void Looper::start_recording_rt() {
 
 void Looper::stop_recording_rt_and_play_rt() {
     loop_length_ = std::clamp(record_pos_, 0, max_samples_);
-    const int min_len = static_cast<int>(std::round(kMinLoopSeconds * static_cast<float>(sample_rate_)));
+    const int min_len =
+        static_cast<int>(std::round(kMinLoopSeconds * static_cast<float>(sample_rate_)));
     if (loop_length_ < min_len) {
         clear_loop_rt();
         return;
@@ -212,7 +214,7 @@ void Looper::process_core(float* left, float* right, int num_samples, bool stere
             float loop_r = (stereo && right) ? buffer_r_[pos] : loop_l;
 
             if (xf > 0 && pos >= loop_length_ - xf) {
-                const int t = pos - (loop_length_ - xf); // 0..xf-1
+                const int t = pos - (loop_length_ - xf);  // 0..xf-1
                 const float w_end = static_cast<float>(xf - t) / static_cast<float>(xf);
                 const float w_start = 1.0f - w_end;
                 const int start_pos = t;
@@ -251,10 +253,8 @@ void Looper::process_core(float* left, float* right, int num_samples, bool stere
     publish_ui_snapshot();
 }
 
-std::ostream& operator<<(std::ostream& os, Looper::State s)
-{
-    switch (s)
-    {
+std::ostream& operator<<(std::ostream& os, Looper::State s) {
+    switch (s) {
         case Looper::State::Empty:
             return os << "Empty";
 
@@ -275,5 +275,4 @@ std::ostream& operator<<(std::ostream& os, Looper::State s)
     }
 }
 
-
-} // namespace Amplitron
+}  // namespace Amplitron
