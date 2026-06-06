@@ -38,4 +38,4 @@ OD --> Wah
 Wah --> Amp
 Amp --> Delay
 Delay --> Reverb
-Reverb --> Out
+Reverb ---> Out
