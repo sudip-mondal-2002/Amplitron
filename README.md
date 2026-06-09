@@ -37,7 +37,7 @@ Professional real-time guitar amplifier simulator with ultra-low latency, 16 stu
   - [Build Targets](#build-targets-makefile)
 - [Usage](#usage)
   - [Running](#running)
-  - [Command-line Options](#command-line-options)
+  - [Command-line options](#command-line-options)
   - [Controls](#controls)
   - [Default Signal Chain](#default-signal-chain)
 - [Project Structure](#project-structure)
