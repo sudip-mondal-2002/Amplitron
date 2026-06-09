@@ -30,14 +30,80 @@ static std::vector<float> generate_bpm_signal(float bpm, int sample_rate, float 
     return signal;
 }
 
+// Helper to generate a kick drum signal at a regular BPM (fast pitch sweep with decay envelope)
+static std::vector<float> generate_kick_drum_signal(float bpm, int sample_rate, float duration_seconds) {
+    int total_samples = static_cast<int>(sample_rate * duration_seconds);
+    std::vector<float> signal(total_samples, 0.0f);
+
+    float beat_interval_seconds = 60.0f / bpm;
+    int beat_interval_samples = static_cast<int>(sample_rate * beat_interval_seconds);
+
+    for (int sample_idx = 0; sample_idx < total_samples; sample_idx += beat_interval_samples) {
+        int kick_len = static_cast<int>(sample_rate * 0.15f); // 150ms kick sweep
+        for (int i = 0; i < kick_len && (sample_idx + i) < total_samples; ++i) {
+            float t = static_cast<float>(i) / sample_rate;
+            // Sweep from 150Hz down to 45Hz
+            float freq = 150.0f * std::exp(-30.0f * t) + 45.0f;
+            float env = std::exp(-15.0f * t);
+            signal[sample_idx + i] = env * std::sin(2.0f * 3.14159265f * freq * t);
+        }
+    }
+    return signal;
+}
+
+// Helper to generate an amplitude-modulated sine wave (pulsed tremolo)
+static std::vector<float> generate_modulated_sine_signal(float bpm, int sample_rate, float duration_seconds) {
+    int total_samples = static_cast<int>(sample_rate * duration_seconds);
+    std::vector<float> signal(total_samples, 0.0f);
+
+    float mod_freq = bpm / 60.0f;
+
+    for (int i = 0; i < total_samples; ++i) {
+        float t = static_cast<float>(i) / sample_rate;
+        // 440 Hz carrier
+        float carrier = std::sin(2.0f * 3.14159265f * 440.0f * t);
+        // Rhythmic pulsing envelope: full depth amplitude modulation
+        float env = 0.5f * (1.0f + std::sin(2.0f * 3.14159265f * mod_freq * t - 3.14159265f / 2.0f));
+        // Make it sharper (more pulse-like) by squaring it
+        signal[i] = (env * env) * carrier;
+    }
+    return signal;
+}
+
+// Helper to generate a pure continuous sine wave (no BPM/periodicity)
+static std::vector<float> generate_pure_sine_signal(float freq, int sample_rate, float duration_seconds) {
+    int total_samples = static_cast<int>(sample_rate * duration_seconds);
+    std::vector<float> signal(total_samples, 0.0f);
+    for (int i = 0; i < total_samples; ++i) {
+        float t = static_cast<float>(i) / sample_rate;
+        signal[i] = std::sin(2.0f * 3.14159265f * freq * t);
+    }
+    return signal;
+}
+
+// Helper to generate white noise
+static std::vector<float> generate_white_noise_signal(int sample_rate, float duration_seconds) {
+    int total_samples = static_cast<int>(sample_rate * duration_seconds);
+    std::vector<float> signal(total_samples, 0.0f);
+    // Simple LCG random generator to be fully deterministic and portable
+    uint32_t seed = 12345;
+    for (int i = 0; i < total_samples; ++i) {
+        seed = seed * 1664525 + 1013904223;
+        float val = static_cast<float>(seed) / 4294967296.0f; // [0, 1)
+        signal[i] = val * 2.0f - 1.0f; // [-1, 1)
+    }
+    return signal;
+}
+
+
 TEST(TempoEngineTest, circular_buffer_wrapping) {
     TempoEngine engine;
     engine.set_sample_rate(48000);
 
-    // Buffer has space for 4 seconds = 192000 samples.
-    // Write 5 seconds of silent data to force wrapping.
+    // Buffer has space for 10 seconds = 480000 samples.
+    // Write 11 seconds of silent data to force wrapping.
     std::vector<float> input(48000, 0.0f);
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < 11; ++i) {
         engine.write_input(input.data(), 48000);
     }
 
@@ -165,3 +231,101 @@ TEST(EffectSyncTest, chorus_bpm_sync) {
     // At 120 BPM, LFO Rate = (120/60) * 1.0 = 2.0 Hz
     ASSERT_NEAR(chorus.params()[0].value, 2.0f, 1e-4f);
 }
+
+TEST(TempoEngineTest, reset_clears_buffer) {
+    TempoEngine engine;
+    int sr = 48000;
+    engine.set_sample_rate(sr);
+
+    // Write some non-zero data
+    std::vector<float> input(1000, 1.0f);
+    engine.write_input(input.data(), 1000);
+
+    // Call reset
+    engine.reset();
+
+    // The next write_input should process the reset request and start fresh.
+    std::vector<float> silent_input(1000, 0.0f);
+    engine.write_input(silent_input.data(), 1000);
+
+    // At this point, the buffer has been cleared and only has 1000 silent samples.
+    // Let's verify that detecting BPM returns -1.0f.
+    float detected = engine.detect_bpm();
+    ASSERT_NEAR(detected, -1.0f, 1e-6f);
+}
+
+TEST(TempoEngineTest, detect_bpm_kick_drum_100_at_48khz) {
+    TempoEngine engine;
+    int sr = 48000;
+    engine.set_sample_rate(sr);
+
+    std::vector<float> signal = generate_kick_drum_signal(100.0f, sr, 4.5f);
+
+    const int chunk_size = 256;
+    for (size_t i = 0; i < signal.size(); i += chunk_size) {
+        int to_write = std::min(static_cast<int>(signal.size() - i), chunk_size);
+        engine.write_input(signal.data() + i, to_write);
+    }
+
+    float detected = engine.detect_bpm();
+    ASSERT_GT(detected, 0.0f);
+    std::cout << "Detected Kick BPM (Expected 100.0): " << detected << std::endl;
+    ASSERT_NEAR(detected, 100.0f, 2.0f);
+}
+
+TEST(TempoEngineTest, detect_bpm_modulated_sine_120_at_48khz) {
+    TempoEngine engine;
+    int sr = 48000;
+    engine.set_sample_rate(sr);
+
+    std::vector<float> signal = generate_modulated_sine_signal(120.0f, sr, 4.5f);
+
+    const int chunk_size = 256;
+    for (size_t i = 0; i < signal.size(); i += chunk_size) {
+        int to_write = std::min(static_cast<int>(signal.size() - i), chunk_size);
+        engine.write_input(signal.data() + i, to_write);
+    }
+
+    float detected = engine.detect_bpm();
+    ASSERT_GT(detected, 0.0f);
+    std::cout << "Detected Modulated Sine BPM (Expected 120.0): " << detected << std::endl;
+    ASSERT_NEAR(detected, 120.0f, 2.0f);
+}
+
+TEST(TempoEngineTest, detect_bpm_unmodulated_sine_returns_negative) {
+    TempoEngine engine;
+    int sr = 48000;
+    engine.set_sample_rate(sr);
+
+    std::vector<float> signal = generate_pure_sine_signal(440.0f, sr, 4.5f);
+
+    const int chunk_size = 256;
+    for (size_t i = 0; i < signal.size(); i += chunk_size) {
+        int to_write = std::min(static_cast<int>(signal.size() - i), chunk_size);
+        engine.write_input(signal.data() + i, to_write);
+    }
+
+    float detected = engine.detect_bpm();
+    // No beat periodicity in pure sine, should return -1.0f
+    ASSERT_NEAR(detected, -1.0f, 1e-6f);
+}
+
+TEST(TempoEngineTest, detect_bpm_white_noise_returns_negative) {
+    TempoEngine engine;
+    int sr = 48000;
+    engine.set_sample_rate(sr);
+
+    std::vector<float> signal = generate_white_noise_signal(sr, 4.5f);
+
+    const int chunk_size = 256;
+    for (size_t i = 0; i < signal.size(); i += chunk_size) {
+        int to_write = std::min(static_cast<int>(signal.size() - i), chunk_size);
+        engine.write_input(signal.data() + i, to_write);
+    }
+
+    float detected = engine.detect_bpm();
+    // No periodicity, should return -1.0f
+    ASSERT_NEAR(detected, -1.0f, 1e-6f);
+}
+
+

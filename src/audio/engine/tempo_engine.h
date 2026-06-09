@@ -21,11 +21,15 @@ class TempoEngine {
     // failure.
     float detect_bpm();
 
+    // Call from UI thread: Thread-safely reset the BPM detection buffer.
+    void reset();
+
    private:
     int sample_rate_ = 48000;
     std::vector<float> buffer_;
     size_t write_pos_ = 0;
     std::atomic<size_t> total_samples_written_{0};
+    std::atomic<bool> reset_requested_{false};
 
     // Preallocated/cached variables for detect_bpm()
     std::vector<float> local_audio_;

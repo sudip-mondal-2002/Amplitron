@@ -247,6 +247,7 @@ class AudioEngine : public IAudioEngine {
     float get_global_bpm() const override;
     void set_global_bpm(float bpm) override;
     float detect_bpm() override;
+    void reset_bpm_detection() override;
 
     /** @brief Return the current metronome enabled state (atomic relaxed read).
      */

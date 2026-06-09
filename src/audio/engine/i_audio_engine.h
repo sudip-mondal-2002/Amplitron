@@ -212,6 +212,7 @@ class IAudioEngine : public ILifecycle,
     virtual bool has_tuner_tap() const = 0;
 
     virtual float detect_bpm() = 0;
+    virtual void reset_bpm_detection() = 0;
 
 #ifdef AMPLITRON_ANDROID_OBOE
     virtual const char* get_oboe_sharing_mode_label() const = 0;

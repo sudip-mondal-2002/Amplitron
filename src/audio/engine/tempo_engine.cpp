@@ -25,13 +25,19 @@ TempoEngine::~TempoEngine() {}
 void TempoEngine::set_sample_rate(int sample_rate) {
     if (sample_rate <= 0) sample_rate = 48000;
     sample_rate_ = sample_rate;
-    buffer_.assign(4 * sample_rate_, 0.0f);
+    buffer_.assign(10 * sample_rate_, 0.0f);
     write_pos_ = 0;
     total_samples_written_ = 0;
 }
 
 void TempoEngine::write_input(const float* input, int num_samples) {
     if (buffer_.empty() || num_samples <= 0) return;
+
+    if (reset_requested_.exchange(false, std::memory_order_acq_rel)) {
+        std::fill(buffer_.begin(), buffer_.end(), 0.0f);
+        write_pos_ = 0;
+        total_samples_written_.store(0, std::memory_order_release);
+    }
 
     for (int i = 0; i < num_samples; ++i) {
         buffer_[write_pos_] = input[i];
@@ -41,6 +47,11 @@ void TempoEngine::write_input(const float* input, int num_samples) {
         }
     }
     total_samples_written_.fetch_add(num_samples, std::memory_order_relaxed);
+}
+
+void TempoEngine::reset() {
+    reset_requested_.store(true, std::memory_order_release);
+    total_samples_written_.store(0, std::memory_order_release);
 }
 
 float TempoEngine::detect_bpm() {
@@ -155,8 +166,15 @@ float TempoEngine::detect_bpm() {
         }
     }
 
-    if (best_lag == -1 || max_r <= 0.0f) {
-        return -1.0f;  // Not enough periodicity
+    float sum_sq = 0.0f;
+    for (float val : flux_envelope) sum_sq += val * val;
+    float r0 = (flux_envelope.size() > 0) ? (sum_sq / flux_envelope.size()) : 0.0f;
+    float peak_saliency = (r0 > 0.0f) ? (max_r / r0) : 0.0f;
+
+    // Reject if transient energy is too low (e.g. silence or continuous unmodulated tone)
+    // or if the correlation peak is not salient (e.g. white noise)
+    if (best_lag == -1 || max_r <= 0.0f || r0 < 2.0f || peak_saliency < 0.2f) {
+        return -1.0f;
     }
 
     // Sub-harmonic / octave correction: prefer smaller lags (higher BPM) if they

@@ -311,6 +311,30 @@ bool GuiManager::run_frame() {
 // Master controls strip (smooth metering stays in GuiManager)
 // ─────────────────────────────────────────────────────────────────────────────
 void GuiManager::render_master_controls() {
+    // ── Update BPM Auto-Detect State Machine ──
+    float dt = ImGui::GetIO().DeltaTime;
+    if (bpm_detect_state_ == BpmDetectState::Countdown) {
+        bpm_detect_timer_ -= dt;
+        if (bpm_detect_timer_ <= 0.0f) {
+            engine_.reset_bpm_detection();
+            bpm_detect_state_ = BpmDetectState::Recording;
+            bpm_detect_timer_ = 10.0f; // Record sample for 10 seconds
+        }
+    } else if (bpm_detect_state_ == BpmDetectState::Recording) {
+        bpm_detect_timer_ -= dt;
+        if (bpm_detect_timer_ <= 0.0f) {
+            float detected = engine_.detect_bpm();
+            bpm_detect_state_ = BpmDetectState::Idle;
+            if (detected > 0.0f) {
+                toast_message_ = "BPM Detected: " + std::to_string(static_cast<int>(std::round(detected)));
+                toast_timer_ = 3.0f;
+            } else {
+                toast_message_ = "BPM Detection Failed";
+                toast_timer_ = 3.0f;
+            }
+        }
+    }
+
     smoothed_input_level_ += (engine_.get_input_level() - smoothed_input_level_) * 0.3f;
     smoothed_output_level_ += (engine_.get_output_level() - smoothed_output_level_) * 0.3f;
 
@@ -429,8 +453,23 @@ void GuiManager::render_master_controls() {
         }
     }
     ImGui::SameLine();
-    if (ImGui::Button("Auto-Detect")) {
-        engine_.detect_bpm();
+    if (bpm_detect_state_ == BpmDetectState::Idle) {
+        if (ImGui::Button("Auto-Detect")) {
+            bpm_detect_state_ = BpmDetectState::Countdown;
+            bpm_detect_timer_ = 5.0f;
+        }
+    } else if (bpm_detect_state_ == BpmDetectState::Countdown) {
+        int display_secs = static_cast<int>(std::ceil(bpm_detect_timer_));
+        std::string label = "Cancel (Prepare " + std::to_string(display_secs) + "s)###AutoDetectBtn";
+        if (ImGui::Button(label.c_str())) {
+            bpm_detect_state_ = BpmDetectState::Idle;
+        }
+    } else if (bpm_detect_state_ == BpmDetectState::Recording) {
+        int display_secs = static_cast<int>(std::ceil(bpm_detect_timer_));
+        std::string label = "Cancel (Detecting " + std::to_string(display_secs) + "s)###AutoDetectBtn";
+        if (ImGui::Button(label.c_str())) {
+            bpm_detect_state_ = BpmDetectState::Idle;
+        }
     }
 
     ImGui::NextColumn();

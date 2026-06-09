@@ -86,4 +86,8 @@ float AudioEngine::detect_bpm() {
     return detected;
 }
 
+void AudioEngine::reset_bpm_detection() {
+    tempo_engine_->reset();
+}
+
 }  // namespace Amplitron

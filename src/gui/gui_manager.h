@@ -129,6 +129,15 @@ class GuiManager {
 
     // ── Waveform buffer (filled from recorder, passed to RecordingProps) ──
     float rec_waveform_buf_[512] = {};
+
+    // ── Auto-Detect BPM state and timer ──
+    enum class BpmDetectState {
+        Idle,
+        Countdown,
+        Recording
+    };
+    BpmDetectState bpm_detect_state_ = BpmDetectState::Idle;
+    float bpm_detect_timer_ = 0.0f;
 };
 
 }  // namespace Amplitron
