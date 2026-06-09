@@ -318,7 +318,7 @@ void GuiManager::render_master_controls() {
         if (bpm_detect_timer_ <= 0.0f) {
             engine_.reset_bpm_detection();
             bpm_detect_state_ = BpmDetectState::Recording;
-            bpm_detect_timer_ = 10.0f; // Record sample for 10 seconds
+            bpm_detect_timer_ = 10.0f;  // Record sample for 10 seconds
         }
     } else if (bpm_detect_state_ == BpmDetectState::Recording) {
         bpm_detect_timer_ -= dt;
@@ -326,7 +326,8 @@ void GuiManager::render_master_controls() {
             float detected = engine_.detect_bpm();
             bpm_detect_state_ = BpmDetectState::Idle;
             if (detected > 0.0f) {
-                toast_message_ = "BPM Detected: " + std::to_string(static_cast<int>(std::round(detected)));
+                toast_message_ =
+                    "BPM Detected: " + std::to_string(static_cast<int>(std::round(detected)));
                 toast_timer_ = 3.0f;
             } else {
                 toast_message_ = "BPM Detection Failed";
@@ -460,13 +461,15 @@ void GuiManager::render_master_controls() {
         }
     } else if (bpm_detect_state_ == BpmDetectState::Countdown) {
         int display_secs = static_cast<int>(std::ceil(bpm_detect_timer_));
-        std::string label = "Cancel (Prepare " + std::to_string(display_secs) + "s)###AutoDetectBtn";
+        std::string label =
+            "Cancel (Prepare " + std::to_string(display_secs) + "s)###AutoDetectBtn";
         if (ImGui::Button(label.c_str())) {
             bpm_detect_state_ = BpmDetectState::Idle;
         }
     } else if (bpm_detect_state_ == BpmDetectState::Recording) {
         int display_secs = static_cast<int>(std::ceil(bpm_detect_timer_));
-        std::string label = "Cancel (Detecting " + std::to_string(display_secs) + "s)###AutoDetectBtn";
+        std::string label =
+            "Cancel (Detecting " + std::to_string(display_secs) + "s)###AutoDetectBtn";
         if (ImGui::Button(label.c_str())) {
             bpm_detect_state_ = BpmDetectState::Idle;
         }

@@ -131,11 +131,7 @@ class GuiManager {
     float rec_waveform_buf_[512] = {};
 
     // ── Auto-Detect BPM state and timer ──
-    enum class BpmDetectState {
-        Idle,
-        Countdown,
-        Recording
-    };
+    enum class BpmDetectState { Idle, Countdown, Recording };
     BpmDetectState bpm_detect_state_ = BpmDetectState::Idle;
     float bpm_detect_timer_ = 0.0f;
 };

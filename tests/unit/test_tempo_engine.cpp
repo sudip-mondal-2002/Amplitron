@@ -31,7 +31,8 @@ static std::vector<float> generate_bpm_signal(float bpm, int sample_rate, float 
 }
 
 // Helper to generate a kick drum signal at a regular BPM (fast pitch sweep with decay envelope)
-static std::vector<float> generate_kick_drum_signal(float bpm, int sample_rate, float duration_seconds) {
+static std::vector<float> generate_kick_drum_signal(float bpm, int sample_rate,
+                                                    float duration_seconds) {
     int total_samples = static_cast<int>(sample_rate * duration_seconds);
     std::vector<float> signal(total_samples, 0.0f);
 
@@ -39,7 +40,7 @@ static std::vector<float> generate_kick_drum_signal(float bpm, int sample_rate, 
     int beat_interval_samples = static_cast<int>(sample_rate * beat_interval_seconds);
 
     for (int sample_idx = 0; sample_idx < total_samples; sample_idx += beat_interval_samples) {
-        int kick_len = static_cast<int>(sample_rate * 0.15f); // 150ms kick sweep
+        int kick_len = static_cast<int>(sample_rate * 0.15f);  // 150ms kick sweep
         for (int i = 0; i < kick_len && (sample_idx + i) < total_samples; ++i) {
             float t = static_cast<float>(i) / sample_rate;
             // Sweep from 150Hz down to 45Hz
@@ -52,7 +53,8 @@ static std::vector<float> generate_kick_drum_signal(float bpm, int sample_rate, 
 }
 
 // Helper to generate an amplitude-modulated sine wave (pulsed tremolo)
-static std::vector<float> generate_modulated_sine_signal(float bpm, int sample_rate, float duration_seconds) {
+static std::vector<float> generate_modulated_sine_signal(float bpm, int sample_rate,
+                                                         float duration_seconds) {
     int total_samples = static_cast<int>(sample_rate * duration_seconds);
     std::vector<float> signal(total_samples, 0.0f);
 
@@ -63,7 +65,8 @@ static std::vector<float> generate_modulated_sine_signal(float bpm, int sample_r
         // 440 Hz carrier
         float carrier = std::sin(2.0f * 3.14159265f * 440.0f * t);
         // Rhythmic pulsing envelope: full depth amplitude modulation
-        float env = 0.5f * (1.0f + std::sin(2.0f * 3.14159265f * mod_freq * t - 3.14159265f / 2.0f));
+        float env =
+            0.5f * (1.0f + std::sin(2.0f * 3.14159265f * mod_freq * t - 3.14159265f / 2.0f));
         // Make it sharper (more pulse-like) by squaring it
         signal[i] = (env * env) * carrier;
     }
@@ -71,7 +74,8 @@ static std::vector<float> generate_modulated_sine_signal(float bpm, int sample_r
 }
 
 // Helper to generate a pure continuous sine wave (no BPM/periodicity)
-static std::vector<float> generate_pure_sine_signal(float freq, int sample_rate, float duration_seconds) {
+static std::vector<float> generate_pure_sine_signal(float freq, int sample_rate,
+                                                    float duration_seconds) {
     int total_samples = static_cast<int>(sample_rate * duration_seconds);
     std::vector<float> signal(total_samples, 0.0f);
     for (int i = 0; i < total_samples; ++i) {
@@ -89,12 +93,11 @@ static std::vector<float> generate_white_noise_signal(int sample_rate, float dur
     uint32_t seed = 12345;
     for (int i = 0; i < total_samples; ++i) {
         seed = seed * 1664525 + 1013904223;
-        float val = static_cast<float>(seed) / 4294967296.0f; // [0, 1)
-        signal[i] = val * 2.0f - 1.0f; // [-1, 1)
+        float val = static_cast<float>(seed) / 4294967296.0f;  // [0, 1)
+        signal[i] = val * 2.0f - 1.0f;                         // [-1, 1)
     }
     return signal;
 }
-
 
 TEST(TempoEngineTest, circular_buffer_wrapping) {
     TempoEngine engine;
@@ -327,5 +330,3 @@ TEST(TempoEngineTest, detect_bpm_white_noise_returns_negative) {
     // No periodicity, should return -1.0f
     ASSERT_NEAR(detected, -1.0f, 1e-6f);
 }
-
-
