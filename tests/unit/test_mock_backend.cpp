@@ -20,8 +20,12 @@ class MockAudioBackend : public IAudioBackend {
         return true;
     }
 
-    int get_sample_rate() const override { return engine_ptr ? engine_ptr->get_sample_rate() : 48000; }
-    int get_buffer_size() const override { return engine_ptr ? engine_ptr->get_buffer_size() : 512; }
+    int get_sample_rate() const override {
+        return engine_ptr ? engine_ptr->get_sample_rate() : 48000;
+    }
+    int get_buffer_size() const override {
+        return engine_ptr ? engine_ptr->get_buffer_size() : 512;
+    }
 
     void shutdown() override {
         initialized = false;
@@ -129,7 +133,7 @@ TEST(AudioEngine_NewFeaturesAndFailures) {
     // 3. Test Tempo Engine reset and detect_bpm from AudioEngine API
     engine.reset_bpm_detection();
     float detected = engine.detect_bpm();
-    ASSERT_NEAR(detected, -1.0f, 0.01f); // No input written, should return -1
+    ASSERT_NEAR(detected, -1.0f, 0.01f);  // No input written, should return -1
 
     // 4. Test set_sample_rate when running
     engine.set_sample_rate(44100);
@@ -151,4 +155,3 @@ TEST(AudioEngine_NewFeaturesAndFailures) {
     engine.shutdown();
     engine.clear_backend_for_test();
 }
-

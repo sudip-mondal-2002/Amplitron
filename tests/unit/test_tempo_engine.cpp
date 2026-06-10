@@ -342,8 +342,8 @@ TEST(EffectSyncTest, delay_and_chorus_extra_sync_and_snap) {
     delay.set_transport_state(NAN);
 
     // 2. Sync off snapping tests (snaps to closest subdivision)
-    delay.params()[4].value = 0.0f; // Sync off
-    
+    delay.params()[4].value = 0.0f;  // Sync off
+
     // Quarter note is 500ms (at 120 BPM). If time is 480ms, it should snap to 500ms.
     delay.params()[0].value = 480.0f;
     delay.set_transport_state(120.0f);
@@ -384,8 +384,8 @@ TEST(EffectSyncTest, delay_and_chorus_extra_sync_and_snap) {
     chorus.set_transport_state(NAN);
 
     // 2. Sync ON subdivisions (0, 1, 2, 3)
-    chorus.params()[3].value = 1.0f; // Sync on
-    
+    chorus.params()[3].value = 1.0f;  // Sync on
+
     // Subdivision 1/1 (0.0f)
     chorus.params()[4].value = 0.0f;
     chorus.set_transport_state(120.0f);
@@ -414,7 +414,7 @@ TEST(EffectSyncTest, delay_and_chorus_extra_sync_and_snap) {
 
 TEST(TempoEngineTest, detect_bpm_edge_cases) {
     TempoEngine engine;
-    
+
     // 1. Invalid write_input params
     engine.write_input(nullptr, 0);
     engine.write_input(nullptr, -5);
@@ -450,4 +450,3 @@ TEST(TempoEngineTest, detect_bpm_edge_cases) {
     float detected4 = engine.detect_bpm();
     ASSERT_NEAR(detected4, -1.0f, 1e-6f);
 }
-

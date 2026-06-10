@@ -2,15 +2,15 @@
 
 #include "audio/effects/amp_cab/amp_simulator.h"
 #include "audio/effects/amp_cab/cabinet_sim.h"
+#include "audio/effects/delay_reverb/delay.h"
 #include "audio/effects/distortion/overdrive.h"
+#include "audio/effects/modulation/chorus.h"
 #include "audio/effects/utility/tuner.h"
 #include "gui/commands/command_history.h"
 #include "gui/pedalboard/pedal_widget.h"
+#include "gui/theme/theme.h"
 #include "gui/views/gui_midi.h"
 #include "midi/midi_manager.h"
-#include "audio/effects/delay_reverb/delay.h"
-#include "audio/effects/modulation/chorus.h"
-#include "gui/theme/theme.h"
 #include "test_fixtures.h"
 #include "test_framework.h"
 
@@ -151,11 +151,11 @@ TEST_F(PresetTest, test_pedal_widget_knobs_delay_chorus_sync) {
 
     // 1. Delay widget rendering with Sync OFF
     auto delay = std::make_shared<Delay>();
-    delay->params()[4].value = 0.0f; // Sync off
+    delay->params()[4].value = 0.0f;  // Sync off
     PedalWidget w_delay(engine, delay, 0);
     w_delay.set_history(&history);
     w_delay.set_gui_midi(&gui_midi);
-    
+
     // Position of Sync checkbox
     float zoom = 1.0f;
     float mid_x = 10.0f + 190.0f * 0.5f;
@@ -229,8 +229,8 @@ TEST_F(PresetTest, test_pedal_widget_knobs_delay_chorus_sync) {
 
     // 4. Chorus widget rendering with Sync ON
     auto chorus = std::make_shared<Chorus>();
-    chorus->params()[3].value = 1.0f; // Sync on
-    chorus->params()[4].value = 0.0f; // Subdivision 1/1
+    chorus->params()[3].value = 1.0f;  // Sync on
+    chorus->params()[4].value = 0.0f;  // Subdivision 1/1
     PedalWidget w_chorus(engine, chorus, 1);
     w_chorus.set_history(&history);
     w_chorus.set_gui_midi(&gui_midi);
@@ -247,4 +247,3 @@ TEST_F(PresetTest, test_pedal_widget_knobs_delay_chorus_sync) {
     ImGui::End();
     engine.shutdown();
 }
-

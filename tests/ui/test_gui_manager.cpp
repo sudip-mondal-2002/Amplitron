@@ -235,9 +235,14 @@ TEST(gui_manager_bpm_auto_detect_state_machine) {
             signal[sample_idx + i] = env * std::sin(2.0f * 3.14159f * 1000.0f * t);
         }
     }
-    
-    // Feed it to the tempo engine via AudioEngine's process
-    engine.process_audio(signal.data(), signal.data(), total_samples);
+
+    // Feed it to the tempo engine via AudioEngine's process in small chunks to prevent buffer
+    // overflow
+    const int chunk_size = 256;
+    for (int i = 0; i < total_samples; i += chunk_size) {
+        int to_process = std::min(total_samples - i, chunk_size);
+        engine.process_audio(signal.data() + i, signal.data() + i, to_process);
+    }
 
     gui.bpm_detect_state_ = GuiManager::BpmDetectState::Recording;
     gui.bpm_detect_timer_ = 0.05f;
@@ -249,4 +254,3 @@ TEST(gui_manager_bpm_auto_detect_state_machine) {
     gui.shutdown();
     engine.shutdown();
 }
-
