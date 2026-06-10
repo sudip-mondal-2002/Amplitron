@@ -30,7 +30,7 @@
 namespace Amplitron {
 
 #ifdef AMPLITRON_HEADLESS
-std::string show_folder_dialog(const std::string&) { return ""; }
+std::string show_folder_dialog(const std::string&) { return g_mock_folder_dialog_result; }
 #else
 
 #ifdef _WIN32

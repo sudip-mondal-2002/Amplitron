@@ -7,6 +7,89 @@
 using namespace Amplitron;
 using namespace TestFramework;
 
+static PaDeviceInfo mock_info_usb_in;
+static PaDeviceInfo mock_info_out;
+static PaDeviceInfo mock_info_normal_in;
+static PaHostApiInfo mock_api_info;
+static PaStreamInfo mock_stream_info;
+
+static void setup_mocks() {
+    mock_api_info.type = paCoreAudio;
+    mock_api_info.name = "MockAPI";
+    mock_api_info.deviceCount = 3;
+
+    mock_info_usb_in.name = "USB Guitar Interface";
+    mock_info_usb_in.maxInputChannels = 2;
+    mock_info_usb_in.maxOutputChannels = 0;
+    mock_info_usb_in.hostApi = 0;
+    mock_info_usb_in.defaultSampleRate = 48000;
+
+    mock_info_out.name = "Mock Speakers";
+    mock_info_out.maxInputChannels = 0;
+    mock_info_out.maxOutputChannels = 2;
+    mock_info_out.hostApi = 0;
+    mock_info_out.defaultSampleRate = 48000;
+
+    mock_info_normal_in.name = "Internal Mic";
+    mock_info_normal_in.maxInputChannels = 2;
+    mock_info_normal_in.maxOutputChannels = 0;
+    mock_info_normal_in.hostApi = 0;
+    mock_info_normal_in.defaultSampleRate = 48000;
+
+    mock_stream_info.sampleRate = 44100;
+    mock_stream_info.inputLatency = 0.01;
+    mock_stream_info.outputLatency = 0.01;
+
+    Amplitron::g_mock_pa_initialize = []() -> PaError { return paNoError; };
+    Amplitron::g_mock_pa_get_host_api_count = []() { return 1; };
+    Amplitron::g_mock_pa_get_device_count = []() { return 3; };
+    Amplitron::g_mock_pa_get_host_api_info = [](int) -> const PaHostApiInfo* {
+        return &mock_api_info;
+    };
+    Amplitron::g_mock_pa_host_api_device_index_to_device_index = [](int, int d) { return d; };
+    Amplitron::g_mock_pa_get_device_info = [](int idx) -> const PaDeviceInfo* {
+        if (idx == 0) return &mock_info_usb_in;
+        if (idx == 1) return &mock_info_out;
+        if (idx == 2) return &mock_info_normal_in;
+        return nullptr;
+    };
+    Amplitron::g_mock_pa_get_default_input_device = []() { return 0; };
+    Amplitron::g_mock_pa_get_default_output_device = []() { return 1; };
+    Amplitron::g_mock_pa_open_stream = [](PaStream** stream, const PaStreamParameters*,
+                                          const PaStreamParameters*, double, unsigned long,
+                                          PaStreamFlags, PaStreamCallback*, void*) -> PaError {
+        *stream = reinterpret_cast<PaStream*>(1);
+        return paNoError;
+    };
+    Amplitron::g_mock_pa_start_stream = [](PaStream*) -> PaError { return paNoError; };
+    Amplitron::g_mock_pa_get_stream_info = [](PaStream*) -> const PaStreamInfo* {
+        return &mock_stream_info;
+    };
+    Amplitron::g_mock_pa_stop_stream = [](PaStream*) -> PaError { return paNoError; };
+    Amplitron::g_mock_pa_close_stream = [](PaStream*) -> PaError { return paNoError; };
+}
+
+static void clear_mocks() {
+    Amplitron::g_mock_pa_get_device_count = nullptr;
+    Amplitron::g_mock_pa_get_device_info = nullptr;
+    Amplitron::g_mock_pa_get_host_api_info = nullptr;
+    Amplitron::g_mock_pa_get_host_api_count = nullptr;
+    Amplitron::g_mock_pa_host_api_device_index_to_device_index = nullptr;
+    Amplitron::g_mock_pa_get_default_input_device = nullptr;
+    Amplitron::g_mock_pa_get_default_output_device = nullptr;
+    Amplitron::g_mock_pa_open_stream = nullptr;
+    Amplitron::g_mock_pa_start_stream = nullptr;
+    Amplitron::g_mock_pa_stop_stream = nullptr;
+    Amplitron::g_mock_pa_close_stream = nullptr;
+    Amplitron::g_mock_pa_get_stream_info = nullptr;
+    Amplitron::g_mock_pa_initialize = nullptr;
+}
+
+struct MockGuard {
+    MockGuard() { setup_mocks(); }
+    ~MockGuard() { clear_mocks(); }
+};
+
 TEST(PortAudioDevices_IsUsbDeviceDetectsUsbInName) {
     ASSERT_TRUE(is_usb_device_name("USB Audio Device"));
     ASSERT_TRUE(is_usb_device_name("Behringer UCG102 [USB]"));
@@ -46,6 +129,7 @@ TEST(PortAudioLifecycle_OpenStreamWithNullDevice) {
 }
 
 TEST(PortAudioLifecycle_StartStopStartCycle) {
+    MockGuard guard;
     AudioEngine engine;
     engine.initialize();
 
@@ -64,6 +148,7 @@ TEST(PortAudioLifecycle_StartStopStartCycle) {
 }
 
 TEST(PortAudioLifecycle_Restart) {
+    MockGuard guard;
     AudioEngine engine;
     engine.initialize();
     engine.restart();
@@ -71,6 +156,7 @@ TEST(PortAudioLifecycle_Restart) {
 }
 
 TEST(PortAudioDevices_EnumerateDevicesReturnsVector) {
+    MockGuard guard;
     AudioEngine engine;
     engine.initialize();
 
@@ -98,6 +184,7 @@ TEST(PortAudioDevices_DevicesShareHostApiSafe) {
 }
 
 TEST(PortAudioDevices_SetDeviceBranchCoverage) {
+    MockGuard guard;
     Pa_Initialize();  // Manual init to keep valid state
 
     AudioEngine engine_valid;
@@ -141,64 +228,6 @@ TEST(PortAudioDevices_SetDeviceBranchCoverage) {
 
     Pa_Terminate();
 }
-
-static PaDeviceInfo mock_info_usb_in;
-static PaDeviceInfo mock_info_out;
-static PaDeviceInfo mock_info_normal_in;
-static PaHostApiInfo mock_api_info;
-static PaStreamInfo mock_stream_info;
-
-static void setup_mocks() {
-    mock_api_info.type = paCoreAudio;
-    mock_api_info.name = "MockAPI";
-    mock_api_info.deviceCount = 3;
-
-    mock_info_usb_in.name = "USB Guitar Interface";
-    mock_info_usb_in.maxInputChannels = 2;
-    mock_info_usb_in.maxOutputChannels = 0;
-    mock_info_usb_in.hostApi = 0;
-    mock_info_usb_in.defaultSampleRate = 48000;
-
-    mock_info_out.name = "Mock Speakers";
-    mock_info_out.maxInputChannels = 0;
-    mock_info_out.maxOutputChannels = 2;
-    mock_info_out.hostApi = 0;
-    mock_info_out.defaultSampleRate = 48000;
-
-    mock_info_normal_in.name = "Internal Mic";
-    mock_info_normal_in.maxInputChannels = 2;
-    mock_info_normal_in.maxOutputChannels = 0;
-    mock_info_normal_in.hostApi = 0;
-    mock_info_normal_in.defaultSampleRate = 48000;
-
-    mock_stream_info.sampleRate = 44100;
-    mock_stream_info.inputLatency = 0.01;
-    mock_stream_info.outputLatency = 0.01;
-
-    Amplitron::g_mock_pa_stop_stream = [](PaStream*) -> PaError { return paNoError; };
-    Amplitron::g_mock_pa_close_stream = [](PaStream*) -> PaError { return paNoError; };
-}
-
-static void clear_mocks() {
-    Amplitron::g_mock_pa_get_device_count = nullptr;
-    Amplitron::g_mock_pa_get_device_info = nullptr;
-    Amplitron::g_mock_pa_get_host_api_info = nullptr;
-    Amplitron::g_mock_pa_get_host_api_count = nullptr;
-    Amplitron::g_mock_pa_host_api_device_index_to_device_index = nullptr;
-    Amplitron::g_mock_pa_get_default_input_device = nullptr;
-    Amplitron::g_mock_pa_get_default_output_device = nullptr;
-    Amplitron::g_mock_pa_open_stream = nullptr;
-    Amplitron::g_mock_pa_start_stream = nullptr;
-    Amplitron::g_mock_pa_stop_stream = nullptr;
-    Amplitron::g_mock_pa_close_stream = nullptr;
-    Amplitron::g_mock_pa_get_stream_info = nullptr;
-    Amplitron::g_mock_pa_initialize = nullptr;
-}
-
-struct MockGuard {
-    MockGuard() { setup_mocks(); }
-    ~MockGuard() { clear_mocks(); }
-};
 
 namespace Amplitron {
 class PortAudioTestSaboteur {
@@ -350,6 +379,7 @@ extern int pa_audio_callback(const void* input, void* output, unsigned long fram
 }
 
 TEST(PortAudioLifecycle_CallbackCoverage) {
+    MockGuard guard;
     AudioEngine engine;
     engine.initialize();
 

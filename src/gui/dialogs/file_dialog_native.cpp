@@ -32,8 +32,12 @@
 namespace Amplitron {
 
 #ifdef AMPLITRON_HEADLESS
+std::string g_mock_save_dialog_result = "";
+std::string g_mock_open_dialog_result = "";
+std::string g_mock_folder_dialog_result = "";
+
 std::string show_save_dialog(const std::string&, const std::string&, const std::string&) {
-    return "";
+    return g_mock_save_dialog_result;
 }
 #else
 
