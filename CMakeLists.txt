@@ -791,6 +791,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/ui/test_pedal_board_chain.cpp
         tests/ui/test_pedal_board_menu.cpp
         tests/ui/test_file_dialog.cpp
+        tests/ui/test_window_context.cpp
         tests/ui/test_pedal_widget_knobs.cpp
         tests/unit/test_session_manager.cpp
         tests/unit/test_cli.cpp
