@@ -103,9 +103,8 @@ void Delay::set_transport_state(float bpm) {
         float target_time = (60000.0f / bpm) * factor;
         params_[0].value = clamp(target_time, params_[0].min_val, params_[0].max_val);
     } else {
-        static float last_snap_bpm = 0.0f;
-        if (bpm == last_snap_bpm) return;
-        last_snap_bpm = bpm;
+        if (bpm == last_snap_bpm_) return;
+        last_snap_bpm_ = bpm;
 
         // Quarter-note duration
         float quarter_note_ms = 60000.0f / bpm;

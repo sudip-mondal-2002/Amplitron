@@ -163,34 +163,10 @@ void AudioEngine::set_sample_rate(int rate) {
             }
             metronome_->set_sample_rate(prev_rate);
             metronome_->reset();
-            tempo_engine_->set_sample_rate(rate);
-        }
-
-        if (was_running) {
-            if (!start()) {
-                last_error_ = "Failed with sample rate " + std::to_string(rate) + " Hz. Reverting.";
-                std::cerr << "[Amplitron] " << last_error_ << std::endl;
-                sample_rate_ = prev_rate;
-
-                std::lock_guard<std::mutex> lock(effect_mutex_);
-                // FIX: Revert the sample rates using the graph nodes
-                for (const auto& node : main_graph_.get_nodes()) {
-                    if (node.pedal) {
-                        node.pedal->set_sample_rate(prev_rate);
-                        node.pedal->reset();
-                    }
-                }
-                if (tuner_tap_) {
-                    tuner_tap_->set_sample_rate(prev_rate);
-                    tuner_tap_->reset();
-                }
-                metronome_->set_sample_rate(prev_rate);
-                metronome_->reset();
-                tempo_engine_->set_sample_rate(prev_rate);
-                start();
-            } else {
-                last_error_.clear();
-            }
+            tempo_engine_->set_sample_rate(prev_rate);
+            start();
+        } else {
+            last_error_.clear();
         }
     }
 }

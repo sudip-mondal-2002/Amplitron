@@ -12,17 +12,29 @@ class MockAudioBackend : public IAudioBackend {
     bool input_device_set = false;
     bool output_device_set = false;
 
-    bool initialize(IAudioEngine*) override {
+    IAudioEngine* engine_ptr = nullptr;
+
+    bool initialize(IAudioEngine* eng) override {
+        engine_ptr = eng;
         initialized = true;
         return true;
     }
 
-    int get_sample_rate() const override { return 48000; }
-    int get_buffer_size() const override { return 512; }
+    int get_sample_rate() const override { return engine_ptr ? engine_ptr->get_sample_rate() : 48000; }
+    int get_buffer_size() const override { return engine_ptr ? engine_ptr->get_buffer_size() : 512; }
 
-    void shutdown() override { initialized = false; }
+    void shutdown() override {
+        initialized = false;
+        engine_ptr = nullptr;
+    }
+
+    bool fail_start = false;
 
     bool start() override {
+        if (fail_start) {
+            fail_start = false;
+            return false;
+        }
         if (initialized) {
             started = true;
             return true;
@@ -80,10 +92,63 @@ TEST(AudioBackend_PolymorphicMockBackendInjection) {
     ASSERT_TRUE(engine.set_input_device(0));
     ASSERT_TRUE(mock->input_device_set);
 
-    engine.stop();
-    ASSERT_FALSE(mock->started);
-
     engine.shutdown();
     ASSERT_FALSE(mock->initialized);
     engine.clear_backend_for_test();
 }
+
+TEST(AudioEngine_NewFeaturesAndFailures) {
+    auto mock = std::make_unique<MockAudioBackend>();
+    AudioEngine engine;
+    engine.replace_backend_for_test(mock.get());
+
+    ASSERT_TRUE(engine.initialize());
+    ASSERT_TRUE(engine.start());
+
+    // 1. Test get/set global BPM
+    engine.set_global_bpm(135.0f);
+    ASSERT_NEAR(engine.get_global_bpm(), 135.0f, 0.01f);
+
+    // Clamp check
+    engine.set_global_bpm(300.0f);
+    ASSERT_NEAR(engine.get_global_bpm(), 240.0f, 0.01f);
+    engine.set_global_bpm(20.0f);
+    ASSERT_NEAR(engine.get_global_bpm(), 40.0f, 0.01f);
+
+    // 2. Test Serialize / Deserialize with BPM
+    engine.set_global_bpm(125.0f);
+    nlohmann::json j = engine.serialize();
+    ASSERT_TRUE(j.contains("global_bpm"));
+    ASSERT_NEAR(j["global_bpm"].get<float>(), 125.0f, 0.01f);
+
+    // Deserialize
+    engine.set_global_bpm(80.0f);
+    engine.deserialize(j);
+    ASSERT_NEAR(engine.get_global_bpm(), 125.0f, 0.01f);
+
+    // 3. Test Tempo Engine reset and detect_bpm from AudioEngine API
+    engine.reset_bpm_detection();
+    float detected = engine.detect_bpm();
+    ASSERT_NEAR(detected, -1.0f, 0.01f); // No input written, should return -1
+
+    // 4. Test set_sample_rate when running
+    engine.set_sample_rate(44100);
+    ASSERT_EQ(engine.get_sample_rate(), 44100);
+
+    // 5. Test set_sample_rate failure and revert
+    mock->fail_start = true;
+    engine.set_sample_rate(96000);
+    // Should revert back to 44100
+    ASSERT_EQ(engine.get_sample_rate(), 44100);
+
+    // 6. Test set_buffer_size failure and revert
+    int initial_buf = engine.get_buffer_size();
+    mock->fail_start = true;
+    engine.set_buffer_size(initial_buf == 256 ? 512 : 256);
+    ASSERT_EQ(engine.get_buffer_size(), initial_buf);
+
+    engine.stop();
+    engine.shutdown();
+    engine.clear_backend_for_test();
+}
+

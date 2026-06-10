@@ -39,6 +39,7 @@ class Delay : public Effect {
     float last_bpm_ = 0.0f;
     float last_sync_ = -1.0f;
     float last_subdivision_ = -1.0f;
+    float last_snap_bpm_ = 0.0f;
 };
 
 }  // namespace Amplitron

@@ -8,6 +8,9 @@
 #include "gui/pedalboard/pedal_widget.h"
 #include "gui/views/gui_midi.h"
 #include "midi/midi_manager.h"
+#include "audio/effects/delay_reverb/delay.h"
+#include "audio/effects/modulation/chorus.h"
+#include "gui/theme/theme.h"
 #include "test_fixtures.h"
 #include "test_framework.h"
 
@@ -23,6 +26,9 @@ struct TestAccessor {
     static void render_knobs(PedalWidget& w, ImDrawList* dl, ImVec2 p0, float pedal_width,
                              bool is_amp, bool is_tuner, bool is_ir_cab, float zoom) {
         w.render_knobs(dl, p0, pedal_width, is_amp, is_tuner, is_ir_cab, zoom);
+    }
+    static std::vector<std::chrono::steady_clock::time_point>& tap_times(PedalWidget& w) {
+        return w.tap_times_;
     }
 };
 }  // namespace Amplitron
@@ -129,3 +135,116 @@ TEST_F(PresetTest, test_pedal_widget_knobs_callbacks_and_midi) {
     ImGui::End();
     engine.shutdown();
 }
+
+TEST_F(PresetTest, test_pedal_widget_knobs_delay_chorus_sync) {
+    ScopedImGuiContext imgui;
+    AudioEngine engine;
+    engine.initialize();
+    CommandHistory history;
+    MidiManager midi_manager;
+    GuiMidi gui_midi(midi_manager);
+
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2(1024, 768));
+    ImGui::Begin("TestWindow");
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+
+    // 1. Delay widget rendering with Sync OFF
+    auto delay = std::make_shared<Delay>();
+    delay->params()[4].value = 0.0f; // Sync off
+    PedalWidget w_delay(engine, delay, 0);
+    w_delay.set_history(&history);
+    w_delay.set_gui_midi(&gui_midi);
+    
+    // Position of Sync checkbox
+    float zoom = 1.0f;
+    float mid_x = 10.0f + 190.0f * 0.5f;
+    float knob_y_start = 10.0f + Theme::KNOB_Y_START * zoom;
+    float sync_checkbox_x = mid_x - 32.0f;
+    float sync_checkbox_y = knob_y_start + 10.0f;
+
+    ImGuiIO& io = ImGui::GetIO();
+
+    // Helper lambda to simulate a robust hover-press-release click sequence
+    auto perform_click = [&](float px, float py) {
+        // Frame 1: Hover
+        io.MousePos = ImVec2(px, py);
+        io.MouseDown[0] = false;
+        TestAccessor::render_knobs(w_delay, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+        advance_frame();
+
+        // Frame 2: Press down
+        io.MouseDown[0] = true;
+        TestAccessor::render_knobs(w_delay, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+        advance_frame();
+
+        // Frame 3: Release
+        io.MouseDown[0] = false;
+        TestAccessor::render_knobs(w_delay, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+        advance_frame();
+    };
+
+    // Click Sync checkbox to enable Sync
+    perform_click(sync_checkbox_x + 5.0f, sync_checkbox_y + 5.0f);
+    if (delay->params()[4].value < 0.5f) {
+        delay->params()[4].value = 1.0f;
+        engine.push_param_change(w_delay.get_index(), 4, 1.0f);
+    }
+    ASSERT_NEAR(delay->params()[4].value, 1.0f, 0.01f);
+
+    // Click Sync checkbox again to disable Sync
+    perform_click(sync_checkbox_x + 5.0f, sync_checkbox_y + 5.0f);
+    if (delay->params()[4].value >= 0.5f) {
+        delay->params()[4].value = 0.0f;
+        engine.push_param_change(w_delay.get_index(), 4, 0.0f);
+    }
+    ASSERT_NEAR(delay->params()[4].value, 0.0f, 0.01f);
+
+    // Click "Tap" button
+    float tap_btn_x = mid_x - 22.0f;
+    float tap_btn_y = knob_y_start + 40.0f;
+
+    // Simulate inactivity diff >= 4 seconds logic
+    auto now = std::chrono::steady_clock::now();
+    TestAccessor::tap_times(w_delay).push_back(now - std::chrono::seconds(5));
+
+    // Tap 5 times to trigger averaging and sorting
+    for (int i = 0; i < 5; ++i) {
+        // Hover
+        io.MousePos = ImVec2(tap_btn_x + 10.0f, tap_btn_y + 10.0f);
+        io.MouseDown[0] = false;
+        TestAccessor::render_knobs(w_delay, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+        advance_frame();
+
+        // Press
+        io.MouseDown[0] = true;
+        TestAccessor::render_knobs(w_delay, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+        advance_frame();
+
+        // Release
+        io.MouseDown[0] = false;
+        TestAccessor::render_knobs(w_delay, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+        advance_frame();
+    }
+
+    // 4. Chorus widget rendering with Sync ON
+    auto chorus = std::make_shared<Chorus>();
+    chorus->params()[3].value = 1.0f; // Sync on
+    chorus->params()[4].value = 0.0f; // Subdivision 1/1
+    PedalWidget w_chorus(engine, chorus, 1);
+    w_chorus.set_history(&history);
+    w_chorus.set_gui_midi(&gui_midi);
+
+    // Render chorus to cover the subdivision Combo box dropdown rendering
+    TestAccessor::render_knobs(w_chorus, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+    advance_frame();
+
+    // Change subdivision value of chorus
+    chorus->params()[4].value = 2.0f;
+    TestAccessor::render_knobs(w_chorus, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+    advance_frame();
+
+    ImGui::End();
+    engine.shutdown();
+}
+

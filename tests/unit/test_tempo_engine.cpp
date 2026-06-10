@@ -330,3 +330,124 @@ TEST(TempoEngineTest, detect_bpm_white_noise_returns_negative) {
     // No periodicity, should return -1.0f
     ASSERT_NEAR(detected, -1.0f, 1e-6f);
 }
+
+TEST(EffectSyncTest, delay_and_chorus_extra_sync_and_snap) {
+    Delay delay;
+    delay.set_sample_rate(48000);
+    delay.reset();
+
+    // 1. Invalid BPM checks (Delay)
+    delay.set_transport_state(-10.0f);
+    delay.set_transport_state(0.0f);
+    delay.set_transport_state(NAN);
+
+    // 2. Sync off snapping tests (snaps to closest subdivision)
+    delay.params()[4].value = 0.0f; // Sync off
+    
+    // Quarter note is 500ms (at 120 BPM). If time is 480ms, it should snap to 500ms.
+    delay.params()[0].value = 480.0f;
+    delay.set_transport_state(120.0f);
+    ASSERT_NEAR(delay.params()[0].value, 500.0f, 1e-4f);
+
+    // Toggle BPM
+    delay.set_transport_state(60.0f);
+
+    // Eighth note is 250ms. If time is 260ms, it should snap to 250ms.
+    delay.params()[0].value = 260.0f;
+    delay.set_transport_state(120.0f);
+    ASSERT_NEAR(delay.params()[0].value, 250.0f, 1e-4f);
+
+    // Toggle BPM
+    delay.set_transport_state(60.0f);
+
+    // Sixteenth note is 125ms. If time is 130ms, it should snap to 125ms.
+    delay.params()[0].value = 130.0f;
+    delay.set_transport_state(120.0f);
+    ASSERT_NEAR(delay.params()[0].value, 125.0f, 1e-4f);
+
+    // Toggle BPM
+    delay.set_transport_state(60.0f);
+
+    // Dotted eighth note is 375ms. If time is 370ms, it should snap to 375ms.
+    delay.params()[0].value = 370.0f;
+    delay.set_transport_state(120.0f);
+    ASSERT_NEAR(delay.params()[0].value, 375.0f, 1e-4f);
+
+    // Chorus tests
+    Chorus chorus;
+    chorus.set_sample_rate(48000);
+    chorus.reset();
+
+    // 1. Invalid BPM checks (Chorus)
+    chorus.set_transport_state(-10.0f);
+    chorus.set_transport_state(0.0f);
+    chorus.set_transport_state(NAN);
+
+    // 2. Sync ON subdivisions (0, 1, 2, 3)
+    chorus.params()[3].value = 1.0f; // Sync on
+    
+    // Subdivision 1/1 (0.0f)
+    chorus.params()[4].value = 0.0f;
+    chorus.set_transport_state(120.0f);
+    ASSERT_NEAR(chorus.params()[0].value, 0.5f, 1e-4f);
+
+    // Subdivision 1/2 (1.0f)
+    chorus.params()[4].value = 1.0f;
+    chorus.set_transport_state(120.0f);
+    ASSERT_NEAR(chorus.params()[0].value, 1.0f, 1e-4f);
+
+    // Subdivision 1/4 (2.0f)
+    chorus.params()[4].value = 2.0f;
+    chorus.set_transport_state(120.0f);
+    ASSERT_NEAR(chorus.params()[0].value, 2.0f, 1e-4f);
+
+    // Subdivision 1/8 (3.0f)
+    chorus.params()[4].value = 3.0f;
+    chorus.set_transport_state(120.0f);
+    ASSERT_NEAR(chorus.params()[0].value, 4.0f, 1e-4f);
+
+    // 3. Sync OFF (snaps rate to BPM / 60)
+    chorus.params()[3].value = 0.0f;
+    chorus.set_transport_state(120.0f);
+    ASSERT_NEAR(chorus.params()[0].value, 2.0f, 1e-4f);
+}
+
+TEST(TempoEngineTest, detect_bpm_edge_cases) {
+    TempoEngine engine;
+    
+    // 1. Invalid write_input params
+    engine.write_input(nullptr, 0);
+    engine.write_input(nullptr, -5);
+
+    // 2. circular_buffer_wrapping with insufficient samples
+    engine.set_sample_rate(48000);
+    std::vector<float> small_input(100, 0.0f);
+    engine.write_input(small_input.data(), 100);
+    float detected1 = engine.detect_bpm();
+    ASSERT_NEAR(detected1, -1.0f, 1e-6f);
+
+    // 3. Trigger num_frames <= 2
+    // F_sf calculation and frame size check
+    engine.set_sample_rate(200);
+    std::vector<float> input2(400, 0.5f);
+    engine.write_input(input2.data(), 400);
+    float detected2 = engine.detect_bpm();
+    ASSERT_NEAR(detected2, -1.0f, 1e-6f);
+
+    // 4. Trigger flux_envelope.size() < 4
+    engine.reset();
+    engine.set_sample_rate(600);
+    std::vector<float> input3(1280, 0.5f);
+    engine.write_input(input3.data(), 1280);
+    float detected3 = engine.detect_bpm();
+    ASSERT_NEAR(detected3, -1.0f, 1e-6f);
+
+    // 5. Trigger min_lag >= max_lag
+    engine.reset();
+    engine.set_sample_rate(10);
+    std::vector<float> input4(30, 0.5f);
+    engine.write_input(input4.data(), 30);
+    float detected4 = engine.detect_bpm();
+    ASSERT_NEAR(detected4, -1.0f, 1e-6f);
+}
+

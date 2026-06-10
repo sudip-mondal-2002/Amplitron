@@ -193,3 +193,60 @@ TEST(gui_manager_logical_builders) {
     gui.shutdown();
     engine.shutdown();
 }
+
+TEST(gui_manager_bpm_auto_detect_state_machine) {
+    ScopedImGuiContext imgui;
+    AmplitronSession session;
+    auto& engine = session.concrete_engine();
+    engine.initialize();
+
+    GuiManager gui(session);
+
+    // 1. Countdown state transition
+    gui.bpm_detect_state_ = GuiManager::BpmDetectState::Countdown;
+    gui.bpm_detect_timer_ = 0.05f;
+    // Set DeltaTime to 0.1f to force expiration
+    ImGui::GetIO().DeltaTime = 0.1f;
+    gui.render_master_controls();
+    ASSERT_TRUE(gui.bpm_detect_state_ == GuiManager::BpmDetectState::Recording);
+    ASSERT_NEAR(gui.bpm_detect_timer_, 10.0f, 0.01f);
+
+    // 2. Recording state transition (failure)
+    gui.bpm_detect_state_ = GuiManager::BpmDetectState::Recording;
+    gui.bpm_detect_timer_ = 0.05f;
+    gui.render_master_controls();
+    ASSERT_TRUE(gui.bpm_detect_state_ == GuiManager::BpmDetectState::Idle);
+    ASSERT_EQ(gui.toast_message_, "BPM Detection Failed");
+    ASSERT_NEAR(gui.toast_timer_, 3.0f, 0.01f);
+
+    // 3. Recording state transition (success)
+    // Write 3 seconds of 120 BPM signal into engine
+    int sr = engine.get_sample_rate();
+    float bpm = 120.0f;
+    int total_samples = static_cast<int>(sr * 3.0f);
+    std::vector<float> signal(total_samples, 0.0f);
+    float beat_interval_seconds = 60.0f / bpm;
+    int beat_interval_samples = static_cast<int>(sr * beat_interval_seconds);
+    for (int sample_idx = 0; sample_idx < total_samples; sample_idx += beat_interval_samples) {
+        int burst_len = static_cast<int>(sr * 0.015f);
+        for (int i = 0; i < burst_len && (sample_idx + i) < total_samples; ++i) {
+            float t = static_cast<float>(i) / sr;
+            float env = std::exp(-200.0f * t);
+            signal[sample_idx + i] = env * std::sin(2.0f * 3.14159f * 1000.0f * t);
+        }
+    }
+    
+    // Feed it to the tempo engine via AudioEngine's process
+    engine.process_audio(signal.data(), signal.data(), total_samples);
+
+    gui.bpm_detect_state_ = GuiManager::BpmDetectState::Recording;
+    gui.bpm_detect_timer_ = 0.05f;
+    gui.render_master_controls();
+    ASSERT_TRUE(gui.bpm_detect_state_ == GuiManager::BpmDetectState::Idle);
+    // Since detect_bpm should detect ~120 BPM, toast_message_ should contain "BPM Detected"
+    ASSERT_TRUE(gui.toast_message_.find("BPM Detected:") != std::string::npos);
+
+    gui.shutdown();
+    engine.shutdown();
+}
+

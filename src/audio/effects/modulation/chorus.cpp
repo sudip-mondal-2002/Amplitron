@@ -149,9 +149,8 @@ void Chorus::set_transport_state(float bpm) {
         float target_rate_hz = (bpm / 60.0f) * factor;
         params_[0].value = clamp(target_rate_hz, params_[0].min_val, params_[0].max_val);
     } else {
-        static float last_snap_bpm = 0.0f;
-        if (bpm == last_snap_bpm) return;
-        last_snap_bpm = bpm;
+        if (bpm == last_snap_bpm_) return;
+        last_snap_bpm_ = bpm;
 
         float target_rate_hz = bpm / 60.0f;
         params_[0].value = clamp(target_rate_hz, params_[0].min_val, params_[0].max_val);

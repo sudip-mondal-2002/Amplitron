@@ -31,6 +31,7 @@ class Chorus : public Effect {
     float last_sync_ = -1.0f;
     float last_subdivision_ = -1.0f;
     float smoothed_rate_ = 1.5f;
+    float last_snap_bpm_ = 0.0f;
 };
 
 }  // namespace Amplitron
