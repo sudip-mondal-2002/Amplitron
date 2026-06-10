@@ -6,8 +6,10 @@
  * PedalWidget index/effect/history accessors, and ImGui rendering for all pedal visual types
  * (standard, Amp, Tuner, Cabinet, Looper, and MultiBand Compressor) using a software ImGui context.
  */
-#include <memory>
 #include <imgui_internal.h>
+
+#include <memory>
+
 #include "test_fixtures.h"
 #include "test_framework.h"
 #define private public
@@ -410,8 +412,9 @@ TEST(pedal_board_modals_and_rebuilds_extended) {
     ASSERT_TRUE(reset_win != nullptr);
 
     // Calculate left button position (Reset)
-    ImVec2 reset_btn_pos(reset_win->Pos.x + reset_win->Size.x * 0.25f, reset_win->Pos.y + reset_win->Size.y - 20.0f);
-    
+    ImVec2 reset_btn_pos(reset_win->Pos.x + reset_win->Size.x * 0.25f,
+                         reset_win->Pos.y + reset_win->Size.y - 20.0f);
+
     // Simulate hover and click
     io.MousePos = reset_btn_pos;
     board.render();
@@ -434,7 +437,8 @@ TEST(pedal_board_modals_and_rebuilds_extended) {
     ASSERT_TRUE(reset_win != nullptr);
 
     // Calculate right button position (Cancel)
-    ImVec2 reset_cancel_btn_pos(reset_win->Pos.x + reset_win->Size.x * 0.75f, reset_win->Pos.y + reset_win->Size.y - 20.0f);
+    ImVec2 reset_cancel_btn_pos(reset_win->Pos.x + reset_win->Size.x * 0.75f,
+                                reset_win->Pos.y + reset_win->Size.y - 20.0f);
 
     io.MousePos = reset_cancel_btn_pos;
     board.render();
@@ -456,7 +460,8 @@ TEST(pedal_board_modals_and_rebuilds_extended) {
     ImGuiWindow* clear_win = ImGui::FindWindowByName("Confirm Clear##Modal");
     ASSERT_TRUE(clear_win != nullptr);
 
-    ImVec2 clear_btn_pos(clear_win->Pos.x + clear_win->Size.x * 0.25f, clear_win->Pos.y + clear_win->Size.y - 20.0f);
+    ImVec2 clear_btn_pos(clear_win->Pos.x + clear_win->Size.x * 0.25f,
+                         clear_win->Pos.y + clear_win->Size.y - 20.0f);
 
     io.MousePos = clear_btn_pos;
     board.render();
@@ -478,7 +483,8 @@ TEST(pedal_board_modals_and_rebuilds_extended) {
     clear_win = ImGui::FindWindowByName("Confirm Clear##Modal");
     ASSERT_TRUE(clear_win != nullptr);
 
-    ImVec2 clear_cancel_btn_pos(clear_win->Pos.x + clear_win->Size.x * 0.75f, clear_win->Pos.y + clear_win->Size.y - 20.0f);
+    ImVec2 clear_cancel_btn_pos(clear_win->Pos.x + clear_win->Size.x * 0.75f,
+                                clear_win->Pos.y + clear_win->Size.y - 20.0f);
 
     io.MousePos = clear_cancel_btn_pos;
     board.render();
@@ -500,7 +506,8 @@ TEST(pedal_board_modals_and_rebuilds_extended) {
     ImGuiWindow* midi_win = ImGui::FindWindowByName("Confirm MIDI Clear##Modal");
     ASSERT_TRUE(midi_win != nullptr);
 
-    ImVec2 midi_btn_pos(midi_win->Pos.x + midi_win->Size.x * 0.25f, midi_win->Pos.y + midi_win->Size.y - 20.0f);
+    ImVec2 midi_btn_pos(midi_win->Pos.x + midi_win->Size.x * 0.25f,
+                        midi_win->Pos.y + midi_win->Size.y - 20.0f);
 
     io.MousePos = midi_btn_pos;
     board.render();
@@ -522,7 +529,8 @@ TEST(pedal_board_modals_and_rebuilds_extended) {
     midi_win = ImGui::FindWindowByName("Confirm MIDI Clear##Modal");
     ASSERT_TRUE(midi_win != nullptr);
 
-    ImVec2 midi_cancel_btn_pos(midi_win->Pos.x + midi_win->Size.x * 0.75f, midi_win->Pos.y + midi_win->Size.y - 20.0f);
+    ImVec2 midi_cancel_btn_pos(midi_win->Pos.x + midi_win->Size.x * 0.75f,
+                               midi_win->Pos.y + midi_win->Size.y - 20.0f);
 
     io.MousePos = midi_cancel_btn_pos;
     board.render();

@@ -1,5 +1,6 @@
-#include <memory>
 #include <imgui_internal.h>
+
+#include <memory>
 
 #include "audio/effects/amp_cab/amp_simulator.h"
 #include "audio/effects/distortion/overdrive.h"
@@ -198,7 +199,7 @@ TEST_F(PresetTest, test_pedal_board_menu_extended) {
 
     PedalBoard board(engine, history, &gui_midi);
 
-    ImGuiIO& io = ImGui::GetIO();
+    ImGuiIO &io = ImGui::GetIO();
 
     auto advance_test_frame = [&]() {
         ImGui::End();
@@ -226,8 +227,8 @@ TEST_F(PresetTest, test_pedal_board_menu_extended) {
     TestAccessor::render_add_pedal_menu(board);
     advance_test_frame();
 
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* popup_win = nullptr;
+    ImGuiContext &g = *GImGui;
+    ImGuiWindow *popup_win = nullptr;
     for (int i = 0; i < g.Windows.Size; ++i) {
         if (g.Windows[i]->Flags & ImGuiWindowFlags_Popup) {
             popup_win = g.Windows[i];
@@ -296,9 +297,9 @@ TEST_F(PresetTest, test_pedal_board_menu_extended) {
 
     // 4. Open MidiMenuPopup and sweep click options
     // Setup connected/learning MIDI states first
-    TestAccessor::learn_active(gui_midi.manager()) = true;
-    TestAccessor::current_port(gui_midi.manager()) = 0;
-    TestAccessor::current_port_name(gui_midi.manager()) = "Virtual Port";
+    TestAccessor::learn_active(midi_manager) = true;
+    TestAccessor::current_port(midi_manager) = 0;
+    TestAccessor::current_port_name(midi_manager) = "Virtual Port";
 
     // Add a dummy mapping so mapping list is non-empty
     MidiMapping mapping;

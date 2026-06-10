@@ -175,7 +175,7 @@ TEST_F(PresetTest, test_implicit_hand_tool) {
 
     // Place the Overdrive pedal at a known position
     for (const auto& node : engine.graph().get_nodes()) {
-        ui_state.node_positions[node.id] = {ImVec2(100.0f, 100.0f), false};
+        ui_state.node_positions[node.id] = {ImVec2(100.0f, 100.0f), false, ImVec2(0.0f, 0.0f)};
     }
 
     ImGui::SetNextWindowPos(ImVec2(0, 0));
@@ -275,7 +275,7 @@ TEST_F(PresetTest, test_pedal_board_chain_nodes_and_wiring) {
 
     // Set initial positions
     for (const auto& node : audio_graph.get_nodes()) {
-        ui_state.node_positions[node.id] = {ImVec2(100.0f, 100.0f), false};
+        ui_state.node_positions[node.id] = {ImVec2(100.0f, 100.0f), false, ImVec2(0.0f, 0.0f)};
     }
 
     ImGui::SetNextWindowPos(ImVec2(0, 0));
@@ -387,20 +387,24 @@ TEST_F(PresetTest, test_pedal_board_chain_extended) {
     int input_id = -1;
     int amp_id = -1;
     for (const auto& node : audio_graph.get_nodes()) {
-        if (node.name == "Splitter") splitter_id = node.id;
-        else if (node.name == "Mixer") mixer_id = node.id;
-        else if (node.name == "Input") input_id = node.id;
-        else if (node.name == "Amp Sim") amp_id = node.id;
+        if (node.name == "Splitter")
+            splitter_id = node.id;
+        else if (node.name == "Mixer")
+            mixer_id = node.id;
+        else if (node.name == "Input")
+            input_id = node.id;
+        else if (node.name == "Amp Sim")
+            amp_id = node.id;
     }
 
     ASSERT_NE(splitter_id, -1);
     ASSERT_NE(mixer_id, -1);
 
     // Place nodes at known coordinates
-    ui_state.node_positions[splitter_id] = { ImVec2(300.0f, 100.0f), false };
-    ui_state.node_positions[mixer_id] = { ImVec2(500.0f, 100.0f), false };
-    ui_state.node_positions[input_id] = { ImVec2(50.0f, 100.0f), false };
-    ui_state.node_positions[amp_id] = { ImVec2(700.0f, 100.0f), false };
+    ui_state.node_positions[splitter_id] = {ImVec2(300.0f, 100.0f), false, ImVec2(0.0f, 0.0f)};
+    ui_state.node_positions[mixer_id] = {ImVec2(500.0f, 100.0f), false, ImVec2(0.0f, 0.0f)};
+    ui_state.node_positions[input_id] = {ImVec2(50.0f, 100.0f), false, ImVec2(0.0f, 0.0f)};
+    ui_state.node_positions[amp_id] = {ImVec2(700.0f, 100.0f), false, ImVec2(0.0f, 0.0f)};
 
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(ImVec2(1024, 768));
@@ -440,7 +444,7 @@ TEST_F(PresetTest, test_pedal_board_chain_extended) {
     ASSERT_NE(ui_state.node_positions[splitter_id].position.x, 300.0f);
 
     // Reset coordinates to known static values
-    ui_state.node_positions[splitter_id] = { ImVec2(300.0f, 100.0f), false };
+    ui_state.node_positions[splitter_id] = {ImVec2(300.0f, 100.0f), false, ImVec2(0.0f, 0.0f)};
 
     // 2. Wire spline drafting and manual connection drop
     auto* splitter_node = audio_graph.find_node(splitter_id);
@@ -483,7 +487,8 @@ TEST_F(PresetTest, test_pedal_board_chain_extended) {
     }
     ASSERT_TRUE(link_found);
 
-    // 3. Test link deletion via bezier hover (click on the splitter output pin where connection starts)
+    // 3. Test link deletion via bezier hover (click on the splitter output pin where connection
+    // starts)
     io.MousePos = splitter_pin_pos;
     advance_frame();
     TestAccessor::render_signal_chain(board);
@@ -525,7 +530,7 @@ TEST_F(PresetTest, test_pedal_board_chain_extended) {
 
     // 5. Test bypass rails animation (different segments)
     od->set_enabled(false);
-    
+
     io.DeltaTime = 0.1f;
     for (int frame = 0; frame < 15; ++frame) {
         advance_frame();
