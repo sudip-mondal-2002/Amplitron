@@ -1,9 +1,10 @@
 #pragma once
 
-#include "common.h"
-#include "audio/engine/audio_engine.h"
-#include "gui/commands/command_history.h"
 #include <set>
+
+#include "audio/engine/i_audio_engine.h"
+#include "common.h"
+#include "gui/commands/command_history.h"
 
 namespace Amplitron {
 
@@ -19,14 +20,15 @@ class GuiMidi;
  */
 class PedalBoard {
     friend class TestAccessor;
-public:
+
+   public:
     /**
      * @brief Construct the pedal board.
      * @param engine  Reference to the audio engine that owns the effect chain.
      * @param history Reference to the shared command history for undo/redo.
      * @param gui_midi Optional GuiMidi pointer for MIDI learn on initial widgets.
      */
-    PedalBoard(AudioEngine& engine, CommandHistory& history, GuiMidi* gui_midi = nullptr);
+    PedalBoard(IAudioEngine& engine, CommandHistory& history, GuiMidi* gui_midi = nullptr);
 
     /** @brief Destructor. */
     ~PedalBoard();
@@ -45,13 +47,13 @@ public:
     /** @brief Inject a GuiMidi pointer to propagate to PedalWidgets. */
     void set_gui_midi(GuiMidi* gm) { gui_midi_ = gm; }
 
-private:
+   private:
     /** @brief Render the "+ Add Pedal" button and its popup menu. */
     void render_add_pedal_menu();
 
     /** @brief Render the amp model selector dropdown. */
     void render_amp_selector();
-    
+
     /** @brief Render the MIDI status and quick actions menu. */
     void render_midi_menu();
 
@@ -64,15 +66,15 @@ private:
     /** @brief Add an effect, rebuild widgets, and mark it visible. */
     void add_effect_and_show(std::shared_ptr<Effect> effect);
 
-    AudioEngine& engine_;
+    IAudioEngine& engine_;
     CommandHistory& history_;
     std::vector<std::unique_ptr<PedalWidget>> widgets_;
     bool show_active_only_ = true;
-    std::set<int> visible_indices_; // Indices of pedals that should be visible
+    std::set<int> visible_indices_;  // Indices of pedals that should be visible
     GuiMidi* gui_midi_ = nullptr;
     bool show_confirm_reset_ = false;
     bool show_confirm_clear_ = false;
     bool show_confirm_midi_clear_ = false;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

@@ -1,12 +1,13 @@
 #pragma once
-#include "audio/effects/effect.h"
-#include <vector>
 #include <string>
+#include <vector>
+
+#include "audio/effects/core/effect.h"
 
 namespace Amplitron {
 
 class MockEffect : public Effect {
-public:
+   public:
     std::string mock_name;
     std::vector<EffectParam> mock_params;
     bool is_reset = false;
@@ -21,25 +22,27 @@ public:
 
     const char* name() const override { return mock_name.c_str(); }
     std::vector<EffectParam>& params() override { return mock_params; }
-    void process(float* /*buffer*/, int /*num_samples*/) override {
-        is_processed = true;
-    }
-    void reset() override {
-        is_reset = true;
-    }
+    const std::vector<EffectParam>& params() const override { return mock_params; }
+    void process(float* /*buffer*/, int /*num_samples*/) override { is_processed = true; }
+    void reset() override { is_reset = true; }
 };
 
 class MockTunerEffect : public Effect {
-public:
+   public:
     bool processed = false;
-    
+
     MockTunerEffect() : Effect() {}
-    void process(float* /*buffer*/, int /*num_samples*/) override {
-        processed = true;
-    }
+    void process(float* /*buffer*/, int /*num_samples*/) override { processed = true; }
     void reset() override {}
     const char* name() const override { return "TestTuner"; }
-    std::vector<EffectParam>& params() override { static std::vector<EffectParam> p; return p; }
+    std::vector<EffectParam>& params() override {
+        static std::vector<EffectParam> p;
+        return p;
+    }
+    const std::vector<EffectParam>& params() const override {
+        static const std::vector<EffectParam> p;
+        return p;
+    }
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

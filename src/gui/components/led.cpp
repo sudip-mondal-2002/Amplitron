@@ -1,4 +1,5 @@
 #include "gui/components/led.h"
+
 #include "gui/theme/theme.h"
 
 namespace Amplitron {
@@ -17,8 +18,7 @@ void LedComponent::render(const char* imgui_id, const LedProps& props, float zoo
         ImVec4 osc = Theme::RecBlink(props.blink_time);
         if (is_on) {
             base_color = ImGui::ColorConvertFloat4ToU32(
-                ImVec4(props.led_color.x, props.led_color.y, props.led_color.z, osc.w)
-            );
+                ImVec4(props.led_color.x, props.led_color.y, props.led_color.z, osc.w));
         }
     } else if (is_on) {
         base_color = ImGui::ColorConvertFloat4ToU32(props.led_color);
@@ -27,15 +27,12 @@ void LedComponent::render(const char* imgui_id, const LedProps& props, float zoo
     dl->AddCircleFilled(center, radius, base_color);
 
     if (is_on) {
-        int glow_alpha = props.blink ? static_cast<int>(Theme::RecBlink(props.blink_time).w * 40) : 40;
+        int glow_alpha =
+            props.blink ? static_cast<int>(Theme::RecBlink(props.blink_time).w * 40) : 40;
         dl->AddCircleFilled(center, glow_radius,
-            IM_COL32(
-                static_cast<int>(props.led_color.x * 255),
-                static_cast<int>(props.led_color.y * 255),
-                static_cast<int>(props.led_color.z * 255),
-                glow_alpha
-            )
-        );
+                            IM_COL32(static_cast<int>(props.led_color.x * 255),
+                                     static_cast<int>(props.led_color.y * 255),
+                                     static_cast<int>(props.led_color.z * 255), glow_alpha));
     }
 
     if (props.tooltip) {
@@ -48,4 +45,4 @@ void LedComponent::render(const char* imgui_id, const LedProps& props, float zoo
     }
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

@@ -1,12 +1,13 @@
 #pragma once
 
-#include "common.h"
-#include "audio/engine/audio_engine.h"
-#include "audio/effects/effect.h"
-#include "gui/commands/command.h"
 #include <array>
 #include <optional>
 #include <vector>
+
+#include "audio/effects/core/effect.h"
+#include "audio/engine/i_audio_engine.h"
+#include "common.h"
+#include "gui/commands/command.h"
 
 namespace Amplitron {
 
@@ -20,7 +21,7 @@ namespace Amplitron {
  * so that recall integrates cleanly with the undo/redo system.
  */
 class SnapshotManager {
-public:
+   public:
     static constexpr int NUM_SLOTS = 4;
 
     /** @brief Display labels for each slot. */
@@ -34,7 +35,7 @@ public:
      */
     struct BoardSnapshot {
         std::vector<LoadPresetCommand::EffectSnapshot> effects;
-        float input_gain  = 0.7f;
+        float input_gain = 0.7f;
         float output_gain = 0.8f;
     };
 
@@ -43,7 +44,7 @@ public:
     // ------------------------------------------------------------------
 
     /** @brief Capture the current engine state into the given slot (0–3). */
-    void save_slot(int slot, AudioEngine& engine) {
+    void save_slot(int slot, IAudioEngine& engine) {
         if (slot < 0 || slot >= NUM_SLOTS) return;
         slots_[slot] = capture(engine);
     }
@@ -60,7 +61,7 @@ public:
      * For use in tests and headless scenarios. GUI code should call
      * GuiSnapshots::recall_slot() instead to get undo/redo support.
      */
-    void recall_slot_direct(int slot, AudioEngine& engine) {
+    void recall_slot_direct(int slot, IAudioEngine& engine) {
         if (slot < 0 || slot >= NUM_SLOTS) return;
         if (!slots_[slot].has_value()) return;
         apply(*slots_[slot], engine);
@@ -95,16 +96,16 @@ public:
     // ------------------------------------------------------------------
 
     /** @brief Capture the current engine state as a BoardSnapshot. */
-    static BoardSnapshot capture(AudioEngine& engine) {
+    static BoardSnapshot capture(IAudioEngine& engine) {
         BoardSnapshot snap;
-        snap.input_gain  = engine.get_input_gain();
+        snap.input_gain = engine.get_input_gain();
         snap.output_gain = engine.get_output_gain();
 
         for (auto& fx : engine.effects()) {
             LoadPresetCommand::EffectSnapshot es;
-            es.effect  = fx;
+            es.effect = fx;
             es.enabled = fx->is_enabled();
-            es.mix     = fx->get_mix();
+            es.mix = fx->get_mix();
             for (auto& p : fx->params()) {
                 es.param_values.push_back(p.value);
             }
@@ -120,7 +121,7 @@ public:
      * effect chain swap via AudioEngine::restore_effects_state so the audio
      * thread never sees a partial state.
      */
-    static void apply(const BoardSnapshot& snap, AudioEngine& engine) {
+    static void apply(const BoardSnapshot& snap, IAudioEngine& engine) {
         std::vector<std::shared_ptr<Effect>> new_effects;
         new_effects.reserve(snap.effects.size());
 
@@ -129,7 +130,8 @@ public:
             es.effect->set_mix(es.mix);
             auto& params = es.effect->params();
             for (int i = 0; i < static_cast<int>(params.size()) &&
-                            i < static_cast<int>(es.param_values.size()); ++i) {
+                            i < static_cast<int>(es.param_values.size());
+                 ++i) {
                 params[i].value = es.param_values[i];
             }
             new_effects.push_back(es.effect);
@@ -140,9 +142,9 @@ public:
         engine.set_output_gain(snap.output_gain);
     }
 
-private:
+   private:
     std::array<std::optional<BoardSnapshot>, NUM_SLOTS> slots_;
     int active_slot_ = -1;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

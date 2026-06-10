@@ -5,11 +5,12 @@
  * Tests the reactive GuiSnapshots component using build_snapshots_props,
  * set_props, and software ImGui context rendering.
  */
-#include "test_framework.h"
-#include "test_fixtures.h"
-#include "gui/commands/command_history.h"
-#include "audio/effects/overdrive.h"
 #include <memory>
+
+#include "audio/effects/distortion/overdrive.h"
+#include "gui/commands/command_history.h"
+#include "test_fixtures.h"
+#include "test_framework.h"
 
 #define private public
 #include "gui/views/gui_snapshots.h"

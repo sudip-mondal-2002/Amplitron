@@ -6,11 +6,12 @@
  * No ImGui draw context or draw calls are exercised here — drawing lives
  * in GuiAnalyzer, which has its own test suite.
  */
-#include "test_framework.h"
-#include "audio/dsp/spectrum_analyzer.h"
 #include <cmath>
-#include <vector>
 #include <limits>
+#include <vector>
+
+#include "audio/dsp/spectrum_analyzer.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 
@@ -48,15 +49,15 @@ TEST(spectrum_analyzer_update_sine_tone_does_not_produce_nan) {
 TEST(spectrum_analyzer_update_null_input_is_safe) {
     SpectrumAnalyzer sa;
     std::vector<float> zeros(SpectrumAnalyzer::FFT_SIZE, 0.0f);
-    sa.update(nullptr,       zeros.data(), 48000, 1.0f / 60.0f);
-    sa.update(zeros.data(),  nullptr,      48000, 1.0f / 60.0f);
-    sa.update(nullptr,       nullptr,      48000, 1.0f / 60.0f);
+    sa.update(nullptr, zeros.data(), 48000, 1.0f / 60.0f);
+    sa.update(zeros.data(), nullptr, 48000, 1.0f / 60.0f);
+    sa.update(nullptr, nullptr, 48000, 1.0f / 60.0f);
 }
 
 TEST(spectrum_analyzer_update_zero_sample_rate_is_safe) {
     SpectrumAnalyzer sa;
     std::vector<float> samples(SpectrumAnalyzer::FFT_SIZE, 0.1f);
-    sa.update(samples.data(), samples.data(),  0, 1.0f / 60.0f);
+    sa.update(samples.data(), samples.data(), 0, 1.0f / 60.0f);
     sa.update(samples.data(), samples.data(), -1, 1.0f / 60.0f);
 }
 

@@ -1,10 +1,12 @@
-#include "audio/recorder/recorder.h"
-#include "audio/engine/audio_engine.h"
-#include <nlohmann/json.hpp>
-#include <iostream>
-#include <fstream>
-#include <ctime>
 #include <cstring>
+#include <ctime>
+#include <fstream>
+#include <iostream>
+#include <nlohmann/json.hpp>
+
+#include "audio/effects/core/effect.h"
+#include "audio/engine/i_audio_engine.h"
+#include "audio/recorder/recorder.h"
 
 namespace Amplitron {
 
@@ -14,7 +16,7 @@ void Recorder::write_wav_header() {
     char header[44];
     std::memset(header, 0, 44);
 
-    int byte_rate = sample_rate_ * channels_ * 2; // 16-bit = 2 bytes
+    int byte_rate = sample_rate_ * channels_ * 2;  // 16-bit = 2 bytes
     int block_align = channels_ * 2;
 
     // RIFF header
@@ -26,7 +28,7 @@ void Recorder::write_wav_header() {
     std::memcpy(header + 12, "fmt ", 4);
     int fmt_size = 16;
     std::memcpy(header + 16, &fmt_size, 4);
-    int16_t audio_format = 1; // PCM
+    int16_t audio_format = 1;  // PCM
     std::memcpy(header + 20, &audio_format, 2);
     int16_t num_channels = static_cast<int16_t>(channels_);
     std::memcpy(header + 22, &num_channels, 2);
@@ -48,35 +50,33 @@ void Recorder::finalize_wav_header() {
     if (!file_.is_open()) return;
 
     int64_t total_samples = samples_written_.load();
-// Clamp channels_ to a safe positive value before multiplication to prevent
-// signed overflow or negative data_size_64 if channels_ is zero or negative.
-int64_t safe_channels = (channels_ > 0 && channels_ <= 8)
-                        ? static_cast<int64_t>(channels_)
-                        : 1LL;
-// Compute data size in 64-bit to avoid overflow
-int64_t data_size_64 = total_samples * safe_channels * 2LL;
+    // Clamp channels_ to a safe positive value before multiplication to prevent
+    // signed overflow or negative data_size_64 if channels_ is zero or negative.
+    int64_t safe_channels =
+        (channels_ > 0 && channels_ <= 8) ? static_cast<int64_t>(channels_) : 1LL;
+    // Compute data size in 64-bit to avoid overflow
+    int64_t data_size_64 = total_samples * safe_channels * 2LL;
     // WAV format uses 32-bit sizes; clamp to max int32
     // Use uint32_t to match the WAV spec (unsigned 32-bit chunk sizes)
-// and avoid signed integer overflow when data_size approaches INT32_MAX.
-// Cap at 0xFFFFFFD8 to leave room for the 36-byte RIFF overhead.
-uint32_t data_size = static_cast<uint32_t>(
-    (data_size_64 > static_cast<int64_t>(0xFFFFFFD8LL))
-        ? 0xFFFFFFD8u
-        : static_cast<uint32_t>(data_size_64));
-uint32_t riff_size = data_size + 36u;
+    // and avoid signed integer overflow when data_size approaches INT32_MAX.
+    // Cap at 0xFFFFFFD8 to leave room for the 36-byte RIFF overhead.
+    uint32_t data_size = static_cast<uint32_t>((data_size_64 > static_cast<int64_t>(0xFFFFFFD8LL))
+                                                   ? 0xFFFFFFD8u
+                                                   : static_cast<uint32_t>(data_size_64));
+    uint32_t riff_size = data_size + 36u;
 
-// Seek back and write correct sizes
-file_.seekp(4, std::ios::beg);
-file_.write(reinterpret_cast<const char*>(&riff_size), 4);
+    // Seek back and write correct sizes
+    file_.seekp(4, std::ios::beg);
+    file_.write(reinterpret_cast<const char*>(&riff_size), 4);
 
-file_.seekp(40, std::ios::beg);
-file_.write(reinterpret_cast<const char*>(&data_size), 4);
+    file_.seekp(40, std::ios::beg);
+    file_.write(reinterpret_cast<const char*>(&data_size), 4);
 
     // Seek to end
     file_.seekp(0, std::ios::end);
 }
 
-void Recorder::write_metadata(const std::string& wav_path, AudioEngine& engine) {
+void Recorder::write_metadata(const std::string& wav_path, IAudioEngine& engine) {
     // Write a JSON sidecar file with recording details
     std::string meta_path = wav_path;
     // Replace .wav with .meta.json
@@ -106,31 +106,31 @@ void Recorder::write_metadata(const std::string& wav_path, AudioEngine& engine) 
 
     // Build the recording metadata object
     nlohmann::ordered_json recording = nlohmann::ordered_json::object();
-    recording["filename"]         = wav_path;
-    recording["recorded_at"]      = timebuf;
+    recording["filename"] = wav_path;
+    recording["recorded_at"] = timebuf;
     recording["duration_seconds"] = duration;
-    recording["total_samples"]    = samples_written_.load();
-    recording["format"]           = "WAV PCM 16-bit";
-    recording["sample_rate"]      = sample_rate_;
-    recording["channels"]         = channels_;
-    recording["bit_depth"]        = 16;
+    recording["total_samples"] = samples_written_.load();
+    recording["format"] = "WAV PCM 16-bit";
+    recording["sample_rate"] = sample_rate_;
+    recording["channels"] = channels_;
+    recording["bit_depth"] = 16;
 
     // Build the audio settings object
     nlohmann::ordered_json audio_settings = nlohmann::ordered_json::object();
-    audio_settings["input_device"]       = engine.get_input_device_name();
-    audio_settings["output_device"]      = engine.get_output_device_name();
+    audio_settings["input_device"] = engine.get_input_device_name();
+    audio_settings["output_device"] = engine.get_output_device_name();
     audio_settings["engine_sample_rate"] = engine.get_sample_rate();
-    audio_settings["buffer_size"]        = engine.get_buffer_size();
-    audio_settings["input_gain"]         = engine.get_input_gain();
-    audio_settings["output_gain"]        = engine.get_output_gain();
+    audio_settings["buffer_size"] = engine.get_buffer_size();
+    audio_settings["input_gain"] = engine.get_input_gain();
+    audio_settings["output_gain"] = engine.get_output_gain();
 
     // Build the signal chain array
     nlohmann::ordered_json signal_chain = nlohmann::ordered_json::array();
     for (auto& fx : engine.effects()) {
         nlohmann::ordered_json jfx = nlohmann::ordered_json::object();
-        jfx["name"]    = fx->name();
+        jfx["name"] = fx->name();
         jfx["enabled"] = fx->is_enabled();
-        jfx["mix"]     = fx->get_mix();
+        jfx["mix"] = fx->get_mix();
 
         nlohmann::ordered_json params_obj = nlohmann::ordered_json::object();
         for (auto& p : fx->params()) {
@@ -143,14 +143,13 @@ void Recorder::write_metadata(const std::string& wav_path, AudioEngine& engine) 
 
     // Assemble root object
     nlohmann::ordered_json root = nlohmann::ordered_json::object();
-    root["recording"]      = std::move(recording);
+    root["recording"] = std::move(recording);
     root["audio_settings"] = std::move(audio_settings);
-    root["signal_chain"]   = std::move(signal_chain);
+    root["signal_chain"] = std::move(signal_chain);
 
     meta << root.dump(2) << "\n";
     meta.close();
     std::cout << "Metadata written: " << meta_path << std::endl;
 }
 
-} // namespace Amplitron
-
+}  // namespace Amplitron

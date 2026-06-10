@@ -1,6 +1,6 @@
 # Amplitron Presets Guide
 
-Welcome to the Amplitron example presets! This collection is designed to demonstrate the versatility and power of the Amplitron DSP engine right out of the box. 
+Welcome to the Amplitron example presets! This collection is designed to demonstrate the versatility and power of the Amplitron DSP engine right out of the box.
 
 **Want to see them in action?** Check out the [Amplitron demo video on YouTube](https://youtu.be/OLGx1zYj0W4) for a first look at how the presets and effects work.
 

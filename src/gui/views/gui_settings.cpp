@@ -1,7 +1,10 @@
 #include "gui/views/gui_settings.h"
-#include "gui/theme/theme.h"
+
 #include <imgui.h>
+
 #include <cstdio>
+
+#include "gui/theme/theme.h"
 
 namespace Amplitron {
 
@@ -27,7 +30,8 @@ void GuiSettings::render(bool& show) {
 
     if (!p.device_error.empty()) {
         ImGui::Spacing();
-        ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "Device error: %s", p.device_error.c_str());
+        ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "Device error: %s",
+                           p.device_error.c_str());
         ImGui::SameLine();
         if (ImGui::SmallButton("Dismiss") && p.on_clear_error) p.on_clear_error();
     }
@@ -37,25 +41,28 @@ void GuiSettings::render(bool& show) {
     // ── Latency ──
     ImGui::TextColored(Theme::Gold(), "LATENCY");
     ImGui::Text("Buffer Size (lower = less latency, more CPU):");
-    const int   buf_sizes[]  = {32, 64, 128, 256, 512};
+    const int buf_sizes[] = {32, 64, 128, 256, 512};
     const char* buf_labels[] = {"32", "64", "128", "256", "512"};
     int current_idx = 1;
     for (int i = 0; i < 5; ++i)
-        if (buf_sizes[i] == p.buffer_size) { current_idx = i; break; }
+        if (buf_sizes[i] == p.buffer_size) {
+            current_idx = i;
+            break;
+        }
     if (ImGui::Combo("Buffer Size", &current_idx, buf_labels, 5)) {
         if (p.on_buffer_size_changed) p.on_buffer_size_changed(buf_sizes[current_idx]);
     }
     ImGui::Text("Estimated latency: %.1f ms", p.latency_ms);
 
 #ifdef AMPLITRON_ANDROID_OBOE
-    ImGui::TextColored(ImVec4(0.2f, 0.9f, 0.4f, 1.0f),
-                       "Audio backend: Oboe (%s)", p.oboe_mode_label);
+    ImGui::TextColored(ImVec4(0.2f, 0.9f, 0.4f, 1.0f), "Audio backend: Oboe (%s)",
+                       p.oboe_mode_label);
 #endif
 
     // CPU load
-    ImVec4 load_color = (p.cpu_load > 0.80f) ? ImVec4(1.0f, 0.2f, 0.2f, 1.0f) :
-                         (p.cpu_load > 0.50f) ? ImVec4(1.0f, 0.8f, 0.2f, 1.0f) :
-                                                ImVec4(0.2f, 0.8f, 0.2f, 1.0f);
+    ImVec4 load_color = (p.cpu_load > 0.80f)   ? ImVec4(1.0f, 0.2f, 0.2f, 1.0f)
+                        : (p.cpu_load > 0.50f) ? ImVec4(1.0f, 0.8f, 0.2f, 1.0f)
+                                               : ImVec4(0.2f, 0.8f, 0.2f, 1.0f);
     ImGui::Spacing();
     ImGui::TextColored(load_color, "CPU Load: %.0f%%", p.cpu_load * 100.0f);
     ImGui::SameLine();
@@ -76,11 +83,14 @@ void GuiSettings::render(bool& show) {
     ImGui::Spacing();
 
     // ── Sample rate ──
-    const int   rates[]       = {44100, 48000, 96000};
+    const int rates[] = {44100, 48000, 96000};
     const char* rate_labels[] = {"44100", "48000", "96000"};
     int sr_idx = 1;
     for (int i = 0; i < 3; ++i)
-        if (rates[i] == p.sample_rate) { sr_idx = i; break; }
+        if (rates[i] == p.sample_rate) {
+            sr_idx = i;
+            break;
+        }
     if (ImGui::Combo("Sample Rate", &sr_idx, rate_labels, 3)) {
         if (p.on_sample_rate_changed) p.on_sample_rate_changed(rates[sr_idx]);
     }
@@ -89,7 +99,8 @@ void GuiSettings::render(bool& show) {
 
     // ── Input devices ──
     ImGui::TextColored(Theme::Gold(), "INPUT DEVICE (USB Guitar Cable)");
-    ImGui::TextWrapped("Select your USB guitar cable or audio interface. USB devices are highlighted with [USB].");
+    ImGui::TextWrapped(
+        "Select your USB guitar cable or audio interface. USB devices are highlighted with [USB].");
     ImGui::BeginChild("InputDevices", ImVec2(0, 120), true);
     for (const auto& dev : p.input_devices) {
         ImGui::PushID(dev.index);
@@ -121,9 +132,10 @@ void GuiSettings::render(bool& show) {
     ImGui::EndChild();
 
     ImGui::Separator();
-    ImGui::TextDisabled("MIDI settings are managed in a separate window (Utilities > MIDI Settings).");
+    ImGui::TextDisabled(
+        "MIDI settings are managed in a separate window (Utilities > MIDI Settings).");
 
     ImGui::End();
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

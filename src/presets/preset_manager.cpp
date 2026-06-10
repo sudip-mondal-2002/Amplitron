@@ -1,11 +1,15 @@
 #include "preset_manager.h"
-#include "preset_manager_impl.h"
-#include <iostream>
-#include <ctime>
+
 #include <sys/stat.h>
+
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <filesystem>
+#include <iostream>
+
+#include "preset_manager_impl.h"
+#include "presets/preset_components.h"
 
 #ifdef _WIN32
 #include <direct.h>
@@ -13,23 +17,37 @@
 #include <windows.h>
 #define MKDIR(path) _mkdir(path)
 #define STAT_STRUCT struct _stat
-#define STAT_FN     _stat
+#define STAT_FN _stat
 #elif defined(__APPLE__)
 #include <dirent.h>
 #include <mach-o/dyld.h>
 #define MKDIR(path) mkdir(path, 0755)
 #define STAT_STRUCT struct stat
-#define STAT_FN     stat
+#define STAT_FN stat
 #else
 #include <dirent.h>
 #define MKDIR(path) mkdir(path, 0755)
 #define STAT_STRUCT struct stat
-#define STAT_FN     stat
+#define STAT_FN stat
 #endif
 
 namespace Amplitron {
 
-std::string PresetManager::last_error_;
+PresetManager::PresetManager() : PresetManager(nullptr, nullptr, nullptr) {}
+
+PresetManager::PresetManager(std::unique_ptr<IPresetSerializer> serializer,
+                             std::unique_ptr<IPresetStorage> storage,
+                             std::unique_ptr<IPresetMigrator> migrator)
+    : serializer_(std::move(serializer)),
+      storage_(std::move(storage)),
+      migrator_(std::move(migrator)) {
+    if (!serializer_) serializer_ = std::make_unique<PresetSerializer>();
+    if (!storage_) storage_ = std::make_unique<PresetStorage>();
+    if (!migrator_) migrator_ = std::make_unique<PresetMigrator>();
+}
+
+PresetManager::~PresetManager() = default;
+
 std::string PresetManager::custom_presets_dir_;
 
 bool dir_exists(const std::string& path) {
@@ -66,7 +84,8 @@ std::string PresetManager::get_config_path() {
     std::string config_dir = std::string(home) + "/.config/amplitron";
     try {
         std::filesystem::create_directories(config_dir);
-    } catch (...) {}
+    } catch (...) {
+    }
     return config_dir + "/config.json";
 #endif
 }
@@ -95,20 +114,23 @@ std::string PresetManager::apply_migrations(const std::string& raw_json_string) 
         return raw_json_string;
     }
 
-    // Look for a "version" key strictly near the root area (e.g., within the first 100 characters)
-    // This stops nested effect parameters from accidentally triggering a false positive bypass.
-    size_t version_pos = raw_json_string.find("\"version\"");
+    // Look for a version key strictly near the root area
+    size_t version_pos = raw_json_string.find("\"format_version\"");
+    if (version_pos == std::string::npos) {
+        version_pos = raw_json_string.find("\"version\"");
+    }
     bool is_root_version = (version_pos != std::string::npos && (version_pos - root_start) < 100);
 
     if (!is_root_version) {
-        std::cout << "[Preset Migration] Upgrading legacy unversioned preset format to Version " 
+        std::cout << "[Preset Migration] Upgrading legacy unversioned preset format to Version "
                   << CURRENT_PRESET_VERSION << std::endl;
 
         std::string patched = raw_json_string;
         size_t last_bracket = patched.find_last_of('}');
-        
+
         if (last_bracket != std::string::npos && last_bracket > root_start) {
-            // Find out if there is any content between the root brackets to avoid trailing comma bugs
+            // Find out if there is any content between the root brackets to avoid trailing comma
+            // bugs
             size_t content_check = patched.find_first_not_of(" \t\n\r", root_start + 1);
             bool is_empty_json = (content_check == last_bracket);
 
@@ -117,6 +139,8 @@ std::string PresetManager::apply_migrations(const std::string& raw_json_string) 
             if (!is_empty_json) {
                 migration_patch += ",\n";
             }
+            migration_patch +=
+                "  \"format_version\": " + std::to_string(CURRENT_PRESET_VERSION) + ",\n";
             migration_patch += "  \"version\": " + std::to_string(CURRENT_PRESET_VERSION) + ",\n";
             migration_patch += "  \"input_gain\": 0.7,\n";
             migration_patch += "  \"output_gain\": 0.8\n";
@@ -129,4 +153,4 @@ std::string PresetManager::apply_migrations(const std::string& raw_json_string) 
     return raw_json_string;
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

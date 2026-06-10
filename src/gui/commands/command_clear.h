@@ -1,9 +1,10 @@
 #pragma once
 
-#include "gui/commands/command_base.h"
-#include "audio/engine/audio_engine.h"
-#include "audio/effects/effect.h"
 #include <vector>
+
+#include "audio/effects/core/effect.h"
+#include "audio/engine/i_audio_engine.h"
+#include "gui/commands/command_base.h"
 
 namespace Amplitron {
 
@@ -13,9 +14,8 @@ namespace Amplitron {
  * Captures the full chain state before clearing so that undo() can restore it.
  */
 class ClearAllCommand : public Command {
-public:
-    explicit ClearAllCommand(AudioEngine& engine)
-        : engine_(engine) {
+   public:
+    explicit ClearAllCommand(IAudioEngine& engine) : engine_(engine) {
         for (auto& fx : engine_.effects()) {
             saved_.push_back(fx);
         }
@@ -36,9 +36,9 @@ public:
 
     const char* description() const override { return "Clear All"; }
 
-private:
-    AudioEngine& engine_;
+   private:
+    IAudioEngine& engine_;
     std::vector<std::shared_ptr<Effect>> saved_;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

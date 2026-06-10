@@ -1,8 +1,9 @@
 #pragma once
 
 #include <imgui.h>
-#include <string>
+
 #include <functional>
+#include <string>
 
 namespace Amplitron {
 
@@ -24,7 +25,7 @@ struct KnobProps {
 
     // Callback events
     std::function<void(float)> on_value_changed;
-    std::function<void(float, float)> on_value_committed; // old_val, new_val
+    std::function<void(float, float)> on_value_committed;  // old_val, new_val
     std::function<void()> on_midi_learn_param;
     std::function<void()> on_midi_clear_param;
     std::function<void()> on_midi_learn_bypass;
@@ -32,7 +33,7 @@ struct KnobProps {
 };
 
 class KnobComponent {
-public:
+   public:
     /**
      * @brief Render a reusable parameter rotary knob.
      * @param imgui_id Unique ID string for ImGui tracking.
@@ -43,4 +44,4 @@ public:
     static void render(const char* imgui_id, const KnobProps& props, float zoom, ImVec2 center);
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

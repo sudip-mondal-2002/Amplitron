@@ -1,10 +1,11 @@
-#include "test_framework.h"
-#include "audio/effects/cabinet_sim.h"
+#include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <fstream>
 #include <vector>
-#include <cmath>
-#include <cstdio>
+
+#include "audio/effects/amp_cab/cabinet_sim.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 using namespace TestFramework;
@@ -25,8 +26,7 @@ static void write_le32(std::ofstream& out, uint32_t v) {
     out.write(b, 4);
 }
 
-static bool write_wav_mono_pcm16(const std::string& path,
-                                 const std::vector<float>& samples,
+static bool write_wav_mono_pcm16(const std::string& path, const std::vector<float>& samples,
                                  int sample_rate) {
     std::ofstream out(path, std::ios::binary);
     if (!out.is_open()) return false;
@@ -45,8 +45,8 @@ static bool write_wav_mono_pcm16(const std::string& path,
 
     // fmt chunk
     out.write("fmt ", 4);
-    write_le32(out, 16);               // PCM fmt chunk size
-    write_le16(out, 1);                // audio format = PCM
+    write_le32(out, 16);  // PCM fmt chunk size
+    write_le16(out, 1);   // audio format = PCM
     write_le16(out, num_channels);
     write_le32(out, static_cast<uint32_t>(sample_rate));
     write_le32(out, byte_rate);
@@ -271,8 +271,7 @@ TEST(CabinetSim_SetSampleRate_ReloadsIR) {
 TEST(CabinetSim_ClearIRRemovesState) {
     std::string path = "clear_ir.wav";
 
-    ASSERT_TRUE(
-        write_wav_mono_pcm16(path, {1.0f}, 48000));
+    ASSERT_TRUE(write_wav_mono_pcm16(path, {1.0f}, 48000));
 
     CabinetSim cab;
 

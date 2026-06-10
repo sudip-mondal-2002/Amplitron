@@ -1,7 +1,19 @@
-#include "midi/midi_manager.h"
 #include "audio/engine/audio_engine.h"
+#include "midi/midi_manager.h"
 
 namespace Amplitron {
+
+namespace {
+int find_node_id_for_effect(IAudioEngine& engine, const std::shared_ptr<Effect>& effect,
+                            int fallback_id) {
+    for (const auto& node : engine.graph().get_nodes()) {
+        if (node.pedal == effect) {
+            return node.id;
+        }
+    }
+    return fallback_id;
+}
+}  // namespace
 
 // ---------------------------------------------------------------------------
 // Mapping management
@@ -10,8 +22,7 @@ namespace Amplitron {
 void MidiManager::add_mapping(const MidiMapping& mapping) {
     // Remove any existing mapping with the same CC + channel
     for (auto it = mappings_.begin(); it != mappings_.end(); ++it) {
-        if (it->cc_number == mapping.cc_number &&
-            it->midi_channel == mapping.midi_channel) {
+        if (it->cc_number == mapping.cc_number && it->midi_channel == mapping.midi_channel) {
             mappings_.erase(it);
             break;
         }
@@ -28,8 +39,7 @@ void MidiManager::remove_mapping(int index) {
 void MidiManager::remove_mapping_for_param(const std::string& effect_name,
                                            const std::string& param_name) {
     for (auto it = mappings_.begin(); it != mappings_.end(); ++it) {
-        if (it->target_type == MidiTargetType::EffectParam &&
-            it->effect_name == effect_name &&
+        if (it->target_type == MidiTargetType::EffectParam && it->effect_name == effect_name &&
             it->param_name == param_name) {
             mappings_.erase(it);
             return;
@@ -37,9 +47,7 @@ void MidiManager::remove_mapping_for_param(const std::string& effect_name,
     }
 }
 
-void MidiManager::clear_mappings() {
-    mappings_.clear();
-}
+void MidiManager::clear_mappings() { mappings_.clear(); }
 
 void MidiManager::install_default_mappings() {
     MidiMapping cc7;
@@ -75,7 +83,7 @@ void MidiManager::install_default_mappings() {
 
 #ifdef __EMSCRIPTEN__
     // Web-specific MIDI defaults
-    
+
     // CC11 (Expression pedal) → Output Gain
     MidiMapping cc11_output;
     cc11_output.cc_number = 11;
@@ -83,7 +91,7 @@ void MidiManager::install_default_mappings() {
     cc11_output.target_type = MidiTargetType::OutputGain;
     cc11_output.mode = MidiMappingMode::Continuous;
     add_mapping(cc11_output);
-    
+
     // CC7 (Volume) → Also Output Gain (alternative)
     MidiMapping cc7_output;
     cc7_output.cc_number = 7;
@@ -91,13 +99,13 @@ void MidiManager::install_default_mappings() {
     cc7_output.target_type = MidiTargetType::OutputGain;
     cc7_output.mode = MidiMappingMode::Continuous;
     add_mapping(cc7_output);
-    
+
     // CC64 (Sustain/Damper pedal) → Bypass toggle
-    // (Already implemented as EffectBypass for AmpSimulator above, 
+    // (Already implemented as EffectBypass for AmpSimulator above,
     // but redefined here explicitly for Web defaults)
 
     // CC64 (Sustain) → acts as bypass via OutputGain toggle (web fallback)
-    
+
     // CC1 (Modulation) → EffectParam (e.g., Chorus Depth)
     MidiMapping cc1_mod;
     cc1_mod.cc_number = 1;
@@ -122,8 +130,7 @@ void MidiManager::install_default_mappings() {
 // MIDI Learn
 // ---------------------------------------------------------------------------
 
-void MidiManager::start_learn(MidiTargetType type,
-                              const std::string& effect_name,
+void MidiManager::start_learn(MidiTargetType type, const std::string& effect_name,
                               const std::string& param_name) {
     learn_active_ = true;
     learn_target_type_ = type;
@@ -162,15 +169,13 @@ std::string MidiManager::learn_status() const {
 // Poll — called from GUI thread each frame
 // ---------------------------------------------------------------------------
 
-void MidiManager::inject_event(const MidiEvent& event) {
-    midi_queue_.try_push(event);
-}
+void MidiManager::inject_event(const MidiEvent& event) { midi_queue_.try_push(event); }
 
-void MidiManager::poll(AudioEngine& engine) {
+void MidiManager::poll(IAudioEngine& engine) {
     MidiEvent event{};
     while (midi_queue_.try_pop(event)) {
         uint8_t cc_number = event.data1;
-        uint8_t cc_value  = event.data2;
+        uint8_t cc_value = event.data2;
         int channel = event.status & 0x0F;
 
         // MIDI Learn: capture the first CC and create a mapping
@@ -180,10 +185,10 @@ void MidiManager::poll(AudioEngine& engine) {
             mapping.midi_channel = channel;
             mapping.target_type = learn_target_type_;
             mapping.mode = (learn_target_type_ == MidiTargetType::EffectBypass)
-                             ? MidiMappingMode::Toggle
-                             : MidiMappingMode::Continuous;
+                               ? MidiMappingMode::Toggle
+                               : MidiMappingMode::Continuous;
             mapping.effect_name = learn_effect_name_;
-            mapping.param_name  = learn_param_name_;
+            mapping.param_name = learn_param_name_;
             add_mapping(mapping);
             learn_active_ = false;
             continue;
@@ -198,8 +203,7 @@ void MidiManager::poll(AudioEngine& engine) {
     }
 }
 
-void MidiManager::apply_mapping(const MidiMapping& mapping, int cc_value,
-                                AudioEngine& engine) {
+void MidiManager::apply_mapping(const MidiMapping& mapping, int cc_value, IAudioEngine& engine) {
     float normalized = static_cast<float>(cc_value) / 127.0f;
 
     switch (mapping.target_type) {
@@ -223,9 +227,8 @@ void MidiManager::apply_mapping(const MidiMapping& mapping, int cc_value,
                     // Toggle on either edge: press (false→true) or release (true→false)
                     if (is_pressed != mapping.last_state) {
                         effects[i]->set_enabled(!effects[i]->is_enabled());
-                        engine.push_effect_enabled(i, effects[i]->is_enabled() ? 1.0f : 0.0f);
-
-                        printf("[DEBUG] AmpSimulator BYPASS TOGGLED\n");
+                        int node_id = find_node_id_for_effect(engine, effects[i], i);
+                        engine.push_effect_enabled(node_id, effects[i]->is_enabled() ? 1.0f : 0.0f);
                     }
 
                     // Update state for next event
@@ -239,11 +242,17 @@ void MidiManager::apply_mapping(const MidiMapping& mapping, int cc_value,
             // Check if it's a Mixer Gain mapping
             if (mapping.effect_name.find("Mixer_") == 0) {
                 int node_id = -1;
-                try { node_id = std::stoi(mapping.effect_name.substr(6)); } catch(...) {}
+                try {
+                    node_id = std::stoi(mapping.effect_name.substr(6));
+                } catch (...) {
+                }
                 if (node_id != -1) {
                     int pin_idx = -1;
                     if (mapping.param_name.find("Gain ") == 0) {
-                        try { pin_idx = std::stoi(mapping.param_name.substr(5)); } catch(...) {}
+                        try {
+                            pin_idx = std::stoi(mapping.param_name.substr(5));
+                        } catch (...) {
+                        }
                     }
                     if (pin_idx != -1) {
                         float gain = normalized * 2.0f;
@@ -263,10 +272,11 @@ void MidiManager::apply_mapping(const MidiMapping& mapping, int cc_value,
                 for (int p = 0; p < static_cast<int>(params.size()); ++p) {
                     if (params[p].name != mapping.param_name) continue;
 
-                    float value = params[p].min_val +
-                                  normalized * (params[p].max_val - params[p].min_val);
+                    float value =
+                        params[p].min_val + normalized * (params[p].max_val - params[p].min_val);
                     params[p].value = value;  // GUI sync
-                    engine.push_param_change(i, p, value);  // Audio sync
+                    int node_id = find_node_id_for_effect(engine, effects[i], i);
+                    engine.push_param_change(node_id, p, value);  // Audio sync
                     break;
                 }
                 break;  // Only map to the first matching effect
@@ -276,4 +286,4 @@ void MidiManager::apply_mapping(const MidiMapping& mapping, int cc_value,
     }
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

@@ -1,8 +1,7 @@
-#include "test_framework.h"
-
-#include "audio/effects/looper.h"
-
 #include <cmath>
+
+#include "audio/effects/utility/looper.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 
@@ -32,7 +31,7 @@ TEST(looper_record_then_play_mixes_loop) {
     float record_buf[kRecord];
     for (int i = 0; i < kRecord; ++i) record_buf[i] = 0.5f;
 
-    looper.request_record_toggle(); // start recording
+    looper.request_record_toggle();  // start recording
     looper.process(record_buf, kRecord);
 
     // Stop recording and immediately play (process one sample to execute toggle).
@@ -62,7 +61,7 @@ TEST(looper_play_toggle_keeps_loop) {
     looper.process(record_buf, kRecord);
 
     float tmp[1] = {0.0f};
-    looper.request_record_toggle(); // stop -> playing
+    looper.request_record_toggle();  // stop -> playing
     looper.process(tmp, 1);
 
     ASSERT_TRUE(looper.has_loop());
@@ -94,7 +93,7 @@ TEST(looper_clear_resets_to_empty) {
     looper.process(record_buf, kRecord);
 
     float tmp[1] = {0.0f};
-    looper.request_record_toggle(); // stop -> playing
+    looper.request_record_toggle();  // stop -> playing
     looper.process(tmp, 1);
 
     ASSERT_TRUE(looper.has_loop());
@@ -106,4 +105,3 @@ TEST(looper_clear_resets_to_empty) {
     ASSERT_EQ(looper.loop_length_samples(), 0);
     ASSERT_EQ(static_cast<uint32_t>(looper.state()), static_cast<uint32_t>(Looper::State::Empty));
 }
-

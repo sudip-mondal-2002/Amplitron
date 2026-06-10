@@ -1,10 +1,11 @@
 #pragma once
 
-#include "gui/commands/command_base.h"
-#include "audio/engine/audio_engine.h"
-#include "audio/effects/effect.h"
-#include <cstring>
 #include <algorithm>
+#include <cstring>
+
+#include "audio/effects/core/effect.h"
+#include "audio/engine/i_audio_engine.h"
+#include "gui/commands/command_base.h"
 
 namespace Amplitron {
 
@@ -14,13 +15,13 @@ namespace Amplitron {
  * execute() adds the effect; undo() finds and removes it.
  */
 class AddEffectCommand : public Command {
-public:
+   public:
     /**
      * @brief Construct an AddEffectCommand.
      * @param engine  Reference to the audio engine that owns the effect chain.
      * @param effect  Shared pointer to the effect to add.
      */
-    AddEffectCommand(AudioEngine& engine, std::shared_ptr<Effect> effect)
+    AddEffectCommand(IAudioEngine& engine, std::shared_ptr<Effect> effect)
         : engine_(engine), effect_(std::move(effect)) {}
 
     /** @brief Append the effect to the engine's chain (before the amp if present). */
@@ -58,8 +59,8 @@ public:
     /** @brief Accessor for the wrapped effect. */
     std::shared_ptr<Effect> effect() const { return effect_; }
 
-private:
-    AudioEngine& engine_;
+   private:
+    IAudioEngine& engine_;
     std::shared_ptr<Effect> effect_;
 };
 
@@ -70,14 +71,13 @@ private:
  * re-insert it at its original position.
  */
 class RemoveEffectCommand : public Command {
-public:
+   public:
     /**
      * @brief Construct a RemoveEffectCommand.
      * @param engine  Reference to the audio engine.
      * @param index   Chain index of the effect to remove (captured at construction).
      */
-    RemoveEffectCommand(AudioEngine& engine, int index)
-        : engine_(engine), index_(index) {
+    RemoveEffectCommand(IAudioEngine& engine, int index) : engine_(engine), index_(index) {
         auto& fx = engine_.effects();
         if (index >= 0 && index < static_cast<int>(fx.size())) {
             effect_ = fx[index];
@@ -112,10 +112,10 @@ public:
     /** @brief Accessor for the captured effect pointer. */
     std::shared_ptr<Effect> effect() const { return effect_; }
 
-private:
-    AudioEngine& engine_;
+   private:
+    IAudioEngine& engine_;
     int index_;
     std::shared_ptr<Effect> effect_;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

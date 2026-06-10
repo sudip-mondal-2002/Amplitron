@@ -1,27 +1,29 @@
 #pragma once
 
-#include "audio/engine/audio_engine.h"
-#include "gui/commands/command_history.h"
-#include "preset_manager.h"
 #include <string>
 #include <vector>
+
+#include "audio/engine/i_audio_engine.h"
+#include "gui/commands/command_history.h"
+#include "preset_manager.h"
 
 namespace Amplitron {
 
 class PedalBoard;
+class IMidiManager;
 
 /**
  * @brief Handles preset save/load/delete UI and logic.
  * Extracted from GuiManager for single-responsibility.
  */
 class GuiPresets {
-public:
+   public:
     /**
      * @brief Construct a GuiPresets helper for the given audio engine and undo history.
      * @param engine Reference to the engine used for preset state capture.
      * @param history Shared command history for undo/redo integration.
      */
-    GuiPresets(AudioEngine& engine, CommandHistory& history);
+    GuiPresets(IAudioEngine& engine, CommandHistory& history, IPresetManager& presets);
 
     /** @brief Render save preset popup. Only call when show is true. */
     void render_save_popup(bool& show);
@@ -39,12 +41,11 @@ public:
     void set_pedal_board(PedalBoard* pb) { pedal_board_ = pb; }
 
     /** @brief Set the MidiManager pointer (for saving/loading midi mappings). */
-    void set_midi_manager(MidiManager* m) { midi_manager_ = m; }
+    void set_midi_manager(IMidiManager* m) { midi_manager_ = m; }
 
     // Preset management methods
     void refresh_presets(bool preserve_selection = true);
-    bool save_named_preset(const std::string& preset_name,
-                           const std::string& description);
+    bool save_named_preset(const std::string& preset_name, const std::string& description);
     bool load_preset_by_index(int index);
     bool load_preset_by_path(const std::string& path);
     bool delete_preset_by_index(int index);
@@ -68,16 +69,17 @@ public:
     /** @brief Record the current engine state as the clean saved preset state. */
     void mark_clean();
 
-private:
+   private:
     std::string preset_name_from_path(const std::string& filepath) const;
     std::string preset_path_from_name(const std::string& preset_name) const;
 
-    AudioEngine& engine_;
+    IAudioEngine& engine_;
     CommandHistory& history_;
+    IPresetManager& presets_;
     PresetData saved_state_;
     bool saved_state_valid_ = false;
     PedalBoard* pedal_board_ = nullptr;
-    MidiManager* midi_manager_ = nullptr;
+    IMidiManager* midi_manager_ = nullptr;
 
     // Preset UI state
     char preset_name_buf_[128] = "My Preset";
@@ -89,4 +91,4 @@ private:
     std::string preset_status_msg_;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

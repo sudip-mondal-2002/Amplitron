@@ -17,28 +17,27 @@
  *  - GuiSettings       (gui_settings.h)
  */
 
-#include "test_framework.h"
-#include "test_fixtures.h"
+#include <algorithm>
+#include <cmath>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "audio/dsp/spectrum_analyzer.h"
-#include "gui/views/gui_presets.h"
-#include "gui/views/gui_snapshots.h"
-#include "gui/views/gui_midi.h"
-#include "gui/views/gui_recording.h"
-#include "gui/views/gui_tuner.h"
-#include "gui/views/gui_analyzer.h"
-#include "gui/views/gui_settings.h"
+#include "audio/effects/distortion/overdrive.h"
+#include "audio/effects/utility/tuner.h"
 #include "gui/commands/command_history.h"
+#include "gui/views/gui_analyzer.h"
+#include "gui/views/gui_midi.h"
+#include "gui/views/gui_presets.h"
+#include "gui/views/gui_recording.h"
+#include "gui/views/gui_settings.h"
+#include "gui/views/gui_snapshots.h"
+#include "gui/views/gui_tuner.h"
 #include "midi/midi_manager.h"
-#include "audio/effects/overdrive.h"
-#include "audio/effects/tuner.h"
 #include "preset_manager.h"
-
-#include <cmath>
-#include <string>
-#include <memory>
-#include <vector>
-#include <algorithm>
+#include "test_fixtures.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 

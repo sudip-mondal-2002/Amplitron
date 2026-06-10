@@ -1,9 +1,11 @@
 #include "audio/recorder/recorder.h"
-#include "audio/recorder/recorder_impl.h"
-#include <iostream>
-#include <ctime>
-#include <cstring>
+
 #include <cstdio>
+#include <cstring>
+#include <ctime>
+#include <iostream>
+
+#include "audio/recorder/recorder_impl.h"
 
 #ifdef _WIN32
 #include <direct.h>
@@ -68,4 +70,4 @@ std::string Recorder::generate_filename() {
     return get_recordings_dir() + "/" + std::string(buf) + ".wav";
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

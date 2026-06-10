@@ -1,4 +1,5 @@
 #include "audio/engine/audio_graph_executor.h"
+
 #include <algorithm>
 #include <cstring>
 
@@ -35,7 +36,8 @@ void AudioGraphExecutor::compile(const AudioGraph& graph) {
     any_explicit_input_ = false;
     bool any_explicit_output = false;
     for (int node_id : sorted_ids) {
-        auto it = std::find_if(nodes.begin(), nodes.end(), [&](const DSPNode& n){ return n.id == node_id; });
+        auto it = std::find_if(nodes.begin(), nodes.end(),
+                               [&](const DSPNode& n) { return n.id == node_id; });
         if (it != nodes.end()) {
             if (it->is_graph_input) any_explicit_input_ = true;
             if (it->is_graph_output) any_explicit_output = true;
@@ -49,7 +51,8 @@ void AudioGraphExecutor::compile(const AudioGraph& graph) {
 
     // Build the flat execution array
     for (int node_id : sorted_ids) {
-        auto it = std::find_if(nodes.begin(), nodes.end(), [&](const DSPNode& n){ return n.id == node_id; });
+        auto it = std::find_if(nodes.begin(), nodes.end(),
+                               [&](const DSPNode& n) { return n.id == node_id; });
         if (it == nodes.end() || !it->is_reachable) continue;
 
         NodeExecutionStep step;
@@ -88,12 +91,20 @@ void AudioGraphExecutor::compile(const AudioGraph& graph) {
                 if (link.dest_pin_id == in_pin) {
                     int src_node_id = graph.get_node_from_pin(link.source_pin_id);
                     if (src_node_id != -1 && node_to_buffer.count(src_node_id)) {
-                        step.input_sources.push_back({ node_to_buffer[src_node_id], pin_gain, static_cast<int>(pin_idx) });
+                        step.input_sources.push_back(
+                            {node_to_buffer[src_node_id], pin_gain, static_cast<int>(pin_idx)});
                     }
                 }
             }
         }
-        execution_plan_.push_back(step);
+
+        if (it->routing_type == NodeRoutingType::StandardEffect && it->pedal) {
+            step.processor = std::make_unique<StandardEffectProcessor>(it->pedal);
+        } else {
+            step.processor = std::make_unique<PassthroughProcessor>();
+        }
+
+        execution_plan_.push_back(std::move(step));
     }
 }
 
@@ -107,11 +118,11 @@ void AudioGraphExecutor::update_transport_state(float bpm) {
 
 void AudioGraphExecutor::process(const float* input, float* output, int num_samples) {
     if (num_samples > max_block_size_) {
-        std::memcpy(output, input, static_cast<size_t>(max_block_size_) * sizeof(float));
+        std::memset(output, 0, static_cast<size_t>(num_samples) * sizeof(float));
         return;
     }
     if (execution_plan_.empty()) {
-        std::memcpy(output, input, num_samples * sizeof(float));
+        std::memset(output, 0, num_samples * sizeof(float));
         return;
     }
 
@@ -147,15 +158,9 @@ void AudioGraphExecutor::process(const float* input, float* output, int num_samp
 
         float* node_output = buffer_pool_[step.buffer_index].data();
 
-        if (step.type == NodeRoutingType::StandardEffect && step.pedal) {
-            // FIX: In-place processing! 
-            // 1. Copy the summed input data into our dedicated output buffer
-            std::memcpy(node_output, node_input, num_samples * sizeof(float));
-            
-            // 2. Tell the pedal to process and overwrite that buffer directly
-            step.pedal->process(node_output, num_samples); 
+        if (step.processor) {
+            step.processor->process(node_input, node_output, num_samples);
         } else {
-            // Merge nodes or empty wrappers just pass the summed input directly downstream
             std::memcpy(node_output, node_input, num_samples * sizeof(float));
         }
     }
@@ -174,7 +179,8 @@ void AudioGraphExecutor::process(const float* input, float* output, int num_samp
 
 void AudioGraphExecutor::update_mixer_gain(int node_id, int pin_index, float gain) {
     for (auto& step : execution_plan_) {
-        if (step.node_id == node_id && (step.type == NodeRoutingType::Mixer || step.type == NodeRoutingType::MergeSum)) {
+        if (step.node_id == node_id &&
+            (step.type == NodeRoutingType::Mixer || step.type == NodeRoutingType::MergeSum)) {
             for (auto& src : step.input_sources) {
                 if (src.pin_index == pin_index) {
                     src.gain = std::clamp(gain, 0.0f, 2.0f);
@@ -186,4 +192,4 @@ void AudioGraphExecutor::update_mixer_gain(int node_id, int pin_index, float gai
     }
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

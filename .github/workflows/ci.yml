@@ -85,7 +85,7 @@ jobs:
           test ! -e "$INSTALL_PREFIX/bin/assets"
 
       - name: Generate Linux Coverage
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
         run: |
           LCOV_IGNORE="--ignore-errors mismatch,mismatch,gcov,gcov,source,source,inconsistent,inconsistent,format,format,unsupported,unsupported,corrupt,corrupt,unused,unused"
           lcov --capture --initial --directory build --output-file coverage_base.info $LCOV_IGNORE
@@ -100,7 +100,7 @@ jobs:
           lcov --summary coverage.filtered.info $LCOV_IGNORE | tee coverage-summary.txt
 
       - name: Quick Linux Coverage Summary
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
         run: |
           LCOV_IGNORE="--ignore-errors unused,unused,inconsistent,inconsistent,format,format,corrupt,corrupt,unsupported,unsupported"
           COVERAGE=$(lcov --summary coverage.filtered.info $LCOV_IGNORE 2>&1 | awk '/lines......:/ {print $2}' | sed 's/%//')
@@ -108,7 +108,7 @@ jobs:
           echo "### Linux Coverage: ${COVERAGE}%" >> $GITHUB_STEP_SUMMARY
 
       - name: Upload Linux Coverage
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
         uses: actions/upload-artifact@v7
         with:
           name: linux-coverage
@@ -149,7 +149,7 @@ jobs:
       - name: Build
         run: |
           HOMEBREW_PREFIX=$(brew --prefix)
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
+          if [ "${{ github.event_name }}" = "pull_request" ] || [ "${{ github.ref }}" = "refs/heads/main" ]; then
             BUILD_TYPE=Debug
             COV_FLAGS="--coverage -O0 -g"
             LINK_FLAGS="--coverage"
@@ -194,7 +194,7 @@ jobs:
           test ! -e "$INSTALL_PREFIX/bin/assets"
 
       - name: Generate macOS Coverage
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
         run: |
           printf '#!/bin/bash\nexec xcrun llvm-cov gcov "$@"\n' > /tmp/llvm-gcov.sh
           chmod +x /tmp/llvm-gcov.sh
@@ -209,7 +209,7 @@ jobs:
           lcov --summary coverage.filtered.info $LCOV_IGNORE | tee coverage-summary-macos.txt
 
       - name: Upload macOS Coverage
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
         uses: actions/upload-artifact@v7
         with:
           name: macos-coverage
@@ -451,7 +451,7 @@ jobs:
           export CCACHE_DIR="$GITHUB_WORKSPACE/.ccache"
           export CCACHE_MAXSIZE=200M
           mkdir -p "$CCACHE_DIR"
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
+          if [ "${{ github.event_name }}" = "pull_request" ] || [ "${{ github.ref }}" = "refs/heads/main" ]; then
             BUILD_TYPE=RelWithDebInfo
             COV_FLAGS="--coverage -O2"
             LINK_FLAGS="--coverage"
@@ -498,7 +498,7 @@ jobs:
           test ! -e "$INSTALL_PREFIX/bin/assets"
 
       - name: Generate Windows Coverage
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
         shell: msys2 {0}
         run: |
           LCOV_VER=$(lcov --version 2>&1 | grep -oP '\d+' | head -1)
@@ -521,7 +521,7 @@ jobs:
           lcov --summary coverage.filtered.info $LCOV_IGNORE | tee coverage-summary-windows.txt
 
       - name: Upload Windows Coverage
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
         uses: actions/upload-artifact@v7
         with:
           name: windows-coverage
@@ -678,7 +678,8 @@ jobs:
             -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 \
             -DCMAKE_OSX_ARCHITECTURES="arm64" \
             -DAMPLITRON_VERSION="${{ steps.version.outputs.version }}" \
-            -DSDL2_DIR=$HOME/sdl2-ios/lib/cmake/SDL2 \
+            -DSDL2_INCLUDE_DIRS=$HOME/sdl2-ios/include/SDL2 \
+            -DSDL2_LIBRARIES="$HOME/sdl2-ios/lib/libSDL2main.a;$HOME/sdl2-ios/lib/libSDL2.a" \
             -G Xcode \
             -S . -B build-ios
 
@@ -750,7 +751,7 @@ jobs:
   merge-coverage:
     name: Merge Cross-Platform Coverage
     needs: [test-linux, test-macos, test-windows]
-    if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+    if: ${{ !cancelled() && (github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -837,18 +838,7 @@ jobs:
 
           cat coverage_comment.md >> $GITHUB_STEP_SUMMARY
 
-      - name: Save PR Number and Coverage Comment
-        run: |
-          mkdir -p pr_coverage
-          echo "${{ github.event.pull_request.number }}" > pr_coverage/pr_number.txt
-          cp coverage_comment.md pr_coverage/coverage_comment.md
 
-      - name: Upload PR Coverage Artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: pr-coverage-comment
-          path: pr_coverage/
-          retention-days: 1
 
       - name: Upload Merged Coverage HTML Report
         uses: actions/upload-artifact@v7
@@ -865,3 +855,13 @@ jobs:
             merged.info
             merged-summary.txt
           retention-days: 7
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: merged.info
+          flags: cross-platform
+          name: cross-platform-coverage
+          fail_ci_if_error: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

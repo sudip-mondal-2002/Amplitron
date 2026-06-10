@@ -1,14 +1,15 @@
-#include "test_framework.h"
-#include "test_fixtures.h"
+#include <cmath>
+#include <filesystem>
+#include <string>
+#include <vector>
+
+#include "audio/effects/delay_reverb/delay.h"
+#include "audio/effects/distortion/distortion.h"
+#include "audio/effects/dynamics/noise_gate.h"
 #include "audio/engine/audio_engine.h"
 #include "preset_manager.h"
-#include "audio/effects/noise_gate.h"
-#include "audio/effects/distortion.h"
-#include "audio/effects/delay.h"
-#include <vector>
-#include <string>
-#include <filesystem>
-#include <cmath>
+#include "test_fixtures.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 
@@ -21,14 +22,14 @@ TEST_F(PresetTest, e2e_preset_workflow_roundtrip_and_processing) {
     auto ng = std::make_shared<NoiseGate>();
     ng->set_enabled(true);
     if (!ng->params().empty()) {
-        ng->params()[0].value = -30.0f; // Set custom threshold within [-80.0f, 0.0f]
+        ng->params()[0].value = -30.0f;  // Set custom threshold within [-80.0f, 0.0f]
     }
     engine.add_effect(ng);
 
     auto dist = std::make_shared<Distortion>();
     dist->set_enabled(true);
     if (!dist->params().empty()) {
-        dist->params()[0].value = 8.5f; // Set custom parameter within [1.0f, 20.0f]
+        dist->params()[0].value = 8.5f;  // Set custom parameter within [1.0f, 20.0f]
     }
     engine.add_effect(dist);
 
@@ -42,7 +43,7 @@ TEST_F(PresetTest, e2e_preset_workflow_roundtrip_and_processing) {
     engine.set_output_gain(0.85f);
 
     // 3. Save the preset
-    bool saved = PresetManager::save_preset(path, "E2E Preset", "E2E Complete Signal Chain Test", engine);
+    bool saved = manager.save_preset(path, "E2E Preset", "E2E Complete Signal Chain Test", engine);
     ASSERT_TRUE(saved);
     ASSERT_TRUE(std::filesystem::exists(path));
 
@@ -53,7 +54,7 @@ TEST_F(PresetTest, e2e_preset_workflow_roundtrip_and_processing) {
     engine.commit_graph_changes();
 
     // 5. Reload the preset
-    bool loaded = PresetManager::load_preset(path, engine);
+    bool loaded = manager.load_preset(path, engine);
     ASSERT_TRUE(loaded);
 
     // Propagate the active sample rate to all newly deserialized nodes in the graph
@@ -89,7 +90,8 @@ TEST_F(PresetTest, e2e_preset_workflow_roundtrip_and_processing) {
 
     // 7. Test DSP processing of a simulated input tone
     std::vector<float> input(64);
-    std::vector<float> output(128, 0.0f); // Correctly allocate 128 elements for stereo output (64 frames * 2 channels)
+    std::vector<float> output(
+        128, 0.0f);  // Correctly allocate 128 elements for stereo output (64 frames * 2 channels)
     for (int i = 0; i < 64; ++i) {
         input[i] = std::sin(2.0f * 3.14159f * 440.0f * i / 48000.0f);
     }

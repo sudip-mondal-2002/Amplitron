@@ -4,7 +4,7 @@ namespace Amplitron {
 
 /** @brief Execute cmd, attempt coalescing, push to undo stack, clear redo. */
 void CommandHistory::execute(std::unique_ptr<Command> cmd) {
-    if (!cmd->execute()) return; // no-op — skip history recording
+    if (!cmd->execute()) return;  // no-op — skip history recording
 
     // Try coalescing with the top of the undo stack
     if (!undo_stack_.empty() && undo_stack_.back()->merge_with(*cmd)) {
@@ -80,4 +80,4 @@ void CommandHistory::trim() {
     }
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

@@ -30,13 +30,11 @@ struct EmptyState {};
  */
 template <typename Props, typename State = EmptyState>
 class UIComponent {
-public:
+   public:
     virtual ~UIComponent() = default;
 
     /** @brief Push new props (inputs) into the component before render(). */
-    virtual void set_props(const Props& new_props) {
-        props_ = new_props;
-    }
+    virtual void set_props(const Props& new_props) { props_ = new_props; }
 
     /**
      * @brief Render the component using current props_ and state_.
@@ -66,7 +64,7 @@ public:
         set_state(next);
     }
 
-protected:
+   protected:
     Props props_;
     State state_;
 
@@ -74,4 +72,4 @@ protected:
     virtual void on_state_change() {}
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

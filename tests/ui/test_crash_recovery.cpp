@@ -6,10 +6,8 @@
  * binary via CMake) so it returns false immediately without opening any SDL
  * message box — no hang on macOS, no X11 error on Linux CI.
  */
-#include "test_framework.h"
 #include "gui/crash_recovery_ui.h"
-
-
+#include "test_framework.h"
 
 TEST(crash_recovery_prompt_returns_false_in_headless_build) {
     // With AMPLITRON_HEADLESS defined, promptRestoreSession() must return false

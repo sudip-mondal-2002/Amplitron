@@ -20,4 +20,4 @@ std::string show_open_dialog(const std::string& title = "Open File",
 // Returns empty string if user cancelled
 std::string show_folder_dialog(const std::string& title = "Select Folder");
 
-} // namespace Amplitron
+}  // namespace Amplitron

@@ -1,11 +1,12 @@
-#include "test_framework.h"
-#include "test_fixtures.h"
-#include "audio/effects/overdrive.h"
-#include "audio/effects/distortion.h"
-#include "audio/effects/amp_simulator.h"
-#include <cstring>
 #include <cmath>
+#include <cstring>
 #include <vector>
+
+#include "audio/effects/amp_cab/amp_simulator.h"
+#include "audio/effects/distortion/distortion.h"
+#include "audio/effects/distortion/overdrive.h"
+#include "test_fixtures.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 
@@ -85,8 +86,8 @@ TEST_F(EffectsTest, amp_simulator_output_clamped) {
     AmpSimulator amp;
     amp.set_sample_rate(SR);
     amp.reset();
-    amp.params()[0].value = 2.0f; // High Gain Modern
-    amp.params()[1].value = 1.0f; // Max gain knob
+    amp.params()[0].value = 2.0f;  // High Gain Modern
+    amp.params()[1].value = 1.0f;  // Max gain knob
 
     fill_sine(440.0f);
     amp.process(input_buffer, BUFFER_SIZE);

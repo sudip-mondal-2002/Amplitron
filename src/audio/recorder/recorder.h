@@ -1,57 +1,57 @@
 #pragma once
 
-#include "common.h"
-#include <fstream>
-#include <chrono>
 #include <array>
+#include <chrono>
+#include <fstream>
 #include <thread>
+
+#include "audio/recorder/i_recorder.h"
+#include "common.h"
 
 namespace Amplitron {
 
-class AudioEngine;
+class IAudioEngine;
 
-class Recorder {
-public:
-    static constexpr int WAVEFORM_SIZE = 512;
-
+class Recorder : public IRecorder {
+   public:
     Recorder();
-    ~Recorder();
+    ~Recorder() override;
 
     // Start recording to a temporary WAV file
-    bool start(const std::string& filepath, int sample_rate, int channels = 1);
+    bool start(const std::string& filepath, int sample_rate, int channels = 1) override;
 
     // Stop recording and finalize the WAV file
-    void stop();
+    void stop() override;
 
     // Pause / resume recording
-    void pause();
-    void resume();
+    void pause() override;
+    void resume() override;
 
     // Write audio samples (called from audio callback)
-    void write_samples(const float* buffer, int num_samples);
+    void write_samples(const float* buffer, int num_samples) override;
 
-    void write_samples_stereo(const float* left, const float* right, int num_samples);
+    void write_samples_stereo(const float* left, const float* right, int num_samples) override;
 
     // Write metadata JSON sidecar file
-    void write_metadata(const std::string& wav_path, AudioEngine& engine);
+    void write_metadata(const std::string& wav_path, IAudioEngine& engine) override;
 
     // Move the recorded temp file to a user-chosen path
-    bool save_to(const std::string& dest_path);
+    bool save_to(const std::string& dest_path) override;
 
     // Discard the recorded temp file
-    void discard();
+    void discard() override;
 
-    bool is_recording() const { return recording_.load(); }
-    bool is_paused() const { return paused_.load(); }
-    bool has_unsaved() const { return has_unsaved_.load(); }
-    float get_duration() const;
-    int64_t get_samples_written() const { return samples_written_.load(); }
-    int get_channels() const { return channels_; }
-    const std::string& filepath() const { return filepath_; }
+    bool is_recording() const override { return recording_.load(); }
+    bool is_paused() const override { return paused_.load(); }
+    bool has_unsaved() const override { return has_unsaved_.load(); }
+    float get_duration() const override;
+    int64_t get_samples_written() const override { return samples_written_.load(); }
+    int get_channels() const override { return channels_; }
+    const std::string& filepath() const override { return filepath_; }
 
     // Waveform visualization data (lock-free ring buffer of peak values)
-    void get_waveform(float* out, int count) const;
-    float get_current_peak() const { return current_peak_.load(); }
+    void get_waveform(float* out, int count) const override;
+    float get_current_peak() const override { return current_peak_.load(); }
 
     // Get default recordings directory
     static std::string get_recordings_dir();
@@ -59,7 +59,7 @@ public:
     // Generate a timestamped filename
     static std::string generate_filename();
 
-private:
+   private:
     std::ofstream file_;
     std::atomic<bool> recording_{false};
     std::atomic<bool> paused_{false};
@@ -99,4 +99,4 @@ private:
     void writer_thread_func();
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

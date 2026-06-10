@@ -1,16 +1,18 @@
 #pragma once
 
-#include "audio/dsp/spectrum_analyzer.h"
-#include "audio/dsp/level_analyzer.h"
-#include "gui/ui_component.h"
 #include <imgui.h>
+
 #include <functional>
+
+#include "audio/dsp/level_analyzer.h"
+#include "audio/dsp/spectrum_analyzer.h"
+#include "gui/ui_component.h"
 
 namespace Amplitron {
 
 enum class SpectrumDisplayMode {
-    Input   = 0,
-    Output  = 1,
+    Input = 0,
+    Output = 1,
     Overlay = 2,
 };
 
@@ -23,21 +25,21 @@ struct SpectrumSnapshot {
 
 struct AnalyzerProps {
     // VU levels (pre-calculated by LevelAnalyzer in the audio engine)
-    float smoothed_input_rms  = 0.0f;
+    float smoothed_input_rms = 0.0f;
     float smoothed_output_rms = 0.0f;
-    float input_peak_hold     = 0.0f;
-    float output_peak_hold    = 0.0f;
-    bool  input_clip_active   = false;
-    bool  output_clip_active  = false;
-    float input_clip_flash    = 0.0f;
-    float output_clip_flash   = 0.0f;
+    float input_peak_hold = 0.0f;
+    float output_peak_hold = 0.0f;
+    bool input_clip_active = false;
+    bool output_clip_active = false;
+    float input_clip_flash = 0.0f;
+    float output_clip_flash = 0.0f;
 
     // Spectrum analyzer (pre-calculated by SpectrumAnalyzer in the audio engine)
     SpectrumSnapshot spectrum;
 
-    std::function<void(bool)>                on_expanded_changed;
+    std::function<void(bool)> on_expanded_changed;
     std::function<void(SpectrumDisplayMode)> on_mode_changed;
-    std::function<void(bool)>                on_set_analyzer_enabled;
+    std::function<void(bool)> on_set_analyzer_enabled;
 };
 
 /**
@@ -47,7 +49,7 @@ struct AnalyzerProps {
  * Zero math or signal processing occurs here — only ImGui drawing calls.
  */
 class GuiAnalyzer : public UIComponent<AnalyzerProps> {
-public:
+   public:
     GuiAnalyzer() = default;
 
     /** @brief Render the collapsible analyzer panel. */
@@ -58,23 +60,16 @@ public:
 
     SpectrumDisplayMode current_mode() const { return mode_; }
     bool is_expanded() const { return expanded_; }
+    void set_expanded(bool expanded) { expanded_ = expanded; }
 
-private:
-    void render_vu_bar(const char* id,
-                       const char* label,
-                       float rms_level,
-                       float peak_hold,
-                       bool  clip_active,
-                       float clip_flash,
-                       ImU32 base_color,
-                       ImU32 peak_color);
+   private:
+    void render_vu_bar(const char* id, const char* label, float rms_level, float peak_hold,
+                       bool clip_active, float clip_flash, ImU32 base_color, ImU32 peak_color);
 
-    void draw_spectrum(ImDrawList* dl,
-                       const ImVec2& pos,
-                       const ImVec2& size) const;
+    void draw_spectrum(ImDrawList* dl, const ImVec2& pos, const ImVec2& size) const;
 
     bool expanded_ = true;
     SpectrumDisplayMode mode_ = SpectrumDisplayMode::Output;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

@@ -1,18 +1,19 @@
-#include "test_framework.h"
-#include "test_fixtures.h"
-#include "audio/effects/octaver.h"
-#include "audio/effects/pitch_shifter.h"
-#include <cstring>
 #include <cmath>
+#include <cstring>
 #include <vector>
+
+#include "audio/effects/pitch/octaver.h"
+#include "audio/effects/pitch/pitch_shifter.h"
+#include "test_fixtures.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 
 TEST_F(EffectsTest, octaver_sub_octave_produces_half_frequency) {
     static constexpr float FUND = 880.0f;
-    static constexpr int   CHUNK = 256;
-    static constexpr int   WARM_UP = 12288;
-    static constexpr int   N    = 4800;
+    static constexpr int CHUNK = 256;
+    static constexpr int WARM_UP = 12288;
+    static constexpr int N = 4800;
 
     Octaver oct;
     oct.set_sample_rate(SR);
@@ -40,8 +41,7 @@ TEST_F(EffectsTest, octaver_sub_octave_produces_half_frequency) {
 
     int crossings = 0;
     for (int i = 1; i < N; ++i) {
-        if (main_buf[i-1] < 0.0f && main_buf[i] >= 0.0f)
-            ++crossings;
+        if (main_buf[i - 1] < 0.0f && main_buf[i] >= 0.0f) ++crossings;
     }
     ASSERT_GE(crossings, 33);
     ASSERT_LT(crossings, 56);
@@ -49,9 +49,9 @@ TEST_F(EffectsTest, octaver_sub_octave_produces_half_frequency) {
 
 TEST_F(EffectsTest, octaver_upper_octave_produces_double_frequency) {
     static constexpr float FUND = 220.0f;
-    static constexpr int   CHUNK = 256;
-    static constexpr int   WARM_UP = 12288;
-    static constexpr int   N    = 8192;
+    static constexpr int CHUNK = 256;
+    static constexpr int WARM_UP = 12288;
+    static constexpr int N = 8192;
 
     Octaver oct;
     oct.set_sample_rate(SR);
@@ -77,7 +77,7 @@ TEST_F(EffectsTest, octaver_upper_octave_produces_double_frequency) {
     ASSERT_TRUE(is_finite(main_buf, N));
 
     float mag_double = dft_magnitude_at(main_buf, N, FUND * 2.0f);
-    float mag_fund   = dft_magnitude_at(main_buf, N, FUND);
+    float mag_fund = dft_magnitude_at(main_buf, N, FUND);
 
     ASSERT_GT(mag_double, 0.05f);
     ASSERT_LT(mag_fund, mag_double * 0.5f);
@@ -85,7 +85,7 @@ TEST_F(EffectsTest, octaver_upper_octave_produces_double_frequency) {
 
 TEST_F(EffectsTest, octaver_disabled_no_sub_or_upper_octave) {
     static constexpr float FUND = 220.0f;
-    static constexpr int   N    = 8192;
+    static constexpr int N = 8192;
 
     Octaver oct;
     oct.set_sample_rate(SR);
@@ -101,12 +101,12 @@ TEST_F(EffectsTest, octaver_disabled_no_sub_or_upper_octave) {
     }
     oct.process(buf, N);
 
-    float mag_fund   = dft_magnitude_at(buf, N, FUND);
-    float mag_half   = dft_magnitude_at(buf, N, FUND / 2.0f);
+    float mag_fund = dft_magnitude_at(buf, N, FUND);
+    float mag_half = dft_magnitude_at(buf, N, FUND / 2.0f);
     float mag_double = dft_magnitude_at(buf, N, FUND * 2.0f);
 
     ASSERT_GT(mag_fund, 0.3f);
-    ASSERT_LT(mag_half,   0.01f);
+    ASSERT_LT(mag_half, 0.01f);
     ASSERT_LT(mag_double, 0.01f);
 }
 
@@ -145,9 +145,9 @@ TEST_F(EffectsTest, octaver_extreme_mix_values) {
     float dry_buf[BUFFER_SIZE];
     std::memcpy(dry_buf, ref, sizeof(ref));
 
-    oct.params()[0].value = 1.0f; // sub octave
-    oct.params()[1].value = 1.0f; // upper octave
-    oct.params()[2].value = 1.0f; // fully dry
+    oct.params()[0].value = 1.0f;  // sub octave
+    oct.params()[1].value = 1.0f;  // upper octave
+    oct.params()[2].value = 1.0f;  // fully dry
 
     oct.process(dry_buf, BUFFER_SIZE);
 
@@ -160,7 +160,7 @@ TEST_F(EffectsTest, octaver_extreme_mix_values) {
 
     oct.params()[0].value = 1.0f;
     oct.params()[1].value = 1.0f;
-    oct.params()[2].value = 0.0f; // no dry signal
+    oct.params()[2].value = 0.0f;  // no dry signal
 
     oct.process(wet_buf, BUFFER_SIZE);
 
@@ -226,8 +226,8 @@ TEST_F(EffectsTest, pitch_shifter_with_mix_and_shift_differs_from_dry) {
     PitchShifter ps;
     ps.set_sample_rate(SR);
     ps.reset();
-    ps.params()[0].value = 7.0f;   // Shift = +7 semitones
-    ps.params()[2].value = 1.0f;   // Mix = fully wet
+    ps.params()[0].value = 7.0f;  // Shift = +7 semitones
+    ps.params()[2].value = 1.0f;  // Mix = fully wet
 
     float warm[512];
     for (int rep = 0; rep < 30; ++rep) {
