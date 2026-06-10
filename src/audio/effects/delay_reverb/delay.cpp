@@ -20,6 +20,10 @@ Delay::Delay() {
                {"Sync", 0.0f, 0.0f, 1.0f, 0.0f, "", "Lock delay time to global BPM."},
                {"Subdivision", 0.0f, 0.0f, 3.0f, 0.0f, "",
                 "Subdivision: 0=1/4, 1=1/8, 2=1/16, 3=Dotted 1/8."}};
+    last_bpm_ = 0.0f;
+    last_sync_ = -1.0f;
+    last_subdivision_ = -1.0f;
+    last_snap_bpm_ = 0.0f;
     set_sample_rate(DEFAULT_SAMPLE_RATE);
 }
 
@@ -73,6 +77,10 @@ void Delay::reset() {
     std::fill(delay_buffer_.begin(), delay_buffer_.end(), 0.0f);
     write_pos_ = 0;
     tone_lp_.reset();
+    last_bpm_ = 0.0f;
+    last_sync_ = -1.0f;
+    last_subdivision_ = -1.0f;
+    last_snap_bpm_ = 0.0f;
 }
 
 void Delay::set_transport_state(float bpm) {

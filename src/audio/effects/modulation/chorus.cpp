@@ -18,6 +18,10 @@ Chorus::Chorus() {
          "Mix volume of the chorus effect. 0 is dry, 1 is fully wet."},
         {"Sync", 0.0f, 0.0f, 1.0f, 0.0f, "", "Lock rate to global BPM."},
         {"Subdivision", 2.0f, 0.0f, 3.0f, 2.0f, "", "Subdivision: 0=1/1, 1=1/2, 2=1/4, 3=1/8."}};
+    last_bpm_ = 0.0f;
+    last_sync_ = -1.0f;
+    last_subdivision_ = -1.0f;
+    last_snap_bpm_ = 0.0f;
     set_sample_rate(DEFAULT_SAMPLE_RATE);
 }
 
@@ -161,6 +165,10 @@ void Chorus::reset() {
     std::fill(delay_buffer_.begin(), delay_buffer_.end(), 0.0f);
     write_pos_ = 0;
     lfo_phase_ = 0.0f;
+    last_bpm_ = 0.0f;
+    last_sync_ = -1.0f;
+    last_subdivision_ = -1.0f;
+    last_snap_bpm_ = 0.0f;
 }
 
 }  // namespace Amplitron
