@@ -1,5 +1,6 @@
-#include <memory>
 #include <imgui_internal.h>
+
+#include <memory>
 
 #include "audio/effects/amp_cab/amp_simulator.h"
 #include "audio/effects/amp_cab/cabinet_sim.h"
@@ -273,7 +274,7 @@ TEST_F(PresetTest, test_pedal_widget_knobs_popup_sweep) {
     advance_test_frame();
     TestAccessor::render_knobs(w_od, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
 
-    io.MousePos = ImVec2(62.5f, 80.0f); // drag upwards
+    io.MousePos = ImVec2(62.5f, 80.0f);  // drag upwards
     io.MouseDelta = ImVec2(0.0f, -22.0f);
     advance_test_frame();
     TestAccessor::render_knobs(w_od, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
