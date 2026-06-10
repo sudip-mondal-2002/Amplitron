@@ -1,11 +1,11 @@
 #include "gui/window_context.h"
-#include "test_framework.h"
 #include "test_fixtures.h"
+#include "test_framework.h"
 
 namespace Amplitron {
 extern bool g_mock_window_context_initialize_fail;
 extern bool g_mock_window_context_poll_events_fail;
-}
+}  // namespace Amplitron
 
 TEST(window_context_constructor_destructor) {
     {
