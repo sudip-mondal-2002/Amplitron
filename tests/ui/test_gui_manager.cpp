@@ -220,10 +220,10 @@ TEST(gui_manager_bpm_auto_detect_state_machine) {
     ASSERT_NEAR(gui.toast_timer_, 3.0f, 0.01f);
 
     // 3. Recording state transition (success)
-    // Write 3 seconds of 120 BPM signal into engine
+    // Write 4.5 seconds of 120 BPM signal into engine
     int sr = engine.get_sample_rate();
     float bpm = 120.0f;
-    int total_samples = static_cast<int>(sr * 3.0f);
+    int total_samples = static_cast<int>(sr * 4.5f);
     std::vector<float> signal(total_samples, 0.0f);
     float beat_interval_seconds = 60.0f / bpm;
     int beat_interval_samples = static_cast<int>(sr * beat_interval_seconds);
@@ -239,9 +239,10 @@ TEST(gui_manager_bpm_auto_detect_state_machine) {
     // Feed it to the tempo engine via AudioEngine's process in small chunks to prevent buffer
     // overflow
     const int chunk_size = 256;
+    std::vector<float> out_buffer(chunk_size * 2, 0.0f);
     for (int i = 0; i < total_samples; i += chunk_size) {
         int to_process = std::min(total_samples - i, chunk_size);
-        engine.process_audio(signal.data() + i, signal.data() + i, to_process);
+        engine.process_audio(signal.data() + i, out_buffer.data(), to_process);
     }
 
     gui.bpm_detect_state_ = GuiManager::BpmDetectState::Recording;
