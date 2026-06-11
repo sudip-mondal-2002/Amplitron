@@ -746,6 +746,22 @@ TEST(gui_manager_frame_comprehensive_coverage) {
     gui.run_frame();
     ASSERT_TRUE(gui.show_keyboard_shortcuts_);
 
+    // Keyboard shortcuts - Save Preset (Ctrl+S)
+    gui.show_save_preset_ = false;
+    mock_gui::MockImGui::target_key = ImGuiKey_S;
+    mock_gui::MockImGui::GetIO().KeyCtrl = true;
+    mock_gui::MockImGui::GetIO().KeyShift = false;
+    gui.run_frame();
+    ASSERT_TRUE(gui.show_save_preset_);
+
+    // Keyboard shortcuts - Load Preset (Ctrl+O)
+    gui.show_load_preset_ = false;
+    mock_gui::MockImGui::target_key = ImGuiKey_O;
+    mock_gui::MockImGui::GetIO().KeyCtrl = true;
+    mock_gui::MockImGui::GetIO().KeyShift = false;
+    gui.run_frame();
+    ASSERT_TRUE(gui.show_load_preset_);
+
     // 3. Trigger showing popups
     gui.show_settings_ = true;
     gui.show_save_preset_ = true;
