@@ -54,7 +54,6 @@ static void click_item(const char* window_substr, const char* item_id_str) {
     }
 }
 
-
 TEST(pedal_board_construction_empty_engine) {
     AudioEngine engine;
     engine.initialize();

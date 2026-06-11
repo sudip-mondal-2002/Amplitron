@@ -17,6 +17,31 @@
 using namespace Amplitron;
 using namespace TestFramework;
 
+static ImGuiID get_item_id(const char *window_substr, const char *item_id_str) {
+    ImGuiContext &g = *GImGui;
+    ImGuiID popup_id = ImGui::GetID(window_substr);
+    char popup_window_name[64];
+    snprintf(popup_window_name, sizeof(popup_window_name), "##Popup_%08x", popup_id);
+
+    for (int i = 0; i < g.Windows.Size; i++) {
+        if (strstr(g.Windows[i]->Name, window_substr) ||
+            strstr(g.Windows[i]->Name, popup_window_name)) {
+            return g.Windows[i]->GetID(item_id_str);
+        }
+    }
+    return 0;
+}
+
+static void click_item(const char *window_substr, const char *item_id_str) {
+    ImGuiID id = get_item_id(window_substr, item_id_str);
+    if (id != 0) {
+        ImGuiContext &g = *GImGui;
+        g.NavActivateId = id;
+        g.NavActivateDownId = id;
+        g.NavActivatePressedId = id;
+    }
+}
+
 namespace Amplitron {
 struct TestAccessor {
     static bool &learn_active(MidiManager &m) { return m.learn_active_; }
@@ -199,8 +224,6 @@ TEST_F(PresetTest, test_pedal_board_menu_extended) {
 
     PedalBoard board(engine, history, &gui_midi);
 
-    ImGuiIO &io = ImGui::GetIO();
-
     auto advance_test_frame = [&]() {
         ImGui::End();
         ImGui::Render();
@@ -222,81 +245,74 @@ TEST_F(PresetTest, test_pedal_board_menu_extended) {
     // Re-verify that amp was added automatically
     ASSERT_GE(board.find_amp_index(), 0);
 
-    // 2. Open AddPedalPopup and sweep click all items
-    ImGui::OpenPopup("AddPedalPopup");
+    ImGuiIO &io = ImGui::GetIO();
+
+    // 2. Click "+ Add Pedal" button programmatically
+    click_item("TestWindow", "+ Add Pedal");
     TestAccessor::render_add_pedal_menu(board);
     advance_test_frame();
 
-    ImGuiContext &g = *GImGui;
-    ImGuiWindow *popup_win = nullptr;
-    for (int i = 0; i < g.Windows.Size; ++i) {
-        if (g.Windows[i]->Flags & ImGuiWindowFlags_Popup) {
-            popup_win = g.Windows[i];
-            break;
-        }
-    }
-    ASSERT_TRUE(popup_win != nullptr);
+    // Click every single effect adding option using direct popup open
+    const std::vector<std::string> effects_to_add = {"Overdrive",
+                                                     "Distortion",
+                                                     "Noise Gate",
+                                                     "Compressor",
+                                                     "MultiBand Compressor",
+                                                     "Chorus",
+                                                     "Phaser",
+                                                     "Flanger",
+                                                     "Delay",
+                                                     "Reverb",
+                                                     "Looper",
+                                                     "Wah",
+                                                     "Octaver",
+                                                     "Pitch Shifter",
+                                                     "Equalizer",
+                                                     "Cabinet Sim",
+                                                     "+ Signal Splitter Node (1 In -> N-Out)",
+                                                     "+ Signal Mixer Node (N-In -> 1 Out)"};
 
-    float popup_x = popup_win->Pos.x + popup_win->Size.x * 0.5f;
-    float start_y = popup_win->Pos.y + 10.0f;
-    float end_y = popup_win->Pos.y + popup_win->Size.y - 10.0f;
-
-    for (float click_y = start_y; click_y < end_y; click_y += 15.0f) {
+    for (const auto &eff_name : effects_to_add) {
         ImGui::OpenPopup("AddPedalPopup");
         TestAccessor::render_add_pedal_menu(board);
         advance_test_frame();
 
-        io.MousePos = ImVec2(popup_x, click_y);
-        TestAccessor::render_add_pedal_menu(board);
-        advance_test_frame();
+        click_item("AddPedalPopup", eff_name.c_str());
 
-        io.MouseDown[0] = true;
-        TestAccessor::render_add_pedal_menu(board);
-        advance_test_frame();
-
-        io.MouseDown[0] = false;
+        ImGui::OpenPopup("AddPedalPopup");
         TestAccessor::render_add_pedal_menu(board);
         advance_test_frame();
     }
 
-    // 3. Open AmpSelectorPopup and sweep click all models
-    ImGui::OpenPopup("AmpSelectorPopup");
+    // 3. Click Amp button programmatically
+    click_item("TestWindow", "Amp: Amp");
     TestAccessor::render_amp_selector(board);
     advance_test_frame();
 
-    popup_win = nullptr;
-    for (int i = 0; i < g.Windows.Size; ++i) {
-        if (g.Windows[i]->Flags & ImGuiWindowFlags_Popup) {
-            popup_win = g.Windows[i];
-            break;
-        }
-    }
-    ASSERT_TRUE(popup_win != nullptr);
+    // Click every amp model
+    const std::vector<std::string> amp_models = {"Clean American", "British Crunch",
+                                                 "High Gain Modern", "Jazz Warm"};
 
-    popup_x = popup_win->Pos.x + popup_win->Size.x * 0.5f;
-    start_y = popup_win->Pos.y + 10.0f;
-    end_y = popup_win->Pos.y + popup_win->Size.y - 10.0f;
-
-    for (float click_y = start_y; click_y < end_y; click_y += 15.0f) {
+    for (const auto &model_name : amp_models) {
         ImGui::OpenPopup("AmpSelectorPopup");
         TestAccessor::render_amp_selector(board);
         advance_test_frame();
 
-        io.MousePos = ImVec2(popup_x, click_y);
-        TestAccessor::render_amp_selector(board);
-        advance_test_frame();
+        click_item("AmpSelectorPopup", model_name.c_str());
 
-        io.MouseDown[0] = true;
-        TestAccessor::render_amp_selector(board);
-        advance_test_frame();
-
-        io.MouseDown[0] = false;
+        ImGui::OpenPopup("AmpSelectorPopup");
         TestAccessor::render_amp_selector(board);
         advance_test_frame();
     }
 
-    // 4. Open MidiMenuPopup and sweep click options
-    // Setup connected/learning MIDI states first
+    // 4. Test disconnected MIDI state in MIDI menu by clicking MIDI button programmatically
+    TestAccessor::learn_active(midi_manager) = false;
+    TestAccessor::current_port(midi_manager) = -1;
+    click_item("TestWindow", "MIDI");
+    TestAccessor::render_midi_menu(board);
+    advance_test_frame();
+
+    // Setup connected/learning MIDI states for action clicks
     TestAccessor::learn_active(midi_manager) = true;
     TestAccessor::current_port(midi_manager) = 0;
     TestAccessor::current_port_name(midi_manager) = "Virtual Port";
@@ -310,40 +326,49 @@ TEST_F(PresetTest, test_pedal_board_menu_extended) {
     mapping.param_name = "Drive";
     gui_midi.manager().add_mapping(mapping);
 
+    // Cancel Learn Mode
     ImGui::OpenPopup("MidiMenuPopup");
     TestAccessor::render_midi_menu(board);
     advance_test_frame();
 
-    popup_win = nullptr;
-    for (int i = 0; i < g.Windows.Size; ++i) {
-        if (g.Windows[i]->Flags & ImGuiWindowFlags_Popup) {
-            popup_win = g.Windows[i];
-            break;
-        }
-    }
-    ASSERT_TRUE(popup_win != nullptr);
+    click_item("MidiMenuPopup", "Cancel Learn Mode");
 
-    popup_x = popup_win->Pos.x + popup_win->Size.x * 0.5f;
-    start_y = popup_win->Pos.y + 10.0f;
-    end_y = popup_win->Pos.y + popup_win->Size.y - 10.0f;
+    ImGui::OpenPopup("MidiMenuPopup");
+    TestAccessor::render_midi_menu(board);
+    advance_test_frame();
 
-    for (float click_y = start_y; click_y < end_y; click_y += 15.0f) {
-        ImGui::OpenPopup("MidiMenuPopup");
-        TestAccessor::render_midi_menu(board);
-        advance_test_frame();
+    // Clear All Mappings
+    ImGui::OpenPopup("MidiMenuPopup");
+    TestAccessor::render_midi_menu(board);
+    advance_test_frame();
 
-        io.MousePos = ImVec2(popup_x, click_y);
-        TestAccessor::render_midi_menu(board);
-        advance_test_frame();
+    click_item("MidiMenuPopup", "Clear All Mappings");
 
-        io.MouseDown[0] = true;
-        TestAccessor::render_midi_menu(board);
-        advance_test_frame();
+    ImGui::OpenPopup("MidiMenuPopup");
+    TestAccessor::render_midi_menu(board);
+    advance_test_frame();
 
-        io.MouseDown[0] = false;
-        TestAccessor::render_midi_menu(board);
-        advance_test_frame();
-    }
+    // Save Config
+    ImGui::OpenPopup("MidiMenuPopup");
+    TestAccessor::render_midi_menu(board);
+    advance_test_frame();
+
+    click_item("MidiMenuPopup", "Save Config");
+
+    ImGui::OpenPopup("MidiMenuPopup");
+    TestAccessor::render_midi_menu(board);
+    advance_test_frame();
+
+    // Load Config
+    ImGui::OpenPopup("MidiMenuPopup");
+    TestAccessor::render_midi_menu(board);
+    advance_test_frame();
+
+    click_item("MidiMenuPopup", "Load Config");
+
+    ImGui::OpenPopup("MidiMenuPopup");
+    TestAccessor::render_midi_menu(board);
+    advance_test_frame();
 
     // 5. Clean up window
     ImGui::End();
