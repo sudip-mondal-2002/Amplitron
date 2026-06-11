@@ -35,4 +35,10 @@ TEST_F(PresetTest, gui_keyboard_shortcuts_render_visible) {
 
     bool show = true;
     gks.render(show);
+
+    // End current frame and start a new one to allow popup modal to begin
+    ImGui::Render();
+    ImGui::NewFrame();
+
+    gks.render(show);
 }
