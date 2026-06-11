@@ -127,7 +127,7 @@ TEST(MoveGraphNodeCommand_executes_and_undoes_correctly) {
     auto& state = GuiGraphState::get_instance();
 
     int node_id = 999;
-    state.node_positions[node_id] = {ImVec2(10, 10), false};
+    state.node_positions[node_id] = {ImVec2(10, 10), false, ImVec2(0.0f, 0.0f)};
 
     auto cmd = std::make_unique<MoveGraphNodeCommand>(node_id, ImVec2(10, 10), ImVec2(50, 50));
     history.execute(std::move(cmd));
@@ -210,7 +210,7 @@ TEST(MoveGraphNodeCommand_fails_on_missing_node_or_identical_position) {
 
     // 2. Fails on identical position
     int node_id = 7777;
-    state.node_positions[node_id] = {ImVec2(50, 50), false};
+    state.node_positions[node_id] = {ImVec2(50, 50), false, ImVec2(0.0f, 0.0f)};
     auto cmd2 = std::make_unique<MoveGraphNodeCommand>(node_id, ImVec2(50, 50), ImVec2(50, 50));
     history.execute(std::move(cmd2));
     ASSERT_EQ(0, history.undo_size());

@@ -284,3 +284,121 @@ TEST_F(EffectsTest, chorus_calculates_correct_rate_from_bpm) {
     // At 120 BPM, the LFO rate should be 2.0 Hz (120 / 60)
     ASSERT_NEAR(ch.params()[0].value, 2.0f, 0.01f);
 }
+
+TEST_F(EffectsTest, chorus_process_stereo) {
+    Chorus ch;
+    ch.set_sample_rate(SR);
+    ch.reset();
+
+    float left[BUFFER_SIZE];
+    float right[BUFFER_SIZE];
+    for (int i = 0; i < BUFFER_SIZE; ++i) {
+        left[i] = std::sin(2.0f * 3.14159265f * 440.0f * i / SR);
+        right[i] = std::sin(2.0f * 3.14159265f * 880.0f * i / SR);
+    }
+
+    ch.process_stereo(left, right, BUFFER_SIZE);
+
+    ASSERT_TRUE(is_finite(left, BUFFER_SIZE));
+    ASSERT_TRUE(is_finite(right, BUFFER_SIZE));
+
+    // Disable and verify pass-through behavior
+    ch.set_enabled(false);
+    float saved_left[BUFFER_SIZE];
+    float saved_right[BUFFER_SIZE];
+    std::memcpy(saved_left, left, sizeof(left));
+    std::memcpy(saved_right, right, sizeof(right));
+
+    ch.process_stereo(left, right, BUFFER_SIZE);
+
+    for (int i = 0; i < BUFFER_SIZE; ++i) {
+        ASSERT_NEAR(left[i], saved_left[i], 1e-6f);
+        ASSERT_NEAR(right[i], saved_right[i], 1e-6f);
+    }
+}
+
+TEST_F(EffectsTest, chorus_set_transport_state_edge_cases) {
+    Chorus ch;
+    ch.set_sample_rate(SR);
+    ch.reset();
+
+    // Set a valid initial BPM
+    ch.set_transport_state(120.0f);
+    float initial = ch.params()[0].value;
+    ASSERT_NEAR(initial, 2.0f, 0.01f);
+
+    // Invalid BPM values should not modify the parameters
+    ch.set_transport_state(-10.0f);
+    ASSERT_NEAR(ch.params()[0].value, initial, 0.0001f);
+
+    ch.set_transport_state(NAN);
+    ASSERT_NEAR(ch.params()[0].value, initial, 0.0001f);
+
+    // Repeated BPM values should remain stable
+    ch.set_transport_state(120.0f);
+    ASSERT_NEAR(ch.params()[0].value, initial, 0.0001f);
+}
+
+TEST_F(EffectsTest, flanger_process_stereo) {
+    Flanger fl;
+    fl.set_sample_rate(SR);
+    fl.reset();
+
+    float left[BUFFER_SIZE];
+    float right[BUFFER_SIZE];
+    for (int i = 0; i < BUFFER_SIZE; ++i) {
+        left[i] = std::sin(2.0f * 3.14159265f * 440.0f * i / SR);
+        right[i] = std::sin(2.0f * 3.14159265f * 880.0f * i / SR);
+    }
+
+    fl.process_stereo(left, right, BUFFER_SIZE);
+
+    ASSERT_TRUE(is_finite(left, BUFFER_SIZE));
+    ASSERT_TRUE(is_finite(right, BUFFER_SIZE));
+
+    // Disable and verify pass-through behavior
+    fl.set_enabled(false);
+    float saved_left[BUFFER_SIZE];
+    float saved_right[BUFFER_SIZE];
+    std::memcpy(saved_left, left, sizeof(left));
+    std::memcpy(saved_right, right, sizeof(right));
+
+    fl.process_stereo(left, right, BUFFER_SIZE);
+
+    for (int i = 0; i < BUFFER_SIZE; ++i) {
+        ASSERT_NEAR(left[i], saved_left[i], 1e-6f);
+        ASSERT_NEAR(right[i], saved_right[i], 1e-6f);
+    }
+}
+
+TEST_F(EffectsTest, phaser_process_stereo) {
+    Phaser ph;
+    ph.set_sample_rate(SR);
+    ph.reset();
+
+    float left[BUFFER_SIZE];
+    float right[BUFFER_SIZE];
+    for (int i = 0; i < BUFFER_SIZE; ++i) {
+        left[i] = std::sin(2.0f * 3.14159265f * 440.0f * i / SR);
+        right[i] = std::sin(2.0f * 3.14159265f * 880.0f * i / SR);
+    }
+
+    ph.process_stereo(left, right, BUFFER_SIZE);
+
+    ASSERT_TRUE(is_finite(left, BUFFER_SIZE));
+    ASSERT_TRUE(is_finite(right, BUFFER_SIZE));
+
+    // Disable and verify pass-through behavior
+    ph.set_enabled(false);
+    float saved_left[BUFFER_SIZE];
+    float saved_right[BUFFER_SIZE];
+    std::memcpy(saved_left, left, sizeof(left));
+    std::memcpy(saved_right, right, sizeof(right));
+
+    ph.process_stereo(left, right, BUFFER_SIZE);
+
+    for (int i = 0; i < BUFFER_SIZE; ++i) {
+        ASSERT_NEAR(left[i], saved_left[i], 1e-6f);
+        ASSERT_NEAR(right[i], saved_right[i], 1e-6f);
+    }
+}

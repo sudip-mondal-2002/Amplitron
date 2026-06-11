@@ -94,6 +94,9 @@ class PresetManager : public IPresetManager {
     bool load_preset(const std::string& filepath, IAudioEngine& engine,
                      IMidiManager* midi_manager = nullptr) override;
 
+    // Serialize full preset to JSON string
+    static std::string preset_to_json_string(IAudioEngine& engine);
+
     // Serialize current graph to JSON
     static std::string graph_to_json(const AudioGraph& graph);
 

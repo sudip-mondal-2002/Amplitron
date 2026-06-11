@@ -1,3 +1,5 @@
+#include <imgui_internal.h>
+
 #include <memory>
 
 #include "audio/effects/amp_cab/amp_simulator.h"
@@ -125,6 +127,161 @@ TEST_F(PresetTest, test_pedal_widget_knobs_callbacks_and_midi) {
     // Render with active mapping info
     TestAccessor::render_knobs(w_od, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
     advance_frame();
+
+    ImGui::End();
+    engine.shutdown();
+}
+
+TEST_F(PresetTest, test_pedal_widget_knobs_popup_sweep) {
+    ScopedImGuiContext imgui;
+    AudioEngine engine;
+    engine.initialize();
+    CommandHistory history;
+    MidiManager midi_manager;
+    GuiMidi gui_midi(midi_manager);
+
+    auto od = std::make_shared<Overdrive>();
+    PedalWidget w_od(engine, od, 0);
+    w_od.set_history(&history);
+    w_od.set_gui_midi(&gui_midi);
+
+    ImGuiIO& io = ImGui::GetIO();
+
+    auto advance_test_frame = [&]() {
+        ImGui::End();
+        ImGui::Render();
+        ImGui::NewFrame();
+        ImGui::SetNextWindowPos(ImVec2(0, 0));
+        ImGui::SetNextWindowSize(ImVec2(1024, 768));
+        ImGui::Begin("TestWindow");
+    };
+
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2(1024, 768));
+    ImGui::Begin("TestWindow");
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+
+    // Render knob once to register its position
+    TestAccessor::render_knobs(w_od, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+    advance_test_frame();
+
+    // 1. Right click on first knob (center is (62.5, 102.0)) to open popup
+    io.MousePos = ImVec2(62.5f, 102.0f);
+    advance_test_frame();
+    TestAccessor::render_knobs(w_od, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+
+    io.MouseDown[1] = true;
+    advance_test_frame();
+    TestAccessor::render_knobs(w_od, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+
+    io.MouseDown[1] = false;
+    advance_test_frame();
+    TestAccessor::render_knobs(w_od, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+
+    // Find popup window
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* popup_win = nullptr;
+    for (int i = 0; i < g.Windows.Size; ++i) {
+        if (g.Windows[i]->Flags & ImGuiWindowFlags_Popup) {
+            popup_win = g.Windows[i];
+            break;
+        }
+    }
+    ASSERT_TRUE(popup_win != nullptr);
+
+    float popup_x = popup_win->Pos.x + popup_win->Size.x * 0.5f;
+    float start_y = popup_win->Pos.y + 5.0f;
+    float end_y = popup_win->Pos.y + popup_win->Size.y - 5.0f;
+
+    // Sweep clicks (no mappings case)
+    for (float click_y = start_y; click_y < end_y; click_y += 12.0f) {
+        // Re-open if closed
+        io.MousePos = ImVec2(62.5f, 102.0f);
+        advance_test_frame();
+        TestAccessor::render_knobs(w_od, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+
+        io.MouseDown[1] = true;
+        advance_test_frame();
+        TestAccessor::render_knobs(w_od, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+
+        io.MouseDown[1] = false;
+        advance_test_frame();
+        TestAccessor::render_knobs(w_od, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+
+        io.MousePos = ImVec2(popup_x, click_y);
+        advance_test_frame();
+        TestAccessor::render_knobs(w_od, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+
+        io.MouseDown[0] = true;
+        advance_test_frame();
+        TestAccessor::render_knobs(w_od, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+
+        io.MouseDown[0] = false;
+        advance_test_frame();
+        TestAccessor::render_knobs(w_od, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+    }
+
+    // 2. Add MIDI parameter and bypass mappings
+    MidiMapping param_map;
+    param_map.cc_number = 20;
+    param_map.midi_channel = 1;
+    param_map.target_type = MidiTargetType::EffectParam;
+    param_map.effect_name = od->name();
+    param_map.param_name = od->params()[0].name;
+    gui_midi.manager().add_mapping(param_map);
+
+    MidiMapping bypass_map;
+    bypass_map.cc_number = 21;
+    bypass_map.midi_channel = 1;
+    bypass_map.target_type = MidiTargetType::EffectBypass;
+    bypass_map.effect_name = od->name();
+    gui_midi.manager().add_mapping(bypass_map);
+
+    // Sweep clicks with active mappings case (to hit removal paths)
+    for (float click_y = start_y; click_y < end_y; click_y += 12.0f) {
+        io.MousePos = ImVec2(62.5f, 102.0f);
+        advance_test_frame();
+        TestAccessor::render_knobs(w_od, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+
+        io.MouseDown[1] = true;
+        advance_test_frame();
+        TestAccessor::render_knobs(w_od, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+
+        io.MouseDown[1] = false;
+        advance_test_frame();
+        TestAccessor::render_knobs(w_od, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+
+        io.MousePos = ImVec2(popup_x, click_y);
+        advance_test_frame();
+        TestAccessor::render_knobs(w_od, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+
+        io.MouseDown[0] = true;
+        advance_test_frame();
+        TestAccessor::render_knobs(w_od, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+
+        io.MouseDown[0] = false;
+        advance_test_frame();
+        TestAccessor::render_knobs(w_od, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+    }
+
+    // 3. Test direct drag adjustments (to cover value changed and committed logic in drag mode)
+    // Left drag on the knob face
+    io.MousePos = ImVec2(62.5f, 102.0f);
+    advance_test_frame();
+    TestAccessor::render_knobs(w_od, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+
+    io.MouseDown[0] = true;
+    advance_test_frame();
+    TestAccessor::render_knobs(w_od, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+
+    io.MousePos = ImVec2(62.5f, 80.0f);  // drag upwards
+    io.MouseDelta = ImVec2(0.0f, -22.0f);
+    advance_test_frame();
+    TestAccessor::render_knobs(w_od, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
+
+    io.MouseDown[0] = false;
+    advance_test_frame();
+    TestAccessor::render_knobs(w_od, dl, ImVec2(10, 10), 190.0f, false, false, false, 1.0f);
 
     ImGui::End();
     engine.shutdown();

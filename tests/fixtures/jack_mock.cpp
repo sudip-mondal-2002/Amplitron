@@ -5,6 +5,7 @@ namespace Amplitron {
 bool g_mock_jack_client_open_fail = false;
 bool g_mock_jack_port_register_fail = false;
 bool g_mock_jack_activate_fail = false;
+jack_status_t g_mock_jack_status = static_cast<jack_status_t>(0);
 
 int (*g_mock_jack_process_callback)(jack_nframes_t, void *) = nullptr;
 void *g_mock_jack_process_arg = nullptr;
@@ -16,7 +17,7 @@ jack_client_t *MOCK_jack_client_open(const char *client_name, jack_options_t opt
     (void)client_name;
     (void)options;
     if (status) {
-        *status = static_cast<jack_status_t>(0);
+        *status = Amplitron::g_mock_jack_status;
     }
     if (Amplitron::g_mock_jack_client_open_fail) {
         return nullptr;

@@ -8,7 +8,7 @@ namespace Amplitron {
 
 // Stub implementation for non-desktop platforms (web, mobile)
 class MidiManager : public IMidiManager {
-    friend class TestAccessor;
+    friend struct TestAccessor;
 
    public:
     MidiManager() = default;
@@ -65,7 +65,7 @@ class MidiManager : public IMidiManager {
  * route CC values through the existing engine.push_param_change() path.
  */
 class MidiManager : public IMidiManager {
-    friend class TestAccessor;
+    friend struct TestAccessor;
 
    public:
     MidiManager();

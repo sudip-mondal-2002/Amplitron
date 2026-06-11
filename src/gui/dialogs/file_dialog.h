@@ -4,6 +4,12 @@
 
 namespace Amplitron {
 
+#ifdef AMPLITRON_HEADLESS
+extern std::string g_mock_save_dialog_result;
+extern std::string g_mock_open_dialog_result;
+extern std::string g_mock_folder_dialog_result;
+#endif
+
 // Cross-platform native save file dialog
 // Returns empty string if user cancelled
 std::string show_save_dialog(const std::string& default_name = "recording.wav",

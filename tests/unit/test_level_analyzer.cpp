@@ -82,6 +82,7 @@ TEST(level_analyzer_invalid_inputs_nan_negative) {
     la.update(0.8f, 0.8f, false, false, -0.01f);
     ASSERT_NEAR(la.smoothed_input_rms(), valid_in_rms, 1e-6f);
     ASSERT_NEAR(la.input_peak_hold(), valid_in_peak, 1e-6f);
+    ASSERT_NEAR(la.output_peak_hold(), valid_out_peak, 1e-6f);
 
     // 2. Invalid dt (infinite/NaN)
     la.update(0.8f, 0.8f, false, false, nan_val);

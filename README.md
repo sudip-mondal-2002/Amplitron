@@ -13,6 +13,47 @@ Professional real-time guitar amplifier simulator with ultra-low latency, 16 stu
 
 **[Download Latest Release](https://github.com/sudip-mondal-2002/Amplitron/releases/latest)** | **[Visit Website](https://sudip-mondal-2002.github.io/Amplitron/)**
 
+## Table of Contents
+
+- [Platform Downloads](#platform-downloads)
+  - [iOS Installation (AltStore)](#ios-installation-altstore)
+- [Demo Video](#-demo-video)
+- [Features](#features)
+  - [Audio Engine](#audio-engine)
+  - [Effects Pedals](#effects-pedals)
+  - [Utilities](#utilities)
+  - [Visual Pedal Board](#visual-pedal-board)
+- [Hardware Setup](#hardware-setup)
+  - [What is a USB Guitar Cable?](#what-is-a-usb-guitar-cable)
+  - [Compatible USB Guitar Cables](#compatible-usb-guitar-cables)
+  - [Full Audio Interfaces](#full-audio-interfaces-also-supported)
+  - [What You Need](#what-you-need)
+  - [Signal Chain](#signal-chain)
+  - [How It Works](#how-it-works)
+  - [Low-Latency Tips](#low-latency-tips)
+- [Building from Source](#building-from-source)
+  - [Prerequisites](#prerequisites)
+  - [Quick Start](#quick-start)
+  - [Build Targets](#build-targets-makefile)
+- [Usage](#usage)
+  - [Running](#running)
+  - [Command-line options](#command-line-options)
+  - [Controls](#controls)
+  - [Default Signal Chain](#default-signal-chain)
+- [Project Structure](#project-structure)
+- [Architecture](#architecture)
+  - [Audio Pipeline](#audio-pipeline)
+  - [DSP Techniques Used](#dsp-techniques-used)
+  - [Class Diagram & Subsystems](#class-diagram--subsystems)
+- [Troubleshooting](#troubleshooting)
+- [Development & Contributing](#development--contributing)
+  - [Running Tests](#running-tests)
+  - [CI/CD Pipeline](#cicd-pipeline)
+  - [Automatic Releases](#automatic-releases)
+  - [Contributing](#contributing)
+  - [Contact](#contact)
+- [License](#license)
+
 ### Platform Downloads
 
 | Platform      | File                          | Notes                                                    |

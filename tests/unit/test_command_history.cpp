@@ -531,3 +531,160 @@ TEST(CommandHistory_EdgeCases_And_Out_Of_Bounds) {
 
     clear_engine(engine);
 }
+
+TEST(ClearAllCommand_ExecutedUndo) {
+    auto& engine = test_engine();
+    clear_engine(engine);
+    engine.add_effect(std::make_shared<Overdrive>());
+    engine.add_effect(std::make_shared<Delay>());
+    ASSERT_EQ(static_cast<int>(engine.effects().size()), 2);
+
+    CommandHistory history;
+    auto cmd = std::make_unique<ClearAllCommand>(engine);
+
+    // Execute
+    history.execute(std::move(cmd));
+    ASSERT_EQ(static_cast<int>(engine.effects().size()), 0);
+
+    // Undo
+    history.undo();
+    ASSERT_EQ(static_cast<int>(engine.effects().size()), 2);
+    ASSERT_EQ(std::string(engine.effects()[0]->name()), "Overdrive");
+    ASSERT_EQ(std::string(engine.effects()[1]->name()), "Delay");
+
+    clear_engine(engine);
+}
+
+TEST(ResetAllCommand_Redo) {
+    auto& engine = test_engine();
+    clear_engine(engine);
+    auto od = std::make_shared<Overdrive>();
+    float custom_val = od->params()[0].min_val + 2.3f;
+    od->params()[0].value = custom_val;
+    engine.add_effect(od);
+
+    CommandHistory history;
+    auto cmd = std::make_unique<ResetAllCommand>(engine);
+
+    // Execute (resets to default)
+    history.execute(std::move(cmd));
+    ASSERT_NEAR(od->params()[0].value, od->params()[0].default_val, 0.001f);
+
+    // Undo
+    history.undo();
+    ASSERT_NEAR(od->params()[0].value, custom_val, 0.001f);
+
+    // Redo
+    history.redo();
+    ASSERT_NEAR(od->params()[0].value, od->params()[0].default_val, 0.001f);
+
+    clear_engine(engine);
+}
+
+TEST(ResetAllCommand_ExecutedUndo) {
+    auto& engine = test_engine();
+    clear_engine(engine);
+    auto od = std::make_shared<Overdrive>();
+    float custom_val = od->params()[0].min_val + 4.5f;
+    od->params()[0].value = custom_val;
+    engine.add_effect(od);
+
+    CommandHistory history;
+    auto cmd = std::make_unique<ResetAllCommand>(engine);
+
+    // Execute
+    history.execute(std::move(cmd));
+    ASSERT_NEAR(od->params()[0].value, od->params()[0].default_val, 0.001f);
+
+    // Undo
+    history.undo();
+    ASSERT_NEAR(od->params()[0].value, custom_val, 0.001f);
+
+    clear_engine(engine);
+}
+
+TEST(CommandHistory_NegativeDepthClampsToZero) {
+    CommandHistory history(-10);
+    ASSERT_EQ(history.max_depth(), 0);
+
+    history.set_max_depth(-5);
+    ASSERT_EQ(history.max_depth(), 0);
+}
+
+TEST(CommandHistory_SizeMaxDepthTrimsExisting) {
+    auto& engine = test_engine();
+    clear_engine(engine);
+
+    CommandHistory history(10);
+    for (int i = 0; i < 10; ++i) {
+        history.execute(std::make_unique<AddEffectCommand>(engine, std::make_shared<Overdrive>()));
+    }
+    ASSERT_EQ(history.undo_size(), 10);
+
+    // Trim existing elements
+    history.set_max_depth(3);
+    ASSERT_EQ(history.max_depth(), 3);
+    ASSERT_EQ(history.undo_size(), 3);
+
+    clear_engine(engine);
+}
+
+TEST(CommandHistory_PushExecutedCoalescing) {
+    auto& engine = test_engine();
+    clear_engine(engine);
+
+    auto fx = std::make_shared<Overdrive>();
+    auto& params = fx->params();
+    float original = params[0].value;
+
+    CommandHistory history;
+    // Push executed commands that should coalesce
+    history.push_executed(
+        std::make_unique<ParameterChangeCommand>(engine, fx, 0, original, original + 0.1f));
+    history.push_executed(
+        std::make_unique<ParameterChangeCommand>(engine, fx, 0, original + 0.1f, original + 0.2f));
+
+    ASSERT_EQ(history.undo_size(), 1);
+
+    clear_engine(engine);
+}
+
+TEST(CommandHistory_PushExecutedClearsRedo) {
+    auto& engine = test_engine();
+    clear_engine(engine);
+
+    CommandHistory history;
+    history.execute(std::make_unique<AddEffectCommand>(engine, std::make_shared<Overdrive>()));
+    history.undo();
+    ASSERT_TRUE(history.can_redo());
+
+    // Push executed should clear redo stack
+    history.push_executed(std::make_unique<AddEffectCommand>(engine, std::make_shared<Delay>()));
+    ASSERT_FALSE(history.can_redo());
+    ASSERT_EQ(history.redo_size(), 0);
+
+    clear_engine(engine);
+}
+
+TEST(ParameterChangeCommand_OutOfRangeParam) {
+    auto& engine = test_engine();
+    clear_engine(engine);
+
+    auto fx = std::make_shared<Overdrive>();
+    CommandHistory history;
+
+    // Out of bounds parameter index (both negative and large positive)
+    auto cmd1 = std::make_unique<ParameterChangeCommand>(engine, fx, -5, 0.0f, 1.0f);
+    auto cmd2 = std::make_unique<ParameterChangeCommand>(engine, fx, 9999, 0.0f, 1.0f);
+
+    ASSERT_EQ(cmd1->param_index(), -5);
+    ASSERT_EQ(cmd2->param_index(), 9999);
+
+    // Execute/undo should be safe no-ops
+    cmd1->execute();
+    cmd1->undo();
+    cmd2->execute();
+    cmd2->undo();
+
+    clear_engine(engine);
+}

@@ -472,7 +472,7 @@ bool AudioGraph::remove_output_pin(int node_id, int pin_id) {
 void AudioGraph::restore_output_pin(int node_id, int pin_id, int index) {
     for (auto &node : nodes_) {
         if (node.id == node_id && node.routing_type == NodeRoutingType::Splitter) {
-            if (index >= 0 && index <= node.output_pin_ids.size()) {
+            if (index >= 0 && static_cast<size_t>(index) <= node.output_pin_ids.size()) {
                 node.output_pin_ids.insert(node.output_pin_ids.begin() + index, pin_id);
             } else {
                 node.output_pin_ids.push_back(pin_id);

@@ -1079,6 +1079,26 @@ TEST_F(PresetTest, save_graph_all_fields) {
     engine2.shutdown();
 }
 
+TEST_F(PresetTest, manager_preset_to_json_string) {
+    GuiGraphState::get_instance().node_positions.clear();
+    engine.clear_effects();
+    auto od = std::make_shared<Overdrive>();
+    engine.add_effect(od);
+    engine.set_input_gain(0.77f);
+    engine.set_output_gain(0.88f);
+
+    std::string json = PresetManager::preset_to_json_string(engine);
+
+    // Verify basic global fields and nodes
+    auto parsed = nlohmann::json::parse(json);
+    ASSERT_NEAR(parsed["input_gain"].get<float>(), 0.77f, 1e-5f);
+    ASSERT_NEAR(parsed["output_gain"].get<float>(), 0.88f, 1e-5f);
+    ASSERT_TRUE(parsed.contains("nodes"));
+    ASSERT_TRUE(std::any_of(parsed["nodes"].begin(), parsed["nodes"].end(), [](const auto &node) {
+        return node.contains("type") && node["type"].template get<std::string>() == "overdrive";
+    }));
+}
+
 // -----------------------------------------------------------------------
 // Additional tests to cover preset_json and preset_manager_dirs/io gaps
 // -----------------------------------------------------------------------

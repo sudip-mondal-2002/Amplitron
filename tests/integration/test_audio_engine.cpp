@@ -383,7 +383,7 @@ TEST_F(AudioEngineTest, repeated_graph_commits) {
 TEST_F(AudioEngineTest, graph_commit_after_node_removal) {
     auto& graph = engine.graph();
 
-    int n1 = graph.add_node("A", NodeRoutingType::StandardEffect);
+    graph.add_node("A", NodeRoutingType::StandardEffect);
     int n2 = graph.add_node("B", NodeRoutingType::StandardEffect);
 
     auto nodes = graph.get_nodes();

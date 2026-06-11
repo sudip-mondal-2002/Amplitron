@@ -25,7 +25,7 @@ endif()
 
 # Compiler flags
 if(EMSCRIPTEN)
-    add_compile_options(-O3 -ffast-math -pthread "-sUSE_SDL=2" -Wno-nontrivial-memaccess)
+    add_compile_options(-O2 -ffast-math -pthread "-sUSE_SDL=2" -Wno-nontrivial-memaccess)
 elseif(MSVC)
     add_compile_options(/W4 /fp:fast)
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
@@ -742,6 +742,10 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/test_main.cpp
         tests/unit/test_common.cpp
         tests/unit/test_mock_backend.cpp
+        tests/unit/test_audio_backend_registry.cpp
+        tests/unit/test_audio_backend_sdl.cpp
+        tests/unit/test_audio_metrics_service.cpp
+        tests/unit/test_audio_command_dispatcher.cpp
         tests/unit/test_oboe_ring_buffer.cpp
         tests/unit/test_effects_dynamics.cpp
         tests/unit/test_effects_saturation.cpp
@@ -754,6 +758,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/unit/test_looper.cpp
         tests/unit/test_theme.cpp
         tests/unit/test_command_history.cpp
+        tests/unit/test_effect_base.cpp
         tests/unit/test_cabinet_sim_ir.cpp
         tests/unit/test_wav_loader.cpp
         tests/unit/test_convolution_engine.cpp
@@ -775,6 +780,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/ui/test_gui_manager.cpp
         tests/ui/test_pedal_board.cpp
         tests/ui/test_crash_recovery.cpp
+        tests/ui/test_crash_recovery_mocked.cpp
         tests/ui/test_gui_commands.cpp
         tests/ui/test_spectrum_analyzer.cpp
         tests/ui/test_gui_presets.cpp
@@ -789,7 +795,10 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/ui/test_screen.cpp
         tests/ui/test_pedal_board_chain.cpp
         tests/ui/test_pedal_board_menu.cpp
+        tests/ui/test_file_dialog.cpp
+        tests/ui/test_window_context.cpp
         tests/ui/test_pedal_widget_knobs.cpp
+        tests/ui/test_pedal_widget.cpp
         tests/unit/test_session_manager.cpp
         tests/unit/test_cli.cpp
         tests/integration/test_main.cpp
@@ -844,6 +853,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
             src/gui/dialogs/file_dialog_native.cpp
             src/gui/dialogs/file_dialog_native_open.cpp
             src/gui/dialogs/file_dialog_native_folder.cpp
+            tests/fixtures/file_dialog_mock.cpp
         )
     endif()
 
@@ -877,6 +887,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         AMPLITRON_VERSION="${AMPLITRON_VERSION}"
         AMPLITRON_HEADLESS
         AMPLITRON_TESTS
+        AMPLITRON_TEST_NATIVE_DIALOGS
         SDL_MAIN_HANDLED
         "Pa_GetDeviceCount=MOCK_Pa_GetDeviceCount"
         "Pa_GetDeviceInfo=MOCK_Pa_GetDeviceInfo"
@@ -892,6 +903,18 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         "Pa_GetStreamInfo=MOCK_Pa_GetStreamInfo"
         "Pa_Initialize=MOCK_Pa_Initialize"
     )
+
+    if(NOT WIN32)
+        target_compile_definitions(amplitron-tests PRIVATE
+            "popen=MOCK_popen"
+            "pclose=MOCK_pclose"
+        )
+        if(APPLE)
+            target_compile_definitions(amplitron-tests PRIVATE
+                "execl=MOCK_execl"
+            )
+        endif()
+    endif()
 
     if(WITH_JACK AND UNIX AND NOT APPLE)
         target_compile_definitions(amplitron-tests PRIVATE

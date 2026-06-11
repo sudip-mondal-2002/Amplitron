@@ -55,12 +55,15 @@ class GuiManager {
     bool initialize(int width = 1280, int height = 720);
     void shutdown();
     bool run_frame();
+    void force_rebuild_pedal_widgets();
 
     IMidiManager& midi_manager() { return midi_manager_; }
     IAudioEngine& audio_engine() { return engine_; }
     CommandHistory& command_history() { return command_history_; }
 
    private:
+    friend struct GuiManagerTestAccessor;
+
     // ── Menu bar ──
     void render_menu_bar();
 

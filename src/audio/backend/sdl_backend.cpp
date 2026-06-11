@@ -11,7 +11,8 @@
 
 namespace Amplitron {
 
-static void sdl_audio_callback(void* userdata, Uint8* stream, int len) {
+// Intentionally non-static so it can be accessed in unit tests for validation
+void sdl_audio_callback(void* userdata, Uint8* stream, int len) {
     auto* be = static_cast<SdlBackend*>(userdata);
     auto* engine = be->get_engine();
     if (!engine) return;

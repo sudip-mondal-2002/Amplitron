@@ -138,13 +138,37 @@ void GuiManager::render_menu_bar() {
                     EM_ASM(
                         {
                             var text = UTF8ToString($0);
-                            navigator.clipboard.writeText(text)
-                                .then(function(){
-                                    // success
-                                })
-                                .catch(function(err) {
-                                    console.error("Clipboard write failed: ", err);
-                                });
+                            if (navigator.clipboard && window.isSecureContext) {
+                                navigator.clipboard.writeText(text)
+                                    .then(function(){
+                                        // success
+                                    })
+                                    .catch(function(err) {
+                                        console.error("Clipboard write failed: ", err);
+                                        window.prompt(
+                                            "Press Ctrl+C or Cmd+C to copy the preset JSON:", text);
+                                    });
+                            } else {
+                                try {
+                                    var textArea = document.createElement("textarea");
+                                    textArea.value = text;
+                                    textArea.style.top = "0";
+                                    textArea.style.left = "0";
+                                    textArea.style.position = "fixed";
+                                    document.body.appendChild(textArea);
+                                    textArea.focus();
+                                    textArea.select();
+                                    var successful = document.execCommand('copy');
+                                    if (!successful) {
+                                        window.prompt(
+                                            "Press Ctrl+C or Cmd+C to copy the preset JSON:", text);
+                                    }
+                                    document.body.removeChild(textArea);
+                                } catch (err) {
+                                    window.prompt("Press Ctrl+C or Cmd+C to copy the preset JSON:",
+                                                  text);
+                                }
+                            }
                         },
                         json_string.c_str());
 #else
@@ -158,6 +182,24 @@ void GuiManager::render_menu_bar() {
                     toast_timer_ = 2.0f;
                 }
             }
+#ifdef __EMSCRIPTEN__
+            if (ImGui::MenuItem("Share current pedalboard")) {
+                std::string json_string = gui_presets_.serialise_current_preset_to_json();
+                if (!json_string.empty()) {
+                    // clang-format off
+                    EM_ASM(
+                        {
+                            if (typeof window.sharePresetToUrl === 'function') {
+                                window.sharePresetToUrl(UTF8ToString($0));
+                            }
+                        },
+                        json_string.c_str());
+                    // clang-format on
+                    toast_message_ = "Link copied to clipboard!";
+                    toast_timer_ = 2.0f;
+                }
+            }
+#endif
             ImGui::Separator();
 #ifndef AMPLITRON_NO_DESKTOP_SHELL
             if (ImGui::MenuItem("Change Presets Directory...")) {
