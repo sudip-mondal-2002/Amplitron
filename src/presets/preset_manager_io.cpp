@@ -226,7 +226,7 @@ bool PresetManager::load_preset(const std::string &filepath, IAudioEngine &engin
         for (const auto &node : engine.graph().get_nodes()) {
             engine.graph().set_node_position(node.id, x, 100);
             GuiGraphState::get_instance().node_positions[node.id] = {ImVec2((float)x, 100.0f),
-                                                                     false};
+                                                                     false, ImVec2(0.0f, 0.0f)};
             x += 200;
         }
     }
@@ -405,8 +405,8 @@ bool PresetManager::graph_from_json(const std::string &json, AudioGraph &graph) 
             }
             if (existing_id != -1) {
                 graph.set_node_position(existing_id, node.x, node.y);
-                GuiGraphState::get_instance().node_positions[existing_id] = {ImVec2(node.x, node.y),
-                                                                             false};
+                GuiGraphState::get_instance().node_positions[existing_id] = {
+                    ImVec2(node.x, node.y), false, ImVec2(0.0f, 0.0f)};
                 node_id_map[node.id] = existing_id;
                 continue;
             }
@@ -426,7 +426,8 @@ bool PresetManager::graph_from_json(const std::string &json, AudioGraph &graph) 
         if (node_name == "Input") graph.set_node_as_input(new_id, true);
         if (node_name == "Output" || node_name == "Amp Sim") graph.set_node_as_output(new_id, true);
 
-        GuiGraphState::get_instance().node_positions[new_id] = {ImVec2(node.x, node.y), false};
+        GuiGraphState::get_instance().node_positions[new_id] = {ImVec2(node.x, node.y), false,
+                                                                ImVec2(0.0f, 0.0f)};
 
         node_id_map[node.id] = new_id;
     }
@@ -446,11 +447,11 @@ bool PresetManager::graph_from_json(const std::string &json, AudioGraph &graph) 
             try {
                 if (p_str.length() > 3 && p_str.substr(0, 3) == "out" && !is_input) {
                     int idx = std::stoi(p_str.substr(3));
-                    if (idx >= 0 && idx < node->output_pin_ids.size())
+                    if (idx >= 0 && static_cast<size_t>(idx) < node->output_pin_ids.size())
                         return node->output_pin_ids[idx];
                 } else if (p_str.length() > 2 && p_str.substr(0, 2) == "in" && is_input) {
                     int idx = std::stoi(p_str.substr(2));
-                    if (idx >= 0 && idx < node->input_pin_ids.size())
+                    if (idx >= 0 && static_cast<size_t>(idx) < node->input_pin_ids.size())
                         return node->input_pin_ids[idx];
                 }
             } catch (const std::invalid_argument &) {

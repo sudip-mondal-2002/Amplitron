@@ -16,6 +16,10 @@
 // clang-format on
 #endif
 
+#ifdef AMPLITRON_TEST_NATIVE_DIALOGS
+#include "fixtures/file_dialog_mock.h"
+#endif
+
 #ifdef __APPLE__
 #include <TargetConditionals.h>
 #include <fcntl.h>
@@ -35,7 +39,9 @@ namespace Amplitron {
 std::string g_mock_save_dialog_result = "";
 std::string g_mock_open_dialog_result = "";
 std::string g_mock_folder_dialog_result = "";
+#endif
 
+#if defined(AMPLITRON_HEADLESS) && !defined(AMPLITRON_TEST_NATIVE_DIALOGS)
 std::string show_save_dialog(const std::string&, const std::string&, const std::string&) {
     return g_mock_save_dialog_result;
 }
@@ -63,7 +69,11 @@ std::string show_save_dialog(const std::string& default_name, const std::string&
 
     // Get desktop/documents as initial dir
     char initial_dir[MAX_PATH] = "";
+#ifdef AMPLITRON_TEST_NATIVE_DIALOGS
+    MOCK_SHGetFolderPathA(NULL, CSIDL_DESKTOP, NULL, 0, initial_dir);
+#else
     SHGetFolderPathA(NULL, CSIDL_DESKTOP, NULL, 0, initial_dir);
+#endif
 
     OPENFILENAMEA ofn;
     std::memset(&ofn, 0, sizeof(ofn));
@@ -77,9 +87,15 @@ std::string show_save_dialog(const std::string& default_name, const std::string&
     ofn.Flags = OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
     ofn.lpstrDefExt = filter_ext.c_str();
 
+#ifdef AMPLITRON_TEST_NATIVE_DIALOGS
+    if (MOCK_GetSaveFileNameA(&ofn)) {
+        return std::string(filename);
+    }
+#else
     if (GetSaveFileNameA(&ofn)) {
         return std::string(filename);
     }
+#endif
     return "";
 }
 

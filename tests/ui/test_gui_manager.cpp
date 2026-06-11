@@ -500,13 +500,37 @@ struct MockKeyboardShortcutsWrapper {
 #define ImGui mock_gui::MockImGui
 #define ImDrawList mock_gui::MockDrawList
 #ifndef _WIN32
+#ifdef fork
+#undef fork
+#endif
 #define fork mock_fork
+#ifdef pipe
+#undef pipe
+#endif
 #define pipe mock_pipe
+#ifdef dup2
+#undef dup2
+#endif
 #define dup2 mock_dup2
+#ifdef open
+#undef open
+#endif
 #define open mock_open
+#ifdef close
+#undef close
+#endif
 #define close mock_close
+#ifdef execl
+#undef execl
+#endif
 #define execl mock_execl
+#ifdef _exit
+#undef _exit
+#endif
 #define _exit mock_exit
+#ifdef waitpid
+#undef waitpid
+#endif
 #define waitpid mock_waitpid
 #endif
 #define gui_presets_ \

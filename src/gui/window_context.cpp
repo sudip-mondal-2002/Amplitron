@@ -37,6 +37,7 @@ bool g_mock_window_context_poll_events_fail = false;
 #endif
 
 bool WindowContext::initialize(int width, int height, const std::string& title) {
+    (void)title;
 #ifdef AMPLITRON_HEADLESS
     if (g_mock_window_context_initialize_fail) {
         return false;

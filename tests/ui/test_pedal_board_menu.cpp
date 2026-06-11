@@ -245,8 +245,6 @@ TEST_F(PresetTest, test_pedal_board_menu_extended) {
     // Re-verify that amp was added automatically
     ASSERT_GE(board.find_amp_index(), 0);
 
-    ImGuiIO &io = ImGui::GetIO();
-
     // 2. Click "+ Add Pedal" button programmatically
     click_item("TestWindow", "+ Add Pedal");
     TestAccessor::render_add_pedal_menu(board);

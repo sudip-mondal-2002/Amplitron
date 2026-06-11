@@ -886,10 +886,6 @@ TEST_F(PresetTest, MBKnob_RightClick_OpensPopup) {
 
     ImGuiIO& io = ImGui::GetIO();
 
-    float col_width = (220.0f - 24.0f * 1.0f) / 3.0f;
-    float x1 = p0.x + 12.0f * 1.0f + col_width;
-    float track_top = p0.y + 90.0f * 1.0f;
-
     // Render once to layout items and register bounding boxes
     ScreenComponent::render(dl, p0, 220.0f, 1.0f, props);
     advance_frame();
@@ -931,7 +927,6 @@ TEST_F(PresetTest, XoverSlider_Drag_UpdatesValueAndPreventsOverlap) {
 
     float col_width = (220.0f - 24.0f * 1.0f) / 3.0f;
     float x1 = p0.x + 12.0f * 1.0f + col_width;
-    float x2 = p0.x + 12.0f * 1.0f + 2.0f * col_width;
     float track_top = p0.y + 90.0f * 1.0f;
 
     // Render once to layout items and register bounding boxes

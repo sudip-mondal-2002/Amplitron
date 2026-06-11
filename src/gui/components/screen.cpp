@@ -174,6 +174,7 @@ void ScreenComponent::render_tuner_display(ImDrawList* dl, ImVec2 p0, float peda
 
 void ScreenComponent::render_ir_cabinet_display(ImDrawList* dl, ImVec2 p0, float pedal_width,
                                                 float zoom, const ScreenProps& props) {
+    (void)dl;
     auto* ir_cab = dynamic_cast<CabinetSim*>(props.effect.get());
     if (ir_cab) {
         float cx = p0.x + pedal_width * 0.5f;
@@ -267,6 +268,7 @@ void ScreenComponent::render_ir_cabinet_display(ImDrawList* dl, ImVec2 p0, float
 
 void ScreenComponent::render_looper_display(ImDrawList* dl, ImVec2 p0, float pedal_width,
                                             float zoom, const ScreenProps& props) {
+    (void)dl;
     auto* looper = dynamic_cast<Looper*>(props.effect.get());
     if (!looper) return;
 

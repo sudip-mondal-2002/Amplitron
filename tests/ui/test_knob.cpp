@@ -380,7 +380,7 @@ TEST_F(PresetTest, KnobComponent_DoubleClick_WhenValueAlreadyDefault_NoCallbackF
     props.min_val = 0.0f;
     props.max_val = 100.0f;
     props.default_val = 50.0f;
-    props.on_value_changed = [&](float v) { changed = true; };
+    props.on_value_changed = [&](float /*v*/) { changed = true; };
     props.on_value_committed = [&](float, float) { committed = true; };
 
     ImVec2 center = ImGui::GetCursorScreenPos();

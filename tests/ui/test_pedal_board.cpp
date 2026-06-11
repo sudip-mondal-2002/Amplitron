@@ -406,8 +406,6 @@ TEST(pedal_board_modals_and_rebuilds_extended) {
     engine.add_effect(od);
     board.rebuild_widgets();
 
-    ImGuiIO& io = ImGui::GetIO();
-
     auto advance_test_frame = [&]() {
         ImGui::End();
         ImGui::Render();

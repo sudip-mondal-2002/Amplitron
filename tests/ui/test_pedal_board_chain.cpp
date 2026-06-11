@@ -804,7 +804,6 @@ TEST_F(PresetTest, test_pedal_board_chain_fully_covered) {
     ASSERT_TRUE(mixer_node != nullptr);
 
     int splitter_out_pin = splitter_node->output_pin_ids[0];
-    int mixer_in_pin = mixer_node->input_pin_ids[0];
     ImVec2 splitter_pin_pos(canvas_pos.x + 582.0f, canvas_pos.y + 139.67f);
     ImVec2 mixer_pin_pos(canvas_pos.x + 648.0f, canvas_pos.y + 137.75f);
 

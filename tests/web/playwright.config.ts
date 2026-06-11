@@ -24,7 +24,7 @@ export default defineConfig({
   workers: 1,
 
   reporter: process.env.CI
-    ? [['github'], ['html', { open: 'never', outputFolder: 'playwright-report' }]]
+    ? [['github'], ['html', { open: 'never', outputFolder: 'playwright-report' }], ['junit', { outputFile: 'junit.xml' }]]
     : [['list'], ['html', { open: 'on-failure', outputFolder: 'playwright-report' }]],
 
   use: {

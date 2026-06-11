@@ -23,13 +23,17 @@
 #include <unistd.h>
 #endif
 
+#ifdef AMPLITRON_TEST_NATIVE_DIALOGS
+#include "fixtures/file_dialog_mock.h"
+#endif
+
 #ifndef _WIN32
 #include <sys/wait.h>
 #endif
 
 namespace Amplitron {
 
-#ifdef AMPLITRON_HEADLESS
+#if defined(AMPLITRON_HEADLESS) && !defined(AMPLITRON_TEST_NATIVE_DIALOGS)
 std::string show_folder_dialog(const std::string&) { return g_mock_folder_dialog_result; }
 #else
 
@@ -40,12 +44,21 @@ std::string show_folder_dialog(const std::string& title) {
     bi.lpszTitle = title.c_str();
     bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
 
+#ifdef AMPLITRON_TEST_NATIVE_DIALOGS
+    LPITEMIDLIST pidl = MOCK_SHBrowseForFolderA(&bi);
+    if (!pidl) return "";
+
+    char path[MAX_PATH];
+    bool ok = MOCK_SHGetPathFromIDListA(pidl, path);
+    MOCK_CoTaskMemFree(pidl);
+#else
     LPITEMIDLIST pidl = SHBrowseForFolderA(&bi);
     if (!pidl) return "";
 
     char path[MAX_PATH];
     bool ok = SHGetPathFromIDListA(pidl, path);
     CoTaskMemFree(pidl);
+#endif
     return ok ? std::string(path) : "";
 }
 

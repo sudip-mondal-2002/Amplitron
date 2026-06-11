@@ -65,7 +65,7 @@ jobs:
           ninja -j$(nproc)
 
       - name: Run Tests
-        run: cd build && ./amplitron-tests
+        run: cd build && ./amplitron-tests --junitxml=junit.xml
 
       - name: Install Smoke Test
         env:
@@ -112,7 +112,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: linux-coverage
-          path: coverage.filtered.info
+          path: |
+            coverage.filtered.info
+            build/junit.xml
           retention-days: 1
 
       - name: Upload Build
@@ -174,7 +176,7 @@ jobs:
           ninja -j$(sysctl -n hw.ncpu)
 
       - name: Run Tests
-        run: cd build && ./amplitron-tests
+        run: cd build && ./amplitron-tests --junitxml=junit.xml
 
       - name: Install Smoke Test
         env:
@@ -213,7 +215,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: macos-coverage
-          path: coverage.filtered.info
+          path: |
+            coverage.filtered.info
+            build/junit.xml
           retention-days: 1
 
       - name: Bundle Dylibs
@@ -384,6 +388,14 @@ jobs:
           CI: true
         run: npx playwright test
 
+      - name: Upload web test results artifact
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: web-test-results
+          path: tests/web/junit.xml
+          retention-days: 1
+
       - name: Upload Playwright HTML report
         if: always()
         uses: actions/upload-artifact@v7
@@ -475,7 +487,7 @@ jobs:
 
       - name: Run Tests
         shell: msys2 {0}
-        run: cd build && ./amplitron-tests.exe
+        run: cd build && ./amplitron-tests.exe --junitxml=junit.xml
 
       - name: Install Smoke Test
         shell: msys2 {0}
@@ -526,7 +538,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: windows-coverage
-          path: coverage.filtered.info
+          path: |
+            coverage.filtered.info
+            build/junit.xml
           retention-days: 1
 
       - name: Collect Binaries
@@ -751,7 +765,7 @@ jobs:
 
   merge-coverage:
     name: Merge Cross-Platform Coverage
-    needs: [test-linux, test-macos, test-windows]
+    needs: [test-linux, test-macos, test-windows, test-web]
     if: ${{ !cancelled() && (github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) }}
     runs-on: ubuntu-latest
     steps:
@@ -809,38 +823,6 @@ jobs:
           genhtml merged.info --output-directory coverage-report $GENHTML_IGNORE --synthesize-missing --prefix $GITHUB_WORKSPACE
           lcov --summary merged.info $LCOV_IGNORE | tee merged-summary.txt
 
-      - name: Generate Merged Coverage Comment
-        run: |
-          LCOV_IGNORE="--ignore-errors unused,unused,inconsistent,inconsistent,format,format,corrupt,corrupt,unsupported,unsupported,source,source,mismatch,mismatch,gcov,gcov"
-          COVERAGE=$(lcov --summary merged.info $LCOV_IGNORE 2>&1 | awk '/lines......:/ {print $2}' | sed 's/%//')
-          echo "Merged line coverage: $COVERAGE%"
-
-          THRESHOLD=60
-
-          echo "### 🌍 Cross-Platform Coverage Report" > coverage_comment.md
-          echo "**Platforms:** ${{ env.PLATFORMS }}" >> coverage_comment.md
-          echo "**Merged Line Coverage:** ${COVERAGE}%" >> coverage_comment.md
-          echo "" >> coverage_comment.md
-
-          if awk "BEGIN {exit !($COVERAGE >= $THRESHOLD)}"; then
-            echo "✅ Coverage meets threshold: $COVERAGE% >= $THRESHOLD%" >> coverage_comment.md
-          else
-            echo "⚠️ Coverage is below threshold: $COVERAGE% < $THRESHOLD%" >> coverage_comment.md
-          fi
-
-          echo "" >> coverage_comment.md
-          echo "<details>" >> coverage_comment.md
-          echo "<summary>Full Merged Coverage Summary</summary>" >> coverage_comment.md
-          echo "" >> coverage_comment.md
-          echo '```text' >> coverage_comment.md
-          cat merged-summary.txt >> coverage_comment.md
-          echo '```' >> coverage_comment.md
-          echo "</details>" >> coverage_comment.md
-
-          cat coverage_comment.md >> $GITHUB_STEP_SUMMARY
-
-
-
       - name: Upload Merged Coverage HTML Report
         uses: actions/upload-artifact@v7
         with:
@@ -866,3 +848,22 @@ jobs:
           fail_ci_if_error: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Download Web Test Results
+        uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: web-test-results
+          path: test-results/web/
+
+      - name: Upload combined test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: |
+            coverage-linux/junit.xml
+            coverage-macos/junit.xml
+            coverage-windows/junit.xml
+            test-results/web/junit.xml
+          report_type: test_results

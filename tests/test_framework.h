@@ -6,6 +6,7 @@
 #include <cmath>
 #include <deque>
 #include <filesystem>
+#include <fstream>
 #include <functional>
 #include <iostream>
 #include <map>
@@ -57,7 +58,7 @@ class TestSuite {
         tests_.push_back({name, std::move(fn)});
     }
 
-    int run() {
+    int run(const std::string& junit_path = "") {
         int passed = 0, failed = 0;
         std::cout << "\n========================================" << std::endl;
         std::cout << "  AMPLITRON TEST SUITE" << std::endl;
@@ -97,6 +98,10 @@ class TestSuite {
             std::cout << std::endl;
         }
 
+        if (!junit_path.empty()) {
+            write_junit_xml(junit_path, passed, failed);
+        }
+
         return failed;
     }
 
@@ -110,6 +115,66 @@ class TestSuite {
     }
 
    private:
+    std::string escape_xml(const std::string& str) {
+        std::string res;
+        res.reserve(str.size());
+        for (char c : str) {
+            switch (c) {
+                case '<':
+                    res += "&lt;";
+                    break;
+                case '>':
+                    res += "&gt;";
+                    break;
+                case '&':
+                    res += "&amp;";
+                    break;
+                case '\"':
+                    res += "&quot;";
+                    break;
+                case '\'':
+                    res += "&apos;";
+                    break;
+                default:
+                    res += c;
+                    break;
+            }
+        }
+        return res;
+    }
+
+    void write_junit_xml(const std::string& filepath, int passed, int failed) {
+        std::ofstream xml(filepath);
+        if (!xml.is_open()) return;
+
+        xml << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+        xml << "<testsuites tests=\"" << (passed + failed) << "\" failures=\"" << failed
+            << "\" errors=\"0\" name=\"AmplitronTests\">\n";
+        xml << "  <testsuite name=\"AmplitronTestSuite\" tests=\"" << (passed + failed)
+            << "\" failures=\"" << failed << "\" errors=\"0\">\n";
+
+        for (const auto& r : results_) {
+            std::string suite_name = "Amplitron";
+            std::string test_name = r.name;
+            size_t dot = r.name.find('.');
+            if (dot != std::string::npos) {
+                suite_name = r.name.substr(0, dot);
+                test_name = r.name.substr(dot + 1);
+            }
+
+            xml << "    <testcase name=\"" << escape_xml(test_name) << "\" classname=\""
+                << escape_xml(suite_name) << "\" time=\"0.0\">\n";
+            if (!r.passed) {
+                xml << "      <failure message=\"" << escape_xml(r.message)
+                    << "\" type=\"AssertionError\">" << escape_xml(r.message) << "</failure>\n";
+            }
+            xml << "    </testcase>\n";
+        }
+
+        xml << "  </testsuite>\n";
+        xml << "</testsuites>\n";
+    }
+
     std::vector<std::pair<std::string, std::function<void()>>> tests_;
     std::vector<TestResult> results_;
     std::string current_test_;
