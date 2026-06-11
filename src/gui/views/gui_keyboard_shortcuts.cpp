@@ -16,7 +16,8 @@ void GuiKeyboardShortcuts::render(bool& show) {
     if (ImGui::BeginPopupModal("Keyboard Shortcuts", &open, ImGuiWindowFlags_NoResize)) {
         ImGui::BeginChild("##ShortcutsScroll", ImVec2(0, -40), true);
 
-        if (ImGui::BeginTable("##ShortcutsTable", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_PadOuterX)) {
+        if (ImGui::BeginTable("##ShortcutsTable", 2,
+                              ImGuiTableFlags_RowBg | ImGuiTableFlags_PadOuterX)) {
             ImGui::TableSetupColumn("Action", ImGuiTableColumnFlags_WidthStretch);
             ImGui::TableSetupColumn("Shortcut", ImGuiTableColumnFlags_WidthFixed, 180);
 

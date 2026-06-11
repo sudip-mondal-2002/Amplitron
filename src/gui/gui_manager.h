@@ -11,13 +11,13 @@
 #include "gui/commands/command_history.h"
 #include "gui/state/snapshot_manager.h"
 #include "gui/views/gui_analyzer.h"
+#include "gui/views/gui_keyboard_shortcuts.h"
 #include "gui/views/gui_midi.h"
 #include "gui/views/gui_presets.h"
 #include "gui/views/gui_recording.h"
 #include "gui/views/gui_settings.h"
 #include "gui/views/gui_snapshots.h"
 #include "gui/views/gui_tuner.h"
-#include "gui/views/gui_keyboard_shortcuts.h"
 #include "midi/midi_manager.h"
 
 struct SDL_Window;

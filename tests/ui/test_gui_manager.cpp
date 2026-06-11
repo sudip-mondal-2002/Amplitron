@@ -492,9 +492,7 @@ struct MockTunerWrapper {
 
 struct MockKeyboardShortcutsWrapper {
     Amplitron::GuiKeyboardShortcuts& real_shortcuts;
-    void render(bool& show) {
-        real_shortcuts.render(show);
-    }
+    void render(bool& show) { real_shortcuts.render(show); }
     void set_props(const Amplitron::KeyboardShortcutsProps& p) { real_shortcuts.set_props(p); }
 };
 
