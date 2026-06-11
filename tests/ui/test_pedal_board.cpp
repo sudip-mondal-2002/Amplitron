@@ -34,6 +34,27 @@
 
 using namespace Amplitron;
 
+static ImGuiID get_item_id(const char* window_substr, const char* item_id_str) {
+    ImGuiContext& g = *GImGui;
+    for (int i = 0; i < g.Windows.Size; i++) {
+        if (strstr(g.Windows[i]->Name, window_substr)) {
+            return g.Windows[i]->GetID(item_id_str);
+        }
+    }
+    return 0;
+}
+
+static void click_item(const char* window_substr, const char* item_id_str) {
+    ImGuiID id = get_item_id(window_substr, item_id_str);
+    if (id != 0) {
+        ImGuiContext& g = *GImGui;
+        g.NavActivateId = id;
+        g.NavActivateDownId = id;
+        g.NavActivatePressedId = id;
+    }
+}
+
+
 TEST(pedal_board_construction_empty_engine) {
     AudioEngine engine;
     engine.initialize();
@@ -403,98 +424,38 @@ TEST(pedal_board_modals_and_rebuilds_extended) {
     ImGui::Begin("TestWindow");
 
     // --- TEST 1: RESET ALL CONFIRMATION MODAL (RESET CLICK) ---
-    board.show_confirm_reset_ = true;
+    click_item("PedalToolbar", "Reset All");
     board.render();
     advance_test_frame();
 
-    // The popup should be open
-    ImGuiWindow* reset_win = ImGui::FindWindowByName("Confirm Reset##Modal");
-    ASSERT_TRUE(reset_win != nullptr);
-
-    // Calculate left button position (Reset)
-    ImVec2 reset_btn_pos(reset_win->Pos.x + reset_win->Size.x * 0.25f,
-                         reset_win->Pos.y + reset_win->Size.y - 20.0f);
-
-    // Simulate hover and click
-    io.MousePos = reset_btn_pos;
-    board.render();
-    advance_test_frame();
-
-    io.MouseDown[0] = true;
-    board.render();
-    advance_test_frame();
-
-    io.MouseDown[0] = false;
+    click_item("Confirm Reset", "Reset");
     board.render();
     advance_test_frame();
 
     // --- TEST 2: RESET ALL CONFIRMATION MODAL (CANCEL CLICK) ---
-    board.show_confirm_reset_ = true;
+    click_item("PedalToolbar", "Reset All");
     board.render();
     advance_test_frame();
 
-    reset_win = ImGui::FindWindowByName("Confirm Reset##Modal");
-    ASSERT_TRUE(reset_win != nullptr);
-
-    // Calculate right button position (Cancel)
-    ImVec2 reset_cancel_btn_pos(reset_win->Pos.x + reset_win->Size.x * 0.75f,
-                                reset_win->Pos.y + reset_win->Size.y - 20.0f);
-
-    io.MousePos = reset_cancel_btn_pos;
-    board.render();
-    advance_test_frame();
-
-    io.MouseDown[0] = true;
-    board.render();
-    advance_test_frame();
-
-    io.MouseDown[0] = false;
+    click_item("Confirm Reset", "Cancel");
     board.render();
     advance_test_frame();
 
     // --- TEST 3: CLEAR ALL CONFIRMATION MODAL (CLEAR CLICK) ---
-    board.show_confirm_clear_ = true;
+    click_item("PedalToolbar", "Clear All");
     board.render();
     advance_test_frame();
 
-    ImGuiWindow* clear_win = ImGui::FindWindowByName("Confirm Clear##Modal");
-    ASSERT_TRUE(clear_win != nullptr);
-
-    ImVec2 clear_btn_pos(clear_win->Pos.x + clear_win->Size.x * 0.25f,
-                         clear_win->Pos.y + clear_win->Size.y - 20.0f);
-
-    io.MousePos = clear_btn_pos;
-    board.render();
-    advance_test_frame();
-
-    io.MouseDown[0] = true;
-    board.render();
-    advance_test_frame();
-
-    io.MouseDown[0] = false;
+    click_item("Confirm Clear", "Clear All");
     board.render();
     advance_test_frame();
 
     // --- TEST 4: CLEAR ALL CONFIRMATION MODAL (CANCEL CLICK) ---
-    board.show_confirm_clear_ = true;
+    click_item("PedalToolbar", "Clear All");
     board.render();
     advance_test_frame();
 
-    clear_win = ImGui::FindWindowByName("Confirm Clear##Modal");
-    ASSERT_TRUE(clear_win != nullptr);
-
-    ImVec2 clear_cancel_btn_pos(clear_win->Pos.x + clear_win->Size.x * 0.75f,
-                                clear_win->Pos.y + clear_win->Size.y - 20.0f);
-
-    io.MousePos = clear_cancel_btn_pos;
-    board.render();
-    advance_test_frame();
-
-    io.MouseDown[0] = true;
-    board.render();
-    advance_test_frame();
-
-    io.MouseDown[0] = false;
+    click_item("Confirm Clear", "Cancel");
     board.render();
     advance_test_frame();
 
@@ -503,21 +464,7 @@ TEST(pedal_board_modals_and_rebuilds_extended) {
     board.render();
     advance_test_frame();
 
-    ImGuiWindow* midi_win = ImGui::FindWindowByName("Confirm MIDI Clear##Modal");
-    ASSERT_TRUE(midi_win != nullptr);
-
-    ImVec2 midi_btn_pos(midi_win->Pos.x + midi_win->Size.x * 0.25f,
-                        midi_win->Pos.y + midi_win->Size.y - 20.0f);
-
-    io.MousePos = midi_btn_pos;
-    board.render();
-    advance_test_frame();
-
-    io.MouseDown[0] = true;
-    board.render();
-    advance_test_frame();
-
-    io.MouseDown[0] = false;
+    click_item("Confirm MIDI Clear", "Clear All");
     board.render();
     advance_test_frame();
 
@@ -526,21 +473,7 @@ TEST(pedal_board_modals_and_rebuilds_extended) {
     board.render();
     advance_test_frame();
 
-    midi_win = ImGui::FindWindowByName("Confirm MIDI Clear##Modal");
-    ASSERT_TRUE(midi_win != nullptr);
-
-    ImVec2 midi_cancel_btn_pos(midi_win->Pos.x + midi_win->Size.x * 0.75f,
-                               midi_win->Pos.y + midi_win->Size.y - 20.0f);
-
-    io.MousePos = midi_cancel_btn_pos;
-    board.render();
-    advance_test_frame();
-
-    io.MouseDown[0] = true;
-    board.render();
-    advance_test_frame();
-
-    io.MouseDown[0] = false;
+    click_item("Confirm MIDI Clear", "Cancel");
     board.render();
     advance_test_frame();
 
