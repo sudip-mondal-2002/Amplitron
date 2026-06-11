@@ -289,6 +289,7 @@ set(APP_SOURCES
     src/gui/views/gui_presets.cpp
     src/gui/views/gui_recording.cpp
     src/gui/views/gui_tuner.cpp
+    src/gui/views/gui_keyboard_shortcuts.cpp
     src/gui/views/gui_analyzer.cpp
     src/gui/pedalboard/pedal_board.cpp
     src/gui/pedalboard/pedal_board_menu.cpp
@@ -783,6 +784,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/ui/test_gui_midi.cpp
         tests/ui/test_gui_recording.cpp
         tests/ui/test_gui_tuner.cpp
+        tests/ui/test_gui_keyboard_shortcuts.cpp
         tests/ui/test_gui_components.cpp
         tests/ui/test_footswitch.cpp
         tests/ui/test_led.cpp
@@ -826,6 +828,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         src/gui/views/gui_presets.cpp
         src/gui/views/gui_recording.cpp
         src/gui/views/gui_tuner.cpp
+        src/gui/views/gui_keyboard_shortcuts.cpp
         src/gui/views/gui_analyzer.cpp
         src/gui/pedalboard/pedal_board.cpp
         src/gui/pedalboard/pedal_board_menu.cpp

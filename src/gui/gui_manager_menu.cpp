@@ -288,6 +288,12 @@ void GuiManager::render_menu_bar() {
             }
             ImGui::EndMenu();
         }
+        if (ImGui::BeginMenu("Help")) {
+            if (ImGui::MenuItem("Keyboard Shortcuts", "F1")) {
+                show_keyboard_shortcuts_ = true;
+            }
+            ImGui::EndMenu();
+        }
 
         // Status bar (right-aligned items computed dynamically)
         float bar_w = ImGui::GetWindowWidth();

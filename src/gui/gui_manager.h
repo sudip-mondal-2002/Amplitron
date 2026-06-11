@@ -17,6 +17,7 @@
 #include "gui/views/gui_settings.h"
 #include "gui/views/gui_snapshots.h"
 #include "gui/views/gui_tuner.h"
+#include "gui/views/gui_keyboard_shortcuts.h"
 #include "midi/midi_manager.h"
 
 struct SDL_Window;
@@ -109,6 +110,7 @@ class GuiManager {
     bool show_load_preset_ = false;
     bool show_tuner_ = false;
     bool show_midi_ = false;
+    bool show_keyboard_shortcuts_ = false;
 
     // ── Snapshot manager is now referenced from session_ ──
 
@@ -121,6 +123,7 @@ class GuiManager {
     GuiSnapshots gui_snapshots_;
     // ── MidiManager is now referenced from session_ ──
     GuiMidi gui_midi_;
+    GuiKeyboardShortcuts gui_keyboard_shortcuts_;
     AudioMetricsService metrics_service_;
 
     // ── Toast notification ──
