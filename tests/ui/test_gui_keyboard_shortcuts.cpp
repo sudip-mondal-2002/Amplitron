@@ -1,4 +1,5 @@
 #include <imgui_internal.h>
+
 #include <memory>
 
 #include "gui/views/gui_keyboard_shortcuts.h"
