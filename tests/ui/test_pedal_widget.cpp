@@ -35,34 +35,6 @@
 using namespace Amplitron;
 using namespace TestFramework;
 
-namespace Amplitron {
-struct TestAccessor {
-    static void commit_param_change(PedalWidget& w, int param_index, float old_val, float new_val) {
-        w.commit_param_change(param_index, old_val, new_val);
-    }
-
-    static void render_footswitch_and_extras(PedalWidget& w, ImDrawList* dl, ImVec2 p0, ImVec2 p1,
-                                             float pedal_width, float pedal_height, bool is_amp,
-                                             bool enabled, bool& should_remove, float zoom) {
-        w.render_footswitch_and_extras(dl, p0, p1, pedal_width, pedal_height, is_amp, enabled,
-                                       should_remove, zoom);
-    }
-
-    static ImVec4 pedal_color(const PedalWidget& w) { return w.pedal_color_; }
-    static ImVec4 led_color(const PedalWidget& w) { return w.led_color_; }
-};
-}  // namespace Amplitron
-
-// Reusable helper to complete the current frame and begin a new one within a TestWindow context
-static inline void advance_frame() {
-    ImGui::End();
-    ImGui::Render();
-    ImGui::NewFrame();
-    ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::SetNextWindowSize(ImVec2(1024, 768));
-    ImGui::Begin("TestWindow");
-}
-
 TEST_F(PresetTest, test_pedal_widget_color_assignment_all_types) {
     AudioEngine engine;
     engine.initialize();

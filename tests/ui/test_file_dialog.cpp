@@ -13,6 +13,7 @@
 using namespace Amplitron;
 using namespace TestFramework;
 
+#ifdef __APPLE__
 namespace {
 std::string read_mock_script() {
     std::ifstream f("dialog_mock_script.txt");
@@ -21,6 +22,7 @@ std::string read_mock_script() {
     return result;
 }
 }  // namespace
+#endif
 
 // =============================================================================
 // Helper test setups

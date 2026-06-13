@@ -9,16 +9,18 @@
 
 namespace Amplitron {
 
-// Static variables to track active knob drag states across frames for accurate undo commitment
+namespace KnobState {
 static bool s_knob_was_active = false;
 static float s_param_value_before_drag = 0.0f;
 static std::string s_active_knob_id = "";
 
 static float s_popup_param_value_before_edit = 0.0f;
 static std::string s_active_popup_id = "";
+}  // namespace KnobState
 
 void KnobComponent::render(const char* imgui_id, const KnobProps& props, float zoom,
                            ImVec2 center) {
+    using namespace KnobState;
     ImDrawList* dl = ImGui::GetWindowDrawList();
 
     float knob_radius = Theme::KNOB_RADIUS * zoom;

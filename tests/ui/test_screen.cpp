@@ -48,16 +48,6 @@ static ImVec2 get_popup_window_pos(const char* popup_id_substr) {
     return ImVec2(0, 0);
 }
 
-// Reusable helper to complete the current frame and begin a new one within a TestWindow context
-static inline void advance_frame() {
-    ImGui::End();
-    ImGui::Render();
-    ImGui::NewFrame();
-    ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::SetNextWindowSize(ImVec2(1024, 768));
-    ImGui::Begin("TestWindow");
-}
-
 static ImGuiID get_popup_item_id(const char* popup_id_substr, const char* item_id_str) {
     ImGuiContext& g = *GImGui;
     std::cout << "DEBUG: get_popup_item_id searching for " << popup_id_substr

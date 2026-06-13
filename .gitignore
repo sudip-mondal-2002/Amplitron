@@ -1,6 +1,7 @@
 # Build
 build/
 build_web/
+build_unity/
 build-*/
 out/
 cmake-build-*/

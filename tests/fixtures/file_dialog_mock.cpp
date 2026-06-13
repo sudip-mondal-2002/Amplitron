@@ -82,6 +82,10 @@ BOOL WINAPI MOCK_SHGetPathFromIDListA(PCIDLIST_ABSOLUTE pidl, LPSTR pszPath) {
 
 HRESULT WINAPI MOCK_SHGetFolderPathA(HWND hwnd, int csidl, HANDLE hToken, DWORD dwFlags,
                                      LPSTR pszPath) {
+    (void)hwnd;
+    (void)csidl;
+    (void)hToken;
+    (void)dwFlags;
     if (pszPath) {
         std::strncpy(pszPath, "C:\\Users\\MockUser\\Desktop", MAX_PATH - 1);
         pszPath[MAX_PATH - 1] = '\0';
@@ -91,6 +95,7 @@ HRESULT WINAPI MOCK_SHGetFolderPathA(HWND hwnd, int csidl, HANDLE hToken, DWORD 
 }
 
 void WINAPI MOCK_CoTaskMemFree(LPVOID pv) {
+    (void)pv;
     // No-op
 }
 
@@ -110,8 +115,9 @@ FILE* MOCK_popen(const char* command, const char* type) {
 }
 
 int MOCK_pclose(FILE* stream) {
-    if (stream) {
-        fclose(stream);
+    FILE* volatile s = stream;
+    if (s) {
+        fclose(s);
         unlink("dialog_mock_temp.txt");
     }
     return (g_exit_status & 0xff) << 8;

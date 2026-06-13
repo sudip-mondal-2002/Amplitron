@@ -61,11 +61,9 @@ jobs:
             -DCMAKE_C_FLAGS="--coverage -O0 -g" \
             -DCMAKE_CXX_FLAGS="--coverage -O0 -g" \
             -DCMAKE_EXE_LINKER_FLAGS="--coverage" \
+            -DCMAKE_UNITY_BUILD=ON \
             ..
           ninja -j$(nproc)
-
-      - name: Run Tests
-        run: cd build && ./amplitron-tests --junitxml=junit.xml
 
       - name: Install Smoke Test
         env:
@@ -83,6 +81,9 @@ jobs:
           test ! -e "$INSTALL_PREFIX/bin/Amplitron"
           test ! -e "$INSTALL_PREFIX/share/amplitron"
           test ! -e "$INSTALL_PREFIX/bin/assets"
+
+      - name: Run Tests
+        run: cd build && ./amplitron-tests --junitxml=junit.xml
 
       - name: Generate Linux Coverage
         if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
@@ -172,11 +173,9 @@ jobs:
             -DSDL2_LIBRARIES="$HOMEBREW_PREFIX/lib/libSDL2.dylib" \
             -DRTMIDI_INCLUDE_DIRS="$HOMEBREW_PREFIX/include" \
             -DRTMIDI_LIBRARIES="$HOMEBREW_PREFIX/lib/librtmidi.dylib" \
+            -DCMAKE_UNITY_BUILD=ON \
             ..
           ninja -j$(sysctl -n hw.ncpu)
-
-      - name: Run Tests
-        run: cd build && ./amplitron-tests --junitxml=junit.xml
 
       - name: Install Smoke Test
         env:
@@ -194,6 +193,9 @@ jobs:
           test ! -e "$INSTALL_PREFIX/bin/Amplitron"
           test ! -e "$INSTALL_PREFIX/share/amplitron"
           test ! -e "$INSTALL_PREFIX/bin/assets"
+
+      - name: Run Tests
+        run: cd build && ./amplitron-tests --junitxml=junit.xml
 
       - name: Generate macOS Coverage
         if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
@@ -343,7 +345,7 @@ jobs:
           source emsdk/emsdk_env.sh
           export NODE_OPTIONS="--max-old-space-size=6144"
           mkdir -p build-web && cd build-web
-          emcmake cmake -DCMAKE_BUILD_TYPE=MinSizeRel -DAMPLITRON_VERSION="${{ steps.version.outputs.version }}" ..
+          emcmake cmake -DCMAKE_BUILD_TYPE=MinSizeRel -DAMPLITRON_VERSION="${{ steps.version.outputs.version }}" -DCMAKE_UNITY_BUILD=ON ..
           emmake make -j2
 
       - name: Upload Web Build
@@ -461,8 +463,9 @@ jobs:
       - name: Build
         shell: msys2 {0}
         run: |
-          export CCACHE_DIR="$GITHUB_WORKSPACE/.ccache"
-          export CCACHE_MAXSIZE=200M
+          export CCACHE_DIR="$(cygpath -u "$GITHUB_WORKSPACE")/.ccache"
+          export CCACHE_MAXSIZE=500M
+          export CCACHE_COMPRESS=1
           mkdir -p "$CCACHE_DIR"
           if [ "${{ github.event_name }}" = "pull_request" ] || [ "${{ github.ref }}" = "refs/heads/main" ]; then
             BUILD_TYPE=RelWithDebInfo
@@ -481,13 +484,10 @@ jobs:
             -DCMAKE_EXE_LINKER_FLAGS="$LINK_FLAGS" \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_UNITY_BUILD=ON \
             ..
           ninja -j$NUMBER_OF_PROCESSORS
           ccache -s
-
-      - name: Run Tests
-        shell: msys2 {0}
-        run: cd build && ./amplitron-tests.exe --junitxml=junit.xml
 
       - name: Install Smoke Test
         shell: msys2 {0}
@@ -509,6 +509,10 @@ jobs:
           test ! -e "$INSTALL_PREFIX/bin/Amplitron.exe"
           test ! -e "$INSTALL_PREFIX/share/amplitron"
           test ! -e "$INSTALL_PREFIX/bin/assets"
+
+      - name: Run Tests
+        shell: msys2 {0}
+        run: cd build && ./amplitron-tests.exe --junitxml=junit.xml
 
       - name: Generate Windows Coverage
         if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')

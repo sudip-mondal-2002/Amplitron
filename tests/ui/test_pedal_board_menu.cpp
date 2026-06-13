@@ -42,32 +42,6 @@ static void click_item(const char *window_substr, const char *item_id_str) {
     }
 }
 
-namespace Amplitron {
-struct TestAccessor {
-    static bool &learn_active(MidiManager &m) { return m.learn_active_; }
-    static int &current_port(MidiManager &m) { return m.current_port_; }
-    static std::string &current_port_name(MidiManager &m) { return m.current_port_name_; }
-
-    static void render_add_pedal_menu(PedalBoard &b) { b.render_add_pedal_menu(); }
-    static void render_amp_selector(PedalBoard &b) { b.render_amp_selector(); }
-    static void render_midi_menu(PedalBoard &b) { b.render_midi_menu(); }
-    static void add_effect_and_show(PedalBoard &b, std::shared_ptr<Effect> effect) {
-        b.add_effect_and_show(effect);
-    }
-};
-}  // namespace Amplitron
-
-// Reusable helper to complete the current frame and begin a new one within a
-// TestWindow context
-static inline void advance_frame() {
-    ImGui::End();
-    ImGui::Render();
-    ImGui::NewFrame();
-    ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::SetNextWindowSize(ImVec2(1024, 768));
-    ImGui::Begin("TestWindow");
-}
-
 TEST_F(PresetTest, test_pedal_board_menu_add_pedal_popup) {
     ScopedImGuiContext imgui;
     AudioEngine engine;

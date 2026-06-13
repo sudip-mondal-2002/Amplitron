@@ -1,16 +1,27 @@
 #pragma once
-#include "test_framework.h"
-// #define private public
-#include "audio/engine/audio_engine.h"
-// #undef private
 #include <imgui.h>
 
 #include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <iostream>
+#include <memory>
 #include <string>
 #include <vector>
+
+#include "test_framework.h"
+
+#define private public
+#define protected public
+#include "audio/engine/audio_engine.h"
+#include "audio/recorder/recorder.h"
+#include "gui/gui_manager.h"
+#include "gui/pedalboard/pedal_board.h"
+#include "gui/pedalboard/pedal_widget.h"
+#include "midi/midi_manager.h"
+#undef private
+#undef protected
 
 #include "preset_manager.h"
 
@@ -21,6 +32,7 @@ class ScopedImGuiContext {
     ScopedImGuiContext() {
         ctx_ = ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
+        io.IniFilename = nullptr;
         io.DisplaySize = ImVec2(1024, 768);
         io.DeltaTime = 1.0f / 60.0f;
 
@@ -127,5 +139,58 @@ class EffectsTest : public TestFramework::Test {
         return std::sqrt(re * re + im * im) / static_cast<float>(n);
     }
 };
+
+struct TestAccessor {
+    // MidiManager accessors
+    static bool& learn_active(MidiManager& m) { return m.learn_active_; }
+    static std::string& learn_effect_name(MidiManager& m) { return m.learn_effect_name_; }
+    static std::string& learn_param_name(MidiManager& m) { return m.learn_param_name_; }
+    static std::vector<MidiMapping>& mappings(MidiManager& m) { return m.mappings_; }
+    static int& current_port(MidiManager& m) { return m.current_port_; }
+    static std::string& current_port_name(MidiManager& m) { return m.current_port_name_; }
+    static void call_midi_callback(MidiManager& mgr, double timestamp,
+                                   std::vector<unsigned char>* message) {
+        MidiManager::midi_callback(timestamp, message, &mgr);
+    }
+    static size_t get_queue_size(const MidiManager& mgr) { return mgr.midi_queue_.size(); }
+    static bool pop_queue(MidiManager& mgr, MidiEvent& event) {
+        return mgr.midi_queue_.try_pop(event);
+    }
+
+    // PedalWidget accessors
+    static void commit_param_change(PedalWidget& w, int param_index, float old_val, float new_val) {
+        w.commit_param_change(param_index, old_val, new_val);
+    }
+    static void render_footswitch_and_extras(PedalWidget& w, ImDrawList* dl, ImVec2 p0, ImVec2 p1,
+                                             float pedal_width, float pedal_height, bool is_amp,
+                                             bool enabled, bool& should_remove, float zoom) {
+        w.render_footswitch_and_extras(dl, p0, p1, pedal_width, pedal_height, is_amp, enabled,
+                                       should_remove, zoom);
+    }
+    static ImVec4 pedal_color(const PedalWidget& w) { return w.pedal_color_; }
+    static ImVec4 led_color(const PedalWidget& w) { return w.led_color_; }
+    static void render_knobs(PedalWidget& w, ImDrawList* dl, ImVec2 p0, float pedal_width,
+                             bool is_amp, bool is_tuner, bool is_ir_cab, float zoom) {
+        w.render_knobs(dl, p0, pedal_width, is_amp, is_tuner, is_ir_cab, zoom);
+    }
+
+    // PedalBoard accessors
+    static void render_add_pedal_menu(PedalBoard& b) { b.render_add_pedal_menu(); }
+    static void render_amp_selector(PedalBoard& b) { b.render_amp_selector(); }
+    static void render_midi_menu(PedalBoard& b) { b.render_midi_menu(); }
+    static void add_effect_and_show(PedalBoard& b, std::shared_ptr<Effect> effect) {
+        b.add_effect_and_show(effect);
+    }
+    static void render_signal_chain(PedalBoard& b) { b.render_signal_chain(); }
+};
+
+inline void advance_frame() {
+    ImGui::End();
+    ImGui::Render();
+    ImGui::NewFrame();
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2(1024, 768));
+    ImGui::Begin("TestWindow");
+}
 
 }  // namespace Amplitron

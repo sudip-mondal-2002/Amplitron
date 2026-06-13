@@ -4,7 +4,7 @@
 
 namespace Amplitron {
 
-static EffectRegistrar<Equalizer> reg("Equalizer");
+static EffectRegistrar<Equalizer> reg_Equalizer("Equalizer");
 
 Equalizer::Equalizer() {
     params_ = {

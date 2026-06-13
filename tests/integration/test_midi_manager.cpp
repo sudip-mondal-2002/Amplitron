@@ -1,3 +1,4 @@
+#include "test_fixtures.h"
 #include "test_framework.h"
 
 // Set a local hook definition to open up internal serialization blocks for test suite coverage
@@ -1491,4 +1492,45 @@ TEST(midi_persist_load_config_valid_json_succeeds) {
 
     // If the parser successfully hit the successful loops, we expect at least 1 mapping
     ASSERT_GE(static_cast<int>(mgr.mappings().size()), 1);
+}
+
+TEST(midi_manager_direct_callback_tests) {
+    MidiManager mgr;
+    mgr.initialize();
+
+    // Record initial queue size (should be 0)
+    size_t initial_size = Amplitron::TestAccessor::get_queue_size(mgr);
+    ASSERT_EQ(initial_size, 0);
+
+    // 1. Mismatch status event (not CC, e.g. Note On 0x90)
+    std::vector<unsigned char> note_on = {0x90, 60, 127};
+    Amplitron::TestAccessor::call_midi_callback(mgr, 0.0, &note_on);
+    ASSERT_EQ(Amplitron::TestAccessor::get_queue_size(mgr), initial_size);
+
+    // 2. Short message (size < 3)
+    std::vector<unsigned char> short_msg = {0xB0, 7};
+    Amplitron::TestAccessor::call_midi_callback(mgr, 0.0, &short_msg);
+    ASSERT_EQ(Amplitron::TestAccessor::get_queue_size(mgr), initial_size);
+
+    // 3. Null message pointer
+    Amplitron::TestAccessor::call_midi_callback(mgr, 0.0, nullptr);
+    ASSERT_EQ(Amplitron::TestAccessor::get_queue_size(mgr), initial_size);
+
+    // 4. Valid CC message
+    std::vector<unsigned char> valid_cc = {0xB0, 7, 100};
+    Amplitron::TestAccessor::call_midi_callback(mgr, 0.0, &valid_cc);
+    ASSERT_EQ(Amplitron::TestAccessor::get_queue_size(mgr), initial_size + 1);
+
+    // Pop the queued event and compare its bytes to valid_cc
+    MidiEvent event{};
+    bool popped = Amplitron::TestAccessor::pop_queue(mgr, event);
+    ASSERT_TRUE(popped);
+    ASSERT_EQ(event.status, 0xB0);
+    ASSERT_EQ(event.data1, 7);
+    ASSERT_EQ(event.data2, 100);
+
+    // Assert the queue size is back to 0
+    ASSERT_EQ(Amplitron::TestAccessor::get_queue_size(mgr), 0);
+
+    mgr.shutdown();
 }

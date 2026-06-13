@@ -7,11 +7,14 @@
 
 int main(int argc, char* argv[]) {
     std::string junit_path = "";
+    std::string filter = "";
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg.rfind("--junitxml=", 0) == 0) {
             junit_path = arg.substr(11);
+        } else if (arg.rfind("--filter=", 0) == 0) {
+            filter = arg.substr(9);
         }
     }
-    return TestFramework::TestSuite::instance().run(junit_path);
+    return TestFramework::TestSuite::instance().run(junit_path, filter);
 }

@@ -490,6 +490,12 @@ struct MockTunerWrapper {
     void set_props(const Amplitron::TunerProps& p) { real_tuner.set_props(p); }
 };
 
+struct MockKeyboardShortcutsWrapper {
+    Amplitron::GuiKeyboardShortcuts& real_shortcuts;
+    void render(bool& show) { real_shortcuts.render(show); }
+    void set_props(const Amplitron::KeyboardShortcutsProps& p) { real_shortcuts.set_props(p); }
+};
+
 #define GuiManager MockGuiManager
 #define ImGui mock_gui::MockImGui
 #define ImDrawList mock_gui::MockDrawList
@@ -531,6 +537,8 @@ struct MockTunerWrapper {
     MockPresetsWrapper { gui_presets_ }
 #define gui_tuner_ \
     MockTunerWrapper { gui_tuner_ }
+#define gui_keyboard_shortcuts_ \
+    MockKeyboardShortcutsWrapper { gui_keyboard_shortcuts_ }
 #include "gui/gui_manager_frame.cpp"
 #include "gui/gui_manager_menu.cpp"
 #undef GuiManager
@@ -548,6 +556,7 @@ struct MockTunerWrapper {
 #endif
 #undef gui_presets_
 #undef gui_tuner_
+#undef gui_keyboard_shortcuts_
 
 // UpdateChecker mocks
 static std::string mock_popen_result;
@@ -695,6 +704,9 @@ TEST(gui_manager_menu_bar_comprehensive_coverage) {
     gui.render_menu_bar();
     mock_gui::MockImGui::target_menu_item = "MIDI Settings";
     gui.render_menu_bar();
+    mock_gui::MockImGui::target_menu_item = "Keyboard Shortcuts";
+    gui.render_menu_bar();
+    ASSERT_TRUE(gui.show_keyboard_shortcuts_);
 
     // 13. Trigger MIDI status interactions
     mock_gui::MockImGui::target_menu_item = "MIDI";
@@ -750,6 +762,29 @@ TEST(gui_manager_frame_comprehensive_coverage) {
     mock_gui::MockImGui::target_key = ImGuiKey_1;
     mock_gui::MockImGui::GetIO().KeyCtrl = true;
     gui.run_frame();
+
+    // Keyboard shortcuts - Help Modal (F1)
+    gui.show_keyboard_shortcuts_ = false;
+    mock_gui::MockImGui::target_key = ImGuiKey_F1;
+    mock_gui::MockImGui::GetIO().KeyCtrl = false;
+    gui.run_frame();
+    ASSERT_TRUE(gui.show_keyboard_shortcuts_);
+
+    // Keyboard shortcuts - Save Preset (Ctrl+S)
+    gui.show_save_preset_ = false;
+    mock_gui::MockImGui::target_key = ImGuiKey_S;
+    mock_gui::MockImGui::GetIO().KeyCtrl = true;
+    mock_gui::MockImGui::GetIO().KeyShift = false;
+    gui.run_frame();
+    ASSERT_TRUE(gui.show_save_preset_);
+
+    // Keyboard shortcuts - Load Preset (Ctrl+O)
+    gui.show_load_preset_ = false;
+    mock_gui::MockImGui::target_key = ImGuiKey_O;
+    mock_gui::MockImGui::GetIO().KeyCtrl = true;
+    mock_gui::MockImGui::GetIO().KeyShift = false;
+    gui.run_frame();
+    ASSERT_TRUE(gui.show_load_preset_);
 
     // 3. Trigger showing popups
     gui.show_settings_ = true;

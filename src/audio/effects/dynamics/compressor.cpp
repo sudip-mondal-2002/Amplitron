@@ -4,7 +4,7 @@
 
 namespace Amplitron {
 
-static EffectRegistrar<Compressor> reg("Compressor");
+static EffectRegistrar<Compressor> reg_Compressor("Compressor");
 
 Compressor::Compressor() {
     params_ = {

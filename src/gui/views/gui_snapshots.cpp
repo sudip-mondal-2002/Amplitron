@@ -60,6 +60,8 @@ void GuiSnapshots::render() {
                 status_timer_ = STATUS_DISPLAY_SECONDS;
             }
         }
+        button_mins_[i] = ImGui::GetItemRectMin();
+        button_maxs_[i] = ImGui::GetItemRectMax();
 
         ImGui::PopStyleColor(3);
 
@@ -85,6 +87,8 @@ void GuiSnapshots::render() {
                 std::snprintf(status_msg_, sizeof(status_msg_), "Saved to %s", lbl);
                 status_timer_ = STATUS_DISPLAY_SECONDS;
             }
+            menu_item_mins_[0] = ImGui::GetItemRectMin();
+            menu_item_maxs_[0] = ImGui::GetItemRectMax();
             if (is_filled) {
                 char clear_label[24];
                 std::snprintf(clear_label, sizeof(clear_label), "Clear %s", lbl);
@@ -92,6 +96,8 @@ void GuiSnapshots::render() {
                 if (ImGui::MenuItem(clear_label)) {
                     if (p.on_clear_slot) p.on_clear_slot(i);
                 }
+                menu_item_mins_[1] = ImGui::GetItemRectMin();
+                menu_item_maxs_[1] = ImGui::GetItemRectMax();
             }
             ImGui::EndPopup();
         }

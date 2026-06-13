@@ -11,6 +11,7 @@
 #include "gui/commands/command_history.h"
 #include "gui/state/snapshot_manager.h"
 #include "gui/views/gui_analyzer.h"
+#include "gui/views/gui_keyboard_shortcuts.h"
 #include "gui/views/gui_midi.h"
 #include "gui/views/gui_presets.h"
 #include "gui/views/gui_recording.h"
@@ -109,6 +110,7 @@ class GuiManager {
     bool show_load_preset_ = false;
     bool show_tuner_ = false;
     bool show_midi_ = false;
+    bool show_keyboard_shortcuts_ = false;
 
     // ── Snapshot manager is now referenced from session_ ──
 
@@ -121,6 +123,7 @@ class GuiManager {
     GuiSnapshots gui_snapshots_;
     // ── MidiManager is now referenced from session_ ──
     GuiMidi gui_midi_;
+    GuiKeyboardShortcuts gui_keyboard_shortcuts_;
     AudioMetricsService metrics_service_;
 
     // ── Toast notification ──

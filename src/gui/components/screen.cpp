@@ -29,8 +29,7 @@ EMSCRIPTEN_KEEPALIVE void load_ir_callback_screen(uintptr_t cab_ptr, const char*
 
 namespace Amplitron {
 
-// Static variables to track active knob drag states across frames for accurate
-// undo commitment
+namespace ScreenKnobState {
 static bool s_knob_was_active = false;
 static int s_active_param_index = -1;
 static float s_param_value_before_drag = 0.0f;
@@ -39,6 +38,7 @@ static std::string s_active_knob_id = "";
 static int s_popup_active_param_index = -1;
 static float s_popup_param_value_before_edit = 0.0f;
 static std::string s_active_popup_id = "";
+}  // namespace ScreenKnobState
 
 void ScreenComponent::render(ImDrawList* dl, ImVec2 p0, float pedal_width, float zoom,
                              const ScreenProps& props) {
@@ -268,6 +268,7 @@ void ScreenComponent::render_ir_cabinet_display(ImDrawList* dl, ImVec2 p0, float
 
 void ScreenComponent::render_looper_display(ImDrawList* dl, ImVec2 p0, float pedal_width,
                                             float zoom, const ScreenProps& props) {
+    using namespace ScreenKnobState;
     (void)dl;
     auto* looper = dynamic_cast<Looper*>(props.effect.get());
     if (!looper) return;
@@ -425,6 +426,7 @@ void ScreenComponent::render_looper_display(ImDrawList* dl, ImVec2 p0, float ped
 void ScreenComponent::render_multiband_compressor_display(ImDrawList* dl, ImVec2 p0,
                                                           float pedal_width, float zoom,
                                                           const ScreenProps& props) {
+    using namespace ScreenKnobState;
     auto* mb_comp = dynamic_cast<MultiBandCompressor*>(props.effect.get());
     if (!mb_comp) return;
 

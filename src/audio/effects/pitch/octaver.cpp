@@ -6,12 +6,14 @@
 
 namespace Amplitron {
 
-static EffectRegistrar<Octaver> reg("Octaver");
+static EffectRegistrar<Octaver> reg_Octaver("Octaver");
 
 // Param indices
+namespace OctaverParams {
 static constexpr int P_OCT_DOWN = 0;
 static constexpr int P_OCT_UP = 1;
 static constexpr int P_DRY = 2;
+}  // namespace OctaverParams
 
 // Hysteresis threshold for the flip-flop zero-crossing detector.
 // The divider only flips when prev_sample_ < -FLIP_HYSTERESIS and the current
@@ -45,6 +47,7 @@ void Octaver::set_sample_rate(int sample_rate) {
 void Octaver::process(float* buffer, int num_samples) {
     if (!enabled_) return;
 
+    using namespace OctaverParams;
     // One-pole smoothing coefficient (~10 ms time constant)
     const float alpha = 1.0f - std::exp(-1.0f / (sample_rate_ * 0.010f));
 
@@ -103,6 +106,7 @@ void Octaver::process(float* buffer, int num_samples) {
 }
 
 void Octaver::reset() {
+    using namespace OctaverParams;
     prev_sample_ = 0.0f;
     flipflop_ = 1.0f;
     dc_x1_ = 0.0f;

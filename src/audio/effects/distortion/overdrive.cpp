@@ -4,7 +4,7 @@
 
 namespace Amplitron {
 
-static EffectRegistrar<Overdrive> reg("Overdrive");
+static EffectRegistrar<Overdrive> reg_Overdrive("Overdrive");
 
 Overdrive::Overdrive() {
     params_ = {

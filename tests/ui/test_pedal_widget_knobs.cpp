@@ -16,29 +16,6 @@
 using namespace Amplitron;
 using namespace TestFramework;
 
-namespace Amplitron {
-struct TestAccessor {
-    static bool& learn_active(MidiManager& m) { return m.learn_active_; }
-    static std::string& learn_effect_name(MidiManager& m) { return m.learn_effect_name_; }
-    static std::string& learn_param_name(MidiManager& m) { return m.learn_param_name_; }
-
-    static void render_knobs(PedalWidget& w, ImDrawList* dl, ImVec2 p0, float pedal_width,
-                             bool is_amp, bool is_tuner, bool is_ir_cab, float zoom) {
-        w.render_knobs(dl, p0, pedal_width, is_amp, is_tuner, is_ir_cab, zoom);
-    }
-};
-}  // namespace Amplitron
-
-// Reusable helper to complete the current frame and begin a new one within a TestWindow context
-static inline void advance_frame() {
-    ImGui::End();
-    ImGui::Render();
-    ImGui::NewFrame();
-    ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::SetNextWindowSize(ImVec2(1024, 768));
-    ImGui::Begin("TestWindow");
-}
-
 TEST_F(PresetTest, test_pedal_widget_knobs_rendering_and_layouts) {
     ScopedImGuiContext imgui;
     AudioEngine engine;
