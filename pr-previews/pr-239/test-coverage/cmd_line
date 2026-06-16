@@ -1,1 +1,0 @@
-genhtml merged.info --output-directory coverage-report --ignore-errors unused,unused,inconsistent,inconsistent,format,format,corrupt,corrupt,unsupported,unsupported,source,source,category,category --synthesize-missing --prefix /home/runner/work/Amplitron/Amplitron
