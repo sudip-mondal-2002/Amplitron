@@ -71,7 +71,8 @@ int AudioGraph::add_link(int source_pin_id, int dest_pin_id) {
             }
             if (out_count >= 1) {
                 printf(
-                    "add_link failed: Output pin %d already has an outgoing connection!\n",
+                    "add_link failed: Output pin %d already has an outgoing "
+                    "connection!\n",
                     source_pin_id);
                 return -1;  // Each output pin can only have 1 outgoing connection!
             }
