@@ -71,6 +71,16 @@ int MOCK_jack_deactivate(jack_client_t *client) {
 }
 
 // Dummy buffers for input/output
+jack_nframes_t MOCK_jack_get_sample_rate(jack_client_t *client) {
+    (void)client;
+    return 48000;
+}
+
+jack_nframes_t MOCK_jack_get_buffer_size(jack_client_t *client) {
+    (void)client;
+    return 512;
+}
+
 static float s_dummy_in[4096] = {0.0f};
 static float s_dummy_out[4096] = {0.0f};
 

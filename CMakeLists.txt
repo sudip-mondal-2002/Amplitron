@@ -936,6 +936,8 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
             "jack_activate=MOCK_jack_activate"
             "jack_deactivate=MOCK_jack_deactivate"
             "jack_port_get_buffer=MOCK_jack_port_get_buffer"
+            "jack_get_sample_rate=MOCK_jack_get_sample_rate"
+            "jack_get_buffer_size=MOCK_jack_get_buffer_size"
         )
     endif()
 
