@@ -25,6 +25,8 @@ subgraph Pre-Amp Effects [Pre-Amp / Front of House]
 end
 
 Amp[Amp Simulator]:::amp
+Split{Splitter}
+Mix{Mixer}
 
 subgraph FX Loop [Post-Amp / FX Loop]
     Delay(Delay):::fxloop
@@ -36,6 +38,10 @@ In --> Comp
 Comp --> OD
 OD --> Wah
 Wah --> Amp
-Amp --> Delay
+Amp --> Split
+Split -- Main Output --> Mix
+Split -- FX Send --> Delay
 Delay --> Reverb
-Reverb --> Out
+Reverb --> Mix
+Mix --> Out
+```

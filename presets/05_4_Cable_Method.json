@@ -1,26 +1,155 @@
 {
-  "presetId": "05_4_Cable_Method",
-  "name": "4-Cable Method (4CM)",
-  "description": "Standard 4CM routing separating pre-amp effects (dynamics/drive) from post-amp effects (time/modulation).",
-  "routing": "graph",
-  "nodes": [
-    { "id": "node_input", "type": "Input", "x": 0, "y": 250 },
-    { "id": "node_comp", "type": "Compressor", "x": 200, "y": 250 },
-    { "id": "node_od", "type": "Overdrive", "x": 400, "y": 250 },
-    { "id": "node_wah", "type": "Wah", "x": 600, "y": 250 },
-    { "id": "node_amp", "type": "AmpSimulator", "x": 800, "y": 250 },
-    { "id": "node_delay", "type": "Delay", "x": 1000, "y": 400 },
-    { "id": "node_reverb", "type": "Reverb", "x": 1200, "y": 400 },
-    { "id": "node_output", "type": "Output", "x": 1400, "y": 400 }
-  ],
-  "links": [
-    { "id": "edge_in_comp", "src": "node_input", "src_pin": "Output", "dst": "node_comp", "dst_pin": "Input" },
-    { "id": "edge_comp_od", "src": "node_comp", "src_pin": "Output", "dst": "node_od", "dst_pin": "Input" },
-    { "id": "edge_od_wah", "src": "node_od", "src_pin": "Output", "dst": "node_wah", "dst_pin": "Input" },
-    { "id": "edge_wah_amp", "src": "node_wah", "src_pin": "Output", "dst": "node_amp", "dst_pin": "MainInput" },
-    { "id": "edge_amp_delay", "src": "node_amp", "src_pin": "FXSend", "dst": "node_delay", "dst_pin": "Input" },
-    { "id": "edge_amp_out", "src": "node_amp", "src_pin": "Output", "dst": "node_output", "dst_pin": "Input" },
-    { "id": "edge_delay_reverb", "src": "node_delay", "src_pin": "Output", "dst": "node_reverb", "dst_pin": "Input" },
-    { "id": "edge_reverb_out", "src": "node_reverb", "src_pin": "Output", "dst": "node_output", "dst_pin": "Input" }
-  ]
+    "format_version": 2,
+    "routing": "graph",
+    "name": "4-Cable Method (4CM)",
+    "description": "Standard 4CM routing separating pre-amp effects (dynamics/drive) from post-amp effects (time/modulation).",
+    "saved_at": "2026-06-19T16:21:43",
+    "input_gain": 0.7,
+    "output_gain": 0.8,
+    "midi_mappings": [],
+    "nodes": [
+        {
+            "id": "n_in",
+            "type": "Input",
+            "position": {
+                "x": 0,
+                "y": 250
+            },
+            "enabled": true,
+            "mix": 1.0
+        },
+        {
+            "id": "n_comp",
+            "type": "Compressor",
+            "position": {
+                "x": 200,
+                "y": 250
+            },
+            "enabled": true,
+            "mix": 1.0
+        },
+        {
+            "id": "n_od",
+            "type": "Overdrive",
+            "position": {
+                "x": 400,
+                "y": 250
+            },
+            "enabled": true,
+            "mix": 1.0
+        },
+        {
+            "id": "n_wah",
+            "type": "Wah",
+            "position": {
+                "x": 600,
+                "y": 250
+            },
+            "enabled": true,
+            "mix": 1.0
+        },
+        {
+            "id": "n_amp",
+            "type": "Amp Sim",
+            "position": {
+                "x": 800,
+                "y": 250
+            },
+            "enabled": true,
+            "mix": 1.0
+        },
+        {
+            "id": "n_split",
+            "type": "splitter",
+            "position": {
+                "x": 1000,
+                "y": 250
+            },
+            "enabled": true,
+            "mix": 1.0
+        },
+        {
+            "id": "n_delay",
+            "type": "Delay",
+            "position": {
+                "x": 1200,
+                "y": 400
+            },
+            "enabled": true,
+            "mix": 1.0
+        },
+        {
+            "id": "n_reverb",
+            "type": "Reverb",
+            "position": {
+                "x": 1400,
+                "y": 400
+            },
+            "enabled": true,
+            "mix": 1.0
+        },
+        {
+            "id": "n_mix",
+            "type": "mixer",
+            "num_inputs": 2,
+            "position": {
+                "x": 1600,
+                "y": 250
+            },
+            "enabled": true,
+            "mix": 1.0
+        },
+        {
+            "id": "n_out",
+            "type": "Output",
+            "position": {
+                "x": 1800,
+                "y": 250
+            },
+            "enabled": true,
+            "mix": 1.0
+        }
+    ],
+    "links": [
+        {
+            "src_pin": "n_in.out0",
+            "dst_pin": "n_comp.in0"
+        },
+        {
+            "src_pin": "n_comp.out0",
+            "dst_pin": "n_od.in0"
+        },
+        {
+            "src_pin": "n_od.out0",
+            "dst_pin": "n_wah.in0"
+        },
+        {
+            "src_pin": "n_wah.out0",
+            "dst_pin": "n_amp.in0"
+        },
+        {
+            "src_pin": "n_amp.out0",
+            "dst_pin": "n_split.in0"
+        },
+        {
+            "src_pin": "n_split.out0",
+            "dst_pin": "n_mix.in0"
+        },
+        {
+            "src_pin": "n_split.out1",
+            "dst_pin": "n_delay.in0"
+        },
+        {
+            "src_pin": "n_delay.out0",
+            "dst_pin": "n_reverb.in0"
+        },
+        {
+            "src_pin": "n_reverb.out0",
+            "dst_pin": "n_mix.in1"
+        },
+        {
+            "src_pin": "n_mix.out0",
+            "dst_pin": "n_out.in0"
+        }
+    ]
 }
