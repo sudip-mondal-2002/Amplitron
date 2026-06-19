@@ -19,6 +19,7 @@
     { "id": "edge_od_wah", "src": "node_od", "src_pin": "Output", "dst": "node_wah", "dst_pin": "Input" },
     { "id": "edge_wah_amp", "src": "node_wah", "src_pin": "Output", "dst": "node_amp", "dst_pin": "MainInput" },
     { "id": "edge_amp_delay", "src": "node_amp", "src_pin": "FXSend", "dst": "node_delay", "dst_pin": "Input" },
+    { "id": "edge_amp_out", "src": "node_amp", "src_pin": "Output", "dst": "node_output", "dst_pin": "Input" },
     { "id": "edge_delay_reverb", "src": "node_delay", "src_pin": "Output", "dst": "node_reverb", "dst_pin": "Input" },
     { "id": "edge_reverb_out", "src": "node_reverb", "src_pin": "Output", "dst": "node_output", "dst_pin": "Input" }
   ]
