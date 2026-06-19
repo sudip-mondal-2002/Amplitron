@@ -14,12 +14,12 @@
     { "id": "node_output", "type": "Output", "x": 1400, "y": 400 }
   ],
   "links": [
-    { "id": "edge_in_comp", "src": "node_input", "src_pin": "out", "dst": "node_comp", "dst_pin": "in" },
-    { "id": "edge_comp_od", "src": "node_comp", "src_pin": "out", "dst": "node_od", "dst_pin": "in" },
-    { "id": "edge_od_wah", "src": "node_od", "src_pin": "out", "dst": "node_wah", "dst_pin": "in" },
-    { "id": "edge_wah_amp", "src": "node_wah", "src_pin": "out", "dst": "node_amp", "dst_pin": "in" },
-    { "id": "edge_amp_delay", "src": "node_amp", "src_pin": "FXSend", "dst": "node_delay", "dst_pin": "in" },
-    { "id": "edge_delay_reverb", "src": "node_delay", "src_pin": "out", "dst": "node_reverb", "dst_pin": "in" },
-    { "id": "edge_reverb_out", "src": "node_reverb", "src_pin": "out", "dst": "node_output", "dst_pin": "in" }
+    { "id": "edge_in_comp", "src": "node_input", "src_pin": "Output", "dst": "node_comp", "dst_pin": "Input" },
+    { "id": "edge_comp_od", "src": "node_comp", "src_pin": "Output", "dst": "node_od", "dst_pin": "Input" },
+    { "id": "edge_od_wah", "src": "node_od", "src_pin": "Output", "dst": "node_wah", "dst_pin": "Input" },
+    { "id": "edge_wah_amp", "src": "node_wah", "src_pin": "Output", "dst": "node_amp", "dst_pin": "MainInput" },
+    { "id": "edge_amp_delay", "src": "node_amp", "src_pin": "FXSend", "dst": "node_delay", "dst_pin": "Input" },
+    { "id": "edge_delay_reverb", "src": "node_delay", "src_pin": "Output", "dst": "node_reverb", "dst_pin": "Input" },
+    { "id": "edge_reverb_out", "src": "node_reverb", "src_pin": "Output", "dst": "node_output", "dst_pin": "Input" }
   ]
 }
