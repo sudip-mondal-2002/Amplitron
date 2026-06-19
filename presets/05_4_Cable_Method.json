@@ -2,27 +2,24 @@
   "presetId": "05_4_Cable_Method",
   "name": "4-Cable Method (4CM)",
   "description": "Standard 4CM routing separating pre-amp effects (dynamics/drive) from post-amp effects (time/modulation).",
+  "routing": "graph",
   "nodes": [
-    { "id": "node_input", "type": "Input", "position": { "x": 0, "y": 250 } },
-    { "id": "node_comp", "type": "Compressor", "position": { "x": 200, "y": 250 } },
-    { "id": "node_od", "type": "Overdrive", "position": { "x": 400, "y": 250 } },
-    { "id": "node_wah", "type": "Wah", "position": { "x": 600, "y": 250 } },
-    { "id": "node_amp", "type": "AmpSimulator", "position": { "x": 800, "y": 250 } },
-    
-    { "id": "node_delay", "type": "Delay", "position": { "x": 1000, "y": 400 } },
-    { "id": "node_reverb", "type": "Reverb", "position": { "x": 1200, "y": 400 } },
-    { "id": "node_output", "type": "Output", "position": { "x": 1400, "y": 400 } }
+    { "id": "node_input", "type": "Input", "x": 0, "y": 250 },
+    { "id": "node_comp", "type": "Compressor", "x": 200, "y": 250 },
+    { "id": "node_od", "type": "Overdrive", "x": 400, "y": 250 },
+    { "id": "node_wah", "type": "Wah", "x": 600, "y": 250 },
+    { "id": "node_amp", "type": "AmpSimulator", "x": 800, "y": 250 },
+    { "id": "node_delay", "type": "Delay", "x": 1000, "y": 400 },
+    { "id": "node_reverb", "type": "Reverb", "x": 1200, "y": 400 },
+    { "id": "node_output", "type": "Output", "x": 1400, "y": 400 }
   ],
-  "edges": [
-    { "id": "edge_in_comp", "source": "node_input", "target": "node_comp" },
-    { "id": "edge_comp_od", "source": "node_comp", "target": "node_od" },
-    { "id": "edge_od_wah", "source": "node_od", "target": "node_wah" },
-    
-    { "id": "edge_wah_amp", "source": "node_wah", "target": "node_amp", "targetPort": "MainInput" },
-    
-    { "id": "edge_amp_delay", "source": "node_amp", "sourcePort": "FXSend", "target": "node_delay" },
-    
-    { "id": "edge_delay_reverb", "source": "node_delay", "target": "node_reverb" },
-    { "id": "edge_reverb_out", "source": "node_reverb", "target": "node_output" }
+  "links": [
+    { "id": "edge_in_comp", "src": "node_input", "dst": "node_comp" },
+    { "id": "edge_comp_od", "src": "node_comp", "dst": "node_od" },
+    { "id": "edge_od_wah", "src": "node_od", "dst": "node_wah" },
+    { "id": "edge_wah_amp", "src": "node_wah", "dst": "node_amp", "dst_pin": "MainInput" },
+    { "id": "edge_amp_delay", "src": "node_amp", "src_pin": "FXSend", "dst": "node_delay" },
+    { "id": "edge_delay_reverb", "src": "node_delay", "dst": "node_reverb" },
+    { "id": "edge_reverb_out", "src": "node_reverb", "dst": "node_output" }
   ]
 }
