@@ -110,6 +110,23 @@ void GuiPresets::mark_clean() {
     saved_state_valid_ = true;
 }
 
+void GuiPresets::auto_save() {
+    if (!auto_save_enabled_) {
+        return;
+    }
+
+    if (!is_dirty()) {
+        return;
+    }
+
+    save_named_preset(
+        std::string(preset_name_buf_),
+        std::string(preset_desc_buf_)
+    );
+
+    last_auto_save_time_ = static_cast<float>(ImGui::GetTime());
+}
+
 std::string GuiPresets::preset_name_from_path(const std::string& filepath) const {
     size_t slash = filepath.find_last_of("/\\");
     std::string name = (slash == std::string::npos) ? filepath : filepath.substr(slash + 1);

@@ -244,6 +244,7 @@ void GuiManager::render_menu_bar() {
         if (gui_presets_.is_dirty()) {
             preset_label += " *";
         }
+        gui_presets_.auto_save();
         items.push_back({preset_label, false});
 
         // Sample rate (rightmost)
