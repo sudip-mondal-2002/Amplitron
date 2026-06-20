@@ -1,5 +1,5 @@
-#include "test_framework.h"
 #include "common.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 
@@ -7,26 +7,18 @@ using namespace Amplitron;
 // common.h utility function tests
 // ============================================================
 
-TEST(clamp_within_range) {
-    ASSERT_NEAR(clamp(0.5f, 0.0f, 1.0f), 0.5f, 1e-6f);
-}
+TEST(clamp_within_range) { ASSERT_NEAR(clamp(0.5f, 0.0f, 1.0f), 0.5f, 1e-6f); }
 
-TEST(clamp_below_min) {
-    ASSERT_NEAR(clamp(-1.0f, 0.0f, 1.0f), 0.0f, 1e-6f);
-}
+TEST(clamp_below_min) { ASSERT_NEAR(clamp(-1.0f, 0.0f, 1.0f), 0.0f, 1e-6f); }
 
-TEST(clamp_above_max) {
-    ASSERT_NEAR(clamp(5.0f, 0.0f, 1.0f), 1.0f, 1e-6f);
-}
+TEST(clamp_above_max) { ASSERT_NEAR(clamp(5.0f, 0.0f, 1.0f), 1.0f, 1e-6f); }
 
 TEST(clamp_at_boundaries) {
     ASSERT_NEAR(clamp(0.0f, 0.0f, 1.0f), 0.0f, 1e-6f);
     ASSERT_NEAR(clamp(1.0f, 0.0f, 1.0f), 1.0f, 1e-6f);
 }
 
-TEST(db_to_linear_zero_db) {
-    ASSERT_NEAR(db_to_linear(0.0f), 1.0f, 1e-5f);
-}
+TEST(db_to_linear_zero_db) { ASSERT_NEAR(db_to_linear(0.0f), 1.0f, 1e-5f); }
 
 TEST(db_to_linear_positive_6db) {
     // +6 dB ~= 2.0
@@ -38,9 +30,7 @@ TEST(db_to_linear_negative_20db) {
     ASSERT_NEAR(db_to_linear(-20.0f), 0.1f, 1e-5f);
 }
 
-TEST(linear_to_db_unity) {
-    ASSERT_NEAR(linear_to_db(1.0f), 0.0f, 1e-5f);
-}
+TEST(linear_to_db_unity) { ASSERT_NEAR(linear_to_db(1.0f), 0.0f, 1e-5f); }
 
 TEST(linear_to_db_half) {
     // 0.5 ~= -6.02 dB
@@ -76,9 +66,7 @@ TEST(soft_clip_symmetric) {
     ASSERT_NEAR(soft_clip(-2.0f), -soft_clip(2.0f), 1e-6f);
 }
 
-TEST(hard_clip_within_threshold) {
-    ASSERT_NEAR(hard_clip(0.5f, 1.0f), 0.5f, 1e-6f);
-}
+TEST(hard_clip_within_threshold) { ASSERT_NEAR(hard_clip(0.5f, 1.0f), 0.5f, 1e-6f); }
 
 TEST(hard_clip_above_threshold) {
     ASSERT_NEAR(hard_clip(2.0f, 0.8f), 0.8f, 1e-6f);

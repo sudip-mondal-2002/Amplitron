@@ -1,24 +1,24 @@
 #pragma once
 
-#include "common.h"
-#include <cstring>
-#include <vector>
-#include <string>
-#include <memory>
 #include <atomic>
-#include <nlohmann/json.hpp>
+#include <cstring>
+#include <memory>
+#include <nlohmann/json_fwd.hpp>
+#include <string>
+#include <vector>
 
 #include "audio/effects/core/effect_param.h"
-#include "audio/effects/core/i_processor.h"
-#include "audio/effects/core/i_parameterizable.h"
-#include "audio/effects/core/i_serializable.h"
 #include "audio/effects/core/i_metadata.h"
+#include "audio/effects/core/i_parameterizable.h"
+#include "audio/effects/core/i_processor.h"
+#include "audio/effects/core/i_serializable.h"
+#include "common.h"
 
 namespace Amplitron {
 
 // Common interface for all mono/stereo audio effects in the pedal chain.
 class Effect : public IProcessor, public IParameterizable, public ISerializable, public IMetadata {
-public:
+   public:
     virtual ~Effect() = default;
 
     // Process a mono buffer in place.
@@ -83,38 +83,16 @@ public:
         }
     }
 
-    virtual const char* get_display_name() const override {
-        return name();
-    }
+    virtual const char* get_display_name() const override { return name(); }
 
     // --- AUTOMATED SERIALIZATION LOGIC ---
-    // These methods automatically handle saving/loading for any effect 
+    // These methods automatically handle saving/loading for any effect
     // that uses the EffectParam vector.
-    
-    virtual nlohmann::json get_params() const override {
-        nlohmann::json j;
-        const auto& p_list = params();
-        for (const auto& p : p_list) {
-            j[p.name] = p.value;
-        }
-        j["enabled"] = enabled_.load();
-        j["mix"] = mix_.load(std::memory_order_relaxed);
-        return j;
-    }
 
-    virtual void set_params(const nlohmann::json& j) override {
-        if (j.contains("enabled")) enabled_.store(j["enabled"].get<bool>());
-        if (j.contains("mix")) mix_.store(j["mix"].get<float>(), std::memory_order_relaxed);
-        
-        auto& p_list = params();
-        for (auto& p : p_list) {
-            if (j.contains(p.name)) {
-                p.value = j[p.name];
-            }
-        }
-    }
+    virtual nlohmann::json get_params() const override;
+    virtual void set_params(const nlohmann::json& j) override;
 
-protected:
+   protected:
     int sample_rate_ = DEFAULT_SAMPLE_RATE;
     std::atomic<bool> enabled_{true};
     std::atomic<float> mix_{1.0f};
@@ -129,5 +107,4 @@ protected:
     }
 };
 
-} // namespace Amplitron
-
+}  // namespace Amplitron

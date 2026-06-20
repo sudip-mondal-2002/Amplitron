@@ -1,12 +1,13 @@
 #pragma once
 
-#include "audio/backend/i_audio_backend.h"
 #include <SDL.h>
+
+#include "audio/backend/i_audio_backend.h"
 
 namespace Amplitron {
 
 class SdlBackend : public IAudioBackend {
-public:
+   public:
     SdlBackend();
     ~SdlBackend() override;
 
@@ -46,7 +47,7 @@ public:
     SDL_AudioDeviceID get_capture_device() const { return capture_device_; }
     std::vector<float>& get_capture_buffer() { return capture_buffer_; }
 
-private:
+   private:
     IAudioEngine* engine_ = nullptr;
     SDL_AudioDeviceID audio_device_ = 0;
     SDL_AudioDeviceID capture_device_ = 0;
@@ -59,4 +60,4 @@ private:
     int selected_output_device_ = 0;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

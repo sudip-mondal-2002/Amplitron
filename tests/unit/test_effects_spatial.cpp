@@ -1,12 +1,13 @@
-#include "test_framework.h"
-#include "test_fixtures.h"
+#include <cmath>
+#include <cstring>
+#include <sstream>
+#include <vector>
+
 #include "audio/effects/delay_reverb/delay.h"
 #include "audio/effects/delay_reverb/reverb.h"
 #include "audio/effects/utility/looper.h"
-#include <cstring>
-#include <cmath>
-#include <vector>
-#include <sstream>
+#include "test_fixtures.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 
@@ -66,7 +67,7 @@ TEST_F(EffectsTest, reverb_reset_clears_tail) {
     for (int i = 0; i < 2048; ++i) {
         buf[i] = std::sin(2.0f * 3.14159265f * 440.0f * i / SR);
     }
-    rv.process(buf, 2048);   
+    rv.process(buf, 2048);
 
     rv.reset();
 
@@ -88,14 +89,14 @@ TEST_F(EffectsTest, reverb_low_decay_shorter_tail_than_high_decay) {
         for (int i = 0; i < 2048; ++i) {
             buf[i] = std::sin(2.0f * 3.14159265f * 440.0f * i / SR);
         }
-        rv.process(buf, 2048);  
+        rv.process(buf, 2048);
         float silence[2048];
         std::memset(silence, 0, sizeof(silence));
         rv.process(silence, 2048);
         return rms(silence, 2048);
     };
 
-    float tail_low  = measure_tail_rms(0.1f);
+    float tail_low = measure_tail_rms(0.1f);
     float tail_high = measure_tail_rms(0.99f);
     ASSERT_LT(tail_low, tail_high);
 }
@@ -110,7 +111,7 @@ TEST_F(EffectsTest, reverb_high_decay_produces_audible_tail) {
     for (int i = 0; i < 2048; ++i) {
         buf[i] = std::sin(2.0f * 3.14159265f * 440.0f * i / SR);
     }
-    rv.process(buf, 2048); 
+    rv.process(buf, 2048);
 
     float silence[2048];
     std::memset(silence, 0, sizeof(silence));
@@ -157,7 +158,7 @@ TEST_F(EffectsTest, reverb_high_damp_reduces_high_freq_content) {
             std::memset(silence, 0, sizeof(silence));
             rv.process(silence, N);
 
-            if (b >= 2) { // skip early tail
+            if (b >= 2) {  // skip early tail
                 mag += dft_magnitude_at(silence, N, 4000.0f);
             }
         }
@@ -166,7 +167,7 @@ TEST_F(EffectsTest, reverb_high_damp_reduces_high_freq_content) {
     };
 
     float hf_undamped = measure_hf_tail(0.0f);
-    float hf_damped   = measure_hf_tail(1.0f);
+    float hf_damped = measure_hf_tail(1.0f);
     ASSERT_GT(hf_undamped, hf_damped);
 }
 
@@ -182,9 +183,9 @@ TEST_F(EffectsTest, reverb_stereo_produces_finite_decorrelated_output) {
     }
     rv.process_stereo(left, right, 2048);
 
-    ASSERT_TRUE(is_finite(left,  2048));
+    ASSERT_TRUE(is_finite(left, 2048));
     ASSERT_TRUE(is_finite(right, 2048));
-    ASSERT_GT(rms(left,  2048), 0.001f);
+    ASSERT_GT(rms(left, 2048), 0.001f);
     ASSERT_GT(rms(right, 2048), 0.001f);
 
     float diff = 0.0f;
@@ -446,7 +447,7 @@ TEST_F(EffectsTest, looper_crossfade_wraparound_executes_crossfade_branch) {
 
     constexpr int LOOP = 5000;
     constexpr int N = 256;
-    constexpr int XF = 240; // 5 ms at 48 kHz
+    constexpr int XF = 240;  // 5 ms at 48 kHz
 
     lp.request_record_toggle();
 
@@ -522,23 +523,16 @@ TEST_F(EffectsTest, looper_stereo_overdub_executes_right_channel_write_path) {
 TEST_F(EffectsTest, looper_state_stream_operator_outputs_expected_strings) {
     std::ostringstream os;
 
-    os << Looper::State::Empty << " "
-       << Looper::State::Idle << " "
-       << Looper::State::Recording << " "
-       << Looper::State::Playing << " "
-       << Looper::State::Overdubbing;
+    os << Looper::State::Empty << " " << Looper::State::Idle << " " << Looper::State::Recording
+       << " " << Looper::State::Playing << " " << Looper::State::Overdubbing;
 
-    ASSERT_EQ(
-        os.str(),
-        "Empty Idle Recording Playing Overdubbing"
-    );
+    ASSERT_EQ(os.str(), "Empty Idle Recording Playing Overdubbing");
 }
 
 TEST_F(EffectsTest, looper_state_stream_operator_handles_unknown_value) {
     std::ostringstream os;
 
-    auto invalid =
-        static_cast<Looper::State>(999);
+    auto invalid = static_cast<Looper::State>(999);
 
     os << invalid;
 
@@ -576,7 +570,7 @@ TEST_F(EffectsTest, delay_calculates_correct_time_from_bpm) {
     dl.set_sample_rate(SR);
     dl.reset();
 
-    dl.params()[0].value = 490.0f; 
+    dl.params()[0].value = 490.0f;
     dl.set_transport_state(120.0f);
 
     ASSERT_NEAR(dl.params()[0].value, 500.0f, 0.01f);

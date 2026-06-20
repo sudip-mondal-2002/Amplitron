@@ -1,14 +1,15 @@
-#include "test_framework.h"
-#include "test_fixtures.h"
+#include <cmath>
+#include <filesystem>
+#include <string>
+#include <vector>
+
+#include "audio/effects/delay_reverb/delay.h"
+#include "audio/effects/distortion/distortion.h"
+#include "audio/effects/dynamics/noise_gate.h"
 #include "audio/engine/audio_engine.h"
 #include "preset_manager.h"
-#include "audio/effects/dynamics/noise_gate.h"
-#include "audio/effects/distortion/distortion.h"
-#include "audio/effects/delay_reverb/delay.h"
-#include <vector>
-#include <string>
-#include <filesystem>
-#include <cmath>
+#include "test_fixtures.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 
@@ -21,14 +22,14 @@ TEST_F(PresetTest, e2e_preset_workflow_roundtrip_and_processing) {
     auto ng = std::make_shared<NoiseGate>();
     ng->set_enabled(true);
     if (!ng->params().empty()) {
-        ng->params()[0].value = -30.0f; // Set custom threshold within [-80.0f, 0.0f]
+        ng->params()[0].value = -30.0f;  // Set custom threshold within [-80.0f, 0.0f]
     }
     engine.add_effect(ng);
 
     auto dist = std::make_shared<Distortion>();
     dist->set_enabled(true);
     if (!dist->params().empty()) {
-        dist->params()[0].value = 8.5f; // Set custom parameter within [1.0f, 20.0f]
+        dist->params()[0].value = 8.5f;  // Set custom parameter within [1.0f, 20.0f]
     }
     engine.add_effect(dist);
 
@@ -87,18 +88,21 @@ TEST_F(PresetTest, e2e_preset_workflow_roundtrip_and_processing) {
     ASSERT_TRUE(loaded_effects[2]->is_enabled());
     ASSERT_NEAR(loaded_effects[2]->get_mix(), 0.4f, 0.01f);
 
-    // 7. Test DSP processing of a simulated input tone
-    std::vector<float> input(64);
-    std::vector<float> output(128, 0.0f); // Correctly allocate 128 elements for stereo output (64 frames * 2 channels)
-    for (int i = 0; i < 64; ++i) {
+    // 7. Test DSP processing of a simulated input tone.
+    // Use 512 frames so the NoiseGate attack envelope (default 0.5 ms = ~24
+    // samples at 48 kHz) has sufficient time to fully open before we measure.
+    const int num_frames = 512;
+    std::vector<float> input(num_frames);
+    std::vector<float> output(num_frames * 2, 0.0f);  // stereo interleaved
+    for (int i = 0; i < num_frames; ++i) {
         input[i] = std::sin(2.0f * 3.14159f * 440.0f * i / 48000.0f);
     }
 
-    engine.process_audio(input.data(), output.data(), 64);
+    engine.process_audio(input.data(), output.data(), num_frames);
 
     // Ensure the output contains processed data and doesn't contain NaNs
     float output_sum = 0.0f;
-    for (int i = 0; i < 128; ++i) {
+    for (int i = 0; i < num_frames * 2; ++i) {
         ASSERT_TRUE(std::isfinite(output[i]));
         output_sum += std::abs(output[i]);
     }

@@ -1,14 +1,13 @@
 #pragma once
+#include <atomic>
+#include <mutex>
 #include <string>
 #include <thread>
-#include <mutex>
-#include <atomic>
-
 
 namespace Amplitron {
 
 class UpdateChecker {
-public:
+   public:
     UpdateChecker();
     ~UpdateChecker();
 
@@ -19,16 +18,16 @@ public:
     std::string new_release_version() const;
     std::string new_release_url() const;
 
-private:
+   private:
     void check_for_updates();
 
     std::thread check_thread_;
     mutable std::mutex mutex_;
-    
+
     bool has_new_release_ = false;
     std::string new_release_version_;
     std::string new_release_url_;
     std::atomic<bool> shutdown_requested_{false};
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <imgui.h>
+
 #include <unordered_map>
 #include <vector>
 
@@ -13,7 +14,7 @@ struct NodeLayoutState {
 };
 
 class GuiGraphState {
-public:
+   public:
     static GuiGraphState& get_instance() {
         static GuiGraphState instance;
         return instance;
@@ -39,9 +40,9 @@ public:
 
     void set_default_position_if_missing(int node_id, float default_x, float default_y) {
         if (node_positions.find(node_id) == node_positions.end()) {
-            node_positions[node_id] = { ImVec2(default_x, default_y), false, ImVec2(0, 0) };
+            node_positions[node_id] = {ImVec2(default_x, default_y), false, ImVec2(0, 0)};
         }
     }
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

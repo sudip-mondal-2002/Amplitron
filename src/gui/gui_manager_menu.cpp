@@ -1,31 +1,36 @@
-#include "gui/gui_manager.h"
-#include "gui/pedalboard/pedal_board.h"
-#include "gui/dialogs/file_dialog.h"
-#include "gui/theme/theme.h"
-#include "preset_manager.h"
-#include "audio/effects/utility/tuner.h"
-#include <imgui.h>
 #include <SDL2/SDL.h>
+#include <imgui.h>
+
 #include <cstdio>
 #include <string>
+
+#include "audio/effects/utility/tuner.h"
+#include "gui/dialogs/file_dialog.h"
+#include "gui/gui_manager.h"
+#include "gui/pedalboard/pedal_board.h"
+#include "gui/theme/theme.h"
+#include "preset_manager.h"
 #ifdef __APPLE__
 #include <TargetConditionals.h>
 #endif
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
+
+// clang-format off
 #if defined(_WIN32)
 #include <windows.h>
 #include <shellapi.h>
 #elif defined(__APPLE__) && !TARGET_OS_IOS
-#include <unistd.h>
-#include <sys/wait.h>
 #include <fcntl.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #elif defined(__linux__)
-#include <unistd.h>
-#include <sys/wait.h>
 #include <fcntl.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #endif
+// clang-format on
 
 namespace Amplitron {
 
@@ -47,7 +52,10 @@ static void open_url_safe(const std::string& url) {
         close(pipefd[0]);
         close(pipefd[1]);
         int devnull = open("/dev/null", O_WRONLY);
-        if (devnull >= 0) { dup2(devnull, STDERR_FILENO); close(devnull); }
+        if (devnull >= 0) {
+            dup2(devnull, STDERR_FILENO);
+            close(devnull);
+        }
         execl("/usr/bin/open", "open", url.c_str(), nullptr);
         _exit(1);
     }
@@ -69,7 +77,10 @@ static void open_url_safe(const std::string& url) {
         close(pipefd[0]);
         close(pipefd[1]);
         int devnull = open("/dev/null", O_WRONLY);
-        if (devnull >= 0) { dup2(devnull, STDERR_FILENO); close(devnull); }
+        if (devnull >= 0) {
+            dup2(devnull, STDERR_FILENO);
+            close(devnull);
+        }
         execl("/usr/bin/xdg-open", "xdg-open", url.c_str(), nullptr);
         _exit(1);
     }
@@ -96,14 +107,18 @@ void GuiManager::render_menu_bar() {
                 gui_presets_.ensure_factory_presets();
                 gui_presets_.refresh_presets(true);
             }
-            bool has_selected_preset = gui_presets_.selected_preset_index() >= 0 &&
-                                       gui_presets_.selected_preset_index() < gui_presets_.preset_count();
+            bool has_selected_preset =
+                gui_presets_.selected_preset_index() >= 0 &&
+                gui_presets_.selected_preset_index() < gui_presets_.preset_count();
             if (ImGui::MenuItem("Delete Selected Preset", nullptr, false, has_selected_preset)) {
                 ImGui::OpenPopup("Confirm Delete Preset");
             }
 
-            if (ImGui::BeginPopupModal("Confirm Delete Preset", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-                ImGui::Text("Are you sure you want to delete the selected preset?\nThis action cannot be undone.");
+            if (ImGui::BeginPopupModal("Confirm Delete Preset", nullptr,
+                                       ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::Text(
+                    "Are you sure you want to delete the selected preset?\nThis action cannot be "
+                    "undone.");
                 ImGui::Separator();
                 if (ImGui::Button("Delete", ImVec2(120, 0))) {
                     gui_presets_.delete_preset_by_index(gui_presets_.selected_preset_index());
@@ -120,14 +135,42 @@ void GuiManager::render_menu_bar() {
                 if (!json_string.empty()) {
 #ifdef __EMSCRIPTEN__
                     // Web build — use browser Clipboard API
-                    EM_ASM({
-                        var text = UTF8ToString($0);
-                        navigator.clipboard.writeText(text).then(function() {
-                            // success
-                        }).catch(function(err) {
-                            console.error("Clipboard write failed: ", err);
-                        });
-                    }, json_string.c_str());
+                    EM_ASM(
+                        {
+                            var text = UTF8ToString($0);
+                            if (navigator.clipboard && window.isSecureContext) {
+                                navigator.clipboard.writeText(text)
+                                    .then(function(){
+                                        // success
+                                    })
+                                    .catch(function(err) {
+                                        console.error("Clipboard write failed: ", err);
+                                        window.prompt(
+                                            "Press Ctrl+C or Cmd+C to copy the preset JSON:", text);
+                                    });
+                            } else {
+                                try {
+                                    var textArea = document.createElement("textarea");
+                                    textArea.value = text;
+                                    textArea.style.top = "0";
+                                    textArea.style.left = "0";
+                                    textArea.style.position = "fixed";
+                                    document.body.appendChild(textArea);
+                                    textArea.focus();
+                                    textArea.select();
+                                    var successful = document.execCommand('copy');
+                                    if (!successful) {
+                                        window.prompt(
+                                            "Press Ctrl+C or Cmd+C to copy the preset JSON:", text);
+                                    }
+                                    document.body.removeChild(textArea);
+                                } catch (err) {
+                                    window.prompt("Press Ctrl+C or Cmd+C to copy the preset JSON:",
+                                                  text);
+                                }
+                            }
+                        },
+                        json_string.c_str());
 #else
                     // Native build — ImGui clipboard works fine
                     ImGui::SetClipboardText(json_string.c_str());
@@ -139,6 +182,24 @@ void GuiManager::render_menu_bar() {
                     toast_timer_ = 2.0f;
                 }
             }
+#ifdef __EMSCRIPTEN__
+            if (ImGui::MenuItem("Share current pedalboard")) {
+                std::string json_string = gui_presets_.serialise_current_preset_to_json();
+                if (!json_string.empty()) {
+                    // clang-format off
+                    EM_ASM(
+                        {
+                            if (typeof window.sharePresetToUrl === 'function') {
+                                window.sharePresetToUrl(UTF8ToString($0));
+                            }
+                        },
+                        json_string.c_str());
+                    // clang-format on
+                    toast_message_ = "Link copied to clipboard!";
+                    toast_timer_ = 2.0f;
+                }
+            }
+#endif
             ImGui::Separator();
 #ifndef AMPLITRON_NO_DESKTOP_SHELL
             if (ImGui::MenuItem("Change Presets Directory...")) {
@@ -153,7 +214,8 @@ void GuiManager::render_menu_bar() {
                 ImGui::OpenPopup("Confirm Reset Presets Dir");
             }
 
-            if (ImGui::BeginPopupModal("Confirm Reset Presets Dir", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            if (ImGui::BeginPopupModal("Confirm Reset Presets Dir", nullptr,
+                                       ImGuiWindowFlags_AlwaysAutoResize)) {
                 ImGui::Text("Reset presets directory to the default internal path?");
                 ImGui::Separator();
                 if (ImGui::Button("Reset", ImVec2(120, 0))) {
@@ -206,8 +268,7 @@ void GuiManager::render_menu_bar() {
         if (ImGui::BeginMenu("Audio")) {
             if (engine_.is_running()) {
                 if (ImGui::MenuItem("Stop Audio", "M")) engine_.stop();
-            } 
-            else {
+            } else {
                 if (ImGui::MenuItem("Start Audio", "M")) {
                     engine_.restart();
                 }
@@ -224,6 +285,12 @@ void GuiManager::render_menu_bar() {
             }
             if (ImGui::MenuItem("MIDI Settings", nullptr, show_midi_)) {
                 show_midi_ = !show_midi_;
+            }
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Help")) {
+            if (ImGui::MenuItem("Keyboard Shortcuts", "F1")) {
+                show_keyboard_shortcuts_ = true;
             }
             ImGui::EndMenu();
         }
@@ -303,7 +370,9 @@ void GuiManager::render_menu_bar() {
                     ImGui::TextColored(ImVec4(0.4f, 0.4f, 0.4f, 1.0f), "%s", it->label.c_str());
                 }
                 if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip(midi_manager_.is_port_open() ? "MIDI Connected. Click for settings." : "MIDI Disconnected. Click for settings.");
+                    ImGui::SetTooltip(midi_manager_.is_port_open()
+                                          ? "MIDI Connected. Click for settings."
+                                          : "MIDI Disconnected. Click for settings.");
                     ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
                 }
                 if (ImGui::IsItemClicked()) {
@@ -356,4 +425,4 @@ void GuiManager::render_menu_bar() {
     }
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

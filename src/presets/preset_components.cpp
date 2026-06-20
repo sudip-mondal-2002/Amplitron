@@ -1,14 +1,14 @@
 #include "presets/preset_components.h"
+
+#include <filesystem>
+#include <fstream>
+
 #include "preset_json.h"
 #include "preset_manager.h"
-#include <fstream>
-#include <filesystem>
 
 namespace Amplitron {
 
-std::string PresetSerializer::serialize(const PresetData& preset) {
-    return to_json_ext(preset);
-}
+std::string PresetSerializer::serialize(const PresetData& preset) { return to_json_ext(preset); }
 
 bool PresetSerializer::deserialize(const std::string& json_str, PresetData& preset) {
     return from_json_ext(json_str, preset);
@@ -25,18 +25,18 @@ bool PresetStorage::save(const std::string& filepath, const std::string& data) {
 std::string PresetStorage::load(const std::string& filepath) {
     std::ifstream file(filepath);
     if (!file.is_open()) return "";
-    std::string data((std::istreambuf_iterator<char>(file)),
-                     std::istreambuf_iterator<char>());
+    std::string data((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     file.close();
     return data;
 }
 
 std::vector<std::string> PresetStorage::list() {
     std::vector<std::string> result;
-    
+
     auto append_files = [](const std::string& dir, std::vector<std::string>& res) {
         try {
-            if (!dir.empty() && std::filesystem::exists(dir) && std::filesystem::is_directory(dir)) {
+            if (!dir.empty() && std::filesystem::exists(dir) &&
+                std::filesystem::is_directory(dir)) {
                 for (const auto& entry : std::filesystem::directory_iterator(dir)) {
                     if (entry.is_regular_file() && entry.path().extension() == ".json") {
                         res.push_back(entry.path().string());
@@ -74,4 +74,4 @@ std::string PresetMigrator::migrate(const std::string& raw_json) {
     return PresetManager::apply_migrations(raw_json);
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

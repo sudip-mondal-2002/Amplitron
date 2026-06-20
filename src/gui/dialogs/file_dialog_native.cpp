@@ -3,22 +3,30 @@
 // Save dialog implementation
 // =============================================================================
 
-#include "gui/dialogs/file_dialog.h"
 #include <cstring>
 
+#include "gui/dialogs/file_dialog.h"
+
 #ifdef _WIN32
+// clang-format off
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <commdlg.h>
 #include <shlobj.h>
+// clang-format on
+#endif
+
+#ifdef AMPLITRON_TEST_NATIVE_DIALOGS
+#include "fixtures/file_dialog_mock.h"
 #endif
 
 #ifdef __APPLE__
 #include <TargetConditionals.h>
-#include <cstdio>
-#include <unistd.h>
-#include <sys/wait.h>
 #include <fcntl.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+#include <cstdio>
 #endif
 
 #ifndef _WIN32
@@ -28,14 +36,19 @@
 namespace Amplitron {
 
 #ifdef AMPLITRON_HEADLESS
+std::string g_mock_save_dialog_result = "";
+std::string g_mock_open_dialog_result = "";
+std::string g_mock_folder_dialog_result = "";
+#endif
+
+#if defined(AMPLITRON_HEADLESS) && !defined(AMPLITRON_TEST_NATIVE_DIALOGS)
 std::string show_save_dialog(const std::string&, const std::string&, const std::string&) {
-    return "";
+    return g_mock_save_dialog_result;
 }
 #else
 
 #ifdef _WIN32
-std::string show_save_dialog(const std::string& default_name,
-                             const std::string& filter_desc,
+std::string show_save_dialog(const std::string& default_name, const std::string& filter_desc,
                              const std::string& filter_ext) {
     char filename[MAX_PATH];
     std::strncpy(filename, default_name.c_str(), MAX_PATH - 1);
@@ -46,9 +59,9 @@ std::string show_save_dialog(const std::string& default_name,
     std::memset(filter, 0, sizeof(filter));
     int pos = 0;
     pos += snprintf(filter + pos, 256 - pos, "%s (*.%s)", filter_desc.c_str(), filter_ext.c_str());
-    pos++; // null separator
+    pos++;  // null separator
     pos += snprintf(filter + pos, 256 - pos, "*.%s", filter_ext.c_str());
-    pos++; // null separator
+    pos++;  // null separator
     pos += snprintf(filter + pos, 256 - pos, "All Files (*.*)");
     pos++;
     pos += snprintf(filter + pos, 256 - pos, "*.*");
@@ -56,7 +69,11 @@ std::string show_save_dialog(const std::string& default_name,
 
     // Get desktop/documents as initial dir
     char initial_dir[MAX_PATH] = "";
+#ifdef AMPLITRON_TEST_NATIVE_DIALOGS
+    MOCK_SHGetFolderPathA(NULL, CSIDL_DESKTOP, NULL, 0, initial_dir);
+#else
     SHGetFolderPathA(NULL, CSIDL_DESKTOP, NULL, 0, initial_dir);
+#endif
 
     OPENFILENAMEA ofn;
     std::memset(&ofn, 0, sizeof(ofn));
@@ -70,20 +87,27 @@ std::string show_save_dialog(const std::string& default_name,
     ofn.Flags = OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
     ofn.lpstrDefExt = filter_ext.c_str();
 
+#ifdef AMPLITRON_TEST_NATIVE_DIALOGS
+    if (MOCK_GetSaveFileNameA(&ofn)) {
+        return std::string(filename);
+    }
+#else
     if (GetSaveFileNameA(&ofn)) {
         return std::string(filename);
     }
+#endif
     return "";
 }
 
 #elif defined(__APPLE__) && !TARGET_OS_IOS
-std::string show_save_dialog(const std::string& default_name,
-                             const std::string& /*filter_desc*/,
+std::string show_save_dialog(const std::string& default_name, const std::string& /*filter_desc*/,
                              const std::string& filter_ext) {
     // Use osascript to show a native NSSavePanel
-    std::string cmd = "osascript -e 'set theFile to POSIX path of (choose file name "
-                      "with prompt \"Save Recording As\" "
-                      "default name \"" + default_name + "\")' 2>/dev/null";
+    std::string cmd =
+        "osascript -e 'set theFile to POSIX path of (choose file name "
+        "with prompt \"Save Recording As\" "
+        "default name \"" +
+        default_name + "\")' 2>/dev/null";
 
     FILE* pipe = popen(cmd.c_str(), "r");
     if (!pipe) return "";
@@ -96,8 +120,7 @@ std::string show_save_dialog(const std::string& default_name,
     pclose(pipe);
 
     // Trim trailing newline
-    while (!result.empty() && (result.back() == '\n' || result.back() == '\r'))
-        result.pop_back();
+    while (!result.empty() && (result.back() == '\n' || result.back() == '\r')) result.pop_back();
 
     if (result.empty()) return "";
 
@@ -110,16 +133,20 @@ std::string show_save_dialog(const std::string& default_name,
     return result;
 }
 
-#else // Linux
-std::string show_save_dialog(const std::string& default_name,
-                             const std::string& filter_desc,
+#else  // Linux
+std::string show_save_dialog(const std::string& default_name, const std::string& filter_desc,
                              const std::string& filter_ext) {
     // Try zenity first, then kdialog
-    std::string cmd = "zenity --file-selection --save --confirm-overwrite "
-                      "--title='Save Recording As' "
-                      "--filename='" + default_name + "' "
-                      "--file-filter='" + filter_desc + " (*." + filter_ext + ")|*." + filter_ext + "' "
-                      "--file-filter='All Files (*)|*' 2>/dev/null";
+    std::string cmd =
+        "zenity --file-selection --save --confirm-overwrite "
+        "--title='Save Recording As' "
+        "--filename='" +
+        default_name +
+        "' "
+        "--file-filter='" +
+        filter_desc + " (*." + filter_ext + ")|*." + filter_ext +
+        "' "
+        "--file-filter='All Files (*)|*' 2>/dev/null";
 
     FILE* pipe = popen(cmd.c_str(), "r");
     if (!pipe) return "";
@@ -133,7 +160,8 @@ std::string show_save_dialog(const std::string& default_name,
 
     // If zenity failed (not installed), try kdialog
     if (status != 0) {
-        cmd = "kdialog --getsavefilename ~/ '*." + filter_ext + "|" + filter_desc + "' "
+        cmd = "kdialog --getsavefilename ~/ '*." + filter_ext + "|" + filter_desc +
+              "' "
               "--title 'Save Recording As' 2>/dev/null";
         pipe = popen(cmd.c_str(), "r");
         if (!pipe) return "";
@@ -145,8 +173,7 @@ std::string show_save_dialog(const std::string& default_name,
     }
 
     // Trim trailing newline
-    while (!result.empty() && (result.back() == '\n' || result.back() == '\r'))
-        result.pop_back();
+    while (!result.empty() && (result.back() == '\n' || result.back() == '\r')) result.pop_back();
 
     if (result.empty()) return "";
 
@@ -160,6 +187,6 @@ std::string show_save_dialog(const std::string& default_name,
 }
 #endif
 
-#endif // AMPLITRON_HEADLESS
+#endif  // AMPLITRON_HEADLESS
 
-} // namespace Amplitron
+}  // namespace Amplitron

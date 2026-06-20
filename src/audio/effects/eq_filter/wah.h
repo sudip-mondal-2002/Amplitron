@@ -5,13 +5,13 @@
 // auto mode f_c follows an envelope e[n], while manual mode maps pedal position
 // directly. Resonance/Q controls bandwidth around f_c.
 
-#include "audio/effects/core/effect.h"
 #include "audio/dsp/envelope_follower.h"
+#include "audio/effects/core/effect.h"
 
 namespace Amplitron {
 
 class WahPedal : public Effect {
-public:
+   public:
     WahPedal();
     void process(float* buffer, int num_samples) override;
     void reset() override;
@@ -20,7 +20,7 @@ public:
     std::vector<EffectParam>& params() override { return params_; }
     const std::vector<EffectParam>& params() const override { return params_; }
 
-private:
+   private:
     std::vector<EffectParam> params_;
 
     // State-variable filter (Chamberlin topology) state
@@ -37,4 +37,4 @@ private:
     float q_smooth_ = 3.5f;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

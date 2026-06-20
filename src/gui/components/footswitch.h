@@ -1,6 +1,7 @@
 #pragma once
 
 #include <imgui.h>
+
 #include <functional>
 
 namespace Amplitron {
@@ -14,7 +15,7 @@ struct FootswitchProps {
 };
 
 class FootswitchComponent {
-public:
+   public:
     /**
      * @brief Render a reusable metallic footswitch toggle component.
      * @param imgui_id Unique ID for ImGui button tracking.
@@ -22,7 +23,8 @@ public:
      * @param zoom     DPI zoom scale.
      * @param center   Center coordinate of the footswitch.
      */
-    static void render(const char* imgui_id, const FootswitchProps& props, float zoom, ImVec2 center);
+    static void render(const char* imgui_id, const FootswitchProps& props, float zoom,
+                       ImVec2 center);
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

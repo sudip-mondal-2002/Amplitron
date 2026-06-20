@@ -1,15 +1,18 @@
 #include "audio/backend/sdl_backend.h"
-#include "audio/engine/i_audio_engine.h"
+
+#include <algorithm>
+#include <cassert>
+#include <cctype>
+#include <cstring>
 #include <iostream>
 #include <vector>
-#include <algorithm>
-#include <cstring>
-#include <cctype>
-#include <cassert>
+
+#include "audio/engine/i_audio_engine.h"
 
 namespace Amplitron {
 
-static void sdl_audio_callback(void* userdata, Uint8* stream, int len) {
+// Intentionally non-static so it can be accessed in unit tests for validation
+void sdl_audio_callback(void* userdata, Uint8* stream, int len) {
     auto* be = static_cast<SdlBackend*>(userdata);
     auto* engine = be->get_engine();
     if (!engine) return;
@@ -48,9 +51,7 @@ static void sdl_audio_callback(void* userdata, Uint8* stream, int len) {
 }
 
 SdlBackend::SdlBackend() = default;
-SdlBackend::~SdlBackend() {
-    shutdown();
-}
+SdlBackend::~SdlBackend() { shutdown(); }
 
 bool SdlBackend::initialize(IAudioEngine* engine) {
     if (initialized_) return true;
@@ -98,8 +99,8 @@ bool SdlBackend::start() {
     want_out.callback = sdl_audio_callback;
     want_out.userdata = this;
 
-    audio_device_ = SDL_OpenAudioDevice(nullptr, 0, &want_out, &have_out,
-                                        SDL_AUDIO_ALLOW_FREQUENCY_CHANGE);
+    audio_device_ =
+        SDL_OpenAudioDevice(nullptr, 0, &want_out, &have_out, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE);
     if (audio_device_ == 0) {
         std::cerr << "[SDL] Failed to open output audio: " << SDL_GetError() << std::endl;
         return false;
@@ -117,10 +118,10 @@ bool SdlBackend::start() {
     want_cap.callback = nullptr;
 
     static const char* usb_keywords[] = {
-        "usb", "guitar", "irig", "scarlett", "behringer", "focusrite",
-        "presonus", "steinberg", "audio interface", "line 6", "rocksmith",
-        "umc", "um2", "uphoria", "podcast", "xenyx", "external"
-    };
+        "usb",       "guitar",   "irig",      "scarlett",        "behringer",
+        "focusrite", "presonus", "steinberg", "audio interface", "line 6",
+        "rocksmith", "umc",      "um2",       "uphoria",         "podcast",
+        "xenyx",     "external"};
 
     const char* preferred_device = nullptr;
     int num_capture = SDL_GetNumAudioDevices(1);
@@ -145,8 +146,7 @@ bool SdlBackend::start() {
     capture_buffer_.resize(static_cast<size_t>(buffer_size_ * 2), 0.0f);
 
     SDL_PauseAudioDevice(audio_device_, 0);
-    if (capture_device_ != 0)
-        SDL_PauseAudioDevice(capture_device_, 0);
+    if (capture_device_ != 0) SDL_PauseAudioDevice(capture_device_, 0);
 
     running_ = true;
     return true;
@@ -154,10 +154,8 @@ bool SdlBackend::start() {
 
 void SdlBackend::stop() {
     if (running_) {
-        if (audio_device_ != 0)
-            SDL_PauseAudioDevice(audio_device_, 1);
-        if (capture_device_ != 0)
-            SDL_PauseAudioDevice(capture_device_, 1);
+        if (audio_device_ != 0) SDL_PauseAudioDevice(audio_device_, 1);
+        if (capture_device_ != 0) SDL_PauseAudioDevice(capture_device_, 1);
         running_ = false;
     }
     if (capture_device_ != 0) {
@@ -171,11 +169,13 @@ void SdlBackend::stop() {
 }
 
 std::vector<AudioDeviceInfo> SdlBackend::get_input_devices() const {
-    return {{0, "Browser Microphone", 1, 0, 48000.0, false}};
+    std::vector<AudioDeviceInfo> dev = {{0, "Browser Microphone", 1, 0, 48000.0, false}};
+    return dev;
 }
 
 std::vector<AudioDeviceInfo> SdlBackend::get_output_devices() const {
-    return {{0, "Browser Audio Output", 0, 2, 48000.0, false}};
+    std::vector<AudioDeviceInfo> dev = {{0, "Browser Audio Output", 0, 2, 48000.0, false}};
+    return dev;
 }
 
 bool SdlBackend::set_input_device(int device_index) {
@@ -188,20 +188,12 @@ bool SdlBackend::set_output_device(int device_index) {
     return true;
 }
 
-std::string SdlBackend::get_input_device_name() const {
-    return "Browser Microphone";
-}
+std::string SdlBackend::get_input_device_name() const { return "Browser Microphone"; }
 
-std::string SdlBackend::get_output_device_name() const {
-    return "Browser Audio Output";
-}
+std::string SdlBackend::get_output_device_name() const { return "Browser Audio Output"; }
 
-int SdlBackend::get_sample_rate() const {
-    return sample_rate_;
-}
+int SdlBackend::get_sample_rate() const { return sample_rate_; }
 
-int SdlBackend::get_buffer_size() const {
-    return buffer_size_;
-}
+int SdlBackend::get_buffer_size() const { return buffer_size_; }
 
-} // namespace Amplitron
+}  // namespace Amplitron

@@ -1,19 +1,19 @@
 #pragma once
 
-#include "common.h"
-#include <fstream>
-#include <chrono>
 #include <array>
+#include <chrono>
+#include <fstream>
 #include <thread>
 
 #include "audio/recorder/i_recorder.h"
+#include "common.h"
 
 namespace Amplitron {
 
 class IAudioEngine;
 
 class Recorder : public IRecorder {
-public:
+   public:
     Recorder();
     ~Recorder() override;
 
@@ -59,7 +59,7 @@ public:
     // Generate a timestamped filename
     static std::string generate_filename();
 
-private:
+   private:
     std::ofstream file_;
     std::atomic<bool> recording_{false};
     std::atomic<bool> paused_{false};
@@ -99,4 +99,4 @@ private:
     void writer_thread_func();
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

@@ -1,16 +1,18 @@
 #include "gui/window_context.h"
-#include "gui/theme/theme.h"
-#include "gui/gl_setup.h"
-#include "gui/state/gui_graph_state.h"
 
-#include <imgui.h>
-#include <imgui_impl_sdl2.h>
-#include <imgui_impl_opengl3.h>
 #include <SDL2/SDL.h>
+#include <imgui.h>
+#include <imgui_impl_opengl3.h>
+#include <imgui_impl_sdl2.h>
+
 #include <iostream>
 
+#include "gui/gl_setup.h"
+#include "gui/state/gui_graph_state.h"
+#include "gui/theme/theme.h"
+
 #ifdef __EMSCRIPTEN__
-#  include <emscripten.h>
+#include <emscripten.h>
 #endif
 
 #pragma GCC diagnostic push
@@ -27,11 +29,24 @@ namespace Amplitron {
 
 WindowContext::WindowContext() = default;
 
-WindowContext::~WindowContext() {
-    shutdown();
-}
+WindowContext::~WindowContext() { shutdown(); }
+
+#ifdef AMPLITRON_HEADLESS
+bool g_mock_window_context_initialize_fail = false;
+bool g_mock_window_context_poll_events_fail = false;
+#endif
 
 bool WindowContext::initialize(int width, int height, const std::string& title) {
+    (void)title;
+#ifdef AMPLITRON_HEADLESS
+    if (g_mock_window_context_initialize_fail) {
+        return false;
+    }
+    width_ = width;
+    height_ = height;
+    initialized_ = true;
+    return true;
+#else
     width_ = width;
     height_ = height;
 
@@ -48,12 +63,9 @@ bool WindowContext::initialize(int width, int height, const std::string& title) 
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
-    window_ = SDL_CreateWindow(
-        title.c_str(),
-        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        width_, height_,
-        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
-    );
+    window_ = SDL_CreateWindow(title.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+                               width_, height_,
+                               SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 
     if (!window_) {
         std::cerr << "SDL_CreateWindow failed: " << SDL_GetError() << std::endl;
@@ -70,7 +82,7 @@ bool WindowContext::initialize(int width, int height, const std::string& title) 
         return false;
     }
     SDL_GL_MakeCurrent(window_, gl_context_);
-    SDL_GL_SetSwapInterval(1); // vsync
+    SDL_GL_SetSwapInterval(1);  // vsync
 
     // Initialize ImGui
     IMGUI_CHECKVERSION();
@@ -93,19 +105,24 @@ bool WindowContext::initialize(int width, int height, const std::string& title) 
 
     initialized_ = true;
     return true;
+#endif
 }
 
+#ifndef AMPLITRON_HEADLESS
 void WindowContext::load_fonts() {
     dpi_scale_ = 1.0f;
     int draw_w = width_, draw_h = height_;
     SDL_GL_GetDrawableSize(window_, &draw_w, &draw_h);
-    if (width_ > 0)
+    if (width_ > 0) {
         dpi_scale_ = static_cast<float>(draw_w) / static_cast<float>(width_);
+    }
 
 #ifdef __EMSCRIPTEN__
     if (dpi_scale_ <= 1.0f) {
         dpi_scale_ = emscripten_get_device_pixel_ratio();
-        if (dpi_scale_ <= 0.0f) dpi_scale_ = 1.0f;
+        if (dpi_scale_ <= 0.0f) {
+            dpi_scale_ = 1.0f;
+        }
     }
 #endif
 
@@ -113,12 +130,13 @@ void WindowContext::load_fonts() {
     ImGuiIO& io = ImGui::GetIO();
 
     const float base_font_size = 14.0f;
-    const float scaled_size    = base_font_size * dpi_scale_;
+    const float scaled_size = base_font_size;
 
     ImFont* loaded_font = nullptr;
     auto try_font = [&](const std::string& path) {
-        if (!loaded_font)
+        if (!loaded_font) {
             loaded_font = io.Fonts->AddFontFromFileTTF(path.c_str(), scaled_size);
+        }
     };
 
     char* base_path = SDL_GetBasePath();
@@ -127,15 +145,17 @@ void WindowContext::load_fonts() {
         SDL_free(base_path);
     }
     try_font("assets/fonts/Roboto-Medium.ttf");
+#ifdef __EMSCRIPTEN__
+    try_font("/assets/fonts/Roboto-Medium.ttf");
+#endif
     try_font("../assets/fonts/Roboto-Medium.ttf");
     try_font("external/imgui/misc/fonts/Roboto-Medium.ttf");
     try_font("../external/imgui/misc/fonts/Roboto-Medium.ttf");
 
     if (!loaded_font) {
         io.Fonts->AddFontDefault();
-        io.FontGlobalScale = 1.0f;
     } else {
-        io.FontGlobalScale = 1.0f / dpi_scale_;
+        io.FontGlobalScale = 1.0f;
     }
 }
 
@@ -147,25 +167,27 @@ void WindowContext::load_icon() {
         SDL_free(base);
     }
     NSVGimage* svg = nullptr;
-    if (!icon_path.empty())
+    if (!icon_path.empty()) {
         svg = nsvgParseFromFile(icon_path.c_str(), "px", 96.0f);
-    if (!svg)
+    }
+    if (!svg) {
         svg = nsvgParseFromFile("../assets/icon.svg", "px", 96.0f);
-    if (!svg)
+    }
+    if (!svg) {
         svg = nsvgParseFromFile("assets/icon.svg", "px", 96.0f);
+    }
+
     if (svg) {
         const int icon_size = 64;
         NSVGrasterizer* rast = nsvgCreateRasterizer();
         if (rast) {
             unsigned char* img = new unsigned char[icon_size * icon_size * 4];
-            nsvgRasterize(rast, svg, 0, 0,
-                         icon_size / svg->width,
-                         img, icon_size, icon_size,
-                         icon_size * 4);
+            nsvgRasterize(rast, svg, 0, 0, icon_size / svg->width, img, icon_size, icon_size,
+                          icon_size * 4);
 
-            SDL_Surface* icon = SDL_CreateRGBSurfaceFrom(
-                img, icon_size, icon_size, 32, icon_size * 4,
-                0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
+            SDL_Surface* icon =
+                SDL_CreateRGBSurfaceFrom(img, icon_size, icon_size, 32, icon_size * 4, 0x000000FF,
+                                         0x0000FF00, 0x00FF0000, 0xFF000000);
             if (icon) {
                 SDL_SetWindowIcon(window_, icon);
                 SDL_FreeSurface(icon);
@@ -178,11 +200,13 @@ void WindowContext::load_icon() {
         std::cerr << "Warning: Could not load assets/icon.svg" << std::endl;
     }
 }
+#endif
 
 void WindowContext::shutdown() {
     if (!initialized_) return;
     initialized_ = false;
 
+#ifndef AMPLITRON_HEADLESS
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
@@ -196,15 +220,21 @@ void WindowContext::shutdown() {
         window_ = nullptr;
     }
     SDL_Quit();
+#endif
 }
 
 bool WindowContext::poll_events() {
+#ifdef AMPLITRON_HEADLESS
+    if (g_mock_window_context_poll_events_fail) {
+        return false;
+    }
+    return true;
+#else
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
         ImGui_ImplSDL2_ProcessEvent(&event);
         if (event.type == SDL_QUIT) return false;
-        if (event.type == SDL_WINDOWEVENT &&
-            event.window.event == SDL_WINDOWEVENT_CLOSE &&
+        if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE &&
             event.window.windowID == SDL_GetWindowID(window_))
             return false;
     }
@@ -212,15 +242,19 @@ bool WindowContext::poll_events() {
         SDL_GetWindowSize(window_, &width_, &height_);
     }
     return true;
+#endif
 }
 
 void WindowContext::begin_frame() {
+#ifndef AMPLITRON_HEADLESS
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
+#endif
 }
 
 void WindowContext::end_frame() {
+#ifndef AMPLITRON_HEADLESS
     ImGui::Render();
     int display_w, display_h;
     SDL_GL_GetDrawableSize(window_, &display_w, &display_h);
@@ -229,6 +263,7 @@ void WindowContext::end_frame() {
     glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     SDL_GL_SwapWindow(window_);
+#endif
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

@@ -1,35 +1,36 @@
 #pragma once
 
-#include "gui/ui_component.h"
+#include <cstdint>
 #include <functional>
 #include <string>
-#include <cstdint>
+
+#include "gui/ui_component.h"
 
 namespace Amplitron {
 
 struct RecordingProps {
-    bool    is_recording   = false;
-    bool    is_paused      = false;
-    bool    has_unsaved    = false;
-    float   duration       = 0.0f;
-    float   current_peak   = 0.0f;
+    bool is_recording = false;
+    bool is_paused = false;
+    bool has_unsaved = false;
+    float duration = 0.0f;
+    float current_peak = 0.0f;
     int64_t samples_written = 0;
-    int     channels       = 1;
-    int     sample_rate    = 44100;
+    int channels = 1;
+    int sample_rate = 44100;
 
     // Waveform preview (valid only while is_recording == true)
-    const float* waveform_buf  = nullptr;
-    int          waveform_size = 0;
+    const float* waveform_buf = nullptr;
+    int waveform_size = 0;
 
     std::function<void()> on_resume;
     std::function<void()> on_pause;
-    std::function<void()> on_stop;    // stops recording; GuiManager then calls render_save_dialog
+    std::function<void()> on_stop;  // stops recording; GuiManager then calls render_save_dialog
     std::function<void()> on_start;
     std::function<void()> on_discard;
 };
 
 struct RecordingState {
-    bool        needs_save = false;   // true after stop/save-as is requested
+    bool needs_save = false;  // true after stop/save-as is requested
     std::string status_msg;
 };
 
@@ -47,7 +48,7 @@ struct RecordingState {
  *      file picker and invokes the callback with the destination path.
  */
 class GuiRecording : public UIComponent<RecordingProps, RecordingState> {
-public:
+   public:
     GuiRecording() = default;
 
     /** @brief Render recording controls (start/stop/pause/waveform). */
@@ -66,4 +67,4 @@ public:
     bool needs_save_dialog() const { return state_.needs_save; }
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

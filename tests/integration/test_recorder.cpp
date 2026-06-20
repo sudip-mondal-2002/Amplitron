@@ -1,12 +1,12 @@
-#include "test_framework.h"
-#include "audio/recorder/recorder.h"
-#include "audio/engine/audio_engine.h"
-#include <nlohmann/json.hpp>
-
-#include <fstream>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
-#include <cmath>
+#include <fstream>
+#include <nlohmann/json.hpp>
+
+#include "audio/engine/audio_engine.h"
+#include "audio/recorder/recorder.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 
@@ -71,7 +71,7 @@ TEST(recorder_writes_samples) {
     ASSERT_TRUE(ok);
 
     // Write a sine wave
-    const int num_samples = 4800; // 0.1 seconds
+    const int num_samples = 4800;  // 0.1 seconds
     float buf[num_samples];
     for (int i = 0; i < num_samples; ++i)
         buf[i] = std::sin(2.0f * 3.14159265f * 440.0f * i / 48000.0f);
@@ -125,7 +125,7 @@ TEST(recorder_duration_increases) {
     std::string path = "recordings/test_rec_duration.wav";
 
     rec.start(path, 48000, 1);
-    ASSERT_NEAR(rec.get_duration(), 0.0f, 1.0f); // just started
+    ASSERT_NEAR(rec.get_duration(), 0.0f, 1.0f);  // just started
 
     // Write 48000 samples = 1 second
     float buf[48000];
@@ -399,10 +399,10 @@ TEST(recorder_wav_header_riff_size_no_overflow_at_large_sample_count) {
     const int64_t large_data_size = static_cast<int64_t>(0xFFFFFFD8LL);
 
     // Replicate the fixed formula
-    uint32_t data_size = static_cast<uint32_t>(
-        (large_data_size > static_cast<int64_t>(0xFFFFFFD8LL))
-            ? 0xFFFFFFD8u
-            : static_cast<uint32_t>(large_data_size));
+    uint32_t data_size =
+        static_cast<uint32_t>((large_data_size > static_cast<int64_t>(0xFFFFFFD8LL))
+                                  ? 0xFFFFFFD8u
+                                  : static_cast<uint32_t>(large_data_size));
     uint32_t riff_size = data_size + 36u;
 
     // riff_size must not wrap around (would indicate overflow)
@@ -416,10 +416,9 @@ TEST(recorder_wav_header_riff_size_clamped_beyond_4gb) {
     // The result must be clamped to 0xFFFFFFD8 and riff_size must not overflow.
     const int64_t huge_data_size = static_cast<int64_t>(0x1FFFFFFFFLL);
 
-    uint32_t data_size = static_cast<uint32_t>(
-        (huge_data_size > static_cast<int64_t>(0xFFFFFFD8LL))
-            ? 0xFFFFFFD8u
-            : static_cast<uint32_t>(huge_data_size));
+    uint32_t data_size = static_cast<uint32_t>((huge_data_size > static_cast<int64_t>(0xFFFFFFD8LL))
+                                                   ? 0xFFFFFFD8u
+                                                   : static_cast<uint32_t>(huge_data_size));
     uint32_t riff_size = data_size + 36u;
 
     ASSERT_EQ(data_size, 0xFFFFFFD8u);
@@ -506,7 +505,8 @@ TEST(recorder_stereo_write_samples_stereo_interleaves_correctly) {
     rec.stop();
     ASSERT_FALSE(rec.is_recording());
 
-    // File size should be: 44 bytes header + (256 frames * 2 channels * 2 bytes/sample) = 44 + 1024 = 1068 bytes
+    // File size should be: 44 bytes header + (256 frames * 2 channels * 2 bytes/sample) = 44 + 1024
+    // = 1068 bytes
     ASSERT_EQ(file_size(path), 44L + num_samples * 2 * 2);
 
     // Open file and verify interleaved content
@@ -536,14 +536,14 @@ TEST(recorder_write_metadata_generates_valid_json) {
     std::string path = "recordings/test_rec_metadata.wav";
 
     ASSERT_TRUE(rec.start(path, 44100, 2));
-    
+
     const int num_samples = 128;
     float left[num_samples];
     float right[num_samples];
     std::memset(left, 0, sizeof(left));
     std::memset(right, 0, sizeof(right));
     rec.write_samples_stereo(left, right, num_samples);
-    
+
     rec.stop();
 
     AudioEngine engine;
@@ -597,7 +597,7 @@ TEST(recorder_discard_removes_temp_and_metadata_files) {
 
 TEST(recorder_save_to_errors_and_edge_cases) {
     Recorder rec;
-    
+
     // Save when no recording exists
     ASSERT_FALSE(rec.save_to("recordings/no_exist.wav"));
 
@@ -612,7 +612,7 @@ TEST(recorder_save_to_errors_and_edge_cases) {
 
     // 1. Same destination path
     ASSERT_TRUE(rec.save_to(path));
-    ASSERT_FALSE(rec.has_unsaved()); // Cleared
+    ASSERT_FALSE(rec.has_unsaved());  // Cleared
 
     // Reset unsaved flag by doing another start/stop sequence
     std::remove(path.c_str());
@@ -630,9 +630,9 @@ TEST(recorder_save_to_errors_and_edge_cases) {
     // 2. Different destination path
     ASSERT_TRUE(rec.save_to(dst_path));
     ASSERT_FALSE(rec.has_unsaved());
-    ASSERT_FALSE(file_exists(path)); // Temp file removed
-    ASSERT_TRUE(file_exists(dst_path)); // New file created
-    ASSERT_FALSE(file_exists(meta_src)); // Old metadata removed
+    ASSERT_FALSE(file_exists(path));      // Temp file removed
+    ASSERT_TRUE(file_exists(dst_path));   // New file created
+    ASSERT_FALSE(file_exists(meta_src));  // Old metadata removed
 
     std::remove(dst_path.c_str());
 
@@ -642,14 +642,14 @@ TEST(recorder_save_to_errors_and_edge_cases) {
     rec.stop();
 
     ASSERT_FALSE(rec.save_to("/non_existent_folder_xyz/file.wav"));
-    
+
     rec.discard();
     std::remove(path.c_str());
 }
 
 TEST(recorder_start_invalid_params_fails) {
     Recorder rec;
-    
+
     // 1. Empty filepath
     ASSERT_FALSE(rec.start("", 48000, 1));
     ASSERT_FALSE(rec.is_recording());
@@ -667,12 +667,12 @@ TEST(recorder_start_invalid_params_fails) {
 
 TEST(recorder_waveform_sizing_boundaries) {
     Recorder rec;
-    
+
     // Waveform check when not recording (should be all 0.0f)
     float waveform[Recorder::WAVEFORM_SIZE];
     std::fill_n(waveform, Recorder::WAVEFORM_SIZE, 1.0f);
     rec.get_waveform(waveform, Recorder::WAVEFORM_SIZE);
-    
+
     for (int i = 0; i < Recorder::WAVEFORM_SIZE; ++i) {
         ASSERT_EQ(waveform[i], 0.0f);
     }

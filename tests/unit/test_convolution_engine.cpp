@@ -1,9 +1,9 @@
-#include "test_framework.h"
-#include "audio/dsp/convolution_engine.h"
-
-#include <vector>
 #include <cmath>
 #include <memory>
+#include <vector>
+
+#include "audio/dsp/convolution_engine.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 using namespace TestFramework;
@@ -11,8 +11,7 @@ using namespace TestFramework;
 TEST(ConvolutionEngine_ResetClearsState) {
     std::vector<float> ir = {1.0f, 0.5f, 0.25f};
 
-    auto kernel =
-        std::make_shared<ConvolutionKernel>(ir, 256);
+    auto kernel = std::make_shared<ConvolutionKernel>(ir, 256);
 
     ConvolutionEngine conv;
 
@@ -42,8 +41,7 @@ TEST(ConvolutionEngine_PartitionedFFTPath) {
     ir[128] = 0.5f;
     ir[512] = 0.25f;
 
-    auto kernel =
-        std::make_shared<ConvolutionKernel>(ir, 256);
+    auto kernel = std::make_shared<ConvolutionKernel>(ir, 256);
 
     ConvolutionEngine conv;
     conv.set_kernel(kernel.get());
@@ -51,8 +49,7 @@ TEST(ConvolutionEngine_PartitionedFFTPath) {
     std::vector<float> buffer(256);
 
     for (size_t i = 0; i < buffer.size(); ++i) {
-        buffer[i] =
-            std::sin(static_cast<float>(i) * 0.01f);
+        buffer[i] = std::sin(static_cast<float>(i) * 0.01f);
     }
 
     conv.process(buffer.data(), 256);
@@ -65,8 +62,7 @@ TEST(ConvolutionEngine_PartitionedFFTPath) {
 TEST(ConvolutionEngine_HasKernelAfterSetKernel) {
     std::vector<float> ir = {1.0f};
 
-    auto kernel =
-        std::make_shared<ConvolutionKernel>(ir, 256);
+    auto kernel = std::make_shared<ConvolutionKernel>(ir, 256);
 
     ConvolutionEngine conv;
 
@@ -80,8 +76,7 @@ TEST(ConvolutionEngine_HasKernelAfterSetKernel) {
 TEST(ConvolutionEngine_OverlapAddConsistency) {
     std::vector<float> ir = {1.0f, 0.5f, 0.25f};
 
-    auto kernel =
-        std::make_shared<ConvolutionKernel>(ir, 256);
+    auto kernel = std::make_shared<ConvolutionKernel>(ir, 256);
 
     ConvolutionEngine conv;
 
@@ -90,8 +85,7 @@ TEST(ConvolutionEngine_OverlapAddConsistency) {
     std::vector<float> buffer(1024);
 
     for (size_t i = 0; i < buffer.size(); ++i) {
-        buffer[i] = std::sin(
-            static_cast<float>(i) * 0.01f);
+        buffer[i] = std::sin(static_cast<float>(i) * 0.01f);
     }
 
     for (int i = 0; i < 1024; i += 256) {
@@ -106,8 +100,7 @@ TEST(ConvolutionEngine_OverlapAddConsistency) {
 TEST(ConvolutionEngine_ClearKernel) {
     std::vector<float> ir = {1.0f};
 
-    auto kernel =
-        std::make_shared<ConvolutionKernel>(ir, 256);
+    auto kernel = std::make_shared<ConvolutionKernel>(ir, 256);
 
     ConvolutionEngine conv;
 
@@ -123,8 +116,7 @@ TEST(ConvolutionEngine_ClearKernel) {
 TEST(ConvolutionEngine_SmallBlockProcessing) {
     std::vector<float> ir = {1.0f, 0.5f};
 
-    auto kernel =
-        std::make_shared<ConvolutionKernel>(ir, 64);
+    auto kernel = std::make_shared<ConvolutionKernel>(ir, 64);
 
     ConvolutionEngine conv;
 
@@ -142,8 +134,7 @@ TEST(ConvolutionEngine_SmallBlockProcessing) {
 TEST(ConvolutionEngine_ZeroInputRemainsSilent) {
     std::vector<float> ir = {1.0f, 0.5f};
 
-    auto kernel =
-        std::make_shared<ConvolutionKernel>(ir, 128);
+    auto kernel = std::make_shared<ConvolutionKernel>(ir, 128);
 
     ConvolutionEngine conv;
 
@@ -175,4 +166,3 @@ TEST(ConvolutionKernel_EmptyIR) {
 
     ASSERT_EQ(kernel.num_partitions(), 0);
 }
-

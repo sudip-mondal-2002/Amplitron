@@ -28,7 +28,7 @@ std::unique_ptr<IAudioBackend> AudioBackendFactory::create_backend(const std::st
     if (backend) {
         return backend;
     }
-    
+
     // Fallback: if not found, use first available
     auto list = get_available_backends();
     if (!list.empty()) {
@@ -41,4 +41,4 @@ std::vector<std::string> AudioBackendFactory::get_available_backends() {
     return AudioBackendRegistry::instance().available();
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

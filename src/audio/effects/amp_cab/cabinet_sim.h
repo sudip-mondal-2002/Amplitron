@@ -5,18 +5,19 @@
 // cut removes rumble, a resonant biquad models cabinet/body emphasis, and a
 // low-pass rolloff attenuates harsh high-frequency content.
 
-#include "audio/effects/core/effect.h"
-#include "audio/dsp/biquad.h"
-#include "audio/dsp/convolution_engine.h"
 #include <atomic>
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
+
+#include "audio/dsp/biquad.h"
+#include "audio/dsp/convolution_engine.h"
+#include "audio/effects/core/effect.h"
 
 namespace Amplitron {
 
 class CabinetSim : public Effect {
-public:
+   public:
     CabinetSim();
     ~CabinetSim() override;
     void process(float* buffer, int num_samples) override;
@@ -35,12 +36,12 @@ public:
     const std::string& ir_name() const { return ir_name_; }
     float ir_duration_ms() const { return ir_duration_ms_; }
 
-private:
+   private:
     std::vector<EffectParam> params_;
 
-    Biquad lp_;   // speaker rolloff
-    Biquad hp_;   // low cut
-    Biquad peak_; // resonance bump
+    Biquad lp_;    // speaker rolloff
+    Biquad hp_;    // low cut
+    Biquad peak_;  // resonance bump
 
     // --- Optional IR-based cabinet convolution ---
 
@@ -83,4 +84,4 @@ private:
     void build_kernel(int block_size);
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

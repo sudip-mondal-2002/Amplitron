@@ -14,10 +14,9 @@ template <typename T, size_t Capacity>
 class SPSCQueue {
     static_assert(Capacity > 0 && (Capacity & (Capacity - 1)) == 0,
                   "Capacity must be a power of two");
-    static_assert(std::is_trivially_copyable<T>::value,
-                  "T must be trivially copyable");
+    static_assert(std::is_trivially_copyable<T>::value, "T must be trivially copyable");
 
-public:
+   public:
     SPSCQueue() : head_(0), tail_(0) {}
 
     // Called from the producer (GUI) thread.
@@ -67,14 +66,13 @@ public:
     }
 
     size_t size() const {
-        return (head_.load(std::memory_order_acquire) - tail_.load(std::memory_order_acquire)) & kMask;
+        return (head_.load(std::memory_order_acquire) - tail_.load(std::memory_order_acquire)) &
+               kMask;
     }
 
-    size_t capacity() const {
-        return Capacity - 1;
-    }
+    size_t capacity() const { return Capacity - 1; }
 
-private:
+   private:
     static constexpr size_t kMask = Capacity - 1;
 
     // Pad to avoid false sharing between producer and consumer cache lines
@@ -86,21 +84,21 @@ private:
 // A command that the GUI thread sends to the audio thread.
 struct AudioCommand {
     enum Type : uint8_t {
-        SetEffectParam,      // Change an effect parameter value
-        SetEffectEnabled,    // Enable/disable an effect
-        SetEffectMix,        // Change effect wet/dry mix
-        SetMixerGain,        // Change mixer input gain dynamically
-        SetInputGain,        // Change master input gain
-        SetOutputGain,       // Change master output gain
-        AddEffect,           // Signal that effect list changed (swap pointer)
-        RemoveEffect,        // Signal that effect list changed
-        MoveEffect,          // Signal that effect list changed
+        SetEffectParam,    // Change an effect parameter value
+        SetEffectEnabled,  // Enable/disable an effect
+        SetEffectMix,      // Change effect wet/dry mix
+        SetMixerGain,      // Change mixer input gain dynamically
+        SetInputGain,      // Change master input gain
+        SetOutputGain,     // Change master output gain
+        AddEffect,         // Signal that effect list changed (swap pointer)
+        RemoveEffect,      // Signal that effect list changed
+        MoveEffect,        // Signal that effect list changed
     };
 
     Type type;
-    int effect_index;     // Which effect in the chain
-    int param_index;      // Which parameter within the effect
-    float value;          // The new value
+    int effect_index;  // Which effect in the chain
+    int param_index;   // Which parameter within the effect
+    float value;       // The new value
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

@@ -1,8 +1,9 @@
 #pragma once
 
-#include "gui/commands/command.h"
-#include <vector>
 #include <memory>
+#include <vector>
+
+#include "gui/commands/command.h"
 
 namespace Amplitron {
 
@@ -14,7 +15,7 @@ namespace Amplitron {
  * configurable maximum history depth (default DEFAULT_MAX_DEPTH).
  */
 class CommandHistory {
-public:
+   public:
     /** @brief Default maximum number of undo entries. */
     static constexpr int DEFAULT_MAX_DEPTH = 100;
 
@@ -79,7 +80,10 @@ public:
      * @brief Change the maximum undo depth and trim excess entries.
      * @param depth New maximum depth. Negative values are clamped to 0.
      */
-    void set_max_depth(int depth) { max_depth_ = (depth < 0) ? 0 : depth; trim(); }
+    void set_max_depth(int depth) {
+        max_depth_ = (depth < 0) ? 0 : depth;
+        trim();
+    }
 
     /** @brief Description string of the top undo command, or nullptr if empty. */
     const char* undo_description() const;
@@ -87,7 +91,7 @@ public:
     /** @brief Description string of the top redo command, or nullptr if empty. */
     const char* redo_description() const;
 
-private:
+   private:
     /** @brief Evict the oldest undo entries until the stack fits max_depth_. */
     void trim();
 
@@ -96,4 +100,4 @@ private:
     int max_depth_;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

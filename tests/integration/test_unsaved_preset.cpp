@@ -1,10 +1,11 @@
-#include "test_framework.h"
-#include "audio/engine/audio_engine.h"
-#include "audio/effects/distortion/overdrive.h"
-#include "preset_manager.h"
 #include <cstring>
 #include <memory>
 #include <vector>
+
+#include "audio/effects/distortion/overdrive.h"
+#include "audio/engine/audio_engine.h"
+#include "preset_manager.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 
@@ -60,7 +61,7 @@ TEST(presets_dirty_flag_input_gain) {
     ASSERT_TRUE(equal_preset_data(saved_state, capture_current_state(engine)));
 
     engine.set_input_gain(engine.get_input_gain() + 0.123f);
-    
+
     bool is_dirty = !equal_preset_data(saved_state, capture_current_state(engine));
     ASSERT_TRUE(is_dirty);
 
@@ -80,7 +81,7 @@ TEST(presets_dirty_on_add_effect) {
 
     auto od = std::make_shared<Overdrive>();
     engine.add_effect(od);
-    
+
     bool is_dirty = !equal_preset_data(saved_state, capture_current_state(engine));
     ASSERT_TRUE(is_dirty);
 

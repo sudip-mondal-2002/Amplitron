@@ -1,7 +1,8 @@
 #pragma once
 
-#include "common.h"
 #include <cmath>
+
+#include "common.h"
 
 namespace Amplitron {
 
@@ -18,9 +19,7 @@ struct EnvelopeFollower {
      * @param sr       Sample rate.
      * @return One-pole coefficient (pass to process()).
      */
-    static float time_to_coeff(float ms, int sr) {
-        return std::exp(-1.0f / (sr * ms * 0.001f));
-    }
+    static float time_to_coeff(float ms, int sr) { return std::exp(-1.0f / (sr * ms * 0.001f)); }
 
     /**
      * Process one sample and return the new envelope value.
@@ -47,4 +46,4 @@ struct EnvelopeFollower {
     void reset() { envelope = 0.0f; }
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

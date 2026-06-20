@@ -15,4 +15,4 @@ struct EffectParam {
     std::string tooltip;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

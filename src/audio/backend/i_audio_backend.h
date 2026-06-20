@@ -1,15 +1,16 @@
 #pragma once
 
-#include "audio/backend/audio_device_info.h"
-#include <vector>
 #include <string>
+#include <vector>
+
+#include "audio/backend/audio_device_info.h"
 
 namespace Amplitron {
 
 class IAudioEngine;
 
 class IAudioBackend {
-public:
+   public:
     virtual ~IAudioBackend() = default;
 
     virtual bool initialize(IAudioEngine* engine) = 0;
@@ -33,4 +34,4 @@ public:
     virtual int get_output_device() const = 0;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

@@ -1,11 +1,14 @@
 #pragma once
 
-#include "common.h"
-#include "gui/ui_component.h"
-#include "gui/state/snapshot_manager.h"
-#include <functional>
+#include <imgui.h>
+
 #include <array>
+#include <functional>
 #include <string>
+
+#include "common.h"
+#include "gui/state/snapshot_manager.h"
+#include "gui/ui_component.h"
 
 namespace Amplitron {
 
@@ -30,17 +33,22 @@ struct SnapshotsProps {
  * callbacks which are executed in GuiManager (where command history lives).
  */
 class GuiSnapshots : public UIComponent<SnapshotsProps> {
-public:
+   public:
     GuiSnapshots() = default;
 
     /** @brief Render the snapshot toolbar row. */
     void render() override;
 
-private:
+   private:
     static constexpr float STATUS_DISPLAY_SECONDS = 2.0f;
 
-    char  status_msg_[64] = {};
-    float status_timer_   = 0.0f;
+    char status_msg_[64] = {};
+    float status_timer_ = 0.0f;
+
+    ImVec2 button_mins_[SnapshotManager::NUM_SLOTS] = {};
+    ImVec2 button_maxs_[SnapshotManager::NUM_SLOTS] = {};
+    ImVec2 menu_item_mins_[2] = {};
+    ImVec2 menu_item_maxs_[2] = {};
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

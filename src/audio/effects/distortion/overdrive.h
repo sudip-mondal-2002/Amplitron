@@ -5,13 +5,13 @@
 // equivalent soft clip, preserving small-signal dynamics while compressing
 // peaks before tone filtering and output level scaling.
 
-#include "audio/effects/core/effect.h"
 #include "audio/dsp/biquad.h"
+#include "audio/effects/core/effect.h"
 
 namespace Amplitron {
 
 class Overdrive : public Effect {
-public:
+   public:
     Overdrive();
     void process(float* buffer, int num_samples) override;
     void reset() override;
@@ -20,7 +20,7 @@ public:
     std::vector<EffectParam>& params() override { return params_; }
     const std::vector<EffectParam>& params() const override { return params_; }
 
-private:
+   private:
     std::vector<EffectParam> params_;
     OnePole tone_lp_;
     OnePole dc_block_;
@@ -31,4 +31,4 @@ private:
     float smoothed_level_ = 0.7f;
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

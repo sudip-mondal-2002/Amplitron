@@ -5,6 +5,52 @@
 
 #include <iostream>
 
+#ifdef AMPLITRON_TESTS
+bool g_mock_rtmidi_should_fail_enumerate = false;
+bool g_mock_rtmidi_should_fail_open = false;
+bool g_mock_rtmidi_should_fail_constructor = false;
+bool g_mock_rtmidi_should_fail_close = false;
+int g_mock_rtmidi_port_count = 1;
+void (*g_mock_rtmidi_callback)(double, std::vector<unsigned char>*, void*) = nullptr;
+void* g_mock_rtmidi_user_data = nullptr;
+bool g_mock_rtmidi_port_open = false;
+
+class MockRtMidiIn {
+   public:
+    MockRtMidiIn(int = 0, const std::string& = "") {
+        if (g_mock_rtmidi_should_fail_constructor) throw RtMidiError("Mock constructor failure");
+    }
+    void ignoreTypes(bool, bool, bool) {}
+    unsigned int getPortCount() {
+        if (g_mock_rtmidi_should_fail_enumerate) throw RtMidiError("Mock port count failure");
+        return g_mock_rtmidi_port_count;
+    }
+    std::string getPortName(unsigned int index) {
+        if (index == 0) return "Mock MIDI Port";
+        throw RtMidiError("Invalid port");
+    }
+    void setCallback(void (*cb)(double, std::vector<unsigned char>*, void*), void* data) {
+        g_mock_rtmidi_callback = cb;
+        g_mock_rtmidi_user_data = data;
+    }
+    void openPort(unsigned int index, const std::string&) {
+        if (index != 0) throw RtMidiError("Invalid port");
+        if (g_mock_rtmidi_should_fail_open) throw RtMidiError("Mock open failure");
+        g_mock_rtmidi_port_open = true;
+    }
+    void closePort() {
+        if (g_mock_rtmidi_should_fail_close) throw RtMidiError("Mock close failure");
+        g_mock_rtmidi_port_open = false;
+    }
+    void cancelCallback() {
+        g_mock_rtmidi_callback = nullptr;
+        g_mock_rtmidi_user_data = nullptr;
+    }
+};
+
+#define RtMidiIn MockRtMidiIn
+#endif
+
 namespace Amplitron {
 
 // ---------------------------------------------------------------------------
@@ -13,28 +59,26 @@ namespace Amplitron {
 
 MidiManager::MidiManager() = default;
 
-MidiManager::~MidiManager() {
-    shutdown();
-}
+MidiManager::~MidiManager() { shutdown(); }
 
 // ---------------------------------------------------------------------------
 // RtMidi callback — runs on RtMidi's internal thread, must be lock-free
 // ---------------------------------------------------------------------------
 
 #ifdef __EMSCRIPTEN__
-void MidiManager::midi_callback(double /*timestamp*/,
-                                std::vector<unsigned char>* /*message*/,
-                                void* /*user_data*/) {
-}
+void MidiManager::midi_callback(double /*timestamp*/, std::vector<unsigned char>* /*message*/,
+                                void* /*user_data*/) {}
 
 bool MidiManager::initialize() { return true; }
 void MidiManager::shutdown() { close_port(); }
 std::vector<std::string> MidiManager::get_available_ports() const { return {}; }
 bool MidiManager::open_port(int /*port_index*/) { return false; }
-void MidiManager::close_port() { current_port_ = -1; current_port_name_.clear(); }
+void MidiManager::close_port() {
+    current_port_ = -1;
+    current_port_name_.clear();
+}
 #else
-void MidiManager::midi_callback(double /*timestamp*/,
-                                std::vector<unsigned char>* message,
+void MidiManager::midi_callback(double /*timestamp*/, std::vector<unsigned char>* message,
                                 void* user_data) {
     if (!message || message->size() < 3) return;
 
@@ -46,8 +90,8 @@ void MidiManager::midi_callback(double /*timestamp*/,
 
     MidiEvent event{};
     event.status = status;
-    event.data1  = (*message)[1];  // CC number
-    event.data2  = (*message)[2];  // CC value
+    event.data1 = (*message)[1];        // CC number
+    event.data2 = (*message)[2];        // CC value
     self->midi_queue_.try_push(event);  // Drop if full — acceptable for CC
 }
 
@@ -95,8 +139,7 @@ std::vector<std::string> MidiManager::get_available_ports() const {
             result.push_back(rt->getPortName(i));
         }
     } catch (const RtMidiError& e) {
-        std::cerr << "[MidiManager] Failed to enumerate MIDI ports: "
-                  << e.getMessage() << "\n";
+        std::cerr << "[MidiManager] Failed to enumerate MIDI ports: " << e.getMessage() << "\n";
     }
     return result;
 }
@@ -118,12 +161,13 @@ bool MidiManager::open_port(int port_index) {
         current_port_name_ = rt->getPortName(static_cast<unsigned int>(port_index));
         return true;
     } catch (const RtMidiError& e) {
-        std::cerr << "[MidiManager] Failed to open port " << port_index
-                  << ": " << e.getMessage() << "\n";
+        std::cerr << "[MidiManager] Failed to open port " << port_index << ": " << e.getMessage()
+                  << "\n";
         // Ensure port is closed on error
         try {
             rt->closePort();
-        } catch (...) {}
+        } catch (...) {
+        }
         current_port_ = -1;
         current_port_name_.clear();
         return false;
@@ -137,10 +181,11 @@ void MidiManager::close_port() {
     try {
         rt->cancelCallback();
         rt->closePort();
-    } catch (...) {}
+    } catch (...) {
+    }
     current_port_ = -1;
     current_port_name_.clear();
 }
 #endif
 
-} // namespace Amplitron
+}  // namespace Amplitron

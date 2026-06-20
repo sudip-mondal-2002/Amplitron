@@ -1,13 +1,16 @@
 #include "gui/views/gui_presets.h"
-#include "gui/pedalboard/pedal_board.h"
+
+#include <imgui.h>
+
+#include <algorithm>
+#include <cstdio>
+#include <cstring>
+
+#include "audio/effects/amp_cab/cabinet_sim.h"
 #include "gui/commands/command.h"
+#include "gui/pedalboard/pedal_board.h"
 #include "gui/theme/theme.h"
 #include "preset_json.h"
-#include "audio/effects/amp_cab/cabinet_sim.h"
-#include <cstring>
-#include <imgui.h>
-#include <cstdio>
-#include <algorithm>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -62,8 +65,7 @@ static PresetData capture_current_state(IAudioEngine& engine) {
  * @param b Second effect snapshot.
  * @return true if the effect data are identical.
  */
-static bool equal_effect_data(const PresetData::EffectData& a,
-                              const PresetData::EffectData& b) {
+static bool equal_effect_data(const PresetData::EffectData& a, const PresetData::EffectData& b) {
     if (a.type != b.type || a.enabled != b.enabled || a.mix != b.mix) return false;
     if (a.params.size() != b.params.size()) return false;
     if (a.metadata != b.metadata) return false;
@@ -140,8 +142,8 @@ std::string GuiPresets::preset_path_from_name(const std::string& preset_name) co
     std::string filename = preset_name;
     for (char& c : filename) {
         if (c == ' ') c = '_';
-        if (c == '/' || c == '\\' || c == ':' || c == '*' ||
-            c == '?' || c == '"' || c == '<' || c == '>' || c == '|') {
+        if (c == '/' || c == '\\' || c == ':' || c == '*' || c == '?' || c == '"' || c == '<' ||
+            c == '>' || c == '|') {
             c = '_';
         }
     }
@@ -172,14 +174,14 @@ void GuiPresets::refresh_presets(bool preserve_selection) {
         selected_preset_index_ = 0;
     }
 
-    if (selected_preset_index_ >= 0 && selected_preset_index_ < static_cast<int>(preset_files_.size())) {
+    if (selected_preset_index_ >= 0 &&
+        selected_preset_index_ < static_cast<int>(preset_files_.size())) {
         std::snprintf(preset_name_buf_, sizeof(preset_name_buf_), "%s",
                       preset_name_from_path(preset_files_[selected_preset_index_]).c_str());
     }
 }
 
-bool GuiPresets::save_named_preset(const std::string& preset_name,
-                                   const std::string& description) {
+bool GuiPresets::save_named_preset(const std::string& preset_name, const std::string& description) {
     if (preset_name.empty()) {
         preset_status_msg_ = "Error: Preset name cannot be empty.";
         return false;
@@ -191,8 +193,9 @@ bool GuiPresets::save_named_preset(const std::string& preset_name,
         return false;
     }
 
-    if (presets_.save_preset(path, preset_name, description, engine_,
-                                   midi_manager_ ? midi_manager_->mappings() : std::vector<MidiMapping>())) {
+    if (presets_.save_preset(
+            path, preset_name, description, engine_,
+            midi_manager_ ? midi_manager_->mappings() : std::vector<MidiMapping>())) {
         preset_status_msg_ = "Saved: " + preset_name;
         refresh_presets(true);
         for (int i = 0; i < static_cast<int>(preset_files_.size()); ++i) {
@@ -206,19 +209,24 @@ bool GuiPresets::save_named_preset(const std::string& preset_name,
 
 #ifdef __EMSCRIPTEN__
         std::string json_content = serialise_current_preset_to_json();
-        EM_ASM({
-            var filename = UTF8ToString($0);
-            var content = UTF8ToString($1);
-            var blob = new Blob([content], {type: "application/json"});
-            var url = URL.createObjectURL(blob);
-            var a = document.createElement("a");
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }, (preset_name + ".json").c_str(), json_content.c_str());
+        EM_ASM(
+            {
+                var filename = UTF8ToString($0);
+                var content = UTF8ToString($1);
+                var blob = new Blob([content], {
+                    type:
+                        "application/json"
+                });
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement("a");
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            },
+            (preset_name + ".json").c_str(), json_content.c_str());
 #endif
 
         return true;
@@ -261,9 +269,9 @@ bool GuiPresets::load_preset_by_index(int index) {
         float after_out = engine_.get_output_gain();
 
         history_.clear();
-        auto cmd = std::make_unique<LoadPresetCommand>(
-            engine_, std::move(before_state), before_in, before_out,
-            std::move(after_state), after_in, after_out);
+        auto cmd = std::make_unique<LoadPresetCommand>(engine_, std::move(before_state), before_in,
+                                                       before_out, std::move(after_state), after_in,
+                                                       after_out);
         history_.push_executed(std::move(cmd));
 
         selected_preset_index_ = index;
@@ -378,9 +386,7 @@ void GuiPresets::begin_new_preset() {
     mark_clean();
 }
 
-void GuiPresets::begin_save_preset() {
-    preset_dialog_is_new_ = false;
-}
+void GuiPresets::begin_save_preset() { preset_dialog_is_new_ = false; }
 
 void GuiPresets::render_save_popup(bool& show) {
     ImGui::SetNextWindowSize(ImVec2(420, 250), ImGuiCond_FirstUseEver);
@@ -400,7 +406,7 @@ void GuiPresets::render_save_popup(bool& show) {
     ImGui::Text("Description (optional):");
     ImGui::SetNextItemWidth(-1);
     ImGui::InputTextMultiline("##preset_desc", preset_desc_buf_, sizeof(preset_desc_buf_),
-                               ImVec2(-1, 60));
+                              ImVec2(-1, 60));
 
     ImGui::Spacing();
     if (preset_dialog_is_new_) {
@@ -454,24 +460,27 @@ void GuiPresets::render_load_popup(bool& show) {
 #ifdef __EMSCRIPTEN__
     ImGui::SameLine();
     if (ImGui::Button("Upload from Computer...")) {
-        EM_ASM({
-            var gui_ptr = $0;
-            var input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.json';
-            input.onchange = function(e) {
-                var file = e.target.files[0];
-                var reader = new FileReader();
-                reader.onload = function(re) {
-                    var content = re.target.result;
-                    var path = "presets/" + file.name;
-                    FS.writeFile(path, content);
-                    Module.ccall('load_preset_callback', 'v', ['number', 'string'], [gui_ptr, path]);
+        EM_ASM(
+            {
+                var gui_ptr = $0;
+                var input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = function(e) {
+                    var file = e.target.files[0];
+                    var reader = new FileReader();
+                    reader.onload = function(re) {
+                        var content = re.target.result;
+                        var path = "presets/" + file.name;
+                        FS.writeFile(path, content);
+                        Module.ccall('load_preset_callback', 'v', [ 'number', 'string' ],
+                                     [ gui_ptr, path ]);
+                    };
+                    reader.readAsText(file);
                 };
-                reader.readAsText(file);
-            };
-            input.click();
-        }, (uintptr_t)this);
+                input.click();
+            },
+            (uintptr_t)this);
         show = false;
     }
 #endif
@@ -480,7 +489,8 @@ void GuiPresets::render_load_popup(bool& show) {
     ImGui::BeginChild("PresetList", ImVec2(0, -70), true);
 
     if (preset_files_.empty()) {
-        ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
+        ImGui::TextColored(
+            ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
             "No presets found in '%s/' folder.\nSave a preset first, or place .json files there.",
             presets_.get_presets_directory().c_str());
     }
@@ -512,7 +522,9 @@ void GuiPresets::render_load_popup(bool& show) {
 }
 
 std::string GuiPresets::serialise_current_preset_to_json() const {
-    PresetData preset = capture_current_state(engine_);
+    std::string json_str = PresetManager::preset_to_json_string(engine_);
+    PresetData preset;
+    from_json_ext(json_str, preset);
     preset.name = current_preset_name();
     if (midi_manager_) {
         preset.midi_mappings = midi_manager_->mappings();
@@ -520,4 +532,4 @@ std::string GuiPresets::serialise_current_preset_to_json() const {
     return to_json_ext(preset);
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

@@ -1,13 +1,15 @@
 #include "gui/views/gui_midi.h"
+
+#include <imgui.h>
+
+#include <cstdio>
+
 #include "gui/theme/theme.h"
 #include "midi/midi_manager.h"
-#include <imgui.h>
-#include <cstdio>
 
 namespace Amplitron {
 
-GuiMidi::GuiMidi(IMidiManager& midi)
-    : midi_(midi) {}
+GuiMidi::GuiMidi(IMidiManager& midi) : midi_(midi) {}
 
 // ---------------------------------------------------------------------------
 // MIDI Settings window
@@ -15,20 +17,28 @@ GuiMidi::GuiMidi(IMidiManager& midi)
 
 static const char* target_type_label(MidiTargetType type) {
     switch (type) {
-        case MidiTargetType::EffectParam:  return "Param";
-        case MidiTargetType::EffectBypass: return "Bypass";
-        case MidiTargetType::InputGain:    return "Input Gain";
-        case MidiTargetType::OutputGain:   return "Output Gain";
-        default: break;  // Fail at compile time if enum is extended
+        case MidiTargetType::EffectParam:
+            return "Param";
+        case MidiTargetType::EffectBypass:
+            return "Bypass";
+        case MidiTargetType::InputGain:
+            return "Input Gain";
+        case MidiTargetType::OutputGain:
+            return "Output Gain";
+        default:
+            break;  // Fail at compile time if enum is extended
     }
     return "?";  // Unreachable if all cases handled
 }
 
 static const char* mode_label(MidiMappingMode mode) {
     switch (mode) {
-        case MidiMappingMode::Continuous: return "Continuous";
-        case MidiMappingMode::Toggle:     return "Toggle";
-        default: break;  // Fail at compile time if enum is extended
+        case MidiMappingMode::Continuous:
+            return "Continuous";
+        case MidiMappingMode::Toggle:
+            return "Toggle";
+        default:
+            break;  // Fail at compile time if enum is extended
     }
     return "?";  // Unreachable if all cases handled
 }
@@ -81,8 +91,7 @@ void GuiMidi::render(bool& show) {
 
     // --- Learn status ---
     if (midi_.is_learning()) {
-        ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "%s",
-                           midi_.learn_status().c_str());
+        ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "%s", midi_.learn_status().c_str());
         ImGui::SameLine();
         if (ImGui::SmallButton("Cancel Learn")) {
             midi_.cancel_learn();
@@ -113,9 +122,8 @@ void GuiMidi::render(bool& show) {
 
         // Table header
         if (ImGui::BeginTable("##MidiMappings", 6,
-                ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
-                ImGuiTableFlags_SizingStretchProp)) {
-
+                              ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
+                                  ImGuiTableFlags_SizingStretchProp)) {
             ImGui::TableSetupColumn("CC#", ImGuiTableColumnFlags_WidthFixed, 40);
             ImGui::TableSetupColumn("Ch", ImGuiTableColumnFlags_WidthFixed, 35);
             ImGui::TableSetupColumn("Target", ImGuiTableColumnFlags_WidthStretch);
@@ -197,8 +205,7 @@ bool GuiMidi::render_learn_menu_item(const std::string& effect_name,
     bool has_mapping = false;
     int mapping_cc = -1;
     for (const auto& m : midi_.mappings()) {
-        if (m.target_type == MidiTargetType::EffectParam &&
-            m.effect_name == effect_name &&
+        if (m.target_type == MidiTargetType::EffectParam && m.effect_name == effect_name &&
             m.param_name == param_name) {
             has_mapping = true;
             mapping_cc = m.cc_number;
@@ -238,8 +245,7 @@ bool GuiMidi::render_remove_mapping_item(const std::string& effect_name,
     const auto& mappings = midi_.mappings();
     for (int i = 0; i < static_cast<int>(mappings.size()); ++i) {
         if (mappings[i].target_type == MidiTargetType::EffectParam &&
-            mappings[i].effect_name == effect_name &&
-            mappings[i].param_name == param_name) {
+            mappings[i].effect_name == effect_name && mappings[i].param_name == param_name) {
             remove_idx = i;
             break;
         }
@@ -277,8 +283,7 @@ bool GuiMidi::render_remove_bypass_item(const std::string& effect_name) {
 std::string GuiMidi::get_mapping_info(const std::string& effect_name,
                                       const std::string& param_name) const {
     for (const auto& m : midi_.mappings()) {
-        if (m.target_type == MidiTargetType::EffectParam &&
-            m.effect_name == effect_name &&
+        if (m.target_type == MidiTargetType::EffectParam && m.effect_name == effect_name &&
             m.param_name == param_name) {
             return "\n\n[MIDI: CC" + std::to_string(m.cc_number) +
                    (m.mode == MidiMappingMode::Toggle ? " Toggle]" : " Range]");
@@ -287,4 +292,4 @@ std::string GuiMidi::get_mapping_info(const std::string& effect_name,
     return "";
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

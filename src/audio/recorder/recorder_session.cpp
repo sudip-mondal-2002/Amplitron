@@ -1,8 +1,9 @@
+#include <algorithm>
+#include <cmath>
+#include <iostream>
+
 #include "audio/recorder/recorder.h"
 #include "audio/recorder/recorder_impl.h"
-#include <iostream>
-#include <cmath>
-#include <algorithm>
 
 namespace Amplitron {
 
@@ -77,8 +78,8 @@ void Recorder::stop() {
     has_unsaved_ = true;
 
     float dur = get_duration();
-    std::cout << "Recording stopped: " << samples_written_.load() << " samples ("
-              << dur << "s) saved to " << filepath_ << std::endl;
+    std::cout << "Recording stopped: " << samples_written_.load() << " samples (" << dur
+              << "s) saved to " << filepath_ << std::endl;
 }
 
 void Recorder::pause() {
@@ -142,4 +143,4 @@ void Recorder::discard() {
     filepath_.clear();
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

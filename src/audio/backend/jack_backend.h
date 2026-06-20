@@ -9,7 +9,7 @@
 namespace Amplitron {
 
 class JackBackend : public IAudioBackend {
-public:
+   public:
     JackBackend();
     ~JackBackend() override;
 
@@ -40,7 +40,7 @@ public:
     IAudioEngine* get_engine() const { return engine_; }
 #endif
 
-private:
+   private:
     IAudioEngine* engine_ = nullptr;
     bool initialized_ = false;
     bool running_ = false;
@@ -53,4 +53,4 @@ private:
 #endif
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

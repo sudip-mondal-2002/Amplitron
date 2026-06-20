@@ -5,10 +5,11 @@
  * Covers toggles, instances, and full visual tuner states (disabled, active without signal,
  * active with signal) using a software ImGui context.
  */
-#include "test_framework.h"
-#include "test_fixtures.h"
-#include "gui/views/gui_tuner.h"
 #include <memory>
+
+#include "gui/views/gui_tuner.h"
+#include "test_fixtures.h"
+#include "test_framework.h"
 
 using namespace Amplitron;
 
@@ -22,7 +23,7 @@ TEST_F(PresetTest, gui_tuner_render_disabled_state) {
     GuiTuner gt;
 
     TunerProps props;
-    props.note_name_fn = [](int idx) { return "E"; };
+    props.note_name_fn = [](int /*idx*/) { return "E"; };
     gt.set_props(props);
 
     bool show = false;
@@ -36,8 +37,8 @@ TEST_F(PresetTest, gui_tuner_render_active_state_no_signal) {
     bool mute_changed_called = false;
     TunerProps props;
     props.has_signal = false;
-    props.note_name_fn = [](int idx) { return "E"; };
-    props.on_mute_changed = [&](bool m) { mute_changed_called = true; };
+    props.note_name_fn = [](int /*idx*/) { return "E"; };
+    props.on_mute_changed = [&](bool /*m*/) { mute_changed_called = true; };
     gt.set_props(props);
 
     bool show = true;
@@ -54,7 +55,7 @@ TEST_F(PresetTest, gui_tuner_render_active_state_with_signal) {
     props.octave = 2;
     props.cents = -5.5f;
     props.freq = 82.4f;
-    props.note_name_fn = [](int idx) { return "E"; };
+    props.note_name_fn = [](int /*idx*/) { return "E"; };
     gt.set_props(props);
 
     bool show = true;
