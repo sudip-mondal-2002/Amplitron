@@ -18,7 +18,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 0
 
@@ -72,7 +72,7 @@ jobs:
     needs: create-release
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Download Windows Build
       uses: actions/download-artifact@v8
@@ -109,7 +109,7 @@ jobs:
     needs: create-release
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Download macOS Build
       uses: actions/download-artifact@v8
@@ -246,7 +246,7 @@ jobs:
     needs: create-release
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Download Linux Build
       uses: actions/download-artifact@v8
@@ -278,7 +278,7 @@ jobs:
     needs: create-release
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Download Android Build
       uses: actions/download-artifact@v8
@@ -333,7 +333,7 @@ jobs:
     needs: [create-release, package-windows, package-macos, package-linux, package-android, package-ios]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Download Web Build
       uses: actions/download-artifact@v8

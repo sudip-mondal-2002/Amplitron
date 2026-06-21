@@ -184,7 +184,7 @@ jobs:
     steps:
       - name: Checkout GitHub Pages branch
         id: pages-checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         continue-on-error: true
         with:
           ref: gh-pages
