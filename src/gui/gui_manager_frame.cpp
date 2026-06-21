@@ -91,6 +91,12 @@ SettingsProps GuiManager::build_settings_props() {
     p.oboe_mode_label = engine_.get_oboe_sharing_mode_label();
 #endif
 
+    p.current_theme_index = Theme::ThemeManager::variant_index(
+        Theme::ThemeManager::active_variant());
+    p.on_theme_changed = [](int idx) {
+        Theme::ThemeManager::set_variant(Theme::ThemeManager::variant_from_index(idx));
+    };
+
     p.on_buffer_size_changed = [this](int s) { engine_.set_buffer_size(s); };
     p.on_sample_rate_changed = [this](int r) { engine_.set_sample_rate(r); };
     p.on_auto_buf_changed = [this](bool b) { engine_.set_auto_buffer_enabled(b); };
@@ -382,7 +388,7 @@ void GuiManager::render_master_controls() {
     ImGui::Text("OUTPUT");
     if (audio_muted_) {
         ImGui::SameLine();
-        ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.2f, 1.0f), "MUTED");
+        ImGui::TextColored(Theme::Stopped(), "MUTED");
     }
     float output_gain = engine_.get_output_gain();
     if (ImGui::SliderFloat("##OutputGain", &output_gain, 0.0f, 2.0f, "%.2f"))

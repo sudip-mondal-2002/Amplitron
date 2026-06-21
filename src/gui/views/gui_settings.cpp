@@ -23,14 +23,14 @@ void GuiSettings::render(bool& show) {
     ImGui::TextColored(Theme::Live(), "Guitar IN:");
     ImGui::SameLine();
     ImGui::Text("%s", p.input_device_name.c_str());
-    ImGui::TextColored(ImVec4(0.35f, 0.60f, 0.95f, 1.0f), "Speaker OUT:");
+    ImGui::TextColored(Theme::GoldDim(), "Speaker OUT:");
     ImGui::SameLine();
     ImGui::Text("%s", p.output_device_name.c_str());
     ImGui::EndChild();
 
     if (!p.device_error.empty()) {
         ImGui::Spacing();
-        ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "Device error: %s",
+        ImGui::TextColored(Theme::Stopped(), "Device error: %s",
                            p.device_error.c_str());
         ImGui::SameLine();
         if (ImGui::SmallButton("Dismiss") && p.on_clear_error) p.on_clear_error();
@@ -55,7 +55,7 @@ void GuiSettings::render(bool& show) {
     ImGui::Text("Estimated latency: %.1f ms", p.latency_ms);
 
 #ifdef AMPLITRON_ANDROID_OBOE
-    ImGui::TextColored(ImVec4(0.2f, 0.9f, 0.4f, 1.0f), "Audio backend: Oboe (%s)",
+    ImGui::TextColored(Theme::Live(), "Audio backend: Oboe (%s)",
                        p.oboe_mode_label);
 #endif
 
@@ -130,6 +130,21 @@ void GuiSettings::render(bool& show) {
         ImGui::PopID();
     }
     ImGui::EndChild();
+
+    ImGui::Separator();
+
+    // ── Theme ──
+    ImGui::TextColored(Theme::Gold(), "THEME");
+    const char* theme_labels[] = {"Dark", "Light", "High Contrast"};
+    int theme_idx = p.current_theme_index;
+    if (ImGui::Combo("App Theme", &theme_idx, theme_labels, 3)) {
+        if (p.on_theme_changed) p.on_theme_changed(theme_idx);
+    }
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip(
+            "Change the visual theme. Dark is the default vintage-amp aesthetic.\n"
+            "Light provides a brighter interface. High Contrast improves accessibility.");
+    }
 
     ImGui::Separator();
     ImGui::TextDisabled(

@@ -303,10 +303,12 @@ set(APP_SOURCES
     src/gui/pedalboard/pedal_widget_body.cpp
     src/gui/pedalboard/pedal_widget_knobs.cpp
     src/gui/commands/command_history.cpp
-    src/gui/views/gui_snapshots.cpp
-    src/gui/components/knob.cpp
     src/gui/components/footswitch.cpp
     src/gui/components/led.cpp
+    src/gui/components/screen.cpp
+    src/gui/theme/ThemeManager.cpp
+    src/gui/theme/ThemeSelectorUI.cpp
+    src/presets/preset_manager_dirs.cpp
     src/gui/components/screen.cpp
     src/presets/preset_manager_dirs.cpp
     src/presets/preset_manager_io.cpp
@@ -646,8 +648,10 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         # kiss_fft (BSD-3 bundled)
         ${KISS_FFT_SOURCES}
         # Desktop MIDI — identical between both targets regardless of backend
-        src/midi/midi_manager_mapping.cpp
+                src/midi/midi_manager_mapping.cpp
         src/midi/midi_manager_persist.cpp
+        src/gui/theme/ThemeManager.cpp
+        src/gui/theme/ThemeSelectorUI.cpp
     )
 
     add_library(amplitron_core OBJECT ${AMPLITRON_CORE_SOURCES})
@@ -693,16 +697,20 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
     )
 
     target_include_directories(Amplitron PRIVATE
-        ${CMAKE_SOURCE_DIR}/src
-        ${CMAKE_SOURCE_DIR}/src/presets
-        ${CMAKE_SOURCE_DIR}/external
-        ${CMAKE_SOURCE_DIR}/external/kiss_fft
-        ${IMGUI_DIR}
-        ${IMGUI_DIR}/backends
-        ${PORTAUDIO_INCLUDE_DIRS}
-        ${SDL2_INCLUDE_DIRS}
-        ${OPENGL_INCLUDE_DIR}
-        ${RTMIDI_INCLUDE_DIRS}
+       target_include_directories(Amplitron PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/presets
+    ${CMAKE_SOURCE_DIR}/external
+    ${CMAKE_SOURCE_DIR}/external/kiss_fft
+    ${CMAKE_SOURCE_DIR}/external/imgui
+    ${CMAKE_SOURCE_DIR}/external/imgui/backends
+)
+    ${IMGUI_DIR}
+    ${IMGUI_DIR}/backends
+    ${PORTAUDIO_INCLUDE_DIRS}
+    ${SDL2_INCLUDE_DIRS}
+    ${OPENGL_INCLUDE_DIR}
+    ${RTMIDI_INCLUDE_DIRS}
     )
 
     if(WITH_JACK AND UNIX AND NOT APPLE AND JACK_INCLUDE_DIRS)
@@ -835,6 +843,9 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         src/gui/window_context.cpp
         src/gui/gui_manager_frame.cpp
         src/gui/gui_manager_menu.cpp
+        src/gui/theme/theme.cpp
+        src/gui/theme/ThemeManager.cpp
+        src/gui/theme/ThemeSelectorUI.cpp
         src/gui/update_checker.cpp
         src/gui/views/gui_settings.cpp
         src/gui/views/gui_presets.cpp
@@ -875,18 +886,18 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
     )
 
     target_include_directories(amplitron-tests PRIVATE
-        ${CMAKE_SOURCE_DIR}/src
-        ${CMAKE_SOURCE_DIR}/src/presets
-        ${CMAKE_SOURCE_DIR}/external
-        ${CMAKE_SOURCE_DIR}/external/kiss_fft
-        ${CMAKE_SOURCE_DIR}/tests
-        ${IMGUI_DIR}
-        ${IMGUI_DIR}/backends
-        ${PORTAUDIO_INCLUDE_DIRS}
-        ${SDL2_INCLUDE_DIRS}
-        ${OPENGL_INCLUDE_DIR}
-        ${RTMIDI_INCLUDE_DIRS}
-    )
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/presets
+    ${CMAKE_SOURCE_DIR}/external
+    ${CMAKE_SOURCE_DIR}/external/kiss_fft
+    ${CMAKE_SOURCE_DIR}/tests
+    ${CMAKE_SOURCE_DIR}/external/imgui
+    ${CMAKE_SOURCE_DIR}/external/imgui/backends
+    ${PORTAUDIO_INCLUDE_DIRS}
+    ${SDL2_INCLUDE_DIRS}
+    ${OPENGL_INCLUDE_DIR}
+    ${RTMIDI_INCLUDE_DIRS}
+)
 
     if(WITH_JACK AND UNIX AND NOT APPLE AND JACK_INCLUDE_DIRS)
         target_include_directories(amplitron-tests PRIVATE ${JACK_INCLUDE_DIRS})

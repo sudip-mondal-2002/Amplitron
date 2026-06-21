@@ -31,6 +31,8 @@
 #include "gui/commands/command_history.h"
 #include "preset_manager.h"
 #include "presets/preset_json.h"
+#include "gui/theme/ThemeManager.h"
+#include "gui/theme/ThemeSelectorUI.h"
 
 // New include for Autosave
 #include "session_manager.h"

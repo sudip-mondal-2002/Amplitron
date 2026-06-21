@@ -39,6 +39,10 @@ struct SettingsProps {
     const char* oboe_mode_label = "";
 #endif
 
+    // Theme
+    int current_theme_index = 0;
+    std::function<void(int)> on_theme_changed;
+
     std::function<void(int)> on_buffer_size_changed;
     std::function<void(int)> on_sample_rate_changed;
     std::function<void(bool)> on_auto_buf_changed;

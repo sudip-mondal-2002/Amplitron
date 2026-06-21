@@ -59,6 +59,7 @@ bool GuiManager::initialize(int width, int height) {
         return false;
     }
     PresetManager::load_config();
+    Theme::ThemeManager::initialize();
 
     // MIDI: load config first; if no saved mappings, install defaults
     midi_manager_.load_config();

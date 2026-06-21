@@ -111,6 +111,7 @@ class GuiManager {
     bool show_tuner_ = false;
     bool show_midi_ = false;
     bool show_keyboard_shortcuts_ = false;
+    bool show_theme_menu_ = false;
 
     // ── Snapshot manager is now referenced from session_ ──
 

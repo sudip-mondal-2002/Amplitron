@@ -259,7 +259,8 @@ void WindowContext::end_frame() {
     int display_w, display_h;
     SDL_GL_GetDrawableSize(window_, &display_w, &display_h);
     glViewport(0, 0, display_w, display_h);
-    glClearColor(0.078f, 0.071f, 0.063f, 1.0f);
+    ImVec4 clear = Theme::ClearColor();
+    glClearColor(clear.x, clear.y, clear.z, clear.w);
     glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     SDL_GL_SwapWindow(window_);

@@ -286,6 +286,20 @@ void GuiManager::render_menu_bar() {
             if (ImGui::MenuItem("MIDI Settings", nullptr, show_midi_)) {
                 show_midi_ = !show_midi_;
             }
+            ImGui::Separator();
+            if (ImGui::BeginMenu("Theme")) {
+                const char* theme_names[] = {"Dark", "Light", "High Contrast"};
+                int current = Theme::ThemeManager::variant_index(
+                    Theme::ThemeManager::active_variant());
+                for (int i = 0; i < Theme::VARIANT_COUNT; ++i) {
+                    bool selected = (i == current);
+                    if (ImGui::MenuItem(theme_names[i], nullptr, selected)) {
+                        Theme::ThemeManager::set_variant(
+                            Theme::ThemeManager::variant_from_index(i));
+                    }
+                }
+                ImGui::EndMenu();
+            }
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Help")) {
@@ -366,7 +380,7 @@ void GuiManager::render_menu_bar() {
                 if (midi_manager_.is_port_open()) {
                     ImGui::TextColored(Theme::Live(), "%s", it->label.c_str());
                 } else {
-                    ImGui::TextColored(ImVec4(0.4f, 0.4f, 0.4f, 1.0f), "%s", it->label.c_str());
+                    ImGui::TextColored(Theme::TextDim(), "%s", it->label.c_str());
                 }
                 if (ImGui::IsItemHovered()) {
                     ImGui::SetTooltip(midi_manager_.is_port_open()
@@ -403,7 +417,7 @@ void GuiManager::render_menu_bar() {
 
     // Error banner when audio is stopped
     if (!engine_.is_running()) {
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.35f, 0.08f, 0.08f, 0.95f));
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, Theme::ErrorBg());
         ImGui::BeginChild("AudioErrorBanner", ImVec2(0, 36), true);
         ImGui::TextColored(Theme::Stopped(), "Audio stream is STOPPED.");
         ImGui::SameLine();
