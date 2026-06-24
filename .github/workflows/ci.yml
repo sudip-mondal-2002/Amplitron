@@ -21,7 +21,7 @@ jobs:
           fetch-depth: 0
 
       - name: Cache apt packages
-        uses: actions/cache@v5
+        uses: actions/cache@v4
         id: apt-cache
         with:
           path: ~/apt-cache
@@ -110,7 +110,7 @@ jobs:
 
       - name: Upload Linux Coverage
         if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: linux-coverage
           path: |
@@ -120,7 +120,7 @@ jobs:
 
       - name: Upload Build
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: linux-build
           path: build/Amplitron
@@ -214,7 +214,7 @@ jobs:
 
       - name: Upload macOS Coverage
         if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: macos-coverage
           path: |
@@ -283,7 +283,7 @@ jobs:
 
       - name: Upload Build
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: macos-build
           path: staging/
@@ -300,7 +300,7 @@ jobs:
           fetch-depth: 0
 
       - name: Cache Emscripten SDK & ports
-        uses: actions/cache@v5
+        uses: actions/cache@v4
         id: emsdk-cache
         with:
           path: |
@@ -349,7 +349,7 @@ jobs:
           emmake make -j2
 
       - name: Upload Web Build
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: web-build
           path: build-web/
@@ -365,7 +365,7 @@ jobs:
           fetch-depth: 0
 
       - name: Download web build artifact
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: web-build
           path: web-build/
@@ -400,7 +400,7 @@ jobs:
 
       - name: Upload Playwright HTML report
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: playwright-report
           path: tests/web/playwright-report/
@@ -408,7 +408,7 @@ jobs:
 
       - name: Upload Playwright test results
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: playwright-test-results
           path: tests/web/test-results/
@@ -440,7 +440,7 @@ jobs:
           cache: true
 
       - name: Restore ccache
-        uses: actions/cache@v5
+        uses: actions/cache@v4
         continue-on-error: true
         with:
           path: .ccache
@@ -539,7 +539,7 @@ jobs:
 
       - name: Upload Windows Coverage
         if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: windows-coverage
           path: |
@@ -562,7 +562,7 @@ jobs:
 
       - name: Upload Build
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: windows-build
           path: staging/
@@ -633,7 +633,7 @@ jobs:
 
       - name: Upload APK
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: android-build
           path: android/app/build/outputs/apk/release/
@@ -660,7 +660,7 @@ jobs:
 
       - name: Cache SDL2 iOS static library
         id: sdl2-ios-cache
-        uses: actions/cache@v5
+        uses: actions/cache@v4
         with:
           path: ~/sdl2-ios
           key: sdl2-ios-arm64-2.30.12
@@ -682,7 +682,7 @@ jobs:
 
       - name: Cache CMake configure output
         id: cmake-cache
-        uses: actions/cache@v5
+        uses: actions/cache@v4
         with:
           path: build-ios
           key: ios-cmake-${{ runner.os }}-${{ hashFiles('CMakeLists.txt', 'ios/Info.plist', '.github/workflows/ci.yml') }}
@@ -761,7 +761,7 @@ jobs:
 
       - name: Upload iOS App
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: ios-build
           path: ios-staging/Amplitron.ipa
@@ -781,13 +781,13 @@ jobs:
           sudo apt-get install -y --no-install-recommends lcov
 
       - name: Download Linux Coverage
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: linux-coverage
           path: coverage-linux/
 
       - name: Download macOS Coverage
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         continue-on-error: true
         id: macos-dl
         with:
@@ -795,7 +795,7 @@ jobs:
           path: coverage-macos/
 
       - name: Download Windows Coverage
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         continue-on-error: true
         id: windows-dl
         with:
@@ -828,14 +828,14 @@ jobs:
           lcov --summary merged.info $LCOV_IGNORE | tee merged-summary.txt
 
       - name: Upload Merged Coverage HTML Report
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage-report/
           retention-days: 7
 
       - name: Upload Merged Coverage Info
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: merged-coverage-summary
           path: |

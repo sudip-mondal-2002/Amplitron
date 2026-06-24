@@ -75,7 +75,7 @@ jobs:
     - uses: actions/checkout@v6
 
     - name: Download Windows Build
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@v4
       with:
         name: windows-build
         path: artifacts/windows
@@ -112,7 +112,7 @@ jobs:
     - uses: actions/checkout@v6
 
     - name: Download macOS Build
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@v4
       with:
         name: macos-build
         path: artifacts/macos
@@ -249,7 +249,7 @@ jobs:
     - uses: actions/checkout@v6
 
     - name: Download Linux Build
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@v4
       with:
         name: linux-build
         path: artifacts/linux
@@ -281,7 +281,7 @@ jobs:
     - uses: actions/checkout@v6
 
     - name: Download Android Build
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@v4
       with:
         name: android-build
         path: artifacts/android
@@ -310,7 +310,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Download iOS Build
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@v4
       with:
         name: ios-build
         path: artifacts/ios
@@ -336,7 +336,7 @@ jobs:
     - uses: actions/checkout@v6
 
     - name: Download Web Build
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@v4
       with:
         name: web-build
         path: web-demo
