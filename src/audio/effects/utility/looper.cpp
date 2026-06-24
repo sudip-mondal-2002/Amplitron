@@ -8,7 +8,7 @@
 
 namespace Amplitron {
 
-static EffectRegistrar<Looper> reg("Looper");
+static EffectRegistrar<Looper> reg_Looper("Looper");
 
 Looper::Looper() {
     params_ = {

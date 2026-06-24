@@ -738,3 +738,65 @@ TEST(json_midi_mapping_missing_fields) {
     ASSERT_EQ(p.midi_mappings[0].midi_channel, -1);
     ASSERT_EQ(p.midi_mappings[0].effect_name, "");
 }
+
+TEST(json_adl_roundtrip_graph_and_midi) {
+    PresetData original;
+    original.name = "ADL Graph Test";
+    original.routing = "graph";
+
+    PresetData::NodeData node;
+    node.id = "n1";
+    node.type = "Overdrive";
+    node.enabled = true;
+    node.mix = 0.75f;
+    node.x = 100.0f;
+    node.y = 150.0f;
+    node.params = {{"Drive", 1.5f}};
+    original.nodes.push_back(node);
+
+    PresetData::LinkData link;
+    link.src_pin = "n1.out";
+    link.dst_pin = "n2.in";
+    original.links.push_back(link);
+
+    MidiMapping m;
+    m.cc_number = 42;
+    m.midi_channel = 3;
+    m.target_type = MidiTargetType::EffectParam;
+    m.mode = MidiMappingMode::Continuous;
+    m.effect_name = "Overdrive";
+    m.param_name = "Drive";
+    original.midi_mappings.push_back(m);
+
+    // 1. Serialize using ADL to_json
+    nlohmann::json j = original;
+
+    // 2. Deserialize using ADL from_json
+    PresetData restored;
+    from_json(j, restored);
+
+    // 3. Assertions
+    ASSERT_EQ(restored.name, original.name);
+    ASSERT_EQ(restored.routing, std::string("graph"));
+
+    ASSERT_EQ(restored.nodes.size(), 1u);
+    ASSERT_EQ(restored.nodes[0].id, "n1");
+    ASSERT_EQ(restored.nodes[0].type, "Overdrive");
+    ASSERT_TRUE(restored.nodes[0].enabled);
+    ASSERT_NEAR(restored.nodes[0].mix, 0.75f, 0.001f);
+    ASSERT_NEAR(restored.nodes[0].x, 100.0f, 0.001f);
+    ASSERT_NEAR(restored.nodes[0].y, 150.0f, 0.001f);
+    ASSERT_EQ(restored.nodes[0].params.size(), 1u);
+    ASSERT_EQ(restored.nodes[0].params[0].first, "Drive");
+    ASSERT_NEAR(restored.nodes[0].params[0].second, 1.5f, 0.001f);
+
+    ASSERT_EQ(restored.links.size(), 1u);
+    ASSERT_EQ(restored.links[0].src_pin, "n1.out");
+    ASSERT_EQ(restored.links[0].dst_pin, "n2.in");
+
+    ASSERT_EQ(restored.midi_mappings.size(), 1u);
+    ASSERT_EQ(restored.midi_mappings[0].cc_number, 42);
+    ASSERT_EQ(restored.midi_mappings[0].midi_channel, 3);
+    ASSERT_EQ(restored.midi_mappings[0].effect_name, "Overdrive");
+    ASSERT_EQ(restored.midi_mappings[0].param_name, "Drive");
+}

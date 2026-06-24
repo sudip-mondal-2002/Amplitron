@@ -4,7 +4,7 @@
 
 namespace Amplitron {
 
-static EffectRegistrar<MultiBandCompressor> reg("MultiBand Compressor");
+static EffectRegistrar<MultiBandCompressor> reg_MultiBandCompressor("MultiBand Compressor");
 
 MultiBandCompressor::MultiBandCompressor() {
     params_ = {// Crossovers

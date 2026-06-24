@@ -6,14 +6,16 @@
 
 namespace Amplitron {
 
-static EffectRegistrar<Phaser> reg("Phaser");
+static EffectRegistrar<Phaser> reg_Phaser("Phaser");
 
 // Param indices
+namespace PhaserParams {
 static constexpr int P_RATE = 0;
 static constexpr int P_DEPTH = 1;
 static constexpr int P_STAGES = 2;
 static constexpr int P_FEEDBACK = 3;
 static constexpr int P_MIX = 4;
+}  // namespace PhaserParams
 
 // Stage count table: Stages param 0..3 -> 4/6/8/12 stages
 static constexpr int STAGE_COUNTS[4] = {4, 6, 8, 12};
@@ -45,6 +47,7 @@ void Phaser::set_sample_rate(int sample_rate) {
 void Phaser::process(float* buffer, int num_samples) {
     if (!enabled_) return;
 
+    using namespace PhaserParams;
     const float rate = params_[P_RATE].value;
     const float depth = params_[P_DEPTH].value;
     const int nstages = STAGE_COUNTS[(int)clamp(params_[P_STAGES].value + 0.5f, 0.0f, 3.0f)];
@@ -95,6 +98,7 @@ void Phaser::process_stereo(float* left, float* right, int num_samples) {
         return;
     }
 
+    using namespace PhaserParams;
     const float rate = params_[P_RATE].value;
     const float depth = params_[P_DEPTH].value;
     const int nstages = STAGE_COUNTS[(int)clamp(params_[P_STAGES].value + 0.5f, 0.0f, 3.0f)];

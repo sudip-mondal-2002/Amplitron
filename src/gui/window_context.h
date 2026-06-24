@@ -27,11 +27,15 @@ class WindowContext {
     float get_dpi_scale() const { return dpi_scale_; }
 
    private:
+#ifndef AMPLITRON_HEADLESS
     void load_fonts();
     void load_icon();
+#endif
 
     SDL_Window* window_ = nullptr;
+#ifndef AMPLITRON_HEADLESS
     SDL_GLContext gl_context_ = nullptr;
+#endif
     int width_ = 1280;
     int height_ = 720;
     float dpi_scale_ = 1.0f;

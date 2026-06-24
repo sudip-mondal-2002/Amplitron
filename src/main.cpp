@@ -30,6 +30,7 @@
 #include "gui/commands/command_graph.h"
 #include "gui/commands/command_history.h"
 #include "preset_manager.h"
+#include "presets/preset_json.h"
 
 // New include for Autosave
 #include "session_manager.h"
@@ -51,6 +52,7 @@ static std::atomic<bool> g_running{true};
 
 #ifdef __EMSCRIPTEN__
 static Amplitron::GuiManager* g_gui = nullptr;
+static Amplitron::AudioEngine* g_engine_ptr = nullptr;
 
 static void em_main_loop() {
     if (!g_gui || !g_gui->run_frame()) {
@@ -97,6 +99,52 @@ extern "C" EMSCRIPTEN_KEEPALIVE void on_midi_device_connected(const char* device
     if (!g_gui || !device_name) return;
 
     emscripten_log(EM_LOG_INFO, "[MIDI] Device connected: %s", device_name);
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE const char* export_preset_json() {
+    static std::string exported_json;
+    if (!g_engine_ptr) return "";
+    try {
+        exported_json = Amplitron::PresetManager::preset_to_json_string(*g_engine_ptr);
+        return exported_json.c_str();
+    } catch (...) {
+        return "";
+    }
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE void import_preset_json(const char* json_str) {
+    if (!g_engine_ptr || !json_str) return;
+    try {
+        Amplitron::PresetData preset;
+        if (!Amplitron::from_json_ext(json_str, preset)) {
+            emscripten_log(EM_LOG_ERROR, "[Web] Failed to parse imported preset JSON.");
+            return;
+        }
+
+        g_engine_ptr->clear_effects();
+        g_engine_ptr->set_input_gain(preset.input_gain);
+        g_engine_ptr->set_output_gain(preset.output_gain);
+
+        if (preset.routing == "graph") {
+            std::string repackaged_json = Amplitron::to_json_ext(preset);
+            if (Amplitron::PresetManager::graph_from_json(repackaged_json, g_engine_ptr->graph())) {
+                std::vector<std::shared_ptr<Amplitron::Effect>> loaded_effects;
+                for (const auto& node : g_engine_ptr->graph().get_nodes()) {
+                    if (node.routing_type == Amplitron::NodeRoutingType::StandardEffect &&
+                        node.pedal != nullptr) {
+                        loaded_effects.push_back(node.pedal);
+                    }
+                }
+                g_engine_ptr->restore_effects_state(loaded_effects);
+                g_engine_ptr->commit_graph_changes();
+                if (g_gui) {
+                    g_gui->force_rebuild_pedal_widgets();
+                }
+            }
+        }
+    } catch (...) {
+        emscripten_log(EM_LOG_ERROR, "[Web] Failed to parse imported preset JSON.");
+    }
 }
 
 extern "C" EMSCRIPTEN_KEEPALIVE void on_canvas_touch_gesture(float dx, float dy, float dscale,
@@ -396,6 +444,16 @@ int main(int argc, char* argv[]) {
     std::cout << "Amplitron is ready. Let's play!" << std::endl;
 #ifdef __EMSCRIPTEN__
     g_gui = gui.get();
+    g_engine_ptr = &engine;
+
+    // Synchronously hydrate preset before the first frame is rendered
+    // clang-format off
+    EM_ASM(
+        if (typeof window.hydrateSharedPreset === 'function') {
+            window.hydrateSharedPreset();
+        }
+    );
+    // clang-format on
     emscripten_set_main_loop(em_main_loop, 0, 1);
 #else
     std::atomic<bool> show_telemetry{true};
@@ -527,6 +585,7 @@ int main(int argc, char* argv[]) {
 
 #ifdef __EMSCRIPTEN__
     g_gui = nullptr;
+    g_engine_ptr = nullptr;
 #endif
 
 #ifndef AMPLITRON_HEADLESS

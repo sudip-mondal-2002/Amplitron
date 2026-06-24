@@ -23,6 +23,7 @@
 
 #include <ctime>
 #include <iostream>
+#include <nlohmann/json.hpp>
 #include <sstream>
 #include <stdexcept>
 

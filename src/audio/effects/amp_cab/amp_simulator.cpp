@@ -4,7 +4,7 @@
 
 namespace Amplitron {
 
-static EffectRegistrar<AmpSimulator> reg("Amp Sim");
+static EffectRegistrar<AmpSimulator> reg_AmpSimulator("Amp Sim");
 
 // ============================================================
 // Factory amp model library

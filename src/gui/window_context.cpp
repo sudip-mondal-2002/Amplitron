@@ -31,7 +31,22 @@ WindowContext::WindowContext() = default;
 
 WindowContext::~WindowContext() { shutdown(); }
 
+#ifdef AMPLITRON_HEADLESS
+bool g_mock_window_context_initialize_fail = false;
+bool g_mock_window_context_poll_events_fail = false;
+#endif
+
 bool WindowContext::initialize(int width, int height, const std::string& title) {
+    (void)title;
+#ifdef AMPLITRON_HEADLESS
+    if (g_mock_window_context_initialize_fail) {
+        return false;
+    }
+    width_ = width;
+    height_ = height;
+    initialized_ = true;
+    return true;
+#else
     width_ = width;
     height_ = height;
 
@@ -90,8 +105,10 @@ bool WindowContext::initialize(int width, int height, const std::string& title) 
 
     initialized_ = true;
     return true;
+#endif
 }
 
+#ifndef AMPLITRON_HEADLESS
 void WindowContext::load_fonts() {
     dpi_scale_ = 1.0f;
     int draw_w = width_, draw_h = height_;
@@ -183,11 +200,13 @@ void WindowContext::load_icon() {
         std::cerr << "Warning: Could not load assets/icon.svg" << std::endl;
     }
 }
+#endif
 
 void WindowContext::shutdown() {
     if (!initialized_) return;
     initialized_ = false;
 
+#ifndef AMPLITRON_HEADLESS
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
@@ -201,9 +220,16 @@ void WindowContext::shutdown() {
         window_ = nullptr;
     }
     SDL_Quit();
+#endif
 }
 
 bool WindowContext::poll_events() {
+#ifdef AMPLITRON_HEADLESS
+    if (g_mock_window_context_poll_events_fail) {
+        return false;
+    }
+    return true;
+#else
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
         ImGui_ImplSDL2_ProcessEvent(&event);
@@ -216,15 +242,19 @@ bool WindowContext::poll_events() {
         SDL_GetWindowSize(window_, &width_, &height_);
     }
     return true;
+#endif
 }
 
 void WindowContext::begin_frame() {
+#ifndef AMPLITRON_HEADLESS
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
+#endif
 }
 
 void WindowContext::end_frame() {
+#ifndef AMPLITRON_HEADLESS
     ImGui::Render();
     int display_w, display_h;
     SDL_GL_GetDrawableSize(window_, &display_w, &display_h);
@@ -233,6 +263,7 @@ void WindowContext::end_frame() {
     glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     SDL_GL_SwapWindow(window_);
+#endif
 }
 
 }  // namespace Amplitron

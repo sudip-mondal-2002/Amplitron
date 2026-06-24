@@ -1,3 +1,5 @@
+#include <imgui_internal.h>
+
 #include <memory>
 
 #include "audio/effects/amp_cab/amp_simulator.h"

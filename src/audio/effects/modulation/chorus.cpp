@@ -4,7 +4,7 @@
 
 namespace Amplitron {
 
-static EffectRegistrar<Chorus> reg("Chorus");
+static EffectRegistrar<Chorus> reg_Chorus("Chorus");
 
 Chorus::Chorus() {
     params_ = {

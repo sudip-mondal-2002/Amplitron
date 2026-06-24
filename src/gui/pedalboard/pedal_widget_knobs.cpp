@@ -12,6 +12,7 @@ namespace Amplitron {
 
 void PedalWidget::render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, bool is_amp,
                                bool is_tuner, bool is_ir_cab, float zoom) {
+    (void)dl;
     float knob_y_start = p0.y + Theme::KNOB_Y_START * zoom;
     if (is_ir_cab) knob_y_start = p0.y + 180 * zoom;
     auto& params = effect_->params();

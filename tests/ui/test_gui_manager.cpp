@@ -1,16 +1,87 @@
-/**
- * @file test_gui_manager.cpp
- * @brief Tests for GuiManager lifecycle and subsystem association.
- *
- * Headless-safe: constructor and accessor paths only — initialize() and
- * run_frame() require SDL+OpenGL and are not exercised here.
- */
+#include <fcntl.h>
+#include <sys/types.h>
+
+#ifndef _WIN32
+#include <sys/wait.h>
+#include <unistd.h>
+#endif
+
+// Pre-include standard library headers to protect them from macro poisoning
+#include <imgui.h>
+
+#include <algorithm>
+#include <any>
+#include <array>
+#include <atomic>
+#include <chrono>
+#include <cmath>
+#include <codecvt>
+#include <complex>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <deque>
+#include <exception>
+#include <filesystem>
+#include <fstream>
+#include <functional>
+#include <initializer_list>
+#include <iomanip>
+#include <ios>
+#include <iosfwd>
+#include <iostream>
+#include <istream>
+#include <iterator>
+#include <limits>
+#include <list>
+#include <locale>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <new>
+#include <ostream>
+#include <queue>
+#include <random>
+#include <ratio>
+#include <set>
+#include <sstream>
+#include <stack>
+#include <stdexcept>
+#include <streambuf>
+#include <string>
+#include <system_error>
+#include <thread>
+#include <type_traits>
+#include <typeinfo>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <valarray>
+#include <vector>
+
+#define private public
+#define protected public
 #include "amplitron_session.h"
+#include "audio/recorder/recorder.h"
+#include "gui/gui_manager.h"
+#include "midi/midi_manager.h"
 #include "test_fixtures.h"
 #include "test_framework.h"
-#define private public
-#include "gui/gui_manager.h"
-#undef private
+
+namespace Amplitron {
+struct GuiManagerTestAccessor {
+    static bool& get_audio_muted(GuiManager& g) { return g.audio_muted_; }
+    static void toggle_audio_mute_state(GuiManager& g) { g.toggle_audio_mute_state(); }
+    static void render_master_controls(GuiManager& g) { g.render_master_controls(); }
+    static void render_menu_bar(GuiManager& g) { g.render_menu_bar(); }
+    static RecordingProps build_recording_props(GuiManager& g) { return g.build_recording_props(); }
+    static TunerProps build_tuner_props(GuiManager& g) { return g.build_tuner_props(); }
+    static SettingsProps build_settings_props(GuiManager& g) { return g.build_settings_props(); }
+    static AnalyzerProps build_analyzer_props(GuiManager& g) { return g.build_analyzer_props(); }
+    static SnapshotsProps build_snapshots_props(GuiManager& g) { return g.build_snapshots_props(); }
+    static AudioMetricsService& get_metrics_service(GuiManager& g) { return g.metrics_service_; }
+};
+}  // namespace Amplitron
 
 using namespace Amplitron;
 
@@ -31,8 +102,9 @@ TEST(gui_manager_basic_lifecycle) {
     auto& engine = session.concrete_engine();
     engine.initialize();
 
-    // Construct GuiManager — safe without SDL/GL (constructor defers window setup)
+    // Construct GuiManager
     GuiManager gui(session);
+    gui.initialize();
 
     // Audio engine reference is correctly stored
     ASSERT_EQ(&gui.audio_engine(), &engine);
@@ -52,6 +124,7 @@ TEST(gui_manager_double_shutdown_is_safe) {
     engine.initialize();
 
     GuiManager gui(session);
+    gui.initialize();
 
     // shutdown() must guard against being called twice (initialized_ flag)
     gui.shutdown();
@@ -85,22 +158,22 @@ TEST(gui_manager_private_rendering_methods) {
     // 1. Mute/unmute
     engine.set_running_for_testing(
         true);  // Headless-safe: bypass physical soundcard start requirement
-    gui.toggle_audio_mute_state();
-    ASSERT_TRUE(gui.audio_muted_);
+    GuiManagerTestAccessor::toggle_audio_mute_state(gui);
+    ASSERT_TRUE(GuiManagerTestAccessor::get_audio_muted(gui));
 
     engine.set_running_for_testing(
         false);  // Headless-safe: manually update engine state since Pa_Stream is nullptr
-    gui.toggle_audio_mute_state();
-    ASSERT_FALSE(gui.audio_muted_);
+    GuiManagerTestAccessor::toggle_audio_mute_state(gui);
+    ASSERT_FALSE(GuiManagerTestAccessor::get_audio_muted(gui));
 
     // 2. Render master controls
-    gui.render_master_controls();
+    GuiManagerTestAccessor::render_master_controls(gui);
 
     // 3. Render menu bar (without update)
-    gui.render_menu_bar();
+    GuiManagerTestAccessor::render_menu_bar(gui);
 
     // 4. UpdateChecker tests are handled elsewhere, render menu normally
-    gui.render_menu_bar();
+    GuiManagerTestAccessor::render_menu_bar(gui);
 
     gui.shutdown();
     engine.shutdown();
@@ -116,19 +189,19 @@ TEST(gui_manager_logical_builders) {
 
     // 1. build_recording_props under various Recorder states
     {
-        auto p1 = gui.build_recording_props();
+        auto p1 = GuiManagerTestAccessor::build_recording_props(gui);
         ASSERT_FALSE(p1.is_recording);
         ASSERT_FALSE(p1.is_paused);
         ASSERT_FALSE(p1.has_unsaved);
 
         // Simulate start
         p1.on_start();
-        auto p2 = gui.build_recording_props();
+        auto p2 = GuiManagerTestAccessor::build_recording_props(gui);
         ASSERT_TRUE(p2.is_recording);
 
         // Pause and stop
         p2.on_pause();
-        auto p3 = gui.build_recording_props();
+        auto p3 = GuiManagerTestAccessor::build_recording_props(gui);
         ASSERT_TRUE(p3.is_paused);
 
         p3.on_resume();
@@ -138,19 +211,19 @@ TEST(gui_manager_logical_builders) {
 
     // 2. build_tuner_props
     {
-        auto p = gui.build_tuner_props();
+        auto p = GuiManagerTestAccessor::build_tuner_props(gui);
         ASSERT_FALSE(p.has_signal);
         p.on_mute_changed(true);
         p.on_a4_ref_changed(442.0f);
 
-        auto p2 = gui.build_tuner_props();
+        auto p2 = GuiManagerTestAccessor::build_tuner_props(gui);
         ASSERT_TRUE(p2.mute_on);
         ASSERT_NEAR(p2.a4_ref, 442.0f, 0.01f);
     }
 
     // 3. build_settings_props
     {
-        auto p = gui.build_settings_props();
+        auto p = GuiManagerTestAccessor::build_settings_props(gui);
         ASSERT_EQ(p.buffer_size, engine.get_buffer_size());
         p.on_buffer_size_changed(256);
         p.on_sample_rate_changed(48000);
@@ -159,7 +232,7 @@ TEST(gui_manager_logical_builders) {
         p.on_input_device_changed(0);
         p.on_output_device_changed(0);
 
-        auto p2 = gui.build_settings_props();
+        auto p2 = GuiManagerTestAccessor::build_settings_props(gui);
         ASSERT_EQ(p2.buffer_size, 256);
         ASSERT_EQ(p2.sample_rate, 48000);
         ASSERT_TRUE(p2.auto_buf);
@@ -167,26 +240,27 @@ TEST(gui_manager_logical_builders) {
 
     // 4. build_analyzer_props
     {
-        auto p = gui.build_analyzer_props();
-        ASSERT_TRUE(p.spectrum.smoothed_input_db ==
-                    gui.metrics_service_.spectrum_analyzer().smoothed_input_db());
+        auto p = GuiManagerTestAccessor::build_analyzer_props(gui);
+        ASSERT_TRUE(p.spectrum.smoothed_input_db == GuiManagerTestAccessor::get_metrics_service(gui)
+                                                        .spectrum_analyzer()
+                                                        .smoothed_input_db());
         p.on_set_analyzer_enabled(true);
     }
 
     // 5. build_snapshots_props
     {
-        auto p = gui.build_snapshots_props();
+        auto p = GuiManagerTestAccessor::build_snapshots_props(gui);
         ASSERT_FALSE(p.slots[0].is_filled);
 
         p.on_save_slot(0);
-        auto p2 = gui.build_snapshots_props();
+        auto p2 = GuiManagerTestAccessor::build_snapshots_props(gui);
         ASSERT_TRUE(p2.slots[0].is_filled);
         ASSERT_TRUE(p2.slots[0].is_active);
 
         p2.on_recall_slot(0);
         p2.on_clear_slot(0);
 
-        auto p3 = gui.build_snapshots_props();
+        auto p3 = GuiManagerTestAccessor::build_snapshots_props(gui);
         ASSERT_FALSE(p3.slots[0].is_filled);
     }
 

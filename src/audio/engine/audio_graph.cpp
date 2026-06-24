@@ -66,12 +66,14 @@ int AudioGraph::add_link(int source_pin_id, int dest_pin_id) {
             int out_count = 0;
             for (const auto &existing_link : links_) {
                 if (existing_link.source_pin_id == source_pin_id) {
-                    printf("add_link failed: Output pin %d already has an outgoing connection!\n",
-                           source_pin_id);
                     out_count++;
                 }
             }
             if (out_count >= 1) {
+                printf(
+                    "add_link failed: Output pin %d already has an outgoing "
+                    "connection!\n",
+                    source_pin_id);
                 return -1;  // Each output pin can only have 1 outgoing connection!
             }
         }
@@ -472,7 +474,7 @@ bool AudioGraph::remove_output_pin(int node_id, int pin_id) {
 void AudioGraph::restore_output_pin(int node_id, int pin_id, int index) {
     for (auto &node : nodes_) {
         if (node.id == node_id && node.routing_type == NodeRoutingType::Splitter) {
-            if (index >= 0 && index <= node.output_pin_ids.size()) {
+            if (index >= 0 && static_cast<size_t>(index) <= node.output_pin_ids.size()) {
                 node.output_pin_ids.insert(node.output_pin_ids.begin() + index, pin_id);
             } else {
                 node.output_pin_ids.push_back(pin_id);

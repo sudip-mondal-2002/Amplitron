@@ -4,7 +4,7 @@
 
 namespace Amplitron {
 
-static EffectRegistrar<Delay> reg("Delay");
+static EffectRegistrar<Delay> reg_Delay("Delay");
 
 Delay::Delay() {
     params_ = {{"Time", 350.0f, 10.0f, 2000.0f, 350.0f, "ms",

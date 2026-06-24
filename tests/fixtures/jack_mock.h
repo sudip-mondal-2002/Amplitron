@@ -9,6 +9,7 @@ namespace Amplitron {
 extern bool g_mock_jack_client_open_fail;
 extern bool g_mock_jack_port_register_fail;
 extern bool g_mock_jack_activate_fail;
+extern jack_status_t g_mock_jack_status;
 
 // Store process callback and argument so we can trigger it in tests
 extern int (*g_mock_jack_process_callback)(jack_nframes_t, void *);
@@ -27,5 +28,7 @@ int MOCK_jack_set_process_callback(jack_client_t *client,
 int MOCK_jack_activate(jack_client_t *client);
 int MOCK_jack_deactivate(jack_client_t *client);
 void *MOCK_jack_port_get_buffer(jack_port_t *port, jack_nframes_t nframes);
+jack_nframes_t MOCK_jack_get_sample_rate(jack_client_t *client);
+jack_nframes_t MOCK_jack_get_buffer_size(jack_client_t *client);
 }
 #endif

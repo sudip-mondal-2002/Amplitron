@@ -7,7 +7,7 @@
 
 namespace Amplitron {
 
-static EffectRegistrar<TunerPedal> reg("Tuner");
+static EffectRegistrar<TunerPedal> reg_TunerPedal("Tuner");
 
 static const char* NOTE_NAMES[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 

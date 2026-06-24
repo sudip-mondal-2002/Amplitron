@@ -61,7 +61,7 @@ class EffectFactory {
 /**
  * RAII helper that registers an effect type at static-init time.
  * Usage (in .cpp file):
- *   static EffectRegistrar<MyEffect> reg("My Effect");
+ *   static EffectRegistrar<MyEffect> reg_MyEffect("My Effect");
  */
 template <typename T>
 struct EffectRegistrar {

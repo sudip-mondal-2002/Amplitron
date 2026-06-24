@@ -3,7 +3,7 @@
 #include <atomic>
 #include <cstring>
 #include <memory>
-#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 #include <string>
 #include <vector>
 
@@ -89,28 +89,8 @@ class Effect : public IProcessor, public IParameterizable, public ISerializable,
     // These methods automatically handle saving/loading for any effect
     // that uses the EffectParam vector.
 
-    virtual nlohmann::json get_params() const override {
-        nlohmann::json j;
-        const auto& p_list = params();
-        for (const auto& p : p_list) {
-            j[p.name] = p.value;
-        }
-        j["enabled"] = enabled_.load();
-        j["mix"] = mix_.load(std::memory_order_relaxed);
-        return j;
-    }
-
-    virtual void set_params(const nlohmann::json& j) override {
-        if (j.contains("enabled")) enabled_.store(j["enabled"].get<bool>());
-        if (j.contains("mix")) mix_.store(j["mix"].get<float>(), std::memory_order_relaxed);
-
-        auto& p_list = params();
-        for (auto& p : p_list) {
-            if (j.contains(p.name)) {
-                p.value = j[p.name];
-            }
-        }
-    }
+    virtual nlohmann::json get_params() const override;
+    virtual void set_params(const nlohmann::json& j) override;
 
    protected:
     int sample_rate_ = DEFAULT_SAMPLE_RATE;
