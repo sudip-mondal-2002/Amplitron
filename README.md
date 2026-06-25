@@ -1,5 +1,6 @@
-# Amplitron - Guitar Amp Simulator
-
+<div align="center">
+  
+  # 🎸 Amplitron - Guitar Amp Simulator
 
 [![CI Build](https://github.com/sudip-mondal-2002/Amplitron/actions/workflows/ci.yml/badge.svg)](https://github.com/sudip-mondal-2002/Amplitron/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/sudip-mondal-2002/Amplitron/graph/badge.svg)](https://codecov.io/gh/sudip-mondal-2002/Amplitron)
@@ -7,23 +8,27 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Android%20%7C%20iOS-blue)](https://github.com/sudip-mondal-2002/Amplitron/releases)
 
-Professional real-time guitar amplifier simulator with ultra-low latency, 16 studio-quality effects, and a beautiful visual pedal board interface. Available as a native desktop app, Android APK, iOS app, and a browser-based web demo. Built in C++17 with PortAudio, SDL2, and Dear ImGui.
+### Professional real-time guitar amplifier simulator with ultra-low latency, 16 studio-quality effects, and a beautiful visual pedal board interface. Available as a native desktop app, Android APK, iOS app, and a browser-based web demo. Built in C++17 with PortAudio, SDL2, and Dear ImGui.
 
 <a href="https://www.producthunt.com/products/amplitron?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-amplitron" target="_blank" rel="noopener noreferrer"><img alt="Amplitron - Poor man's guitar amp | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1105240&amp;theme=light&amp;t=1774378395088"></a>
 
-**[Download Latest Release](https://github.com/sudip-mondal-2002/Amplitron/releases/latest)** | **[Visit Website](https://sudip-mondal-2002.github.io/Amplitron/)**
+### [⬇️ Download Latest Release](https://github.com/sudip-mondal-2002/Amplitron/releases/latest) | [🌐 Visit Website](https://sudip-mondal-2002.github.io/Amplitron/)
+
+</div>
+
+---
 
 ## Table of Contents
 
-- [Platform Downloads](#platform-downloads)
+- [⬇️ Platform Downloads](#platform-downloads)
   - [iOS Installation (AltStore)](#ios-installation-altstore)
-- [Demo Video](#-demo-video)
-- [Features](#features)
+- [📹 Demo Video](#-demo-video)
+- [🎯 Features](#features)
   - [Audio Engine](#audio-engine)
   - [Effects Pedals](#effects-pedals)
   - [Utilities](#utilities)
   - [Visual Pedal Board](#visual-pedal-board)
-- [Hardware Setup](#hardware-setup)
+- [🔌 Hardware Setup](#hardware-setup)
   - [What is a USB Guitar Cable?](#what-is-a-usb-guitar-cable)
   - [Compatible USB Guitar Cables](#compatible-usb-guitar-cables)
   - [Full Audio Interfaces](#full-audio-interfaces-also-supported)
@@ -31,30 +36,32 @@ Professional real-time guitar amplifier simulator with ultra-low latency, 16 stu
   - [Signal Chain](#signal-chain)
   - [How It Works](#how-it-works)
   - [Low-Latency Tips](#low-latency-tips)
-- [Building from Source](#building-from-source)
+- [🛠️ Building from Source](#building-from-source)
   - [Prerequisites](#prerequisites)
   - [Quick Start](#quick-start)
   - [Build Targets](#build-targets-makefile)
-- [Usage](#usage)
+- [🚀 Usage](#usage)
   - [Running](#running)
   - [Command-line options](#command-line-options)
   - [Controls](#controls)
   - [Default Signal Chain](#default-signal-chain)
-- [Project Structure](#project-structure)
-- [Architecture](#architecture)
+- [🗂️ Project Structure](#project-structure)
+- [🖧 Architecture](#architecture)
   - [Audio Pipeline](#audio-pipeline)
   - [DSP Techniques Used](#dsp-techniques-used)
   - [Class Diagram & Subsystems](#class-diagram--subsystems)
-- [Troubleshooting](#troubleshooting)
-- [Development & Contributing](#development--contributing)
+- [⚠️ Troubleshooting](#troubleshooting)
+- [🤝 Development & Contributing](#development--contributing)
   - [Running Tests](#running-tests)
   - [CI/CD Pipeline](#cicd-pipeline)
   - [Automatic Releases](#automatic-releases)
   - [Contributing](#contributing)
   - [Contact](#contact)
-- [License](#license)
+- [📜 License](#license)
 
-### Platform Downloads
+---
+
+## Platform Downloads
 
 | Platform      | File                          | Notes                                                    |
 | ------------- | ----------------------------- | -------------------------------------------------------- |
@@ -64,7 +71,7 @@ Professional real-time guitar amplifier simulator with ultra-low latency, 16 stu
 | Android 8.0+  | `Amplitron-Android.apk`       | Enable "Install unknown apps" in Settings                |
 | iOS 15.0+     | `Amplitron-iOS.ipa`           | See [iOS installation](#ios-installation-altstore) below |
 
-#### iOS Installation (AltStore)
+### iOS Installation (AltStore)
 
 Apple does not allow installing apps outside the App Store without a paid developer certificate, but [AltStore](https://altstore.io) makes sideloading transparent:
 
@@ -73,7 +80,9 @@ Apple does not allow installing apps outside the App Store without a paid develo
 3. Tap **Share → AltStore** to install
 4. AltStore auto-refreshes the app certificate in the background as long as your phone and computer are on the same Wi-Fi once a week — no re-installs needed
 
-## 🎬 Demo Video
+---
+
+## 📹 Demo Video
 
 Watch the first look and demo: **[Amplitron Demo - YouTube](https://youtu.be/OLGx1zYj0W4)**
 
@@ -304,7 +313,7 @@ make build
 .\build\Release\amplitron.exe
 ```
 
-### Command-line options
+### Command-Line Options
 
 | Flag              | Description            |
 | ----------------- | ---------------------- |
@@ -908,7 +917,7 @@ For bugs and feature requests, open an issue on GitHub.
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE). The audio DSP algorithms are original implementations based on well-known techniques from the audio engineering literature.
+This project is licensed under the [MIT License](LICENSE), and is free to copy and modify. The audio DSP algorithms are original implementations based on well-known techniques from the audio engineering literature.
 
 **Dependencies:**
 
