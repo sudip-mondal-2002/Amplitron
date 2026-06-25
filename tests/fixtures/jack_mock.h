@@ -28,5 +28,7 @@ int MOCK_jack_set_process_callback(jack_client_t *client,
 int MOCK_jack_activate(jack_client_t *client);
 int MOCK_jack_deactivate(jack_client_t *client);
 void *MOCK_jack_port_get_buffer(jack_port_t *port, jack_nframes_t nframes);
+jack_nframes_t MOCK_jack_get_sample_rate(jack_client_t *client);
+jack_nframes_t MOCK_jack_get_buffer_size(jack_client_t *client);
 }
 #endif
