@@ -101,13 +101,9 @@ void AudioCommandDispatcher::drain_commands(std::atomic<float>& input_gain,
             if (node_id >= 0 && node_id < static_cast<int>(dummy_effects.size())) {
                 // Comments on node_id semantics: node_id is used as a 0-based linear index fallback
                 // for the GUI and tests
-                std::cerr << "[AudioCommandDispatcher] Node ID " << node_id
-                          << " not found in executor or graph; falling back to dummy_effects index."
-                          << std::endl;
                 return dummy_effects[node_id];
             }
-            std::cerr << "[AudioCommandDispatcher] Node ID " << node_id
-                      << " lookup failed completely." << std::endl;
+            error_flag_.store(true, std::memory_order_release);
             return nullptr;
         };
 
