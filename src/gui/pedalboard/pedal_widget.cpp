@@ -155,7 +155,16 @@ void PedalWidget::render_standard_pedal(ImDrawList* dl, ImVec2 p0, ImVec2 p1, fl
     
     // Render a small styled "R" Reset button inside the top plate
     if (ImGui::Button("R", ImVec2(20 * zoom, 20 * zoom))) {
-    effect_->reset_to_defaults(); 
+        auto& p_list = effect_->params();
+        for (size_t i = 0; i < p_list.size(); ++i) {
+            float old_val = p_list[i].value;
+            float def_val = p_list[i].default_val;
+            
+            // Engine memory aur visual knobs ko reset command notify karne ke liye
+            commit_param_change(static_cast<int>(i), old_val, def_val);
+            p_list[i].value = def_val;
+        }
+    }
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("Reset all knobs on this pedal to default positions");
     }
