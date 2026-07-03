@@ -7,6 +7,7 @@
 
 #include "audio/effects/core/effect.h"
 #include "audio/engine/audio_graph.h"
+#include "audio/engine/dsp_performance_profiler.h"
 
 namespace Amplitron {
 
@@ -78,7 +79,8 @@ class AudioGraphExecutor {
 
     // Hot-path processing (Strictly allocation-free and lock-free)
     // Adjust the pedal->process signature if your pedals process strictly in-place
-    void process(const float* input, float* output, int num_samples);
+    void process(const float* input, float* output, int num_samples,
+                 DspPerformanceProfiler* profiler = nullptr);
     void update_mixer_gain(int node_id, int pin_index, float gain);
 
     std::shared_ptr<Effect> get_effect_by_node_id(int node_id) const {

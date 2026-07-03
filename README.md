@@ -90,6 +90,7 @@ Transform your computer into a complete guitar rig. Plug in your guitar via USB 
 - **Sample rates** — 44.1kHz, 48kHz, 96kHz
 - **Auto-detection of USB guitar cables** — automatically selects USB input device for guitar, laptop output for speakers
 - **Real-time input/output metering**
+- **Real-time DSP performance profiling** — tracks latency, callback budget, CPU load, deadline misses, underruns/overruns, and per-module DSP timing
 - **Adjustable input and output gain**
 - **Device selection** — choose any PortAudio-compatible input/output device, with USB devices highlighted in the UI
 
@@ -115,9 +116,10 @@ Transform your computer into a complete guitar rig. Plug in your guitar via USB 
 
 ### Utilities
 
-| Tool                | Description                                                                   |
-| ------------------- | ----------------------------------------------------------------------------- |
-| **Chromatic Tuner** | YIN pitch detection algorithm with note name, octave, and cent offset display |
+| Tool                         | Description                                                                                                  |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **Chromatic Tuner**          | YIN pitch detection algorithm with note name, octave, and cent offset display                                |
+| **DSP Performance Profiler** | Real-time latency, CPU budget, underrun/overrun, history graph, and per-DSP-module processing-time visibility |
 
 ### Visual Pedal Board
 
