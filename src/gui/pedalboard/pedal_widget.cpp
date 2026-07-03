@@ -150,6 +150,15 @@ void PedalWidget::render_standard_pedal(ImDrawList* dl, ImVec2 p0, ImVec2 p1, fl
     ImGui::Text("%s", effect_->name());
     ImGui::PopStyleColor();
 
+    ImGui::SameLine();
+    ImGui::SetCursorScreenPos(ImVec2(p0.x + 12 * zoom + ImGui::CalcTextSize(effect_->name()).x + 10 * zoom, p0.y + 11 * zoom));
+    
+    // Render a small styled "R" Reset button inside the top plate
+    if (ImGui::Button("R", ImVec2(20 * zoom, 20 * zoom))) {
+    effect_->reset_to_defaults(); 
+    if (ImGui::IsItemHovered()) {
+        ImGui::SetTooltip("Reset all knobs on this pedal to default positions");
+    }
     // Reusable status LED indicator
     float led_x = p0.x + pedal_width - 25 * zoom;
     float led_y = p0.y + 20 * zoom;

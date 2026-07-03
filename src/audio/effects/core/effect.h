@@ -91,6 +91,12 @@ class Effect : public IProcessor, public IParameterizable, public ISerializable,
 
     virtual nlohmann::json get_params() const override;
     virtual void set_params(const nlohmann::json& j) override;
+    virtual void reset_to_defaults() {
+    for (auto& p : params()) {
+        // base class vector updates the current param target back to baseline
+        p.value = p.default_val; 
+    }
+}
 
    protected:
     int sample_rate_ = DEFAULT_SAMPLE_RATE;
