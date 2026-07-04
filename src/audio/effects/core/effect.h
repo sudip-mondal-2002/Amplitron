@@ -90,28 +90,24 @@ class Effect : public IProcessor, public IParameterizable, public ISerializable,
     // that uses the EffectParam vector.
 
     virtual nlohmann::json get_params() const override;
-    virtual void set_params(const nlohmann::json& j) override;
-    virtual void reset_to_defaults() {
+            virtual void reset_to_defaults() {
         auto& p_list = params();
         for (size_t i = 0; i < p_list.size(); ++i) {
             p_list[i].value = p_list[i].default_val;
         }
     }
-}
 
-   protected:
-    int sample_rate_ = DEFAULT_SAMPLE_RATE;
-    std::atomic<bool> enabled_{true};
-    std::atomic<float> mix_{1.0f};
+    protected:
+        int sample_rate_ = DEFAULT_SAMPLE_RATE;
+        std::atomic<bool> enabled_{true};
+        std::atomic<float> mix_{1.0f};
 
-    // Wet/dry mix helper
-    void apply_mix(const float* dry, float* wet, int num_samples) {
-        float current_mix = mix_.load(std::memory_order_relaxed);
-        if (current_mix >= 1.0f) return;
-        for (int i = 0; i < num_samples; ++i) {
-            wet[i] = dry[i] * (1.0f - current_mix) + wet[i] * current_mix;
+        // Wet/dry mix helper
+        void apply_mix(const float* dry, float* wet, int num_samples) {
+            float current_mix = mix_.load(std::memory_order_relaxed);
+            if (current_mix >= 1.0f) return;
+            for (int i = 0; i < num_samples; ++i) {
+                wet[i] = dry[i] * (1.0f - current_mix) + wet[i] * current_mix;
+            }
         }
-    }
-};
-
-}  // namespace Amplitron
+    };
