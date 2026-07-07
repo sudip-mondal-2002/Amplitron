@@ -7,7 +7,7 @@
 
 namespace Amplitron {
 
-static EffectRegistrar<CabinetSim> reg("Cabinet");
+static EffectRegistrar<CabinetSim> reg_CabinetSim("Cabinet");
 
 CabinetSim::CabinetSim() {
     params_ = {

@@ -6,12 +6,14 @@
 
 namespace Amplitron {
 
-static EffectRegistrar<PitchShifter> reg("Pitch Shifter");
+static EffectRegistrar<PitchShifter> reg_PitchShifter("Pitch Shifter");
 
 // Param indices
+namespace PitchShifterParams {
 static constexpr int P_SHIFT = 0;
 static constexpr int P_FINE = 1;
 static constexpr int P_MIX = 2;
+}  // namespace PitchShifterParams
 
 // Grain window size in seconds (~23 ms at 48kHz = 1024 samples)
 static constexpr float GRAIN_WINDOW_SEC = 0.023f;
@@ -66,6 +68,7 @@ float PitchShifter::read_linear(float phase) const {
 void PitchShifter::process(float* buffer, int num_samples) {
     if (!enabled_) return;
 
+    using namespace PitchShifterParams;
     if (mix_smooth_ < 0.001f && params_[P_MIX].value < 0.001f) {
         // We process in-place, so the input buffer is already the output buffer.
         // Exit immediately
@@ -138,6 +141,7 @@ void PitchShifter::process(float* buffer, int num_samples) {
 }
 
 void PitchShifter::reset() {
+    using namespace PitchShifterParams;
     std::fill(grain_buf_.begin(), grain_buf_.end(), 0.0f);
     write_pos_ = 0;
     // Start tap B offset by half the buffer from tap A

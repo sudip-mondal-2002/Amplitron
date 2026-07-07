@@ -4,7 +4,7 @@
 
 namespace Amplitron {
 
-static EffectRegistrar<Reverb> reg("Reverb");
+static EffectRegistrar<Reverb> reg_Reverb("Reverb");
 
 // Comb filter delay lengths (in samples at 44100Hz, will be scaled)
 static const int COMB_LENGTHS[] = {1116, 1188, 1277, 1356};

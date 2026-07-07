@@ -4,6 +4,11 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <nlohmann/json.hpp>
+
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
 
 #include "audio/effects/amp_cab/cabinet_sim.h"
 #include "audio/effects/delay_reverb/reverb.h"
@@ -14,7 +19,12 @@
 #include "audio/engine/audio_engine.h"
 #include "gui/state/gui_graph_state.h"
 #include "midi/midi_manager.h"
+#define private public
+#define protected public
 #include "preset_manager.h"
+#include "presets/preset_manager_impl.h"
+#undef private
+#undef protected
 #include "test_fixtures.h"
 #include "test_framework.h"
 
@@ -275,12 +285,8 @@ TEST_F(PresetTest, set_presets_dir_copies_bundled_presets) {
     std::string test_dir = "presets/test_new_presets_dir_detailed";
     register_temp_dir(test_dir);
 
-    // Remove if it exists from a previous run
-#ifdef _WIN32
-    system(("rmdir /s /q \"" + test_dir + "\" >nul 2>&1").c_str());
-#else
-    system(("rm -rf \"" + test_dir + "\" 2>/dev/null").c_str());
-#endif
+    std::error_code ec;
+    std::filesystem::remove_all(test_dir, ec);
 
     // Set the presets directory to our test directory
     PresetManager::set_presets_dir(test_dir);
@@ -1079,6 +1085,26 @@ TEST_F(PresetTest, save_graph_all_fields) {
     engine2.shutdown();
 }
 
+TEST_F(PresetTest, manager_preset_to_json_string) {
+    GuiGraphState::get_instance().node_positions.clear();
+    engine.clear_effects();
+    auto od = std::make_shared<Overdrive>();
+    engine.add_effect(od);
+    engine.set_input_gain(0.77f);
+    engine.set_output_gain(0.88f);
+
+    std::string json = PresetManager::preset_to_json_string(engine);
+
+    // Verify basic global fields and nodes
+    auto parsed = nlohmann::json::parse(json);
+    ASSERT_NEAR(parsed["input_gain"].get<float>(), 0.77f, 1e-5f);
+    ASSERT_NEAR(parsed["output_gain"].get<float>(), 0.88f, 1e-5f);
+    ASSERT_TRUE(parsed.contains("nodes"));
+    ASSERT_TRUE(std::any_of(parsed["nodes"].begin(), parsed["nodes"].end(), [](const auto &node) {
+        return node.contains("type") && node["type"].template get<std::string>() == "overdrive";
+    }));
+}
+
 // -----------------------------------------------------------------------
 // Additional tests to cover preset_json and preset_manager_dirs/io gaps
 // -----------------------------------------------------------------------
@@ -1114,11 +1140,8 @@ TEST(PresetManagerDirs, PresetsDirCreatesIfMissing) {
     std::string test_dir = "presets/test_auto_create_dir";
 
     // Remove any previous run artifacts
-#ifdef _WIN32
-    system(("rmdir /s /q \"" + test_dir + "\" >nul 2>&1").c_str());
-#else
-    system(("rm -rf \"" + test_dir + "\" 2>/dev/null").c_str());
-#endif
+    std::error_code ec;
+    std::filesystem::remove_all(test_dir, ec);
 
     PresetManager::set_presets_dir(test_dir);
     ASSERT_TRUE(std::filesystem::exists(test_dir));
@@ -1536,4 +1559,147 @@ TEST(PresetManagerIO, SavePresetIncludesCabinetIrMetadata) {
     std::remove(path.c_str());
     std::remove(ir_path.c_str());
     engine.shutdown();
+}
+
+TEST_F(PresetTest, AdvancedPresetManagerEdgeCases) {
+    // 1. Escaping in save_config and load_config
+    // Create a path containing backslashes (and double quotes on non-Windows platforms)
+#ifdef _WIN32
+    std::string test_dir = "presets\\escape_test_dir";
+#else
+    std::string test_dir = "presets/escape_\"test\"_\\dir\\";
+#endif
+    std::filesystem::create_directories(test_dir);
+    register_temp_dir(test_dir);
+
+    PresetManager::set_presets_dir(test_dir);
+    PresetManager::save_config();
+
+    // Verify config escaping
+    std::string config_path = PresetManager::get_config_path();
+    std::string config_content = read_file(config_path);
+#ifndef _WIN32
+    ASSERT_TRUE(config_content.find("\\\"test\\\"") != std::string::npos);
+    ASSERT_TRUE(config_content.find("\\\\dir\\\\") != std::string::npos);
+#else
+    ASSERT_TRUE(config_content.find("presets\\\\escape_test_dir") != std::string::npos);
+#endif
+
+    // Clear and reload config
+    PresetManager::set_presets_dir("");
+    PresetManager::load_config();
+    std::string loaded_dir = PresetManager::get_presets_dir();
+    ASSERT_EQ(loaded_dir, test_dir);
+
+    // Clean up
+    std::remove(config_path.c_str());
+
+    // 2. Exception on set_presets_dir (permission-denied path)
+    PresetManager::set_presets_dir("/unwritable_root_path/presets_dir");
+
+    // 3. load_config parsing failures
+    {
+        // Missing key
+        std::ofstream f(config_path);
+        f << "{\"wrong_key\": \"value\"}";
+        f.close();
+        PresetManager::set_presets_dir("");
+        PresetManager::load_config();
+        ASSERT_NE(PresetManager::get_presets_dir(), "value");
+
+        // Missing colon
+        f.open(config_path);
+        f << "{\"presets_dir\" \"value\"}";
+        f.close();
+        PresetManager::set_presets_dir("");
+        PresetManager::load_config();
+        ASSERT_NE(PresetManager::get_presets_dir(), "value");
+
+        // Missing open quote
+        f.open(config_path);
+        f << "{\"presets_dir\": value\"}";
+        f.close();
+        PresetManager::set_presets_dir("");
+        PresetManager::load_config();
+        ASSERT_NE(PresetManager::get_presets_dir(), "value");
+
+        // Unclosed quote / escapes in load_config
+        f.open(config_path);
+        f << "{\"presets_dir\": \"val\\\\n\\\\\\\\\\\\\\\"unclosed}";
+        f.close();
+        PresetManager::set_presets_dir("");
+        PresetManager::load_config();
+
+        std::remove(config_path.c_str());
+    }
+}
+
+#ifdef __APPLE__
+TEST(PresetManagerDirs, AppleBundlePresetsExists) {
+    char exe_path[4096];
+    uint32_t size = sizeof(exe_path);
+    std::string target_dir;
+    if (_NSGetExecutablePath(exe_path, &size) == 0) {
+        std::string exe_str = exe_path;
+        size_t last_slash = exe_str.find_last_of("/");
+        if (last_slash != std::string::npos) {
+            target_dir = exe_str.substr(0, last_slash) + "/../Resources/presets";
+        }
+    }
+    if (target_dir.empty()) {
+        target_dir = "Resources/presets";
+    }
+
+    std::filesystem::create_directories(target_dir);
+
+    // Call get_bundled_presets_dir()
+    std::string bundled = Amplitron::get_bundled_presets_dir();
+    // It should find and return the Resources path on Apple!
+    ASSERT_TRUE(bundled.find("Resources/presets") != std::string::npos);
+
+    // Cleanup
+    std::filesystem::remove_all(std::filesystem::path(target_dir).parent_path());
+}
+#endif
+
+TEST(PresetManagerDirs, GetPresetsDirUnwritableFallback) {
+    // 1. Custom presets dir fail to create MKDIR
+#ifdef _WIN32
+    PresetManager::custom_presets_dir_ = "Q:\\invalid_unwritable_path\\presets";
+    std::string path = PresetManager::get_presets_dir();
+    ASSERT_NE(path, "Q:\\invalid_unwritable_path\\presets");
+
+    // 2. Exception/failure on user_dir creation
+    [[maybe_unused]] ScopedEnvVar env_appdata("APPDATA", "Q:\\invalid_dir");
+#else
+    PresetManager::custom_presets_dir_ = "/invalid_unwritable_path/presets";
+    std::string path = PresetManager::get_presets_dir();
+    ASSERT_NE(path, "/invalid_unwritable_path/presets");
+
+    // 2. Exception/failure on user_dir creation
+    [[maybe_unused]] ScopedEnvVar env_home("HOME", "/invalid_dir");
+#endif
+    PresetManager::custom_presets_dir_ = "";
+    std::string fallback_path = PresetManager::get_presets_dir();
+    ASSERT_EQ(fallback_path, "presets");
+}
+
+TEST(PresetManagerIO, SaveFactoryPresetsUnreadableSource) {
+    std::filesystem::create_directories("presets");
+    std::string bad_file = "presets/bad_unreadable_file_test.json";
+
+    std::ofstream f(bad_file);
+    f << "{}";
+    f.close();
+
+    // Remove read permissions
+    std::filesystem::permissions(bad_file, std::filesystem::perms::none);
+
+    // Attempt to save factory presets; it should skip the unreadable bad_file gracefully
+    PresetManager::save_factory_presets("test_dest_unreadable");
+
+    // Restore permissions for cleanup
+    std::filesystem::permissions(bad_file, std::filesystem::perms::owner_all);
+    std::remove(bad_file.c_str());
+    std::filesystem::remove_all("test_dest_unreadable");
 }

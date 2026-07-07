@@ -11,7 +11,8 @@
 
 namespace Amplitron {
 
-static void sdl_audio_callback(void* userdata, Uint8* stream, int len) {
+// Intentionally non-static so it can be accessed in unit tests for validation
+void sdl_audio_callback(void* userdata, Uint8* stream, int len) {
     auto* be = static_cast<SdlBackend*>(userdata);
     auto* engine = be->get_engine();
     if (!engine) return;
@@ -168,11 +169,13 @@ void SdlBackend::stop() {
 }
 
 std::vector<AudioDeviceInfo> SdlBackend::get_input_devices() const {
-    return {{0, "Browser Microphone", 1, 0, 48000.0, false}};
+    std::vector<AudioDeviceInfo> dev = {{0, "Browser Microphone", 1, 0, 48000.0, false}};
+    return dev;
 }
 
 std::vector<AudioDeviceInfo> SdlBackend::get_output_devices() const {
-    return {{0, "Browser Audio Output", 0, 2, 48000.0, false}};
+    std::vector<AudioDeviceInfo> dev = {{0, "Browser Audio Output", 0, 2, 48000.0, false}};
+    return dev;
 }
 
 bool SdlBackend::set_input_device(int device_index) {

@@ -1,11 +1,25 @@
+#include <algorithm>
+#include <array>
+#include <atomic>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <fstream>
+#include <functional>
+#include <memory>
+#include <mutex>
+#include <nlohmann/json.hpp>
+#include <string>
 #include <vector>
 
-#include "audio/effects/amp_cab/cabinet_sim.h"
 #include "test_framework.h"
+
+#define private public
+#define protected public
+#include "audio/effects/amp_cab/cabinet_sim.h"
+#undef private
+#undef protected
 
 using namespace Amplitron;
 using namespace TestFramework;
@@ -304,4 +318,98 @@ TEST(CabinetSim_DisabledProcessPassthrough) {
     for (float s : buf) {
         ASSERT_NEAR(s, 0.25f, 1e-6f);
     }
+}
+
+TEST(CabinetSim_IR_AdvancedSwapAndMismatch) {
+    std::string path1 = "test_cabinet_ir1.wav";
+    ASSERT_TRUE(write_wav_mono_pcm16(path1, {1.0f, 0.5f}, 48000));
+
+    CabinetSim cab;
+    cab.set_sample_rate(48000);
+    ASSERT_TRUE(cab.load_ir(path1));
+    cab.set_enabled(true);
+
+    // 1. Test wet/dry mixing
+    cab.set_mix(0.5f);
+    std::vector<float> buf(256, 1.0f);
+    cab.process(buf.data(), 256);
+    ASSERT_NE(buf[0], 1.0f);
+
+    // 2. Test active kernel swap
+    std::string path2 = "test_cabinet_ir2.wav";
+    ASSERT_TRUE(write_wav_mono_pcm16(path2, {0.5f, -0.5f}, 48000));
+    ASSERT_TRUE(cab.load_ir(path2));
+
+    std::vector<float> buf2(256, 1.0f);
+    cab.process(buf2.data(), 256);
+
+    // Swap to a third IR to delete kernel 1
+    std::string path3 = "test_cabinet_ir3.wav";
+    ASSERT_TRUE(write_wav_mono_pcm16(path3, {0.1f, -0.1f, 0.2f}, 48000));
+    ASSERT_TRUE(cab.load_ir(path3));
+    cab.process(buf2.data(), 256);
+
+    // Clear IR to swap to null and delete kernel 2
+    cab.clear_ir();
+    cab.process(buf2.data(), 256);
+
+    // Trigger sweep deletion on the GUI thread
+    ASSERT_FALSE(cab.has_ir());
+
+    // Restore IR to continue subsequent tests
+    ASSERT_TRUE(cab.load_ir(path1));
+    cab.process(buf2.data(), 256);
+
+    // 3. Test block size mismatch
+    std::vector<float> buf3(128, 1.0f);
+    cab.process(buf3.data(), 128);
+
+    // 4. Test dry buffer resizing (larger block size)
+    std::vector<float> buf4(512, 1.0f);
+    cab.process(buf4.data(), 512);
+
+    // 5. Test safe clear
+    cab.clear_ir();
+    cab.process(buf4.data(), 512);
+    ASSERT_FALSE(cab.has_ir());
+
+    std::remove(path1.c_str());
+    std::remove(path2.c_str());
+    std::remove(path3.c_str());
+}
+
+TEST(CabinetSim_IR_ManualSwapToDeleteOld) {
+    CabinetSim cab;
+    cab.set_sample_rate(48000);
+
+    std::vector<float> ir = {1.0f};
+    auto* k1 = new ConvolutionKernel(ir, 256);
+    auto* k2 = new ConvolutionKernel(ir, 256);
+    auto* k3 = new ConvolutionKernel(ir, 256);
+
+    cab.active_kernel_ = k1;
+    cab.conv_engine_.set_kernel(k1);
+    cab.expected_block_size_.store(256, std::memory_order_release);
+
+    cab.old_kernel_to_delete_.store(k2, std::memory_order_release);
+    cab.pending_kernel_.store(k3, std::memory_order_release);
+
+    std::vector<float> buf(256, 1.0f);
+    cab.process(buf.data(), 256);
+
+    ASSERT_EQ(cab.active_kernel_, k3);
+    ASSERT_EQ(cab.old_kernel_to_delete_.load(), k1);
+}
+
+TEST(CabinetSim_ResetShrunkDryBuffer) {
+    CabinetSim cab;
+    std::vector<float> empty;
+    cab.dry_buffer_.swap(empty);
+    ASSERT_LT(cab.dry_buffer_.capacity(), 1024ULL);
+
+    cab.reset();
+    ASSERT_GE(cab.dry_buffer_.capacity(), 1024ULL);
+
+    const CabinetSim& const_cab = cab;
+    ASSERT_EQ(const_cab.params().size(), cab.params().size());
 }

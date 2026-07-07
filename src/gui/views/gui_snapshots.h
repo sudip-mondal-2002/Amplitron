@@ -1,5 +1,7 @@
 #pragma once
 
+#include <imgui.h>
+
 #include <array>
 #include <functional>
 #include <string>
@@ -42,6 +44,11 @@ class GuiSnapshots : public UIComponent<SnapshotsProps> {
 
     char status_msg_[64] = {};
     float status_timer_ = 0.0f;
+
+    ImVec2 button_mins_[SnapshotManager::NUM_SLOTS] = {};
+    ImVec2 button_maxs_[SnapshotManager::NUM_SLOTS] = {};
+    ImVec2 menu_item_mins_[2] = {};
+    ImVec2 menu_item_maxs_[2] = {};
 };
 
 }  // namespace Amplitron

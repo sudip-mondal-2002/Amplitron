@@ -212,6 +212,24 @@ bool GuiManager::run_frame() {
                 recallSnapshotFromSlot(i);
             }
         }
+
+        // F1: toggle keyboard shortcuts modal
+        if (ImGui::IsKeyPressed(ImGuiKey_F1)) {
+            show_keyboard_shortcuts_ = !show_keyboard_shortcuts_;
+        }
+
+        // Ctrl+S: save preset
+        if (mod && !io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_S)) {
+            gui_presets_.begin_save_preset();
+            show_save_preset_ = true;
+        }
+
+        // Ctrl+O: load preset
+        if (mod && !io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_O)) {
+            show_load_preset_ = true;
+            gui_presets_.ensure_factory_presets();
+            gui_presets_.refresh_presets(true);
+        }
     }
 
     // ── Menu bar ──
@@ -284,6 +302,9 @@ bool GuiManager::run_frame() {
         }
     }
     if (show_midi_) gui_midi_.render(show_midi_);
+    if (show_keyboard_shortcuts_) {
+        gui_keyboard_shortcuts_.render(show_keyboard_shortcuts_);
+    }
 
     // ── Toast overlay ──
     if (toast_timer_ > 0.0f) {

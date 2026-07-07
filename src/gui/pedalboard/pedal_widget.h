@@ -19,7 +19,7 @@ class GuiMidi;
  * pointer injected with set_history().
  */
 class PedalWidget {
-    friend class TestAccessor;
+    friend struct TestAccessor;
 
    public:
     /**

@@ -30,7 +30,7 @@ EMSCRIPTEN_KEEPALIVE void load_ir_callback_screen(uintptr_t cab_ptr, const char*
 
 namespace Amplitron {
 
-// Static variables to track active knob drag states across frames for accurate undo commitment
+namespace ScreenKnobState {
 static bool s_knob_was_active = false;
 static int s_active_param_index = -1;
 static float s_param_value_before_drag = 0.0f;
@@ -39,6 +39,7 @@ static std::string s_active_knob_id = "";
 static int s_popup_active_param_index = -1;
 static float s_popup_param_value_before_edit = 0.0f;
 static std::string s_active_popup_id = "";
+}  // namespace ScreenKnobState
 
 void ScreenComponent::render(ImDrawList* dl, ImVec2 p0, float pedal_width, float zoom,
                              const ScreenProps& props) {
@@ -154,8 +155,7 @@ void ScreenComponent::render_tuner_display(ImDrawList* dl, ImVec2 p0, float peda
 
         ImGui::SetCursorScreenPos(ImVec2(cx - ml_size.x * 0.5f, display_y));
         ImGui::SetNextItemAllowOverlap();
-        ImGui::InvisibleButton("##tuner_mute_toggle", ml_size);
-        if (ImGui::IsItemClicked()) {
+        if (ImGui::InvisibleButton("##tuner_mute_toggle", ml_size)) {
             float new_val = mute_on ? 0.0f : 1.0f;
             props.effect->params()[0].value = new_val;
             if (props.engine) {
@@ -175,6 +175,7 @@ void ScreenComponent::render_tuner_display(ImDrawList* dl, ImVec2 p0, float peda
 
 void ScreenComponent::render_ir_cabinet_display(ImDrawList* dl, ImVec2 p0, float pedal_width,
                                                 float zoom, const ScreenProps& props) {
+    (void)dl;
     auto* ir_cab = dynamic_cast<CabinetSim*>(props.effect.get());
     if (ir_cab) {
         float cx = p0.x + pedal_width * 0.5f;
@@ -268,6 +269,8 @@ void ScreenComponent::render_ir_cabinet_display(ImDrawList* dl, ImVec2 p0, float
 
 void ScreenComponent::render_looper_display(ImDrawList* dl, ImVec2 p0, float pedal_width,
                                             float zoom, const ScreenProps& props) {
+    using namespace ScreenKnobState;
+    (void)dl;
     auto* looper = dynamic_cast<Looper*>(props.effect.get());
     if (!looper) return;
 
@@ -424,6 +427,7 @@ void ScreenComponent::render_looper_display(ImDrawList* dl, ImVec2 p0, float ped
 void ScreenComponent::render_multiband_compressor_display(ImDrawList* dl, ImVec2 p0,
                                                           float pedal_width, float zoom,
                                                           const ScreenProps& props) {
+    using namespace ScreenKnobState;
     auto* mb_comp = dynamic_cast<MultiBandCompressor*>(props.effect.get());
     if (!mb_comp) return;
 
@@ -826,7 +830,7 @@ void ScreenComponent::render_multiband_compressor_display(ImDrawList* dl, ImVec2
                             Theme::TEXT_DIM, tick_lbl);
             }
         } else {  // High crossover (1000 to 15000 Hz)
-            float tick_hzs[] = {1000.0f, 4000.0f, 8000.0f, 12000.0f, 15000.0f};
+            float tick_hzs[] = {500.0f, 1000.0f, 4000.0f, 8000.0f, 12000.0f, 15000.0f};
             for (float hz : tick_hzs) {
                 float norm = (hz - param.min_val) / range;
                 float ty = track_bottom - norm * (track_bottom - track_top);

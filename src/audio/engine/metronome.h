@@ -28,6 +28,12 @@ class Metronome : public IMetronome {
     // Generate next click sample
     float next_sample() override;
 
+#ifdef AMPLITRON_TESTS
+    double& test_samples_per_beat() { return metronome_samples_per_beat_; }
+    double& test_sample_counter() { return metronome_sample_counter_; }
+    int& test_click_samples_remaining() { return metronome_click_samples_remaining_; }
+#endif
+
    private:
     void update_timing();
 

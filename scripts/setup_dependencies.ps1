@@ -83,7 +83,8 @@ if (Get-Command vcpkg -ErrorAction SilentlyContinue) {
 $pa_paths = @(
     "C:\Program Files\portaudio",
     "C:\vcpkg\installed\x64-windows",
-    "$env:VCPKG_ROOT\installed\x64-windows"
+    "$env:VCPKG_ROOT\installed\x64-windows",
+    "C:\msys64\mingw64"
 )
 foreach ($p in $pa_paths) {
     if (Test-Path (Join-Path $p "include\portaudio.h")) {
@@ -110,7 +111,8 @@ $sdl_found = $false
 $sdl_paths = @(
     "C:\Program Files\SDL2",
     "C:\vcpkg\installed\x64-windows",
-    "$env:VCPKG_ROOT\installed\x64-windows"
+    "$env:VCPKG_ROOT\installed\x64-windows",
+    "C:\msys64\mingw64"
 )
 foreach ($p in $sdl_paths) {
     if ((Test-Path (Join-Path $p "include\SDL2\SDL.h")) -or (Test-Path (Join-Path $p "include\SDL.h"))) {

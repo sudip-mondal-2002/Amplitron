@@ -312,8 +312,8 @@ TEST(audio_graph_explicit_inputs_sinks) {
 TEST(graph_preset_roundtrip_single_chain) {
     AudioGraph graph;
     int n1 = graph.add_node("Input", NodeRoutingType::StandardEffect);
-    int n2 = graph.add_node("EQ", NodeRoutingType::StandardEffect);
-    int n3 = graph.add_node("Reverb", NodeRoutingType::StandardEffect);
+    graph.add_node("EQ", NodeRoutingType::StandardEffect);
+    graph.add_node("Reverb", NodeRoutingType::StandardEffect);
     int n4 = graph.add_node("Output", NodeRoutingType::StandardEffect);
 
     graph.set_node_as_input(n1, true);
@@ -346,9 +346,9 @@ TEST(audio_graph_rapid_graph_rebuild_stress) {
 
         int splitter = graph.add_node("Splitter", NodeRoutingType::Splitter);
 
-        int path_a = graph.add_node("PathA", NodeRoutingType::StandardEffect);
+        graph.add_node("PathA", NodeRoutingType::StandardEffect);
 
-        int path_b = graph.add_node("PathB", NodeRoutingType::StandardEffect);
+        graph.add_node("PathB", NodeRoutingType::StandardEffect);
 
         int merge = graph.add_node("Merge", NodeRoutingType::MergeSum);
 
@@ -380,10 +380,10 @@ TEST(audio_graph_rapid_graph_rebuild_stress) {
 TEST(graph_preset_roundtrip_parallel_amps) {
     AudioGraph graph;
     int input = graph.add_node("Input", NodeRoutingType::StandardEffect);
-    int split = graph.add_node("Splitter", NodeRoutingType::Splitter);
-    int ampA = graph.add_node("AmpA", NodeRoutingType::StandardEffect);
-    int ampB = graph.add_node("AmpB", NodeRoutingType::StandardEffect);
-    int mixer = graph.add_node("Mixer", NodeRoutingType::Mixer);
+    graph.add_node("Splitter", NodeRoutingType::Splitter);
+    graph.add_node("AmpA", NodeRoutingType::StandardEffect);
+    graph.add_node("AmpB", NodeRoutingType::StandardEffect);
+    graph.add_node("Mixer", NodeRoutingType::Mixer);
     int output = graph.add_node("Output", NodeRoutingType::StandardEffect);
 
     graph.set_node_as_input(input, true);
@@ -487,8 +487,8 @@ TEST(graph_preset_legacy_linear_preset_loads) {
 
 TEST(graph_preset_missing_node_handled_gracefully) {
     AudioGraph graph;
-    int n1 = graph.add_node("A", NodeRoutingType::StandardEffect);
-    int n2 = graph.add_node("B", NodeRoutingType::StandardEffect);
+    graph.add_node("A", NodeRoutingType::StandardEffect);
+    graph.add_node("B", NodeRoutingType::StandardEffect);
 
     auto nodes = graph.get_nodes();
     graph.add_link(nodes[0].output_pin_ids[0], nodes[1].input_pin_ids[0]);
@@ -503,9 +503,9 @@ TEST(graph_preset_missing_node_handled_gracefully) {
 
 TEST(audio_graph_link_enforcement) {
     AudioGraph graph;
-    int n1 = graph.add_node("A", NodeRoutingType::StandardEffect);
-    int n2 = graph.add_node("B", NodeRoutingType::StandardEffect);
-    int n3 = graph.add_node("C", NodeRoutingType::StandardEffect);
+    graph.add_node("A", NodeRoutingType::StandardEffect);
+    graph.add_node("B", NodeRoutingType::StandardEffect);
+    graph.add_node("C", NodeRoutingType::StandardEffect);
 
     auto nodes = graph.get_nodes();
     int l1 = graph.add_link(nodes[0].output_pin_ids[0], nodes[1].input_pin_ids[0]);
@@ -526,13 +526,13 @@ TEST(audio_graph_link_enforcement) {
 
 TEST(audio_graph_remove_node_and_link) {
     AudioGraph graph;
-    int n1 = graph.add_node("A", NodeRoutingType::StandardEffect);
+    graph.add_node("A", NodeRoutingType::StandardEffect);
     int n2 = graph.add_node("B", NodeRoutingType::StandardEffect);
-    int n3 = graph.add_node("C", NodeRoutingType::StandardEffect);
+    graph.add_node("C", NodeRoutingType::StandardEffect);
 
     auto nodes = graph.get_nodes();
     int l1 = graph.add_link(nodes[0].output_pin_ids[0], nodes[1].input_pin_ids[0]);
-    int l2 = graph.add_link(nodes[1].output_pin_ids[0], nodes[2].input_pin_ids[0]);
+    graph.add_link(nodes[1].output_pin_ids[0], nodes[2].input_pin_ids[0]);
 
     // Remove non-existent node
     ASSERT_FALSE(graph.remove_node(999));
@@ -553,7 +553,7 @@ TEST(audio_graph_remove_node_and_link) {
 TEST(audio_graph_mixer_inputs) {
     AudioGraph graph;
     // Test num_inputs > 0 case
-    int n1 = graph.add_node("Mixer", NodeRoutingType::Mixer, nullptr, 4);
+    graph.add_node("Mixer", NodeRoutingType::Mixer, nullptr, 4);
     auto nodes = graph.get_nodes();
     ASSERT_TRUE(nodes[0].input_pin_ids.size() == 4);
 }
@@ -579,7 +579,7 @@ TEST(audio_graph_repeated_executor_recompile_processing) {
 
         int input_node = graph.add_node("Input", NodeRoutingType::Splitter);
 
-        int effect_node = graph.add_node("Effect", NodeRoutingType::StandardEffect);
+        graph.add_node("Effect", NodeRoutingType::StandardEffect);
 
         int output_node = graph.add_node("Output", NodeRoutingType::MergeSum);
 
@@ -639,7 +639,7 @@ TEST(audio_graph_dynamic_topology_mutation) {
     }
 
     // Dynamically mutate the SAME graph topology
-    int inserted = graph.add_node("InsertedEffect", NodeRoutingType::StandardEffect);
+    graph.add_node("InsertedEffect", NodeRoutingType::StandardEffect);
 
     nodes = graph.get_nodes();
 
@@ -832,9 +832,9 @@ TEST(audio_graph_executor_fallback_input_and_sink_paths) {
     executor.prepare(48000, 128);
 
     // No explicit input/output nodes on purpose
-    int node_a = graph.add_node("A", NodeRoutingType::StandardEffect);
+    graph.add_node("A", NodeRoutingType::StandardEffect);
 
-    int node_b = graph.add_node("B", NodeRoutingType::StandardEffect);
+    graph.add_node("B", NodeRoutingType::StandardEffect);
 
     auto nodes = graph.get_nodes();
 
@@ -885,9 +885,9 @@ TEST(audio_graph_executor_implicit_input_output_paths) {
     AudioGraph graph;
 
     // No explicit graph input/output nodes
-    int node_a = graph.add_node("A", NodeRoutingType::StandardEffect);
+    graph.add_node("A", NodeRoutingType::StandardEffect);
 
-    int node_b = graph.add_node("B", NodeRoutingType::StandardEffect);
+    graph.add_node("B", NodeRoutingType::StandardEffect);
 
     auto nodes = graph.get_nodes();
 
@@ -963,8 +963,8 @@ TEST(audio_graph_mixer_gains) {
     graph.set_node_as_output(mixer, true);
 
     auto nodes = graph.get_nodes();
-    int path1 = graph.add_node("Path1", NodeRoutingType::StandardEffect);
-    int path2 = graph.add_node("Path2", NodeRoutingType::StandardEffect);
+    graph.add_node("Path1", NodeRoutingType::StandardEffect);
+    graph.add_node("Path2", NodeRoutingType::StandardEffect);
     int path3 = graph.add_node("Path3", NodeRoutingType::StandardEffect);
 
     nodes = graph.get_nodes();
@@ -1008,10 +1008,10 @@ TEST(audio_graph_split_merge_disconnects) {
 
     // create nodes
     int in_node = graph.add_node("Input", NodeRoutingType::StandardEffect);
-    int split_node = graph.add_node("Splitter", NodeRoutingType::Splitter);
-    int a_node = graph.add_node("A", NodeRoutingType::StandardEffect);
-    int b_node = graph.add_node("B", NodeRoutingType::StandardEffect);
-    int merge_node = graph.add_node("Merge", NodeRoutingType::MergeSum);
+    graph.add_node("Splitter", NodeRoutingType::Splitter);
+    graph.add_node("A", NodeRoutingType::StandardEffect);
+    graph.add_node("B", NodeRoutingType::StandardEffect);
+    graph.add_node("Merge", NodeRoutingType::MergeSum);
     int amp_node = graph.add_node("Amp", NodeRoutingType::StandardEffect);
 
     graph.set_node_as_input(in_node, true);
@@ -1019,7 +1019,7 @@ TEST(audio_graph_split_merge_disconnects) {
 
     auto nodes = graph.get_nodes();
     // input -> splitter
-    int l_in_split = graph.add_link(nodes[0].output_pin_ids[0], nodes[1].input_pin_ids[0]);
+    graph.add_link(nodes[0].output_pin_ids[0], nodes[1].input_pin_ids[0]);
 
     // splitter -> A
     int l_split_a = graph.add_link(nodes[1].output_pin_ids[0], nodes[2].input_pin_ids[0]);
@@ -1031,10 +1031,10 @@ TEST(audio_graph_split_merge_disconnects) {
     int l_a_merge = graph.add_link(nodes[2].output_pin_ids[0], nodes[4].input_pin_ids[0]);
 
     // B -> Merge
-    int l_b_merge = graph.add_link(nodes[3].output_pin_ids[0], nodes[4].input_pin_ids[1]);
+    graph.add_link(nodes[3].output_pin_ids[0], nodes[4].input_pin_ids[1]);
 
     // Merge -> Amp
-    int l_merge_amp = graph.add_link(nodes[4].output_pin_ids[0], nodes[5].input_pin_ids[0]);
+    graph.add_link(nodes[4].output_pin_ids[0], nodes[5].input_pin_ids[0]);
 
     // Case 1: Original produces output
     ASSERT_TRUE(graph.rebuild_topology());
@@ -1088,4 +1088,120 @@ TEST(audio_graph_split_merge_disconnects) {
     std::fill(output_audio.begin(), output_audio.end(), 0.0f);
     executor.process(input_audio.data(), output_audio.data(), 64);
     ASSERT_TRUE(output_audio[0] == 0.0f);  // No output
+}
+
+TEST(audio_graph_extra_branches) {
+    AudioGraph graph;
+
+    // 1. restore_node()
+    DSPNode node1;
+    node1.id = 10;
+    node1.name = "Node1";
+    node1.routing_type = NodeRoutingType::Mixer;
+    node1.input_pin_ids = {101, 102};
+    node1.output_pin_ids = {201};
+    node1.input_gains = {1.0f, 1.0f};
+    graph.restore_node(node1);
+
+    auto *found = graph.find_node(10);
+    ASSERT_TRUE(found != nullptr);
+    ASSERT_EQ(found->id, 10);
+
+    // 2. restore_link()
+    GraphLink link1;
+    link1.id = 50;
+    link1.source_pin_id = 201;
+    link1.dest_pin_id = 102;
+    graph.restore_link(
+        link1);  // Restoring a link that creates a cycle (source output -> self input)
+
+    // Verify the cycle link (id 50) was rejected and is absent
+    bool found_link_50 = false;
+    for (const auto &link : graph.get_links()) {
+        if (link.id == 50) {
+            found_link_50 = true;
+            break;
+        }
+    }
+    ASSERT_FALSE(found_link_50);
+
+    // 3. restore_input_pin()
+    // - Index >= 0, idx <= size
+    graph.restore_input_pin(10, 103, 1, 0.5f);
+    auto *n10 = graph.find_node(10);
+    ASSERT_TRUE(n10 != nullptr);
+    ASSERT_EQ(n10->input_pin_ids.size(), 3u);
+    ASSERT_EQ(n10->input_pin_ids[1], 103);
+
+    // - Index >= 0, idx > size
+    graph.restore_input_pin(10, 104, 10, 0.5f);
+    ASSERT_EQ(n10->input_pin_ids.size(), 4u);
+    ASSERT_EQ(n10->input_pin_ids[3], 104);
+
+    // - Index < 0 (adds pin to back in current implementation)
+    graph.restore_input_pin(10, 105, -1, 0.5f);
+    ASSERT_EQ(n10->input_pin_ids.size(), 5u);
+    ASSERT_EQ(n10->input_pin_ids[4], 105);
+
+    // 4. restore_output_pin()
+    // - Index >= 0, idx <= size
+    DSPNode splitter_node;
+    splitter_node.id = 20;
+    splitter_node.routing_type = NodeRoutingType::Splitter;
+    splitter_node.output_pin_ids = {301, 302};
+    graph.restore_node(splitter_node);
+    graph.restore_output_pin(20, 303, 1);
+
+    auto *n20 = graph.find_node(20);
+    ASSERT_TRUE(n20 != nullptr);
+    ASSERT_EQ(n20->output_pin_ids.size(), 3u);
+    ASSERT_EQ(n20->output_pin_ids[1], 303);
+
+    // - Index out of bounds (adds pin to back in current implementation)
+    graph.restore_output_pin(20, 304, 99);
+    ASSERT_EQ(n20->output_pin_ids.size(), 4u);
+    ASSERT_EQ(n20->output_pin_ids[3], 304);
+
+    // 5. add_output_pin()
+    // - Splitter up to 8 pins
+    ASSERT_TRUE(graph.add_output_pin(20));   // 5th pin
+    ASSERT_TRUE(graph.add_output_pin(20));   // 6th pin
+    ASSERT_TRUE(graph.add_output_pin(20));   // 7th pin
+    ASSERT_TRUE(graph.add_output_pin(20));   // 8th pin
+    ASSERT_FALSE(graph.add_output_pin(20));  // fails at 9
+
+    // 6. remove_output_pin()
+    // - By specific pin ID
+    ASSERT_TRUE(graph.remove_output_pin(20, 301));
+    // - By default index -1
+    ASSERT_TRUE(graph.remove_output_pin(20, -1));
+    // - Fail when linked
+    GraphLink link2;
+    link2.id = 60;
+    link2.source_pin_id = 302;
+    link2.dest_pin_id = 101;
+    graph.restore_link(link2);
+    ASSERT_FALSE(graph.remove_output_pin(20, 302));
+
+    // 7. remove_input_pin()
+    // - Fail when linked
+    ASSERT_FALSE(graph.remove_input_pin(10, 101));
+    // - Success by specific ID
+    ASSERT_TRUE(graph.remove_input_pin(10, 105));
+    // - Success by default index -1
+    ASSERT_TRUE(graph.remove_input_pin(10, -1));
+
+    // 8. set_mixer_input_gain() for invalid node/pin
+    graph.set_mixer_input_gain(99, 0, 0.5f);
+
+    // 9. update_transport_state() with pedal
+    AudioGraphExecutor executor;
+    AudioGraph graph2;
+    auto effect = EffectFactory::instance().create("Overdrive");
+    int fx_node = graph2.add_node("Overdrive", NodeRoutingType::StandardEffect, effect);
+    graph2.set_node_as_input(fx_node, true);
+    graph2.set_node_as_output(fx_node, true);
+    ASSERT_TRUE(graph2.rebuild_topology());
+    executor.compile(graph2);
+    executor.update_transport_state(125.0f);
 }

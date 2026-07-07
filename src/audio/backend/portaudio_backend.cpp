@@ -316,7 +316,6 @@ int PortAudioBackend::get_sample_rate() const {
 int PortAudioBackend::get_buffer_size() const { return engine_ ? engine_->get_buffer_size() : 512; }
 
 void PortAudioBackend::auto_detect_devices() {
-    int device_count = Pa_GetDeviceCount();
     int num_apis = Pa_GetHostApiCount();
 
     struct ApiCandidate {

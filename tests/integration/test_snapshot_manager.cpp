@@ -860,3 +860,74 @@ TEST(snapshot_multiple_effects_all_params_preserved) {
 
     engine.shutdown();
 }
+
+TEST(SnapshotSlotLabelsCorrect) {
+    ASSERT_EQ(SnapshotManager::NUM_SLOTS, 4);
+    ASSERT_EQ(std::string(SnapshotManager::SLOT_LABELS[0]), "A");
+    ASSERT_EQ(std::string(SnapshotManager::SLOT_LABELS[1]), "B");
+    ASSERT_EQ(std::string(SnapshotManager::SLOT_LABELS[2]), "C");
+    ASSERT_EQ(std::string(SnapshotManager::SLOT_LABELS[3]), "D");
+}
+
+TEST(SnapshotSlotActiveSlotArbitrary) {
+    SnapshotManager mgr;
+    ASSERT_EQ(mgr.active_slot(), -1);
+    mgr.set_active_slot(2);
+    ASSERT_EQ(mgr.active_slot(), 2);
+    mgr.set_active_slot(999);
+    ASSERT_EQ(mgr.active_slot(), 999);
+}
+
+TEST(SnapshotApplyMismatchedParamCount) {
+    AudioEngine engine;
+    engine.initialize();
+
+    auto od = std::make_shared<Overdrive>();
+    engine.add_effect(od);
+
+    size_t param_count = od->params().size();
+    ASSERT_TRUE(param_count > 0);
+
+    float default_val = od->params()[0].value;
+
+    // Case 1: Snapshot has fewer params (empty param_values)
+    {
+        SnapshotManager::BoardSnapshot snap;
+        LoadPresetCommand::EffectSnapshot es;
+        es.effect = od;
+        es.enabled = true;
+        es.mix = 1.0f;
+        snap.effects.push_back(es);
+
+        od->params()[0].value = default_val + 5.0f;
+        SnapshotManager::apply(snap, engine);
+        ASSERT_NEAR(od->params()[0].value, default_val + 5.0f, 0.001f);
+    }
+
+    // Case 2: Snapshot has more params than the effect actually has
+    {
+        SnapshotManager::BoardSnapshot snap;
+        LoadPresetCommand::EffectSnapshot es;
+        es.effect = od;
+        es.enabled = true;
+        es.mix = 1.0f;
+        es.param_values.assign(param_count + 5, default_val + 2.0f);
+        snap.effects.push_back(es);
+
+        SnapshotManager::apply(snap, engine);
+        ASSERT_NEAR(od->params()[0].value, default_val + 2.0f, 0.001f);
+    }
+
+    engine.shutdown();
+}
+
+TEST(SnapshotCaptureEmptyEngine) {
+    AudioEngine engine;
+    engine.initialize();
+    clear_engine(engine);
+
+    SnapshotManager::BoardSnapshot snap = SnapshotManager::capture(engine);
+    ASSERT_TRUE(snap.effects.empty());
+
+    engine.shutdown();
+}

@@ -5,6 +5,52 @@
 
 #include <iostream>
 
+#ifdef AMPLITRON_TESTS
+bool g_mock_rtmidi_should_fail_enumerate = false;
+bool g_mock_rtmidi_should_fail_open = false;
+bool g_mock_rtmidi_should_fail_constructor = false;
+bool g_mock_rtmidi_should_fail_close = false;
+int g_mock_rtmidi_port_count = 1;
+void (*g_mock_rtmidi_callback)(double, std::vector<unsigned char>*, void*) = nullptr;
+void* g_mock_rtmidi_user_data = nullptr;
+bool g_mock_rtmidi_port_open = false;
+
+class MockRtMidiIn {
+   public:
+    MockRtMidiIn(int = 0, const std::string& = "") {
+        if (g_mock_rtmidi_should_fail_constructor) throw RtMidiError("Mock constructor failure");
+    }
+    void ignoreTypes(bool, bool, bool) {}
+    unsigned int getPortCount() {
+        if (g_mock_rtmidi_should_fail_enumerate) throw RtMidiError("Mock port count failure");
+        return g_mock_rtmidi_port_count;
+    }
+    std::string getPortName(unsigned int index) {
+        if (index == 0) return "Mock MIDI Port";
+        throw RtMidiError("Invalid port");
+    }
+    void setCallback(void (*cb)(double, std::vector<unsigned char>*, void*), void* data) {
+        g_mock_rtmidi_callback = cb;
+        g_mock_rtmidi_user_data = data;
+    }
+    void openPort(unsigned int index, const std::string&) {
+        if (index != 0) throw RtMidiError("Invalid port");
+        if (g_mock_rtmidi_should_fail_open) throw RtMidiError("Mock open failure");
+        g_mock_rtmidi_port_open = true;
+    }
+    void closePort() {
+        if (g_mock_rtmidi_should_fail_close) throw RtMidiError("Mock close failure");
+        g_mock_rtmidi_port_open = false;
+    }
+    void cancelCallback() {
+        g_mock_rtmidi_callback = nullptr;
+        g_mock_rtmidi_user_data = nullptr;
+    }
+};
+
+#define RtMidiIn MockRtMidiIn
+#endif
+
 namespace Amplitron {
 
 // ---------------------------------------------------------------------------

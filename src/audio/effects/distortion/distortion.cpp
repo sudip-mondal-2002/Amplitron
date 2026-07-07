@@ -4,7 +4,7 @@
 
 namespace Amplitron {
 
-static EffectRegistrar<Distortion> reg("Distortion");
+static EffectRegistrar<Distortion> reg_Distortion("Distortion");
 
 Distortion::Distortion() {
     params_ = {
