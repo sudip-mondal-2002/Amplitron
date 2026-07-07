@@ -706,6 +706,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${CMAKE_SOURCE_DIR}/src/presets
         ${CMAKE_SOURCE_DIR}/external
         ${CMAKE_SOURCE_DIR}/external/kiss_fft
+        ${CMAKE_SOURCE_DIR}/external/RTNeural
         ${IMGUI_DIR}
         ${IMGUI_DIR}/backends
         ${PORTAUDIO_INCLUDE_DIRS}
