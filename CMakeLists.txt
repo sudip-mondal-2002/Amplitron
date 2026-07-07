@@ -621,50 +621,6 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         target_link_libraries(Amplitron PRIVATE dl pthread)
     endif()
 
-    # --- Test Target ---
-    set(TEST_SOURCES
-        tests/test_main.cpp
-        tests/test_common.cpp
-        tests/test_oboe_ring_buffer.cpp
-        tests/test_effects.cpp
-        tests/test_nam_loader.cpp
-        tests/test_looper.cpp
-        tests/test_preset_manager.cpp
-        tests/test_json_serialization.cpp
-        tests/test_recorder.cpp
-        tests/test_theme.cpp
-        tests/test_command_history.cpp
-        tests/test_snapshot_manager.cpp
-        tests/test_cabinet_sim_ir.cpp
-	tests/test_wav_loader.cpp
-	tests/test_convolution_engine.cpp
-        tests/test_midi_manager.cpp
-        tests/test_unsaved_preset.cpp
-        tests/test_audio_graph.cpp
-        tests/test_metronome.cpp
-        tests/test_gui_manager.cpp
-        tests/test_clipboard_preset.cpp
-        tests/test_audio_engine.cpp
-    )
-
-    # Effect + core sources needed by tests (no GUI, no main)
-    set(CORE_SOURCES
-        src/preset_manager.cpp
-        src/preset_json.cpp
-        src/preset_manager_dirs.cpp
-        src/preset_manager_io.cpp
-        src/audio/audio_engine.cpp
-        src/audio/audio_engine_chain.cpp
-        src/audio/audio_engine_process.cpp
-        src/audio/audio_engine_api.cpp
-        src/audio/audio_backend_portaudio.cpp
-        src/audio/audio_backend_portaudio_lifecycle.cpp
-        src/audio/audio_backend_portaudio_devices.cpp
-        src/audio/recorder.cpp
-        src/audio/recorder_session.cpp
-        src/audio/recorder_io.cpp
-        src/audio/recorder_wav.cpp
-        src/gui/command_history.cpp)
     # ==========================================================================
     # amplitron_core OBJECT library
     # Sources compiled identically for both Amplitron and amplitron-tests
@@ -838,6 +794,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/unit/test_pitch_shifter.cpp
         tests/unit/test_effects_utility.cpp
         tests/unit/test_looper.cpp
+        tests/unit/test_nam_loader.cpp
         tests/unit/test_theme.cpp
         tests/unit/test_command_history.cpp
         tests/unit/test_cabinet_sim_ir.cpp

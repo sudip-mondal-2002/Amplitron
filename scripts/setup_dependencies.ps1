@@ -129,6 +129,24 @@ SDL2 not found. Install it via one of these methods:
               Extract to C:\Program Files\SDL2
 "@ -ForegroundColor Red
 }
+# --- RTNeural (real-time neural network inference) ---
+$RTNEURAL_DIR = Join-Path $EXTERNAL_DIR "RTNeural"
+$RTNEURAL_VERSION = "1fb1f078233f20d5bc515671158d927d3b036573"
+
+if (-not (Test-Path $RTNEURAL_DIR)) {
+    Write-Host "`nFetching RTNeural (pinned to commit $RTNEURAL_VERSION)..." -ForegroundColor Yellow
+    git clone https://github.com/jatinchowdhury18/RTNeural.git $RTNEURAL_DIR
+    Push-Location $RTNEURAL_DIR
+    git checkout $RTNEURAL_VERSION
+    Pop-Location
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "ERROR: Failed to fetch/checkout RTNeural" -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "RTNeural fetched and pinned to $RTNEURAL_VERSION successfully." -ForegroundColor Green
+} else {
+    Write-Host "RTNeural already present, skipping." -ForegroundColor Green
+}
 
 Write-Host "`n=== Setup Complete ===" -ForegroundColor Cyan
 if ($pa_found -and $sdl_found) {

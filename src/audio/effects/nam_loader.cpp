@@ -14,61 +14,113 @@ NamLoader::NamLoader() {
     };
 }
 
+NamLoader::~NamLoader() {
+    // Clean up any unconsumed pending model
+    auto* pending = pending_model_.exchange(nullptr);
+    delete pending;
+
+    // Clean up active model
+    delete active_model_;
+
+    // Clean up old garbage model
+    auto* old = old_model_to_delete_.exchange(nullptr);
+    delete old;
+}
+
 bool NamLoader::load_model(const std::string& path) {
+    // Sweep old models on GUI thread (thread-safe, lock-free GC)
+    auto* to_delete = old_model_to_delete_.exchange(nullptr, std::memory_order_acquire);
+    delete to_delete;
+
     std::ifstream f(path);
     if (!f.good()) {
-        std::lock_guard<std::mutex>
-        lock(model_mutex_);
-        model_.reset();
-        model_path_.clear();
-        model_loaded_ = false;
+        clear_model();
         return false;
     }
     try {
         auto temp_model = RTNeural::json_parser::parseJson<float>(f);
         if (!temp_model) {
-            std::lock_guard<std::mutex>
-            lock(model_mutex_);
-            model_.reset();
-            model_path_.clear();
-            model_loaded_ = false;
+            clear_model();
             return false;
         }
         temp_model->reset();
-        std::lock_guard<std::mutex>
-        lock(model_mutex_);
-        model_ = std::move(temp_model);
+
+        auto* old_pending = pending_model_.exchange(temp_model.release());
+        delete old_pending;
+
         model_path_ = path;
-        model_loaded_ = true;
+        model_loaded_.store(true, std::memory_order_release);
+        clear_pending_.store(false, std::memory_order_release);
         return true;
     } catch (...) {
-        std::lock_guard<std::mutex>
-        lock(model_mutex_);
-        model_.reset();
-        model_path_.clear();
-        model_loaded_ = false;
+        clear_model();
         return false;
     }
 }
 
+void NamLoader::clear_model() {
+    model_path_.clear();
+    model_loaded_.store(false, std::memory_order_release);
+
+    auto* old = pending_model_.exchange(nullptr);
+    delete old;
+
+    clear_pending_.store(true, std::memory_order_release);
+}
+
+const std::string& NamLoader::model_path() const {
+    // Sweep old models on GUI thread
+    auto* to_delete = old_model_to_delete_.exchange(nullptr, std::memory_order_acquire);
+    delete to_delete;
+    return model_path_;
+}
+
 void NamLoader::process(float* buffer, int num_samples) {
     if (!enabled_) return;
-    std::lock_guard<std::mutex> lock(model_mutex_);
-    if (!model_loaded_ || !model_) return;
+
+    check_pending_model();
+    if (!model_loaded_.load(std::memory_order_acquire) || !active_model_) return;
 
     const float level = params_[0].value;
 
     for (int i = 0; i < num_samples; ++i) {
         float input = buffer[i];
-        buffer[i] = model_->forward(&input) * level;
+        buffer[i] = active_model_->forward(&input) * level;
+    }
+}
+
+void NamLoader::check_pending_model() {
+    // 1. Process pending clear commands
+    if (clear_pending_.exchange(false, std::memory_order_acq_rel)) {
+        auto* old = active_model_;
+        active_model_ = nullptr;
+        if (old) {
+            auto* prev_old = old_model_to_delete_.exchange(old, std::memory_order_release);
+            if (prev_old) {
+                delete prev_old;
+            }
+        }
+    }
+
+    // 2. Process pending model updates
+    auto* pending = pending_model_.exchange(nullptr, std::memory_order_acquire);
+    if (pending) {
+        auto* old = active_model_;
+        active_model_ = pending;
+        if (old) {
+            auto* prev_old = old_model_to_delete_.exchange(old, std::memory_order_release);
+            if (prev_old) {
+                delete prev_old;
+            }
+        }
     }
 }
 
 void NamLoader::reset() {
-    std::lock_guard<std::mutex> lock(model_mutex_);
-    if (model_) model_->reset();
-    model_loaded_ = false;
-    model_path_.clear();
+    auto* model = active_model_;
+    if (model) {
+        model->reset();
+    }
 }
 
 } // namespace Amplitron

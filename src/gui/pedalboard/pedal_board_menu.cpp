@@ -19,6 +19,7 @@
 #include "audio/effects/pitch/octaver.h"
 #include "audio/effects/pitch/pitch_shifter.h"
 #include "audio/effects/utility/looper.h"
+#include "audio/effects/nam_loader.h"
 #include "gui/pedalboard/pedal_board.h"
 #include "gui/theme/theme.h"
 #include "gui/views/gui_midi.h"
@@ -98,6 +99,9 @@ void PedalBoard::render_add_pedal_menu() {
         }
         if (ImGui::MenuItem("Cabinet Sim")) {
             add_effect_and_show(std::make_shared<CabinetSim>());
+        }
+        if (ImGui::MenuItem("NAM Loader")) {
+            add_effect_and_show(std::make_shared<NamLoader>());
         }
 
         ImGui::Separator();
