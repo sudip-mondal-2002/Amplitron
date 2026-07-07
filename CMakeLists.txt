@@ -91,12 +91,11 @@ endif()
 file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/external")
 if(NOT EXISTS "${CMAKE_SOURCE_DIR}/external/nanosvg.h" OR
    NOT EXISTS "${CMAKE_SOURCE_DIR}/external/nanosvgrast.h" OR
-   NOT EXISTS "${CMAKE_SOURCE_DIR}/external/dr_wav.h" OR
-   NOT EXISTS "${CMAKE_SOURCE_DIR}/external/RTNeural/RTNeural/RTNeural.h")
+   NOT EXISTS "${CMAKE_SOURCE_DIR}/external/dr_wav.h")
     message(FATAL_ERROR
         "Missing external header dependencies in external/. "
         "Run scripts/setup_dependencies.sh (Linux/macOS) or "
-        "scripts/setup_dependencies.ps1 (Windows) to fetch required dependencies.")
+        "scripts/setup_dependencies.ps1 (Windows) to fetch nanosvg and dr_wav.")
 endif()
 
 
@@ -582,8 +581,6 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         set(CMAKE_RC_COMPILER_INIT windres)
         enable_language(RC)
     endif()
-
-
 
     # ==========================================================================
     # amplitron_core OBJECT library
