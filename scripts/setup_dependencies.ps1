@@ -131,7 +131,7 @@ SDL2 not found. Install it via one of these methods:
 }
 # --- RTNeural (real-time neural network inference) ---
 $RTNEURAL_DIR = Join-Path $EXTERNAL_DIR "RTNeural"
-$RTNEURAL_VERSION = "1fb1f078233f20d5bc515671158d927d3b036573"
+$RTNEURAL_VERSION = "1fb1f075d9e50e93a64d1f2e8674d8174f88417c"
 
 if (-not (Test-Path $RTNEURAL_DIR)) {
     Write-Host "`nFetching RTNeural (pinned to commit $RTNEURAL_VERSION)..." -ForegroundColor Yellow

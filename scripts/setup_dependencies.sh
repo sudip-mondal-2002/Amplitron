@@ -130,7 +130,7 @@ echo "  mkdir -p build && cd build && cmake .. && make -j\$(nproc)"
 
 # --- RTNeural (real-time neural network inference) ---
 RTNEURAL_DIR="$EXTERNAL_DIR/RTNeural"
-RTNEURAL_VERSION="1fb1f078233f20d5bc515671158d927d3b036573"
+RTNEURAL_VERSION="1fb1f075d9e50e93a64d1f2e8674d8174f88417c"
 if [ ! -d "$RTNEURAL_DIR" ];
 then
     echo ""
