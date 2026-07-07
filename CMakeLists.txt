@@ -583,49 +583,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         enable_language(RC)
     endif()
 
-    add_executable(Amplitron ${APP_SOURCES} ${MIDI_SOURCES} ${BACKEND_SOURCES} ${DIALOG_SOURCES} ${IMGUI_SOURCES} ${KISS_FFT_SOURCES} $<$<PLATFORM_ID:Windows>:${WIN_RC}>)
 
-    target_include_directories(Amplitron PRIVATE
-        ${CMAKE_SOURCE_DIR}/src
-        ${CMAKE_SOURCE_DIR}/external
-        ${CMAKE_SOURCE_DIR}/external/kiss_fft
-        ${CMAKE_SOURCE_DIR}/external/RTNeural
-        ${IMGUI_DIR}
-        ${IMGUI_DIR}/backends
-        ${PORTAUDIO_INCLUDE_DIRS}
-        ${SDL2_INCLUDE_DIRS}
-        ${OPENGL_INCLUDE_DIR}
-        ${RTMIDI_INCLUDE_DIRS}
-    )
-
-    # ============================================================
-    # DEFINE AMPLITRON_HAS_MIDI FOR DESKTOP BUILDS
-    # ============================================================
-    target_compile_definitions(Amplitron PRIVATE 
-        AMPLITRON_VERSION="${AMPLITRON_VERSION}"
-        AMPLITRON_HAS_MIDI
-    )
-
-    target_link_libraries(Amplitron PRIVATE
-        nlohmann_json::nlohmann_json
-        ${PORTAUDIO_LIBRARIES}
-        ${SDL2_LIBRARIES}
-        ${OPENGL_LIBRARIES}
-        ${RTMIDI_LIBRARIES}
-    )
-
-    if(WIN32)
-        target_link_libraries(Amplitron PRIVATE winmm ole32 setupapi comdlg32 shell32)
-        if(NOT MSVC)
-            target_link_options(Amplitron PRIVATE -mwindows)
-        else()
-            set_target_properties(Amplitron PROPERTIES WIN32_EXECUTABLE TRUE)
-        endif()
-    endif()
-
-    if(UNIX AND NOT APPLE)
-        target_link_libraries(Amplitron PRIVATE dl pthread)
-    endif()
 
     # ==========================================================================
     # amplitron_core OBJECT library
