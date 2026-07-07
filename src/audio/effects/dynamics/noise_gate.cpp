@@ -4,7 +4,7 @@
 
 namespace Amplitron {
 
-static EffectRegistrar<NoiseGate> reg("Noise Gate");
+static EffectRegistrar<NoiseGate> reg_NoiseGate("Noise Gate");
 
 NoiseGate::NoiseGate() {
     params_ = {

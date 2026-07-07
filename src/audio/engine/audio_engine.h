@@ -2,11 +2,9 @@
 
 #include <chrono>
 #include <memory>
-#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 
 #include "audio/backend/audio_backend.h"
-#include "audio/dsp/level_analyzer.h"
-#include "audio/dsp/spectrum_analyzer.h"
 #include "audio/effects/core/effect.h"
 #include "audio/engine/audio_command_dispatcher.h"
 #include "audio/engine/audio_graph.h"
@@ -125,6 +123,15 @@ class AudioEngine : public IAudioEngine {
     void replace_backend_state_for_test(std::unique_ptr<IAudioBackend> backend);
     void replace_backend_for_test(IAudioBackend* backend);
     void clear_backend_for_test();
+    /** @brief Direct access to process buffers for white-box testing. */
+    std::vector<float>& test_process_buffer() { return process_buffer_; }
+    std::vector<float>& test_process_buffer_right() { return process_buffer_right_; }
+    /** @brief Direct access to cpu_load_ for white-box testing. */
+    std::atomic<float>& test_cpu_load() { return cpu_load_; }
+    /** @brief Direct access to audio_shadow_executor_ for white-box testing. */
+    std::shared_ptr<AudioGraphExecutor>& test_audio_shadow_executor() {
+        return audio_shadow_executor_;
+    }
 #endif
 
     // =========================================================================

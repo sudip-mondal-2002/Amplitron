@@ -128,6 +128,24 @@ TEST(AudioBackend_Jack_ClientOpenFailure) {
     ASSERT_TRUE(engine.initialize());
     ASSERT_FALSE(engine.start());
 }
+
+TEST(AudioBackend_Jack_ClientOpenFailureWithStatus) {
+    g_mock_jack_client_open_fail = true;
+    g_mock_jack_status = static_cast<jack_status_t>(
+        JackFailure | JackNameNotUnique | JackLoadFailure | JackInitFailure | JackShmFailure |
+        JackVersionError | JackBackendError);
+
+    AudioEngine engine;
+    auto backend = std::make_unique<JackBackend>();
+    ASSERT_EQ(backend->get_input_device(), 0);
+    ASSERT_EQ(backend->get_output_device(), 0);
+
+    engine.replace_backend_state_for_test(std::move(backend));
+    ASSERT_TRUE(engine.initialize());
+    ASSERT_FALSE(engine.start());
+
+    g_mock_jack_status = static_cast<jack_status_t>(0);
+}
 #else
 TEST(AudioBackend_Jack_NotAvailable) { ASSERT_TRUE(true); }
 #endif

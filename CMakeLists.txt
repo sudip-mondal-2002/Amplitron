@@ -25,7 +25,7 @@ endif()
 
 # Compiler flags
 if(EMSCRIPTEN)
-    add_compile_options(-O3 -ffast-math -pthread "-sUSE_SDL=2" -Wno-nontrivial-memaccess)
+    add_compile_options(-O2 -ffast-math -pthread "-sUSE_SDL=2" -Wno-nontrivial-memaccess)
 elseif(MSVC)
     add_compile_options(/W4 /fp:fast)
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
@@ -51,24 +51,29 @@ endif()
 # Single-header C++17 JSON library used for preset serialization /
 # deserialization.  We disable nlohmann's own tests and install rules so
 # they don't pollute the Amplitron build.
+#
+# NOTE: We intentionally bypass find_package() here. The system or conda
+# environment may provide an older nlohmann version that is incompatible with
+# GCC 13 ABI (causing sstream/any redeclaration errors). Always fetching a
+# known-good v3.11.3 ensures cross-platform ABI compatibility.
 
-# Suppress cmake_minimum_required deprecation warnings from fetched deps
-set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
 
-find_package(nlohmann_json QUIET)
-if(NOT nlohmann_json_FOUND)
-    include(FetchContent)
-    FetchContent_Declare(
-        nlohmann_json
-        GIT_REPOSITORY https://github.com/nlohmann/json.git
-        GIT_TAG        v3.11.3
-        GIT_SHALLOW    TRUE
-    )
-    set(JSON_BuildTests OFF CACHE INTERNAL "Disable nlohmann/json tests")
-    set(JSON_Install    OFF CACHE INTERNAL "Disable nlohmann/json install")
-    FetchContent_MakeAvailable(nlohmann_json)
-endif()
+include(FetchContent)
+FetchContent_Declare(
+    nlohmann_json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG        v3.11.3
+    GIT_SHALLOW    TRUE
+)
+set(JSON_BuildTests OFF CACHE INTERNAL "Disable nlohmann/json tests")
+set(JSON_Install    OFF CACHE INTERNAL "Disable nlohmann/json install")
+# Suppress cmake_minimum_required deprecation warnings from nlohmann/json
+set(OLD_CMAKE_WARN_DEPRECATED ${CMAKE_WARN_DEPRECATED})
+set(CMAKE_WARN_DEPRECATED OFF)
+FetchContent_MakeAvailable(nlohmann_json)
+set(CMAKE_WARN_DEPRECATED ${OLD_CMAKE_WARN_DEPRECATED})
 # ---------------------------------------------------------------------------
+
 
 find_package(GTest QUIET)
 if(NOT TARGET GTest::gtest AND NOT EMSCRIPTEN AND NOT ANDROID AND NOT IOS)
@@ -291,6 +296,7 @@ set(APP_SOURCES
     src/gui/views/gui_presets.cpp
     src/gui/views/gui_recording.cpp
     src/gui/views/gui_tuner.cpp
+    src/gui/views/gui_keyboard_shortcuts.cpp
     src/gui/views/gui_analyzer.cpp
     src/gui/pedalboard/pedal_board.cpp
     src/gui/pedalboard/pedal_board_menu.cpp
@@ -690,7 +696,6 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         # kiss_fft (BSD-3 bundled)
         ${KISS_FFT_SOURCES}
         # Desktop MIDI — identical between both targets regardless of backend
-        src/midi/midi_manager.cpp
         src/midi/midi_manager_mapping.cpp
         src/midi/midi_manager_persist.cpp
     )
@@ -727,6 +732,16 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
 
     # Remove shared sources from APP_SOURCES so Amplitron doesn't recompile them
     list(REMOVE_ITEM APP_SOURCES ${AMPLITRON_CORE_SOURCES})
+
+    add_executable(Amplitron
+        ${APP_SOURCES}
+        ${BACKEND_SOURCES}
+        ${DIALOG_SOURCES}
+        ${IMGUI_SOURCES}
+        src/midi/midi_manager.cpp
+        $<TARGET_OBJECTS:amplitron_core>
+        $<$<PLATFORM_ID:Windows>:${WIN_RC}>
+    )
 
     target_include_directories(Amplitron PRIVATE
         ${CMAKE_SOURCE_DIR}/src
@@ -784,6 +799,10 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/test_main.cpp
         tests/unit/test_common.cpp
         tests/unit/test_mock_backend.cpp
+        tests/unit/test_audio_backend_registry.cpp
+        tests/unit/test_audio_backend_sdl.cpp
+        tests/unit/test_audio_metrics_service.cpp
+        tests/unit/test_audio_command_dispatcher.cpp
         tests/unit/test_oboe_ring_buffer.cpp
         tests/unit/test_effects_dynamics.cpp
         tests/unit/test_effects_saturation.cpp
@@ -797,6 +816,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/unit/test_nam_loader.cpp
         tests/unit/test_theme.cpp
         tests/unit/test_command_history.cpp
+        tests/unit/test_effect_base.cpp
         tests/unit/test_cabinet_sim_ir.cpp
         tests/unit/test_wav_loader.cpp
         tests/unit/test_convolution_engine.cpp
@@ -818,6 +838,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/ui/test_gui_manager.cpp
         tests/ui/test_pedal_board.cpp
         tests/ui/test_crash_recovery.cpp
+        tests/ui/test_crash_recovery_mocked.cpp
         tests/ui/test_gui_commands.cpp
         tests/ui/test_spectrum_analyzer.cpp
         tests/ui/test_gui_presets.cpp
@@ -825,6 +846,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/ui/test_gui_midi.cpp
         tests/ui/test_gui_recording.cpp
         tests/ui/test_gui_tuner.cpp
+        tests/ui/test_gui_keyboard_shortcuts.cpp
         tests/ui/test_gui_components.cpp
         tests/ui/test_footswitch.cpp
         tests/ui/test_led.cpp
@@ -832,8 +854,12 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/ui/test_screen.cpp
         tests/ui/test_pedal_board_chain.cpp
         tests/ui/test_pedal_board_menu.cpp
+        tests/ui/test_file_dialog.cpp
+        tests/ui/test_window_context.cpp
         tests/ui/test_pedal_widget_knobs.cpp
+        tests/ui/test_pedal_widget.cpp
         tests/unit/test_session_manager.cpp
+        tests/unit/test_preset_components.cpp
         tests/unit/test_cli.cpp
         tests/integration/test_main.cpp
         tests/integration/test_audio_backend_jack.cpp
@@ -846,6 +872,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         src/audio/backend/audio_backend_factory.cpp
         src/audio/backend/portaudio_backend.cpp
         src/audio/backend/sdl_backend.cpp
+        src/midi/midi_manager.cpp
     )
 
     if(WITH_JACK AND UNIX AND NOT APPLE)
@@ -865,6 +892,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         src/gui/views/gui_presets.cpp
         src/gui/views/gui_recording.cpp
         src/gui/views/gui_tuner.cpp
+        src/gui/views/gui_keyboard_shortcuts.cpp
         src/gui/views/gui_analyzer.cpp
         src/gui/pedalboard/pedal_board.cpp
         src/gui/pedalboard/pedal_board_menu.cpp
@@ -887,6 +915,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
             src/gui/dialogs/file_dialog_native.cpp
             src/gui/dialogs/file_dialog_native_open.cpp
             src/gui/dialogs/file_dialog_native_folder.cpp
+            tests/fixtures/file_dialog_mock.cpp
         )
     endif()
 
@@ -921,6 +950,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         AMPLITRON_VERSION="${AMPLITRON_VERSION}"
         AMPLITRON_HEADLESS
         AMPLITRON_TESTS
+        AMPLITRON_TEST_NATIVE_DIALOGS
         SDL_MAIN_HANDLED
         "Pa_GetDeviceCount=MOCK_Pa_GetDeviceCount"
         "Pa_GetDeviceInfo=MOCK_Pa_GetDeviceInfo"
@@ -937,6 +967,18 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         "Pa_Initialize=MOCK_Pa_Initialize"
     )
 
+    if(NOT WIN32)
+        target_compile_definitions(amplitron-tests PRIVATE
+            "popen=MOCK_popen"
+            "pclose=MOCK_pclose"
+        )
+        if(APPLE)
+            target_compile_definitions(amplitron-tests PRIVATE
+                "execl=MOCK_execl"
+            )
+        endif()
+    endif()
+
     if(WITH_JACK AND UNIX AND NOT APPLE)
         target_compile_definitions(amplitron-tests PRIVATE
             WITH_JACK
@@ -947,6 +989,8 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
             "jack_activate=MOCK_jack_activate"
             "jack_deactivate=MOCK_jack_deactivate"
             "jack_port_get_buffer=MOCK_jack_port_get_buffer"
+            "jack_get_sample_rate=MOCK_jack_get_sample_rate"
+            "jack_get_buffer_size=MOCK_jack_get_buffer_size"
         )
     endif()
 
@@ -970,23 +1014,35 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         target_link_libraries(amplitron-tests PRIVATE dl pthread)
     endif()
 
+    set_target_properties(amplitron-tests PROPERTIES UNITY_BUILD OFF)
+
     # Copy presets into build directory alongside the executable
-    add_custom_target(copy_presets ALL
+    add_custom_command(TARGET Amplitron POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${CMAKE_SOURCE_DIR}/presets"
             "$<TARGET_FILE_DIR:Amplitron>/presets"
         COMMENT "Copying presets to build directory"
     )
-    add_dependencies(copy_presets Amplitron)
+    add_custom_command(TARGET amplitron-tests POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/presets"
+            "$<TARGET_FILE_DIR:amplitron-tests>/presets"
+        COMMENT "Copying presets to build directory"
+    )
 
     # Copy fonts into build directory alongside the executable
-    add_custom_target(copy_fonts ALL
+    add_custom_command(TARGET Amplitron POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${CMAKE_SOURCE_DIR}/assets/fonts"
             "$<TARGET_FILE_DIR:Amplitron>/assets/fonts"
         COMMENT "Copying fonts to build directory"
     )
-    add_dependencies(copy_fonts Amplitron)
+    add_custom_command(TARGET amplitron-tests POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/assets/fonts"
+            "$<TARGET_FILE_DIR:amplitron-tests>/assets/fonts"
+        COMMENT "Copying fonts to build directory"
+    )
 
     # Install
     install(TARGETS Amplitron RUNTIME DESTINATION bin)

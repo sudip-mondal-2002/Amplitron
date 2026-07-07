@@ -57,9 +57,6 @@ class PitchShifter : public Effect {
     // 8192 is a power of 2 (allows fast bitwise wrapping) and fits easily in L1 cache
     std::array<float, 8192> hann_lut_;
 
-    // Cached pitch ratio to avoid per-sample pow()
-    float ratio_ = 1.0f;
-
     float read_linear(float phase) const;
 };
 

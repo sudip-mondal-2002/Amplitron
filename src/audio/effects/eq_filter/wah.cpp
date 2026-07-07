@@ -4,7 +4,7 @@
 
 namespace Amplitron {
 
-static EffectRegistrar<WahPedal> reg("Wah");
+static EffectRegistrar<WahPedal> reg_WahPedal("Wah");
 
 WahPedal::WahPedal() {
     params_ = {

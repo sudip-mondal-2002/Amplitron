@@ -2,6 +2,7 @@
 #include <cmath>
 #include <filesystem>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <vector>
 
 #include "audio/effects/distortion/distortion.h"
@@ -383,7 +384,7 @@ TEST_F(AudioEngineTest, repeated_graph_commits) {
 TEST_F(AudioEngineTest, graph_commit_after_node_removal) {
     auto& graph = engine.graph();
 
-    int n1 = graph.add_node("A", NodeRoutingType::StandardEffect);
+    graph.add_node("A", NodeRoutingType::StandardEffect);
     int n2 = graph.add_node("B", NodeRoutingType::StandardEffect);
 
     auto nodes = graph.get_nodes();
@@ -420,4 +421,125 @@ TEST_F(AudioEngineTest, multiple_buffer_size_changes) {
         engine.set_buffer_size(size);
     }
     ASSERT_TRUE(true);
+}
+
+TEST_F(AudioEngineTest, SuggestedBufferSizeLoadBranches) {
+    // 1. High CPU load, should double buffer size
+    engine.set_buffer_size(256);
+    engine.test_cpu_load().store(0.85f);
+    ASSERT_EQ(engine.get_suggested_buffer_size(), 512);
+
+    // 2. High CPU load, but already at MAX_BUFFER_SIZE (512)
+    engine.set_buffer_size(512);
+    engine.test_cpu_load().store(0.85f);
+    ASSERT_EQ(engine.get_suggested_buffer_size(), 512);
+
+    // 3. Low CPU load, should half buffer size
+    engine.set_buffer_size(512);
+    engine.test_cpu_load().store(0.15f);
+    ASSERT_EQ(engine.get_suggested_buffer_size(), 256);
+
+    // 4. Low CPU load, but already at MIN_BUFFER_SIZE (32)
+    engine.set_buffer_size(32);
+    engine.test_cpu_load().store(0.15f);
+    ASSERT_EQ(engine.get_suggested_buffer_size(), 32);
+
+    // 5. Moderate CPU load, should suggest current buffer size
+    engine.set_buffer_size(256);
+    engine.test_cpu_load().store(0.5f);
+    ASSERT_EQ(engine.get_suggested_buffer_size(), 256);
+}
+
+TEST_F(AudioEngineTest, PushMixerGainChangeDrainsSuccessfully) {
+    int n1 = engine.graph().add_node("SourceNode", NodeRoutingType::StandardEffect, nullptr);
+    int mixer_id = engine.graph().add_node("MixerNode", NodeRoutingType::Mixer, nullptr);
+
+    // Link SourceNode to MixerNode so that MixerNode has an input source in executor step
+    int src_out = engine.graph().find_node(n1)->output_pin_ids[0];
+    int mix_in = engine.graph().find_node(mixer_id)->input_pin_ids[0];
+    engine.graph().add_link(src_out, mix_in);
+
+    engine.graph().set_node_as_input(n1, true);
+    engine.graph().set_node_as_output(mixer_id, true);
+
+    engine.commit_graph_changes();
+
+    std::vector<float> in(64, 0.0f), out(128, 0.0f);
+    // Process audio once to execute the pending topology/executor swap
+    engine.process_audio(in.data(), out.data(), 64);
+
+    // Push gain change now that the new executor is active
+    engine.push_mixer_gain_change(mixer_id, 0, 1.5f);
+
+    // Process audio again to drain the gain change command
+    engine.process_audio(in.data(), out.data(), 64);
+
+    // Check that Mixer gain changed in executor
+    bool gain_updated = false;
+    for (const auto& step : engine.test_audio_shadow_executor()->test_execution_plan()) {
+        if (step.node_id == mixer_id) {
+            for (const auto& src : step.input_sources) {
+                if (src.pin_index == 0) {
+                    ASSERT_NEAR(src.gain, 1.5f, 1e-6f);
+                    gain_updated = true;
+                    break;
+                }
+            }
+            break;
+        }
+    }
+    ASSERT_TRUE(gain_updated);
+
+    // Test push_mixer_gain_change with invalid node to hit safety branch
+    engine.push_mixer_gain_change(9999, 0, 1.0f);
+    engine.process_audio(in.data(), out.data(), 64);
+}
+
+class ResetTrackingMockTunerEffect : public Effect {
+   public:
+    bool reset_called = false;
+    int sample_rate_received = 0;
+
+    void process(float*, int) override {}
+    void reset() override { reset_called = true; }
+    void set_sample_rate(int sr) override {
+        Effect::set_sample_rate(sr);
+        sample_rate_received = sr;
+    }
+    const char* name() const override { return "ResetTuner"; }
+    std::vector<EffectParam>& params() override {
+        static std::vector<EffectParam> p;
+        return p;
+    }
+    const std::vector<EffectParam>& params() const override {
+        static const std::vector<EffectParam> p;
+        return p;
+    }
+};
+
+TEST_F(AudioEngineTest, TunerTapSampleRateAndReset) {
+    auto tap = std::make_shared<ResetTrackingMockTunerEffect>();
+    engine.set_tuner_tap(tap);
+
+    // Changing sample rate on engine should update tap's sample rate
+    engine.set_sample_rate(44100);
+    ASSERT_EQ(tap->sample_rate_received, 44100);
+
+    // Check that tap was reset
+    ASSERT_TRUE(tap->reset_called);
+
+    engine.clear_tuner_tap();
+}
+
+TEST_F(AudioEngineTest, ProcessAudioResizesInternalBuffersWhenFrameCountExceedsCapacity) {
+    // Default internal buffer capacity is 16384. Request a size larger than this.
+    const int large_frame_count = 17000;
+    std::vector<float> in(large_frame_count, 0.5f);
+    std::vector<float> out(large_frame_count * 2, 0.0f);
+
+    engine.process_audio(in.data(), out.data(), large_frame_count);
+
+    // Check that the internal buffers resized accordingly
+    ASSERT_GE(engine.test_process_buffer().size(), static_cast<size_t>(large_frame_count));
+    ASSERT_GE(engine.test_process_buffer_right().size(), static_cast<size_t>(large_frame_count));
 }

@@ -49,7 +49,14 @@ void UpdateChecker::check_for_updates() {
     std::array<char, 128> buffer;
     std::string result;
 
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+    struct PipeDeleter {
+        void operator()(FILE* p) const {
+            if (p) {
+                pclose(p);
+            }
+        }
+    };
+    std::unique_ptr<FILE, PipeDeleter> pipe(popen(cmd, "r"));
     if (!pipe) {
         return;
     }

@@ -10,16 +10,6 @@
 using namespace Amplitron;
 using namespace TestFramework;
 
-// Reusable helper to complete the current frame and begin a new one within a TestWindow context
-static inline void advance_frame() {
-    ImGui::End();
-    ImGui::Render();
-    ImGui::NewFrame();
-    ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::SetNextWindowSize(ImVec2(1024, 768));
-    ImGui::Begin("TestWindow");
-}
-
 TEST_F(PresetTest, test_led_component_comprehensive) {
     ScopedImGuiContext imgui;
 

@@ -19,7 +19,7 @@ class GuiMidi;
  * are routed through CommandHistory for undo/redo support.
  */
 class PedalBoard {
-    friend class TestAccessor;
+    friend struct TestAccessor;
 
    public:
     /**

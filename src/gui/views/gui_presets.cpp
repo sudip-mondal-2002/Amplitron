@@ -505,7 +505,9 @@ void GuiPresets::render_load_popup(bool& show) {
 }
 
 std::string GuiPresets::serialise_current_preset_to_json() const {
-    PresetData preset = capture_current_state(engine_);
+    std::string json_str = PresetManager::preset_to_json_string(engine_);
+    PresetData preset;
+    from_json_ext(json_str, preset);
     preset.name = current_preset_name();
     if (midi_manager_) {
         preset.midi_mappings = midi_manager_->mappings();

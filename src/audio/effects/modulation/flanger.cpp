@@ -6,14 +6,16 @@
 
 namespace Amplitron {
 
-static EffectRegistrar<Flanger> reg("Flanger");
+static EffectRegistrar<Flanger> reg_Flanger("Flanger");
 
 // Param indices
+namespace FlangerParams {
 static constexpr int P_RATE = 0;
 static constexpr int P_DEPTH = 1;
 static constexpr int P_DELAY = 2;
 static constexpr int P_FEEDBACK = 3;
 static constexpr int P_MIX = 4;
+}  // namespace FlangerParams
 
 // Max total delay: 15ms base + 7ms depth = 22ms. Size to 30ms for safety.
 static constexpr float MAX_DELAY_MS = 30.0f;
@@ -49,6 +51,7 @@ void Flanger::set_sample_rate(int sample_rate) {
 void Flanger::process(float* buffer, int num_samples) {
     if (!enabled_) return;
 
+    using namespace FlangerParams;
     const float rate = params_[P_RATE].value;
     const float depth_ms = params_[P_DEPTH].value;
     const float delay_ms = params_[P_DELAY].value;
@@ -95,6 +98,7 @@ void Flanger::process_stereo(float* left, float* right, int num_samples) {
         return;
     }
 
+    using namespace FlangerParams;
     const float rate = params_[P_RATE].value;
     const float depth_ms = params_[P_DEPTH].value;
     const float delay_ms = params_[P_DELAY].value;

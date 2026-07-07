@@ -101,3 +101,72 @@ TEST(effect_colors_are_distinct) {
                          std::fabs(dist->pedal_color.z - rv->pedal_color.z) < 0.01f);
     ASSERT_FALSE(dist_rv_same);
 }
+
+TEST(theme_format_parameter_value_hz_low) {
+    std::string formatted = Theme::formatParameterValue(440.0f, "Hz");
+    ASSERT_EQ(formatted, "440 Hz");
+}
+
+TEST(theme_format_parameter_value_hz_high) {
+    std::string formatted = Theme::formatParameterValue(1500.0f, "Hz");
+    ASSERT_EQ(formatted, "1.5 kHz");
+}
+
+TEST(theme_format_parameter_value_db) {
+    std::string formatted = Theme::formatParameterValue(-6.0f, "dB");
+    ASSERT_EQ(formatted, "-6.0 dB");
+}
+
+TEST(theme_format_parameter_value_percent) {
+    std::string formatted = Theme::formatParameterValue(75.2f, "%");
+    ASSERT_EQ(formatted, "75%");
+
+    std::string formatted_pct = Theme::formatParameterValue(50.8f, "pct");
+    ASSERT_EQ(formatted_pct, "51%");
+}
+
+TEST(theme_format_parameter_value_ms) {
+    std::string formatted = Theme::formatParameterValue(250.0f, "ms");
+    ASSERT_EQ(formatted, "250.0 ms");
+}
+
+TEST(theme_format_parameter_value_s) {
+    std::string formatted = Theme::formatParameterValue(1.234f, "s");
+    ASSERT_EQ(formatted, "1.23 s");
+}
+
+TEST(theme_format_parameter_value_custom_unit) {
+    std::string formatted = Theme::formatParameterValue(3.5f, "oct");
+    ASSERT_EQ(formatted, "3.5 oct");
+}
+
+TEST(theme_format_parameter_value_empty_unit) {
+    std::string formatted = Theme::formatParameterValue(5.0f, "");
+    ASSERT_EQ(formatted, "5.0");
+}
+
+TEST(effect_color_lookup_all_effects) {
+    const char* all_effects[] = {
+        "Distortion", "Overdrive",  "Delay",         "Reverb",
+        "Looper",     "Chorus",     "Phaser",        "Flanger",
+        "Equalizer",  "Noise Gate", "Compressor",    "MultiBand Compressor",
+        "Cabinet",    "Octaver",    "Pitch Shifter", "Tuner"};
+    for (const char* name : all_effects) {
+        const auto* entry = get_effect_color(name);
+        ASSERT_TRUE(entry != nullptr);
+        ASSERT_EQ(std::string(entry->name), std::string(name));
+    }
+}
+
+TEST(theme_gold_dim_and_not_distinct) {
+    ImVec4 gold = Theme::Gold();
+    ImVec4 gold_dim = Theme::GoldDim();
+    ASSERT_NEAR(gold_dim.w, 1.0f, 1e-6f);
+    bool is_same =
+        (std::fabs(gold.x - gold_dim.x) < 1e-4f && std::fabs(gold.y - gold_dim.y) < 1e-4f &&
+         std::fabs(gold.z - gold_dim.z) < 1e-4f);
+    ASSERT_FALSE(is_same);
+    ASSERT_GT(gold_dim.x, 0.4f);
+    ASSERT_GT(gold_dim.y, 0.3f);
+    ASSERT_LT(gold_dim.z, 0.4f);
+}

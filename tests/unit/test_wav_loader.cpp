@@ -179,3 +179,22 @@ TEST(WavLoader_Truncation_LimitOfOne) {
     ASSERT_EQ(static_cast<int>(wav.samples.size()), 1);
     ASSERT_NEAR(wav.samples[0], 0.9f, 5e-3f);
 }
+
+TEST(WavLoader_ResampleLinearOutOfBounds) {
+    std::vector<float> input = {1.0f, 2.0f};
+    auto res = resample_linear(input, 5, 1);
+    ASSERT_EQ(static_cast<int>(res.size()), 1);
+    ASSERT_NEAR(res[0], 1.0f, 1e-4f);
+}
+
+TEST(WavLoader_StereoMixdown) {
+    const std::string path = "tests/assets/wl_test_stereo.wav";
+    TempFile guard(path);
+    std::vector<int16_t> samples = {1000, 2000, 3000, 4000};
+    ASSERT_TRUE(write_pcm16_wav(path, 2, 44100, samples));
+    WavData wav = load_wav_file(path, 0, 1024);
+    ASSERT_EQ(wav.channels, 2);
+    ASSERT_EQ(static_cast<int>(wav.samples.size()), 2);
+    ASSERT_NEAR(wav.samples[0], 1500.f / 32767.f, 1e-4f);
+    ASSERT_NEAR(wav.samples[1], 3500.f / 32767.f, 1e-4f);
+}

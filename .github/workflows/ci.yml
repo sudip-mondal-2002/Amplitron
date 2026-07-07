@@ -16,7 +16,7 @@ jobs:
     name: Test on Linux
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -61,11 +61,9 @@ jobs:
             -DCMAKE_C_FLAGS="--coverage -O0 -g" \
             -DCMAKE_CXX_FLAGS="--coverage -O0 -g" \
             -DCMAKE_EXE_LINKER_FLAGS="--coverage" \
+            -DCMAKE_UNITY_BUILD=ON \
             ..
           ninja -j$(nproc)
-
-      - name: Run Tests
-        run: cd build && ./amplitron-tests
 
       - name: Install Smoke Test
         env:
@@ -83,6 +81,9 @@ jobs:
           test ! -e "$INSTALL_PREFIX/bin/Amplitron"
           test ! -e "$INSTALL_PREFIX/share/amplitron"
           test ! -e "$INSTALL_PREFIX/bin/assets"
+
+      - name: Run Tests
+        run: cd build && ./amplitron-tests --junitxml=junit.xml
 
       - name: Generate Linux Coverage
         if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
@@ -112,7 +113,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: linux-coverage
-          path: coverage.filtered.info
+          path: |
+            coverage.filtered.info
+            build/junit.xml
           retention-days: 1
 
       - name: Upload Build
@@ -128,7 +131,7 @@ jobs:
     name: Test on macOS
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -170,11 +173,9 @@ jobs:
             -DSDL2_LIBRARIES="$HOMEBREW_PREFIX/lib/libSDL2.dylib" \
             -DRTMIDI_INCLUDE_DIRS="$HOMEBREW_PREFIX/include" \
             -DRTMIDI_LIBRARIES="$HOMEBREW_PREFIX/lib/librtmidi.dylib" \
+            -DCMAKE_UNITY_BUILD=ON \
             ..
           ninja -j$(sysctl -n hw.ncpu)
-
-      - name: Run Tests
-        run: cd build && ./amplitron-tests
 
       - name: Install Smoke Test
         env:
@@ -192,6 +193,9 @@ jobs:
           test ! -e "$INSTALL_PREFIX/bin/Amplitron"
           test ! -e "$INSTALL_PREFIX/share/amplitron"
           test ! -e "$INSTALL_PREFIX/bin/assets"
+
+      - name: Run Tests
+        run: cd build && ./amplitron-tests --junitxml=junit.xml
 
       - name: Generate macOS Coverage
         if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
@@ -213,7 +217,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: macos-coverage
-          path: coverage.filtered.info
+          path: |
+            coverage.filtered.info
+            build/junit.xml
           retention-days: 1
 
       - name: Bundle Dylibs
@@ -289,7 +295,7 @@ jobs:
     env:
       EMSDK_VERSION: 3.1.51
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -300,19 +306,19 @@ jobs:
           path: |
             emsdk
             ~/.emscripten_cache
-          key: emsdk-${{ env.EMSDK_VERSION }}-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}
+          key: emsdk-${{ env.EMSDK_VERSION }}-${{ runner.os }}-v2-${{ hashFiles('CMakeLists.txt') }}
           restore-keys: |
+            emsdk-${{ env.EMSDK_VERSION }}-${{ runner.os }}-v2-
             emsdk-${{ env.EMSDK_VERSION }}-${{ runner.os }}-
 
       - name: Setup Emscripten
         if: steps.emsdk-cache.outputs.cache-hit != 'true'
         run: |
           if [ -d emsdk ]; then
-            cd emsdk && git pull
-          else
-            git clone https://github.com/emscripten-core/emsdk.git
-            cd emsdk
+            rm -rf emsdk
           fi
+          git clone https://github.com/emscripten-core/emsdk.git
+          cd emsdk
           ./emsdk install $EMSDK_VERSION
           ./emsdk activate $EMSDK_VERSION
 
@@ -337,9 +343,10 @@ jobs:
       - name: Build WASM
         run: |
           source emsdk/emsdk_env.sh
+          export NODE_OPTIONS="--max-old-space-size=6144"
           mkdir -p build-web && cd build-web
-          emcmake cmake -DCMAKE_BUILD_TYPE=Release -DAMPLITRON_VERSION="${{ steps.version.outputs.version }}" ..
-          emmake make -j$(nproc)
+          emcmake cmake -DCMAKE_BUILD_TYPE=MinSizeRel -DAMPLITRON_VERSION="${{ steps.version.outputs.version }}" -DCMAKE_UNITY_BUILD=ON ..
+          emmake make -j2
 
       - name: Upload Web Build
         uses: actions/upload-artifact@v7
@@ -353,7 +360,7 @@ jobs:
     needs: build-web
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -383,6 +390,14 @@ jobs:
           CI: true
         run: npx playwright test
 
+      - name: Upload web test results artifact
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: web-test-results
+          path: tests/web/junit.xml
+          retention-days: 1
+
       - name: Upload Playwright HTML report
         if: always()
         uses: actions/upload-artifact@v7
@@ -404,7 +419,7 @@ jobs:
     name: Test on Windows
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 1
 
@@ -448,8 +463,9 @@ jobs:
       - name: Build
         shell: msys2 {0}
         run: |
-          export CCACHE_DIR="$GITHUB_WORKSPACE/.ccache"
-          export CCACHE_MAXSIZE=200M
+          export CCACHE_DIR="$(cygpath -u "$GITHUB_WORKSPACE")/.ccache"
+          export CCACHE_MAXSIZE=500M
+          export CCACHE_COMPRESS=1
           mkdir -p "$CCACHE_DIR"
           if [ "${{ github.event_name }}" = "pull_request" ] || [ "${{ github.ref }}" = "refs/heads/main" ]; then
             BUILD_TYPE=RelWithDebInfo
@@ -468,13 +484,10 @@ jobs:
             -DCMAKE_EXE_LINKER_FLAGS="$LINK_FLAGS" \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_UNITY_BUILD=ON \
             ..
           ninja -j$NUMBER_OF_PROCESSORS
           ccache -s
-
-      - name: Run Tests
-        shell: msys2 {0}
-        run: cd build && ./amplitron-tests.exe
 
       - name: Install Smoke Test
         shell: msys2 {0}
@@ -496,6 +509,10 @@ jobs:
           test ! -e "$INSTALL_PREFIX/bin/Amplitron.exe"
           test ! -e "$INSTALL_PREFIX/share/amplitron"
           test ! -e "$INSTALL_PREFIX/bin/assets"
+
+      - name: Run Tests
+        shell: msys2 {0}
+        run: cd build && ./amplitron-tests.exe --junitxml=junit.xml
 
       - name: Generate Windows Coverage
         if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
@@ -525,7 +542,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: windows-coverage
-          path: coverage.filtered.info
+          path: |
+            coverage.filtered.info
+            build/junit.xml
           retention-days: 1
 
       - name: Collect Binaries
@@ -553,7 +572,7 @@ jobs:
     name: Build Android APK
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -624,7 +643,7 @@ jobs:
     name: Build iOS App (Device)
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -750,11 +769,11 @@ jobs:
 
   merge-coverage:
     name: Merge Cross-Platform Coverage
-    needs: [test-linux, test-macos, test-windows]
+    needs: [test-linux, test-macos, test-windows, test-web]
     if: ${{ !cancelled() && (github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install lcov
         run: |
@@ -808,38 +827,6 @@ jobs:
           genhtml merged.info --output-directory coverage-report $GENHTML_IGNORE --synthesize-missing --prefix $GITHUB_WORKSPACE
           lcov --summary merged.info $LCOV_IGNORE | tee merged-summary.txt
 
-      - name: Generate Merged Coverage Comment
-        run: |
-          LCOV_IGNORE="--ignore-errors unused,unused,inconsistent,inconsistent,format,format,corrupt,corrupt,unsupported,unsupported,source,source,mismatch,mismatch,gcov,gcov"
-          COVERAGE=$(lcov --summary merged.info $LCOV_IGNORE 2>&1 | awk '/lines......:/ {print $2}' | sed 's/%//')
-          echo "Merged line coverage: $COVERAGE%"
-
-          THRESHOLD=60
-
-          echo "### 🌍 Cross-Platform Coverage Report" > coverage_comment.md
-          echo "**Platforms:** ${{ env.PLATFORMS }}" >> coverage_comment.md
-          echo "**Merged Line Coverage:** ${COVERAGE}%" >> coverage_comment.md
-          echo "" >> coverage_comment.md
-
-          if awk "BEGIN {exit !($COVERAGE >= $THRESHOLD)}"; then
-            echo "✅ Coverage meets threshold: $COVERAGE% >= $THRESHOLD%" >> coverage_comment.md
-          else
-            echo "⚠️ Coverage is below threshold: $COVERAGE% < $THRESHOLD%" >> coverage_comment.md
-          fi
-
-          echo "" >> coverage_comment.md
-          echo "<details>" >> coverage_comment.md
-          echo "<summary>Full Merged Coverage Summary</summary>" >> coverage_comment.md
-          echo "" >> coverage_comment.md
-          echo '```text' >> coverage_comment.md
-          cat merged-summary.txt >> coverage_comment.md
-          echo '```' >> coverage_comment.md
-          echo "</details>" >> coverage_comment.md
-
-          cat coverage_comment.md >> $GITHUB_STEP_SUMMARY
-
-
-
       - name: Upload Merged Coverage HTML Report
         uses: actions/upload-artifact@v7
         with:
@@ -857,7 +844,7 @@ jobs:
           retention-days: 7
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: merged.info
           flags: cross-platform
@@ -865,3 +852,22 @@ jobs:
           fail_ci_if_error: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Download Web Test Results
+        uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: web-test-results
+          path: test-results/web/
+
+      - name: Upload combined test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: |
+            coverage-linux/junit.xml
+            coverage-macos/junit.xml
+            coverage-windows/junit.xml
+            test-results/web/junit.xml
+          report_type: test_results
