@@ -416,9 +416,11 @@ if(EMSCRIPTEN)
         ${CMAKE_SOURCE_DIR}/src/presets
         ${CMAKE_SOURCE_DIR}/external
         ${CMAKE_SOURCE_DIR}/external/kiss_fft
-        ${CMAKE_SOURCE_DIR}/external/RTNeural
         ${IMGUI_DIR}
         ${IMGUI_DIR}/backends
+    )
+    target_include_directories(Amplitron SYSTEM PRIVATE
+        ${CMAKE_SOURCE_DIR}/external/RTNeural
     )
 
     # OpenGL ES 3 for ImGui's OpenGL3 backend on WebGL 2
@@ -478,9 +480,11 @@ elseif(ANDROID)
         ${CMAKE_SOURCE_DIR}/src/presets
         ${CMAKE_SOURCE_DIR}/external
         ${CMAKE_SOURCE_DIR}/external/kiss_fft
-        ${CMAKE_SOURCE_DIR}/external/RTNeural
         ${IMGUI_DIR}
         ${IMGUI_DIR}/backends
+    )
+    target_include_directories(main SYSTEM PRIVATE
+        ${CMAKE_SOURCE_DIR}/external/RTNeural
     )
     if(SDL2_SOURCE_DIR)
         target_include_directories(main PRIVATE ${SDL2_SOURCE_DIR}/include)
@@ -522,9 +526,11 @@ elseif(IOS)
         ${CMAKE_SOURCE_DIR}/src/presets
         ${CMAKE_SOURCE_DIR}/external
         ${CMAKE_SOURCE_DIR}/external/kiss_fft
-        ${CMAKE_SOURCE_DIR}/external/RTNeural
         ${IMGUI_DIR}
         ${IMGUI_DIR}/backends
+    )
+    target_include_directories(Amplitron SYSTEM PRIVATE
+        ${CMAKE_SOURCE_DIR}/external/RTNeural
     )
     if(SDL2_INCLUDE_DIRS)
         target_include_directories(Amplitron PRIVATE ${SDL2_INCLUDE_DIRS})
@@ -662,12 +668,14 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${CMAKE_SOURCE_DIR}/src/presets
         ${CMAKE_SOURCE_DIR}/external
         ${CMAKE_SOURCE_DIR}/external/kiss_fft
-        ${CMAKE_SOURCE_DIR}/external/RTNeural
         ${IMGUI_DIR}
         ${IMGUI_DIR}/backends
         ${PORTAUDIO_INCLUDE_DIRS}
         ${SDL2_INCLUDE_DIRS}
         ${RTMIDI_INCLUDE_DIRS}
+    )
+    target_include_directories(amplitron_core SYSTEM PRIVATE
+        ${CMAKE_SOURCE_DIR}/external/RTNeural
     )
     if(WITH_JACK AND UNIX AND NOT APPLE AND JACK_INCLUDE_DIRS)
         target_include_directories(amplitron_core PRIVATE ${JACK_INCLUDE_DIRS})
@@ -678,6 +686,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
     target_compile_definitions(amplitron_core PRIVATE
         AMPLITRON_HAS_MIDI
         AMPLITRON_VERSION="${AMPLITRON_VERSION}"
+        RTNEURAL_DEFAULT_ALIGNMENT=16
     )
     if(WITH_JACK AND UNIX AND NOT APPLE)
         target_compile_definitions(amplitron_core PRIVATE WITH_JACK)
@@ -703,13 +712,15 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${CMAKE_SOURCE_DIR}/src/presets
         ${CMAKE_SOURCE_DIR}/external
         ${CMAKE_SOURCE_DIR}/external/kiss_fft
-        ${CMAKE_SOURCE_DIR}/external/RTNeural
         ${IMGUI_DIR}
         ${IMGUI_DIR}/backends
         ${PORTAUDIO_INCLUDE_DIRS}
         ${SDL2_INCLUDE_DIRS}
         ${OPENGL_INCLUDE_DIR}
         ${RTMIDI_INCLUDE_DIRS}
+    )
+    target_include_directories(Amplitron SYSTEM PRIVATE
+        ${CMAKE_SOURCE_DIR}/external/RTNeural
     )
 
     if(WITH_JACK AND UNIX AND NOT APPLE AND JACK_INCLUDE_DIRS)
@@ -719,6 +730,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
     target_compile_definitions(Amplitron PRIVATE
         AMPLITRON_VERSION="${AMPLITRON_VERSION}"
         AMPLITRON_HAS_MIDI
+        RTNEURAL_DEFAULT_ALIGNMENT=16
     )
 
     if(WITH_JACK AND UNIX AND NOT APPLE)
@@ -887,7 +899,6 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${CMAKE_SOURCE_DIR}/src/presets
         ${CMAKE_SOURCE_DIR}/external
         ${CMAKE_SOURCE_DIR}/external/kiss_fft
-        ${CMAKE_SOURCE_DIR}/external/RTNeural
         ${CMAKE_SOURCE_DIR}/tests
         ${IMGUI_DIR}
         ${IMGUI_DIR}/backends
@@ -895,6 +906,9 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${SDL2_INCLUDE_DIRS}
         ${OPENGL_INCLUDE_DIR}
         ${RTMIDI_INCLUDE_DIRS}
+    )
+    target_include_directories(amplitron-tests SYSTEM PRIVATE
+        ${CMAKE_SOURCE_DIR}/external/RTNeural
     )
 
     if(WITH_JACK AND UNIX AND NOT APPLE AND JACK_INCLUDE_DIRS)
@@ -908,6 +922,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         AMPLITRON_TESTS
         AMPLITRON_TEST_NATIVE_DIALOGS
         SDL_MAIN_HANDLED
+        RTNEURAL_DEFAULT_ALIGNMENT=16
         "Pa_GetDeviceCount=MOCK_Pa_GetDeviceCount"
         "Pa_GetDeviceInfo=MOCK_Pa_GetDeviceInfo"
         "Pa_GetHostApiInfo=MOCK_Pa_GetHostApiInfo"
@@ -970,6 +985,8 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         target_link_libraries(amplitron-tests PRIVATE dl pthread)
     endif()
 
+    set_target_properties(amplitron_core PROPERTIES UNITY_BUILD OFF)
+    set_target_properties(Amplitron PROPERTIES UNITY_BUILD OFF)
     set_target_properties(amplitron-tests PROPERTIES UNITY_BUILD OFF)
 
     # Copy presets into build directory alongside the executable

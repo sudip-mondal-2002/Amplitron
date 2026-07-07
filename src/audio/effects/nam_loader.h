@@ -1,8 +1,6 @@
 #pragma once
 
-// Neural Amp Modeler (NAM) pedal — loads and runs .nam ML model files
-// for realistic amp simulation using RTNeural inference engine.
-
+#include <nlohmann/json.hpp>
 #include "audio/effects/core/effect.h"
 #include <string>
 #include <memory>
