@@ -254,6 +254,7 @@ set(APP_SOURCES
     src/audio/engine/audio_engine.cpp
     src/audio/engine/audio_engine_chain.cpp
     src/audio/engine/audio_engine_process.cpp
+    src/audio/engine/dsp_performance_profiler.cpp
     src/audio/engine/audio_engine_api.cpp
     src/audio/engine/audio_metrics_service.cpp
     src/audio/engine/metronome.cpp
@@ -297,6 +298,7 @@ set(APP_SOURCES
     src/gui/views/gui_tuner.cpp
     src/gui/views/gui_keyboard_shortcuts.cpp
     src/gui/views/gui_analyzer.cpp
+    src/gui/views/gui_dsp_profiler.cpp
     src/gui/pedalboard/pedal_board.cpp
     src/gui/pedalboard/pedal_board_menu.cpp
     src/gui/pedalboard/pedal_board_chain.cpp
@@ -626,6 +628,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         # Audio engine (partial — see exclusion note above)
         src/audio/engine/audio_engine_chain.cpp
         src/audio/engine/audio_engine_process.cpp
+        src/audio/engine/dsp_performance_profiler.cpp
         src/audio/engine/audio_engine_api.cpp
         src/audio/engine/audio_metrics_service.cpp
         src/audio/engine/metronome.cpp
@@ -782,6 +785,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/unit/test_audio_backend_registry.cpp
         tests/unit/test_audio_backend_sdl.cpp
         tests/unit/test_audio_metrics_service.cpp
+        tests/unit/test_dsp_performance_profiler.cpp
         tests/unit/test_audio_command_dispatcher.cpp
         tests/unit/test_oboe_ring_buffer.cpp
         tests/unit/test_effects_dynamics.cpp
@@ -875,6 +879,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         src/gui/views/gui_tuner.cpp
         src/gui/views/gui_keyboard_shortcuts.cpp
         src/gui/views/gui_analyzer.cpp
+        src/gui/views/gui_dsp_profiler.cpp
         src/gui/pedalboard/pedal_board.cpp
         src/gui/pedalboard/pedal_board_menu.cpp
         src/gui/pedalboard/pedal_board_chain.cpp

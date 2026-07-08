@@ -26,11 +26,16 @@ void sdl_audio_callback(void* userdata, Uint8* stream, int len) {
     }
 
     SDL_AudioDeviceID cap_dev = be->get_capture_device();
+
     if (cap_dev != 0) {
         Uint32 queued = SDL_GetQueuedAudioSize(cap_dev);
         Uint32 need = static_cast<Uint32>(frame_count * sizeof(float));
-
         Uint32 max_queued = need * 2;
+
+        if (queued > max_queued) {
+            engine->record_profiler_overrun();
+        }
+
         while (queued > max_queued) {
             Uint8 junk[4096];
             Uint32 chunk = (queued - need) > 4096 ? 4096 : (queued - need);
@@ -40,9 +45,12 @@ void sdl_audio_callback(void* userdata, Uint8* stream, int len) {
 
         Uint32 got = SDL_DequeueAudio(cap_dev, cap.data(), need);
         int captured = static_cast<int>(got / sizeof(float));
-        if (captured < frame_count)
+
+        if (captured < frame_count) {
+            engine->record_profiler_underrun();
             std::memset(cap.data() + captured, 0,
                         static_cast<size_t>(frame_count - captured) * sizeof(float));
+        }
     } else {
         std::memset(cap.data(), 0, static_cast<size_t>(frame_count) * sizeof(float));
     }
@@ -51,6 +59,7 @@ void sdl_audio_callback(void* userdata, Uint8* stream, int len) {
 }
 
 SdlBackend::SdlBackend() = default;
+
 SdlBackend::~SdlBackend() { shutdown(); }
 
 bool SdlBackend::initialize(IAudioEngine* engine) {
@@ -88,6 +97,7 @@ bool SdlBackend::start() {
         target_buffer = p;
     }
 #endif
+
     int target_rate = engine_->get_sample_rate();
 
     SDL_AudioSpec want_out, have_out;
@@ -128,15 +138,18 @@ bool SdlBackend::start() {
     for (int i = 0; i < num_capture; ++i) {
         const char* name = SDL_GetAudioDeviceName(i, 1);
         if (!name) continue;
+
         std::string lower = name;
         std::transform(lower.begin(), lower.end(), lower.begin(),
                        [](unsigned char c) { return std::tolower(c); });
+
         for (const auto* kw : usb_keywords) {
             if (lower.find(kw) != std::string::npos) {
                 preferred_device = name;
                 break;
             }
         }
+
         if (preferred_device) break;
     }
 
@@ -158,10 +171,12 @@ void SdlBackend::stop() {
         if (capture_device_ != 0) SDL_PauseAudioDevice(capture_device_, 1);
         running_ = false;
     }
+
     if (capture_device_ != 0) {
         SDL_CloseAudioDevice(capture_device_);
         capture_device_ = 0;
     }
+
     if (audio_device_ != 0) {
         SDL_CloseAudioDevice(audio_device_);
         audio_device_ = 0;

@@ -9,6 +9,7 @@
 #include "audio/engine/audio_command_dispatcher.h"
 #include "audio/engine/audio_graph.h"
 #include "audio/engine/audio_graph_executor.h"
+#include "audio/engine/dsp_performance_profiler.h"
 #include "audio/engine/i_audio_engine.h"
 #include "audio/engine/i_metronome.h"
 #include "audio/engine/metronome.h"
@@ -287,6 +288,16 @@ class AudioEngine : public IAudioEngine {
     /** @brief Return the current CPU load fraction (0.0–1.0, atomic). */
     float get_cpu_load() const override { return cpu_load_.load(std::memory_order_relaxed); }
 
+    DspProfilerSnapshot get_dsp_profiler_snapshot() const override {
+        return dsp_profiler_.snapshot();
+    }
+
+    void reset_dsp_profiler() override { dsp_profiler_.reset(); }
+
+    void record_profiler_underrun() override { dsp_profiler_.record_underrun(); }
+
+    void record_profiler_overrun() override { dsp_profiler_.record_overrun(); }
+
     /** @brief Suggest a new buffer size based on current CPU load. */
     int get_suggested_buffer_size() const override;
 
@@ -374,6 +385,7 @@ class AudioEngine : public IAudioEngine {
     // CPU load watchdog for buffer auto-tuning
     std::atomic<float> cpu_load_{0.0f};
     std::atomic<float> callback_duration_us_{0.0f};
+    DspPerformanceProfiler dsp_profiler_;
     bool auto_buffer_enabled_ = false;
 
     std::unique_ptr<AnalyzerCapture> analyzer_capture_;
