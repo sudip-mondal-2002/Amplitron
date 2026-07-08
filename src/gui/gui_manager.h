@@ -49,93 +49,92 @@ class AmplitronSession;
  * - GuiMidi:      MIDI mapping & learn window
  */
 class GuiManager {
- public:
-  GuiManager(AmplitronSession& session);
-  ~GuiManager();
+   public:
+    GuiManager(AmplitronSession& session);
+    ~GuiManager();
 
-  bool initialize(int width = 1280, int height = 720);
-  void shutdown();
-  bool run_frame();
-  void force_rebuild_pedal_widgets();
+    bool initialize(int width = 1280, int height = 720);
+    void shutdown();
+    bool run_frame();
+    void force_rebuild_pedal_widgets();
 
-  IMidiManager& midi_manager() { return midi_manager_; }
-  IAudioEngine& audio_engine() { return engine_; }
-  CommandHistory& command_history() { return command_history_; }
+    IMidiManager& midi_manager() { return midi_manager_; }
+    IAudioEngine& audio_engine() { return engine_; }
+    CommandHistory& command_history() { return command_history_; }
 
- private:
-  friend struct GuiManagerTestAccessor;
+   private:
+    friend struct GuiManagerTestAccessor;
 
-  // ── Menu bar ──
-  void render_menu_bar();
+    // ── Menu bar ──
+    void render_menu_bar();
 
-  // ── Master controls strip ──
-  void render_master_controls();
+    // ── Master controls strip ──
+    void render_master_controls();
 
-  // ── Prop-assembly helpers ──
-  RecordingProps build_recording_props();
-  TunerProps build_tuner_props();
-  SettingsProps build_settings_props();
-  AnalyzerProps build_analyzer_props();
-  SnapshotsProps build_snapshots_props();
+    // ── Prop-assembly helpers ──
+    RecordingProps build_recording_props();
+    TunerProps build_tuner_props();
+    SettingsProps build_settings_props();
+    AnalyzerProps build_analyzer_props();
+    SnapshotsProps build_snapshots_props();
 
-  // ── Actions (called from child callbacks / keyboard shortcuts) ──
-  void toggle_audio_mute_state();
-  void set_show_tuner(bool show);
-  void recallSnapshotFromSlot(int slot);
+    // ── Actions (called from child callbacks / keyboard shortcuts) ──
+    void toggle_audio_mute_state();
+    void set_show_tuner(bool show);
+    void recallSnapshotFromSlot(int slot);
 
-  // ─────────────────────────────────────────────────────────────────────
-  // Core objects
-  // ─────────────────────────────────────────────────────────────────────
-  AmplitronSession& session_;
-  IAudioEngine& engine_;
-  CommandHistory& command_history_;
-  IMidiManager& midi_manager_;
-  SnapshotManager& snapshot_manager_;
-  WindowContext window_context_;
-  std::unique_ptr<PedalBoard> pedal_board_;
+    // ─────────────────────────────────────────────────────────────────────
+    // Core objects
+    // ─────────────────────────────────────────────────────────────────────
+    AmplitronSession& session_;
+    IAudioEngine& engine_;
+    CommandHistory& command_history_;
+    IMidiManager& midi_manager_;
+    SnapshotManager& snapshot_manager_;
+    WindowContext window_context_;
+    std::unique_ptr<PedalBoard> pedal_board_;
 
-  // Tuner pedal instance shared between engine tap and TunerProps assembly
-  std::shared_ptr<TunerPedal> tuner_pedal_;
+    // Tuner pedal instance shared between engine tap and TunerProps assembly
+    std::shared_ptr<TunerPedal> tuner_pedal_;
 
-  bool initialized_ = false;
-  bool audio_muted_ = false;
+    bool initialized_ = false;
+    bool audio_muted_ = false;
 
-  // ── Smoothed master level meters (computed in GuiManager, not in children)
-  // ──
-  float smoothed_input_level_ = 0.0f;
-  float smoothed_output_level_ = 0.0f;
+    // ── Smoothed master level meters (computed in GuiManager, not in children) ──
+    float smoothed_input_level_ = 0.0f;
+    float smoothed_output_level_ = 0.0f;
 
-  // ── Visibility flags (owned here, passed to child render calls) ──
-  bool show_settings_ = false;
-  bool show_save_preset_ = false;
-  bool show_load_preset_ = false;
-  bool show_tuner_ = false;
-  bool show_midi_ = false;
-  bool show_keyboard_shortcuts_ = false;
+    // ── Visibility flags (owned here, passed to child render calls) ──
+    bool show_settings_ = false;
+    bool show_save_preset_ = false;
+    bool show_load_preset_ = false;
+    bool show_tuner_ = false;
+    bool show_midi_ = false;
+    bool show_keyboard_shortcuts_ = false;
 
-  // ── Snapshot manager is now referenced from session_ ──
+    // ── Snapshot manager is now referenced from session_ ──
 
-  // ── Reactive child components ──
-  GuiSettings gui_settings_;
-  GuiPresets gui_presets_;
-  GuiRecording gui_recording_;
-  GuiTuner gui_tuner_;
-  GuiAnalyzer gui_analyzer_;
-  GuiSnapshots gui_snapshots_;
-  // ── MidiManager is now referenced from session_ ──
-  GuiMidi gui_midi_;
-  GuiKeyboardShortcuts gui_keyboard_shortcuts_;
-  AudioMetricsService metrics_service_;
+    // ── Reactive child components ──
+    GuiSettings gui_settings_;
+    GuiPresets gui_presets_;
+    GuiRecording gui_recording_;
+    GuiTuner gui_tuner_;
+    GuiAnalyzer gui_analyzer_;
+    GuiSnapshots gui_snapshots_;
+    // ── MidiManager is now referenced from session_ ──
+    GuiMidi gui_midi_;
+    GuiKeyboardShortcuts gui_keyboard_shortcuts_;
+    AudioMetricsService metrics_service_;
 
-  // ── Toast notification ──
-  std::string toast_message_;
-  float toast_timer_ = 0.0f;
+    // ── Toast notification ──
+    std::string toast_message_;
+    float toast_timer_ = 0.0f;
 
-  // ── Update checking ──
-  UpdateChecker update_checker_;
+    // ── Update checking ──
+    UpdateChecker update_checker_;
 
-  // ── Waveform buffer (filled from recorder, passed to RecordingProps) ──
-  float rec_waveform_buf_[512] = {};
+    // ── Waveform buffer (filled from recorder, passed to RecordingProps) ──
+    float rec_waveform_buf_[512] = {};
 };
 
 }  // namespace Amplitron

@@ -13,9 +13,8 @@ extern int (*g_mock_pa_get_default_input_device)();
 extern int (*g_mock_pa_get_default_output_device)();
 
 extern PaError (*g_mock_pa_open_stream)(PaStream **, const PaStreamParameters *,
-                                        const PaStreamParameters *, double,
-                                        unsigned long, PaStreamFlags,
-                                        PaStreamCallback *, void *);
+                                        const PaStreamParameters *, double, unsigned long,
+                                        PaStreamFlags, PaStreamCallback *, void *);
 extern PaError (*g_mock_pa_start_stream)(PaStream *);
 extern PaError (*g_mock_pa_stop_stream)(PaStream *);
 extern PaError (*g_mock_pa_close_stream)(PaStream *);
@@ -32,11 +31,9 @@ PaDeviceIndex MOCK_Pa_HostApiDeviceIndexToDeviceIndex(PaHostApiIndex hostApi,
                                                       int hostApiDeviceIndex);
 PaDeviceIndex MOCK_Pa_GetDefaultInputDevice();
 PaDeviceIndex MOCK_Pa_GetDefaultOutputDevice();
-PaError MOCK_Pa_OpenStream(PaStream **stream,
-                           const PaStreamParameters *inputParameters,
-                           const PaStreamParameters *outputParameters,
-                           double sampleRate, unsigned long framesPerBuffer,
-                           PaStreamFlags streamFlags,
+PaError MOCK_Pa_OpenStream(PaStream **stream, const PaStreamParameters *inputParameters,
+                           const PaStreamParameters *outputParameters, double sampleRate,
+                           unsigned long framesPerBuffer, PaStreamFlags streamFlags,
                            PaStreamCallback *streamCallback, void *userData);
 PaError MOCK_Pa_StartStream(PaStream *stream);
 PaError MOCK_Pa_StopStream(PaStream *stream);

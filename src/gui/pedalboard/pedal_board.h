@@ -19,66 +19,62 @@ class GuiMidi;
  * are routed through CommandHistory for undo/redo support.
  */
 class PedalBoard {
-  friend struct TestAccessor;
+    friend struct TestAccessor;
 
- public:
-  /**
-   * @brief Construct the pedal board.
-   * @param engine  Reference to the audio engine that owns the effect chain.
-   * @param history Reference to the shared command history for undo/redo.
-   * @param gui_midi Optional GuiMidi pointer for MIDI learn on initial widgets.
-   */
-  PedalBoard(IAudioEngine& engine, CommandHistory& history,
-             GuiMidi* gui_midi = nullptr);
+   public:
+    /**
+     * @brief Construct the pedal board.
+     * @param engine  Reference to the audio engine that owns the effect chain.
+     * @param history Reference to the shared command history for undo/redo.
+     * @param gui_midi Optional GuiMidi pointer for MIDI learn on initial widgets.
+     */
+    PedalBoard(IAudioEngine& engine, CommandHistory& history, GuiMidi* gui_midi = nullptr);
 
-  /** @brief Destructor. */
-  ~PedalBoard();
+    /** @brief Destructor. */
+    ~PedalBoard();
 
-  /** @brief Render the toolbar and signal chain each frame. */
-  void render();
+    /** @brief Render the toolbar and signal chain each frame. */
+    void render();
 
-  /** @brief Recreate PedalWidget instances from the current engine effect list.
-   *  Preserves visibility of effects already on the board by tracking effect
-   * pointer identity; new effects (e.g. after preset load or add) are shown
-   * only if enabled. */
-  void rebuild_widgets();
+    /** @brief Recreate PedalWidget instances from the current engine effect list.
+     *  Preserves visibility of effects already on the board by tracking effect pointer
+     *  identity; new effects (e.g. after preset load or add) are shown only if enabled. */
+    void rebuild_widgets();
 
-  /** @brief Whether only enabled pedals are shown (default true). */
-  bool show_active_only() const { return show_active_only_; }
+    /** @brief Whether only enabled pedals are shown (default true). */
+    bool show_active_only() const { return show_active_only_; }
 
-  /** @brief Inject a GuiMidi pointer to propagate to PedalWidgets. */
-  void set_gui_midi(GuiMidi* gm) { gui_midi_ = gm; }
+    /** @brief Inject a GuiMidi pointer to propagate to PedalWidgets. */
+    void set_gui_midi(GuiMidi* gm) { gui_midi_ = gm; }
 
- private:
-  /** @brief Render the "+ Add Pedal" button and its popup menu. */
-  void render_add_pedal_menu();
+   private:
+    /** @brief Render the "+ Add Pedal" button and its popup menu. */
+    void render_add_pedal_menu();
 
-  /** @brief Render the amp model selector dropdown. */
-  void render_amp_selector();
+    /** @brief Render the amp model selector dropdown. */
+    void render_amp_selector();
 
-  /** @brief Render the MIDI status and quick actions menu. */
-  void render_midi_menu();
+    /** @brief Render the MIDI status and quick actions menu. */
+    void render_midi_menu();
 
-  /** @brief Render the signal flow line, pedal widgets, and drag-and-drop
-   * targets. */
-  void render_signal_chain();
+    /** @brief Render the signal flow line, pedal widgets, and drag-and-drop targets. */
+    void render_signal_chain();
 
-  /** @brief Find the index of the current AmpSimulator in the effect chain (-1
-   * if none). */
-  int find_amp_index() const;
+    /** @brief Find the index of the current AmpSimulator in the effect chain (-1 if none). */
+    int find_amp_index() const;
 
-  /** @brief Add an effect, rebuild widgets, and mark it visible. */
-  void add_effect_and_show(std::shared_ptr<Effect> effect);
+    /** @brief Add an effect, rebuild widgets, and mark it visible. */
+    void add_effect_and_show(std::shared_ptr<Effect> effect);
 
-  IAudioEngine& engine_;
-  CommandHistory& history_;
-  std::vector<std::unique_ptr<PedalWidget>> widgets_;
-  bool show_active_only_ = true;
-  std::set<int> visible_indices_;  // Indices of pedals that should be visible
-  GuiMidi* gui_midi_ = nullptr;
-  bool show_confirm_reset_ = false;
-  bool show_confirm_clear_ = false;
-  bool show_confirm_midi_clear_ = false;
+    IAudioEngine& engine_;
+    CommandHistory& history_;
+    std::vector<std::unique_ptr<PedalWidget>> widgets_;
+    bool show_active_only_ = true;
+    std::set<int> visible_indices_;  // Indices of pedals that should be visible
+    GuiMidi* gui_midi_ = nullptr;
+    bool show_confirm_reset_ = false;
+    bool show_confirm_clear_ = false;
+    bool show_confirm_midi_clear_ = false;
 };
 
 }  // namespace Amplitron

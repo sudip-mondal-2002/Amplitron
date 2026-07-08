@@ -10,19 +10,19 @@
 namespace Amplitron {
 
 struct TunerProps {
-  bool has_signal = false;
-  int note_idx = -1;
-  int octave = 4;
-  float cents = 0.0f;
-  float freq = 0.0f;
-  bool mute_on = false;
-  float a4_ref = 440.0f;
+    bool has_signal = false;
+    int note_idx = -1;
+    int octave = 4;
+    float cents = 0.0f;
+    float freq = 0.0f;
+    bool mute_on = false;
+    float a4_ref = 440.0f;
 
-  std::function<void(bool)> on_mute_changed;  // arg: new mute state
-  std::function<void(float)> on_a4_ref_changed;
+    std::function<void(bool)> on_mute_changed;  // arg: new mute state
+    std::function<void(float)> on_a4_ref_changed;
 
-  // Needed to get note name string
-  std::function<const char*(int)> note_name_fn;
+    // Needed to get note name string
+    std::function<const char*(int)> note_name_fn;
 };
 
 /**
@@ -32,22 +32,20 @@ struct TunerProps {
  * Callbacks handle mute toggle and A4 reference changes.
  */
 class GuiTuner : public UIComponent<TunerProps> {
- public:
-  GuiTuner() = default;
+   public:
+    GuiTuner() = default;
 
-  /**
-   * @brief Render the tuner modal.
-   * Uses the internal show_ flag — call render(show) for external visibility
-   * control.
-   */
-  void render() override { render(show_); }
+    /**
+     * @brief Render the tuner modal.
+     * Uses the internal show_ flag — call render(show) for external visibility control.
+     */
+    void render() override { render(show_); }
 
-  /** @brief Render with an external show flag (GuiManager holds authoritative
-   * state). */
-  void render(bool& show);
+    /** @brief Render with an external show flag (GuiManager holds authoritative state). */
+    void render(bool& show);
 
- private:
-  bool show_ = true;
+   private:
+    bool show_ = true;
 };
 
 }  // namespace Amplitron

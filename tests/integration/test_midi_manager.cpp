@@ -1,8 +1,8 @@
 #include "test_fixtures.h"
 #include "test_framework.h"
 
-// Set a local hook definition to open up internal serialization blocks for test
-// suite coverage tracking
+// Set a local hook definition to open up internal serialization blocks for test suite coverage
+// tracking
 #define VIRTUAL_TEST_HOOK public
 #include "audio/effects/core/effect.h"
 #include "audio/engine/audio_engine.h"
@@ -21,21 +21,21 @@ namespace fs = std::filesystem;
  * MIDI control change (CC) mappings.
  */
 class TestEffect : public Effect {
- public:
-  TestEffect() {
-    params_ = {
-        {"Drive", 0.5f, 0.0f, 1.0f, 0.5f, "", ""},
-        {"Level", 0.8f, 0.0f, 2.0f, 0.8f, "", ""},
-    };
-  }
-  const char* name() const override { return "TestEffect"; }
-  std::vector<EffectParam>& params() override { return params_; }
-  const std::vector<EffectParam>& params() const override { return params_; }
-  void process(float* /*buffer*/, int /*num_samples*/) override {}
-  void reset() override {}
+   public:
+    TestEffect() {
+        params_ = {
+            {"Drive", 0.5f, 0.0f, 1.0f, 0.5f, "", ""},
+            {"Level", 0.8f, 0.0f, 2.0f, 0.8f, "", ""},
+        };
+    }
+    const char* name() const override { return "TestEffect"; }
+    std::vector<EffectParam>& params() override { return params_; }
+    const std::vector<EffectParam>& params() const override { return params_; }
+    void process(float* /*buffer*/, int /*num_samples*/) override {}
+    void reset() override {}
 
- private:
-  std::vector<EffectParam> params_;
+   private:
+    std::vector<EffectParam> params_;
 };
 
 /**
@@ -46,11 +46,11 @@ class TestEffect : public Effect {
  * @return A configured MidiEvent structure.
  */
 static MidiEvent make_cc(uint8_t cc, uint8_t value, uint8_t channel = 0) {
-  MidiEvent e{};
-  e.status = static_cast<uint8_t>(0xB0 | (channel & 0x0F));
-  e.data1 = cc;
-  e.data2 = value;
-  return e;
+    MidiEvent e{};
+    e.status = static_cast<uint8_t>(0xB0 | (channel & 0x0F));
+    e.data1 = cc;
+    e.data2 = value;
+    return e;
 }
 
 // ---------------------------------------------------------------------------
@@ -62,27 +62,27 @@ static MidiEvent make_cc(uint8_t cc, uint8_t value, uint8_t channel = 0) {
  * a minimum CC value of 0 to the parameter's minimum range limit.
  */
 TEST(midi_continuous_cc0_maps_to_min) {
-  MidiManager midi;
-  AudioEngine engine;
-  engine.initialize();
+    MidiManager midi;
+    AudioEngine engine;
+    engine.initialize();
 
-  auto fx = std::make_shared<TestEffect>();
-  engine.add_effect(fx);
+    auto fx = std::make_shared<TestEffect>();
+    engine.add_effect(fx);
 
-  MidiMapping m;
-  m.cc_number = 10;
-  m.midi_channel = -1;
-  m.target_type = MidiTargetType::EffectParam;
-  m.mode = MidiMappingMode::Continuous;
-  m.effect_name = "TestEffect";
-  m.param_name = "Drive";
-  midi.add_mapping(m);
+    MidiMapping m;
+    m.cc_number = 10;
+    m.midi_channel = -1;
+    m.target_type = MidiTargetType::EffectParam;
+    m.mode = MidiMappingMode::Continuous;
+    m.effect_name = "TestEffect";
+    m.param_name = "Drive";
+    midi.add_mapping(m);
 
-  midi.inject_event(make_cc(10, 0));
-  midi.poll(engine);
+    midi.inject_event(make_cc(10, 0));
+    midi.poll(engine);
 
-  ASSERT_NEAR(fx->params()[0].value, 0.0f, 0.01f);
-  engine.shutdown();
+    ASSERT_NEAR(fx->params()[0].value, 0.0f, 0.01f);
+    engine.shutdown();
 }
 
 /**
@@ -90,89 +90,88 @@ TEST(midi_continuous_cc0_maps_to_min) {
  * a maximum CC value of 127 to the parameter's maximum range limit.
  */
 TEST(midi_continuous_cc127_maps_to_max) {
-  MidiManager midi;
-  AudioEngine engine;
-  engine.initialize();
+    MidiManager midi;
+    AudioEngine engine;
+    engine.initialize();
 
-  auto fx = std::make_shared<TestEffect>();
-  engine.add_effect(fx);
+    auto fx = std::make_shared<TestEffect>();
+    engine.add_effect(fx);
 
-  MidiMapping m;
-  m.cc_number = 10;
-  m.midi_channel = -1;
-  m.target_type = MidiTargetType::EffectParam;
-  m.mode = MidiMappingMode::Continuous;
-  m.effect_name = "TestEffect";
-  m.param_name = "Drive";
-  midi.add_mapping(m);
+    MidiMapping m;
+    m.cc_number = 10;
+    m.midi_channel = -1;
+    m.target_type = MidiTargetType::EffectParam;
+    m.mode = MidiMappingMode::Continuous;
+    m.effect_name = "TestEffect";
+    m.param_name = "Drive";
+    midi.add_mapping(m);
 
-  midi.inject_event(make_cc(10, 127));
-  midi.poll(engine);
+    midi.inject_event(make_cc(10, 127));
+    midi.poll(engine);
 
-  ASSERT_NEAR(fx->params()[0].value, 1.0f, 0.01f);
-  engine.shutdown();
+    ASSERT_NEAR(fx->params()[0].value, 1.0f, 0.01f);
+    engine.shutdown();
 }
 
 /**
- * @brief Verifies that a continuous MIDI mapping correctly scales an
- * intermediate CC value (64) directly to the target parameter's mathematical
- * midpoint.
+ * @brief Verifies that a continuous MIDI mapping correctly scales an intermediate
+ * CC value (64) directly to the target parameter's mathematical midpoint.
  */
 TEST(midi_continuous_cc64_maps_to_midpoint) {
-  MidiManager midi;
-  AudioEngine engine;
-  engine.initialize();
+    MidiManager midi;
+    AudioEngine engine;
+    engine.initialize();
 
-  auto fx = std::make_shared<TestEffect>();
-  engine.add_effect(fx);
+    auto fx = std::make_shared<TestEffect>();
+    engine.add_effect(fx);
 
-  MidiMapping m;
-  m.cc_number = 20;
-  m.midi_channel = -1;
-  m.target_type = MidiTargetType::EffectParam;
-  m.mode = MidiMappingMode::Continuous;
-  m.effect_name = "TestEffect";
-  m.param_name = "Level";
-  midi.add_mapping(m);
+    MidiMapping m;
+    m.cc_number = 20;
+    m.midi_channel = -1;
+    m.target_type = MidiTargetType::EffectParam;
+    m.mode = MidiMappingMode::Continuous;
+    m.effect_name = "TestEffect";
+    m.param_name = "Level";
+    midi.add_mapping(m);
 
-  midi.inject_event(make_cc(20, 64));
-  midi.poll(engine);
+    midi.inject_event(make_cc(20, 64));
+    midi.poll(engine);
 
-  float expected = (64.0f / 127.0f) * 2.0f;
-  ASSERT_NEAR(fx->params()[1].value, expected, 0.02f);
-  engine.shutdown();
+    float expected = (64.0f / 127.0f) * 2.0f;
+    ASSERT_NEAR(fx->params()[1].value, expected, 0.02f);
+    engine.shutdown();
 }
 
 /**
- * @brief Validates that a toggle MIDI mapping alternates the effect bypass
- * state correctly when boundary values (0 and 127) are fed to the engine.
+ * @brief Validates that a toggle MIDI mapping alternates the effect bypass state
+ * correctly when boundary values (0 and 127) are fed to the engine.
  */
 TEST(midi_toggle_cc_enables_effect) {
-  MidiManager midi;
-  AudioEngine engine;
-  engine.initialize();
+    MidiManager midi;
+    AudioEngine engine;
+    engine.initialize();
 
-  auto fx = std::make_shared<TestEffect>();
-  fx->set_enabled(false);
-  engine.add_effect(fx);
+    auto fx = std::make_shared<TestEffect>();
+    fx->set_enabled(false);
+    engine.add_effect(fx);
 
-  MidiMapping m;
-  m.cc_number = 64;
-  m.midi_channel = -1;
-  m.target_type = MidiTargetType::EffectBypass;
-  m.mode = MidiMappingMode::Toggle;
-  m.effect_name = "TestEffect";
-  midi.add_mapping(m);
+    MidiMapping m;
+    m.cc_number = 64;
+    m.midi_channel = -1;
+    m.target_type = MidiTargetType::EffectBypass;
+    m.mode = MidiMappingMode::Toggle;
+    m.effect_name = "TestEffect";
+    midi.add_mapping(m);
 
-  midi.inject_event(make_cc(64, 127));
-  midi.poll(engine);
-  ASSERT_TRUE(fx->is_enabled());
+    midi.inject_event(make_cc(64, 127));
+    midi.poll(engine);
+    ASSERT_TRUE(fx->is_enabled());
 
-  midi.inject_event(make_cc(64, 0));
-  midi.poll(engine);
-  ASSERT_FALSE(fx->is_enabled());
+    midi.inject_event(make_cc(64, 0));
+    midi.poll(engine);
+    ASSERT_FALSE(fx->is_enabled());
 
-  engine.shutdown();
+    engine.shutdown();
 }
 
 /**
@@ -180,29 +179,29 @@ TEST(midi_toggle_cc_enables_effect) {
  * parameters of an incoming CC signal and instantiates a valid layout mapping.
  */
 TEST(midi_learn_creates_mapping) {
-  MidiManager midi;
-  AudioEngine engine;
-  engine.initialize();
+    MidiManager midi;
+    AudioEngine engine;
+    engine.initialize();
 
-  auto fx = std::make_shared<TestEffect>();
-  engine.add_effect(fx);
+    auto fx = std::make_shared<TestEffect>();
+    engine.add_effect(fx);
 
-  ASSERT_TRUE(midi.mappings().empty());
+    ASSERT_TRUE(midi.mappings().empty());
 
-  midi.start_learn(MidiTargetType::EffectParam, "TestEffect", "Drive");
-  ASSERT_TRUE(midi.is_learning());
+    midi.start_learn(MidiTargetType::EffectParam, "TestEffect", "Drive");
+    ASSERT_TRUE(midi.is_learning());
 
-  midi.inject_event(make_cc(42, 100, 3));
-  midi.poll(engine);
+    midi.inject_event(make_cc(42, 100, 3));
+    midi.poll(engine);
 
-  ASSERT_FALSE(midi.is_learning());
-  ASSERT_EQ(static_cast<int>(midi.mappings().size()), 1);
-  ASSERT_EQ(midi.mappings()[0].cc_number, 42);
-  ASSERT_EQ(midi.mappings()[0].midi_channel, 3);
-  ASSERT_EQ(midi.mappings()[0].effect_name, std::string("TestEffect"));
-  ASSERT_EQ(midi.mappings()[0].param_name, std::string("Drive"));
+    ASSERT_FALSE(midi.is_learning());
+    ASSERT_EQ(static_cast<int>(midi.mappings().size()), 1);
+    ASSERT_EQ(midi.mappings()[0].cc_number, 42);
+    ASSERT_EQ(midi.mappings()[0].midi_channel, 3);
+    ASSERT_EQ(midi.mappings()[0].effect_name, std::string("TestEffect"));
+    ASSERT_EQ(midi.mappings()[0].param_name, std::string("Drive"));
 
-  engine.shutdown();
+    engine.shutdown();
 }
 
 /**
@@ -210,19 +209,19 @@ TEST(midi_learn_creates_mapping) {
  * the values of internal parameters.
  */
 TEST(midi_unmapped_cc_ignored) {
-  MidiManager midi;
-  AudioEngine engine;
-  engine.initialize();
+    MidiManager midi;
+    AudioEngine engine;
+    engine.initialize();
 
-  auto fx = std::make_shared<TestEffect>();
-  engine.add_effect(fx);
-  float original = fx->params()[0].value;
+    auto fx = std::make_shared<TestEffect>();
+    engine.add_effect(fx);
+    float original = fx->params()[0].value;
 
-  midi.inject_event(make_cc(99, 64));
-  midi.poll(engine);
+    midi.inject_event(make_cc(99, 64));
+    midi.poll(engine);
 
-  ASSERT_NEAR(fx->params()[0].value, original, 0.001f);
-  engine.shutdown();
+    ASSERT_NEAR(fx->params()[0].value, original, 0.001f);
+    engine.shutdown();
 }
 
 /**
@@ -230,134 +229,131 @@ TEST(midi_unmapped_cc_ignored) {
  * missing or unallocated effect string name fails gracefully without a crash.
  */
 TEST(midi_missing_effect_no_crash) {
-  MidiManager midi;
-  AudioEngine engine;
-  engine.initialize();
+    MidiManager midi;
+    AudioEngine engine;
+    engine.initialize();
 
-  MidiMapping m;
-  m.cc_number = 10;
-  m.midi_channel = -1;
-  m.target_type = MidiTargetType::EffectParam;
-  m.mode = MidiMappingMode::Continuous;
-  m.effect_name = "NonExistent";
-  m.param_name = "Drive";
-  midi.add_mapping(m);
+    MidiMapping m;
+    m.cc_number = 10;
+    m.midi_channel = -1;
+    m.target_type = MidiTargetType::EffectParam;
+    m.mode = MidiMappingMode::Continuous;
+    m.effect_name = "NonExistent";
+    m.param_name = "Drive";
+    midi.add_mapping(m);
 
-  midi.inject_event(make_cc(10, 64));
-  midi.poll(engine);
-  ASSERT_TRUE(true);
-  engine.shutdown();
+    midi.inject_event(make_cc(10, 64));
+    midi.poll(engine);
+    ASSERT_TRUE(true);
+    engine.shutdown();
 }
 
 /**
- * @brief Assures that explicit channel value definitions are respected,
- * filtering out mismatched channel traffic while allowing matched channels to
- * modify attributes.
+ * @brief Assures that explicit channel value definitions are respected, filtering out
+ * mismatched channel traffic while allowing matched channels to modify attributes.
  */
 TEST(midi_channel_filter) {
-  MidiManager midi;
-  AudioEngine engine;
-  engine.initialize();
+    MidiManager midi;
+    AudioEngine engine;
+    engine.initialize();
 
-  auto fx = std::make_shared<TestEffect>();
-  engine.add_effect(fx);
-  float original = fx->params()[0].value;
+    auto fx = std::make_shared<TestEffect>();
+    engine.add_effect(fx);
+    float original = fx->params()[0].value;
 
-  MidiMapping m;
-  m.cc_number = 10;
-  m.midi_channel = 5;
-  m.target_type = MidiTargetType::EffectParam;
-  m.mode = MidiMappingMode::Continuous;
-  m.effect_name = "TestEffect";
-  m.param_name = "Drive";
-  midi.add_mapping(m);
+    MidiMapping m;
+    m.cc_number = 10;
+    m.midi_channel = 5;
+    m.target_type = MidiTargetType::EffectParam;
+    m.mode = MidiMappingMode::Continuous;
+    m.effect_name = "TestEffect";
+    m.param_name = "Drive";
+    midi.add_mapping(m);
 
-  midi.inject_event(make_cc(10, 127, 0));
-  midi.poll(engine);
-  ASSERT_NEAR(fx->params()[0].value, original, 0.001f);
+    midi.inject_event(make_cc(10, 127, 0));
+    midi.poll(engine);
+    ASSERT_NEAR(fx->params()[0].value, original, 0.001f);
 
-  midi.inject_event(make_cc(10, 127, 5));
-  midi.poll(engine);
-  ASSERT_NEAR(fx->params()[0].value, 1.0f, 0.01f);
+    midi.inject_event(make_cc(10, 127, 5));
+    midi.poll(engine);
+    ASSERT_NEAR(fx->params()[0].value, 1.0f, 0.01f);
 
-  engine.shutdown();
+    engine.shutdown();
 }
 
 /**
- * @brief Validates continuous evaluation scaling mappings targeting the output
- * master gain node inside the running audio context framework.
+ * @brief Validates continuous evaluation scaling mappings targeting the output master
+ * gain node inside the running audio context framework.
  */
 TEST(midi_output_gain_mapping) {
-  MidiManager midi;
-  AudioEngine engine;
-  engine.initialize();
+    MidiManager midi;
+    AudioEngine engine;
+    engine.initialize();
 
-  MidiMapping m;
-  m.cc_number = 7;
-  m.midi_channel = -1;
-  m.target_type = MidiTargetType::OutputGain;
-  m.mode = MidiMappingMode::Continuous;
-  midi.add_mapping(m);
+    MidiMapping m;
+    m.cc_number = 7;
+    m.midi_channel = -1;
+    m.target_type = MidiTargetType::OutputGain;
+    m.mode = MidiMappingMode::Continuous;
+    midi.add_mapping(m);
 
-  midi.inject_event(make_cc(7, 64));
-  midi.poll(engine);
+    midi.inject_event(make_cc(7, 64));
+    midi.poll(engine);
 
-  float expected = (64.0f / 127.0f) * 2.0f;
-  ASSERT_NEAR(engine.get_output_gain(), expected, 0.02f);
-  engine.shutdown();
+    float expected = (64.0f / 127.0f) * 2.0f;
+    ASSERT_NEAR(engine.get_output_gain(), expected, 0.02f);
+    engine.shutdown();
 }
 
 /**
- * @brief Exercises serialization conversion flows across multi-tier standard
- * allocations to prove structural precision during clear and index-based
- * removals.
+ * @brief Exercises serialization conversion flows across multi-tier standard allocations
+ * to prove structural precision during clear and index-based removals.
  */
 TEST(midi_json_roundtrip) {
-  MidiManager midi;
+    MidiManager midi;
 
-  MidiMapping m1;
-  m1.cc_number = 7;
-  m1.midi_channel = -1;
-  m1.target_type = MidiTargetType::OutputGain;
-  m1.mode = MidiMappingMode::Continuous;
-  midi.add_mapping(m1);
+    MidiMapping m1;
+    m1.cc_number = 7;
+    m1.midi_channel = -1;
+    m1.target_type = MidiTargetType::OutputGain;
+    m1.mode = MidiMappingMode::Continuous;
+    midi.add_mapping(m1);
 
-  MidiMapping m2;
-  m2.cc_number = 74;
-  m2.midi_channel = 2;
-  m2.target_type = MidiTargetType::EffectParam;
-  m2.mode = MidiMappingMode::Continuous;
-  m2.effect_name = "WahPedal";
-  m2.param_name = "Sweep";
-  midi.add_mapping(m2);
+    MidiMapping m2;
+    m2.cc_number = 74;
+    m2.midi_channel = 2;
+    m2.target_type = MidiTargetType::EffectParam;
+    m2.mode = MidiMappingMode::Continuous;
+    m2.effect_name = "WahPedal";
+    m2.param_name = "Sweep";
+    midi.add_mapping(m2);
 
-  MidiMapping m3;
-  m3.cc_number = 64;
-  m3.midi_channel = -1;
-  m3.target_type = MidiTargetType::EffectBypass;
-  m3.mode = MidiMappingMode::Toggle;
-  m3.effect_name = "Distortion";
-  midi.add_mapping(m3);
+    MidiMapping m3;
+    m3.cc_number = 64;
+    m3.midi_channel = -1;
+    m3.target_type = MidiTargetType::EffectBypass;
+    m3.mode = MidiMappingMode::Toggle;
+    m3.effect_name = "Distortion";
+    midi.add_mapping(m3);
 
-  ASSERT_EQ(static_cast<int>(midi.mappings().size()), 3);
+    ASSERT_EQ(static_cast<int>(midi.mappings().size()), 3);
 
-  ASSERT_EQ(midi.mappings()[0].cc_number, 7);
-  ASSERT_EQ(static_cast<int>(midi.mappings()[0].target_type),
-            static_cast<int>(MidiTargetType::OutputGain));
+    ASSERT_EQ(midi.mappings()[0].cc_number, 7);
+    ASSERT_EQ(static_cast<int>(midi.mappings()[0].target_type),
+              static_cast<int>(MidiTargetType::OutputGain));
 
-  ASSERT_EQ(midi.mappings()[1].cc_number, 74);
-  ASSERT_EQ(midi.mappings()[1].effect_name, std::string("WahPedal"));
-  ASSERT_EQ(midi.mappings()[1].param_name, std::string("Sweep"));
+    ASSERT_EQ(midi.mappings()[1].cc_number, 74);
+    ASSERT_EQ(midi.mappings()[1].effect_name, std::string("WahPedal"));
+    ASSERT_EQ(midi.mappings()[1].param_name, std::string("Sweep"));
 
-  ASSERT_EQ(midi.mappings()[2].cc_number, 64);
-  ASSERT_EQ(static_cast<int>(midi.mappings()[2].mode),
-            static_cast<int>(MidiMappingMode::Toggle));
+    ASSERT_EQ(midi.mappings()[2].cc_number, 64);
+    ASSERT_EQ(static_cast<int>(midi.mappings()[2].mode), static_cast<int>(MidiMappingMode::Toggle));
 
-  midi.remove_mapping(1);
-  ASSERT_EQ(static_cast<int>(midi.mappings().size()), 2);
+    midi.remove_mapping(1);
+    ASSERT_EQ(static_cast<int>(midi.mappings().size()), 2);
 
-  midi.clear_mappings();
-  ASSERT_TRUE(midi.mappings().empty());
+    midi.clear_mappings();
+    ASSERT_TRUE(midi.mappings().empty());
 }
 
 /**
@@ -365,77 +361,72 @@ TEST(midi_json_roundtrip) {
  * across input nodes, bypass states, and filter sweeps.
  */
 TEST(midi_default_mappings) {
-  MidiManager midi;
-  midi.install_default_mappings();
-  const auto& maps = midi.mappings();
+    MidiManager midi;
+    midi.install_default_mappings();
+    const auto& maps = midi.mappings();
 
-  // 1. Maintain the strict count requirement
-  ASSERT_EQ(static_cast<int>(maps.size()), 4);
+    // 1. Maintain the strict count requirement
+    ASSERT_EQ(static_cast<int>(maps.size()), 4);
 
-  // 2. Helper to find a mapping and return a pointer to it
-  auto find_mapping = [&](uint8_t cc,
-                          MidiTargetType target) -> const MidiMapping* {
-    for (const auto& m : maps) {
-      if (m.cc_number == cc && m.target_type == target) return &m;
-    }
-    return nullptr;
-  };
+    // 2. Helper to find a mapping and return a pointer to it
+    auto find_mapping = [&](uint8_t cc, MidiTargetType target) -> const MidiMapping* {
+        for (const auto& m : maps) {
+            if (m.cc_number == cc && m.target_type == target) return &m;
+        }
+        return nullptr;
+    };
 
-  // 3. Perform strict field-level validation for each expected mapping
+    // 3. Perform strict field-level validation for each expected mapping
 
-  // Validate CC 7 (Output Gain)
-  const auto* m1 = find_mapping(7, MidiTargetType::OutputGain);
-  ASSERT_NE(m1, nullptr);
-  ASSERT_EQ(static_cast<int>(m1->mode),
-            static_cast<int>(MidiMappingMode::Continuous));
+    // Validate CC 7 (Output Gain)
+    const auto* m1 = find_mapping(7, MidiTargetType::OutputGain);
+    ASSERT_NE(m1, nullptr);
+    ASSERT_EQ(static_cast<int>(m1->mode), static_cast<int>(MidiMappingMode::Continuous));
 
-  // Validate CC 11 (Input Gain)
-  const auto* m2 = find_mapping(11, MidiTargetType::InputGain);
-  ASSERT_NE(m2, nullptr);
-  ASSERT_EQ(static_cast<int>(m2->mode),
-            static_cast<int>(MidiMappingMode::Continuous));
+    // Validate CC 11 (Input Gain)
+    const auto* m2 = find_mapping(11, MidiTargetType::InputGain);
+    ASSERT_NE(m2, nullptr);
+    ASSERT_EQ(static_cast<int>(m2->mode), static_cast<int>(MidiMappingMode::Continuous));
 
-  // Validate CC 64 (Effect Bypass)
-  const auto* m3 = find_mapping(64, MidiTargetType::EffectBypass);
-  ASSERT_NE(m3, nullptr);
-  ASSERT_EQ(static_cast<int>(m3->mode),
-            static_cast<int>(MidiMappingMode::Toggle));
-  ASSERT_FALSE(m3->effect_name.empty());  // Ensure effect is assigned
+    // Validate CC 64 (Effect Bypass)
+    const auto* m3 = find_mapping(64, MidiTargetType::EffectBypass);
+    ASSERT_NE(m3, nullptr);
+    ASSERT_EQ(static_cast<int>(m3->mode), static_cast<int>(MidiMappingMode::Toggle));
+    ASSERT_FALSE(m3->effect_name.empty());  // Ensure effect is assigned
 
-  // Validate CC 74 (Effect Param)
-  const auto* m4 = find_mapping(74, MidiTargetType::EffectParam);
-  ASSERT_NE(m4, nullptr);
-  ASSERT_EQ(static_cast<int>(m4->mode),
-            static_cast<int>(MidiMappingMode::Continuous));
+    // Validate CC 74 (Effect Param)
+    const auto* m4 = find_mapping(74, MidiTargetType::EffectParam);
+    ASSERT_NE(m4, nullptr);
+    ASSERT_EQ(static_cast<int>(m4->mode), static_cast<int>(MidiMappingMode::Continuous));
 }
 
 /**
- * @brief Assures collision tracking layers completely override existing entries
- * when matching double CC registration events are explicitly added.
+ * @brief Assures collision tracking layers completely override existing entries when
+ * matching double CC registration events are explicitly added.
  */
 TEST(midi_duplicate_cc_replaces) {
-  MidiManager midi;
+    MidiManager midi;
 
-  MidiMapping m1;
-  m1.cc_number = 10;
-  m1.midi_channel = -1;
-  m1.target_type = MidiTargetType::EffectParam;
-  m1.mode = MidiMappingMode::Continuous;
-  m1.effect_name = "TestEffect";
-  m1.param_name = "Drive";
-  midi.add_mapping(m1);
+    MidiMapping m1;
+    m1.cc_number = 10;
+    m1.midi_channel = -1;
+    m1.target_type = MidiTargetType::EffectParam;
+    m1.mode = MidiMappingMode::Continuous;
+    m1.effect_name = "TestEffect";
+    m1.param_name = "Drive";
+    midi.add_mapping(m1);
 
-  MidiMapping m2;
-  m2.cc_number = 10;
-  m2.midi_channel = -1;
-  m2.target_type = MidiTargetType::EffectParam;
-  m2.mode = MidiMappingMode::Continuous;
-  m2.effect_name = "TestEffect";
-  m2.param_name = "Level";
-  midi.add_mapping(m2);
+    MidiMapping m2;
+    m2.cc_number = 10;
+    m2.midi_channel = -1;
+    m2.target_type = MidiTargetType::EffectParam;
+    m2.mode = MidiMappingMode::Continuous;
+    m2.effect_name = "TestEffect";
+    m2.param_name = "Level";
+    midi.add_mapping(m2);
 
-  ASSERT_EQ(static_cast<int>(midi.mappings().size()), 1);
-  ASSERT_EQ(midi.mappings()[0].param_name, std::string("Level"));
+    ASSERT_EQ(static_cast<int>(midi.mappings().size()), 1);
+    ASSERT_EQ(midi.mappings()[0].param_name, std::string("Level"));
 }
 
 /**
@@ -443,14 +434,14 @@ TEST(midi_duplicate_cc_replaces) {
  * capture routine, checking state teardown properties.
  */
 TEST(midi_learn_cancel) {
-  MidiManager midi;
+    MidiManager midi;
 
-  midi.start_learn(MidiTargetType::EffectParam, "TestEffect", "Drive");
-  ASSERT_TRUE(midi.is_learning());
+    midi.start_learn(MidiTargetType::EffectParam, "TestEffect", "Drive");
+    ASSERT_TRUE(midi.is_learning());
 
-  midi.cancel_learn();
-  ASSERT_FALSE(midi.is_learning());
-  ASSERT_TRUE(midi.mappings().empty());
+    midi.cancel_learn();
+    ASSERT_FALSE(midi.is_learning());
+    ASSERT_TRUE(midi.mappings().empty());
 }
 
 // ===========================================================================
@@ -458,28 +449,27 @@ TEST(midi_learn_cancel) {
 // ===========================================================================
 
 /**
- * @brief RAII Cleanup Guard ensuring strict test isolation by forcing file
- * operations into a unique temporary workspace directory across all development
- * platforms.
+ * @brief RAII Cleanup Guard ensuring strict test isolation by forcing file operations
+ * into a unique temporary workspace directory across all development platforms.
  */
 struct config_backup_guard {
-  std::filesystem::path original_cwd;
-  std::filesystem::path temp_dir;
+    std::filesystem::path original_cwd;
+    std::filesystem::path temp_dir;
 
-  config_backup_guard() {
-    original_cwd = std::filesystem::current_path();
-    temp_dir = std::filesystem::temp_directory_path() /
-               ("midi_test_" + std::to_string(std::rand()));
-    std::filesystem::create_directories(temp_dir);
-    std::filesystem::current_path(temp_dir);
-  }
-
-  ~config_backup_guard() {
-    std::filesystem::current_path(original_cwd);
-    if (!temp_dir.empty() && std::filesystem::exists(temp_dir)) {
-      std::filesystem::remove_all(temp_dir);
+    config_backup_guard() {
+        original_cwd = std::filesystem::current_path();
+        temp_dir =
+            std::filesystem::temp_directory_path() / ("midi_test_" + std::to_string(std::rand()));
+        std::filesystem::create_directories(temp_dir);
+        std::filesystem::current_path(temp_dir);
     }
-  }
+
+    ~config_backup_guard() {
+        std::filesystem::current_path(original_cwd);
+        if (!temp_dir.empty() && std::filesystem::exists(temp_dir)) {
+            std::filesystem::remove_all(temp_dir);
+        }
+    }
 };
 
 /**
@@ -487,48 +477,40 @@ struct config_backup_guard {
  * serialized to disk and deserialized back with complete field-level integrity.
  */
 TEST(midi_persist_save_and_load_roundtrip) {
-  config_backup_guard guard;
+    config_backup_guard guard;
 
-  MidiManager mgr;
-  MidiMapping m1{7,
-                 -1,
-                 MidiTargetType::EffectParam,
-                 MidiMappingMode::Continuous,
-                 "effect_0",
-                 "drive"};
-  MidiMapping m2{11,
-                 -1,
-                 MidiTargetType::EffectParam,
-                 MidiMappingMode::Continuous,
-                 "effect_1",
-                 "level"};
-  mgr.add_mapping(m1);
-  mgr.add_mapping(m2);
+    MidiManager mgr;
+    MidiMapping m1{7,          -1,     MidiTargetType::EffectParam, MidiMappingMode::Continuous,
+                   "effect_0", "drive"};
+    MidiMapping m2{11,         -1,     MidiTargetType::EffectParam, MidiMappingMode::Continuous,
+                   "effect_1", "level"};
+    mgr.add_mapping(m1);
+    mgr.add_mapping(m2);
 
-  mgr.save_config();
+    mgr.save_config();
 
-  MidiManager mgr2;
-  mgr2.load_config();
+    MidiManager mgr2;
+    mgr2.load_config();
 
-  ASSERT_EQ(static_cast<int>(mgr2.mappings().size()), 2);
+    ASSERT_EQ(static_cast<int>(mgr2.mappings().size()), 2);
 
-  ASSERT_EQ(mgr2.mappings()[0].cc_number, 7);
-  ASSERT_EQ(mgr2.mappings()[0].midi_channel, -1);
-  ASSERT_EQ(static_cast<int>(mgr2.mappings()[0].target_type),
-            static_cast<int>(MidiTargetType::EffectParam));
-  ASSERT_EQ(static_cast<int>(mgr2.mappings()[0].mode),
-            static_cast<int>(MidiMappingMode::Continuous));
-  ASSERT_EQ(mgr2.mappings()[0].effect_name, std::string("effect_0"));
-  ASSERT_EQ(mgr2.mappings()[0].param_name, std::string("drive"));
+    ASSERT_EQ(mgr2.mappings()[0].cc_number, 7);
+    ASSERT_EQ(mgr2.mappings()[0].midi_channel, -1);
+    ASSERT_EQ(static_cast<int>(mgr2.mappings()[0].target_type),
+              static_cast<int>(MidiTargetType::EffectParam));
+    ASSERT_EQ(static_cast<int>(mgr2.mappings()[0].mode),
+              static_cast<int>(MidiMappingMode::Continuous));
+    ASSERT_EQ(mgr2.mappings()[0].effect_name, std::string("effect_0"));
+    ASSERT_EQ(mgr2.mappings()[0].param_name, std::string("drive"));
 
-  ASSERT_EQ(mgr2.mappings()[1].cc_number, 11);
-  ASSERT_EQ(mgr2.mappings()[1].midi_channel, -1);
-  ASSERT_EQ(static_cast<int>(mgr2.mappings()[1].target_type),
-            static_cast<int>(MidiTargetType::EffectParam));
-  ASSERT_EQ(static_cast<int>(mgr2.mappings()[1].mode),
-            static_cast<int>(MidiMappingMode::Continuous));
-  ASSERT_EQ(mgr2.mappings()[1].effect_name, std::string("effect_1"));
-  ASSERT_EQ(mgr2.mappings()[1].param_name, std::string("level"));
+    ASSERT_EQ(mgr2.mappings()[1].cc_number, 11);
+    ASSERT_EQ(mgr2.mappings()[1].midi_channel, -1);
+    ASSERT_EQ(static_cast<int>(mgr2.mappings()[1].target_type),
+              static_cast<int>(MidiTargetType::EffectParam));
+    ASSERT_EQ(static_cast<int>(mgr2.mappings()[1].mode),
+              static_cast<int>(MidiMappingMode::Continuous));
+    ASSERT_EQ(mgr2.mappings()[1].effect_name, std::string("effect_1"));
+    ASSERT_EQ(mgr2.mappings()[1].param_name, std::string("level"));
 }
 
 /**
@@ -536,15 +518,15 @@ TEST(midi_persist_save_and_load_roundtrip) {
  * safely falls back to the 2 default factory mappings.
  */
 TEST(midi_persist_load_missing_file_graceful) {
-  config_backup_guard guard;
-  if (fs::exists("midi_config.json")) fs::remove("midi_config.json");
+    config_backup_guard guard;
+    if (fs::exists("midi_config.json")) fs::remove("midi_config.json");
 
-  MidiManager mgr;
-  mgr.clear_mappings();
-  mgr.load_config();
+    MidiManager mgr;
+    mgr.clear_mappings();
+    mgr.load_config();
 
-  // The production code falls back to 2 default mappings
-  ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
+    // The production code falls back to 2 default mappings
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
 }
 
 /**
@@ -552,9 +534,9 @@ TEST(midi_persist_load_missing_file_graceful) {
  * instance without causing any undefined behavior or crashing.
  */
 TEST(midi_mapping_clear_all_mappings_when_empty) {
-  MidiManager mgr;
-  mgr.clear_mappings();
-  ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 0);
+    MidiManager mgr;
+    mgr.clear_mappings();
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 0);
 }
 
 /**
@@ -562,150 +544,133 @@ TEST(midi_mapping_clear_all_mappings_when_empty) {
  * and drops the active mapping count to zero after items are populated.
  */
 TEST(midi_mapping_clear_all_mappings_after_adding) {
-  MidiManager mgr;
-  MidiMapping m1{7,
-                 -1,
-                 MidiTargetType::EffectParam,
-                 MidiMappingMode::Continuous,
-                 "effect_0",
-                 "drive"};
-  MidiMapping m2{11,
-                 -1,
-                 MidiTargetType::EffectParam,
-                 MidiMappingMode::Continuous,
-                 "effect_1",
-                 "level"};
-  mgr.add_mapping(m1);
-  mgr.add_mapping(m2);
-  ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
+    MidiManager mgr;
+    MidiMapping m1{7,          -1,     MidiTargetType::EffectParam, MidiMappingMode::Continuous,
+                   "effect_0", "drive"};
+    MidiMapping m2{11,         -1,     MidiTargetType::EffectParam, MidiMappingMode::Continuous,
+                   "effect_1", "level"};
+    mgr.add_mapping(m1);
+    mgr.add_mapping(m2);
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
 
-  mgr.clear_mappings();
-  ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 0);
+    mgr.clear_mappings();
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 0);
 }
 
 /**
- * @brief Confirms that adding a new configuration layout mapping with an
- * identical CC value correctly overrides and replaces the pre-existing
- * parameter configuration.
+ * @brief Confirms that adding a new configuration layout mapping with an identical
+ * CC value correctly overrides and replaces the pre-existing parameter configuration.
  */
 TEST(midi_mapping_override_same_cc_with_new_param) {
-  MidiManager mgr;
-  MidiMapping m1{7,
-                 -1,
-                 MidiTargetType::EffectParam,
-                 MidiMappingMode::Continuous,
-                 "effect_0",
-                 "drive"};
-  mgr.add_mapping(m1);
-  int count_after_first = static_cast<int>(mgr.mappings().size());
-  ASSERT_EQ(count_after_first, 1);
+    MidiManager mgr;
+    MidiMapping m1{7,          -1,     MidiTargetType::EffectParam, MidiMappingMode::Continuous,
+                   "effect_0", "drive"};
+    mgr.add_mapping(m1);
+    int count_after_first = static_cast<int>(mgr.mappings().size());
+    ASSERT_EQ(count_after_first, 1);
 
-  MidiMapping m2{7,
-                 -1,
-                 MidiTargetType::EffectParam,
-                 MidiMappingMode::Continuous,
-                 "effect_1",
-                 "level"};
-  mgr.add_mapping(m2);
-  int count_after_override = static_cast<int>(mgr.mappings().size());
+    MidiMapping m2{7,          -1,     MidiTargetType::EffectParam, MidiMappingMode::Continuous,
+                   "effect_1", "level"};
+    mgr.add_mapping(m2);
+    int count_after_override = static_cast<int>(mgr.mappings().size());
 
-  ASSERT_EQ(count_after_override, 1);
-  ASSERT_EQ(mgr.mappings()[0].effect_name, std::string("effect_1"));
-  ASSERT_EQ(mgr.mappings()[0].param_name, std::string("level"));
+    ASSERT_EQ(count_after_override, 1);
+    ASSERT_EQ(mgr.mappings()[0].effect_name, std::string("effect_1"));
+    ASSERT_EQ(mgr.mappings()[0].param_name, std::string("level"));
 }
 
 /**
- * @brief Checks tracking accuracy and baseline states of the active mapping
- * count across rapid bulk configuration additions and subsequent full resets.
+ * @brief Checks tracking accuracy and baseline states of the active mapping count
+ * across rapid bulk configuration additions and subsequent full resets.
  */
 TEST(midi_mapping_get_active_mapping_count_after_bulk_ops) {
-  MidiManager mgr;
-  mgr.clear_mappings();
-  for (int i = 0; i < 5; i++) {
-    MidiMapping m;
-    m.cc_number = static_cast<uint8_t>(i);
-    mgr.add_mapping(m);
-  }
-  // Changed from GE to EQ for exact count
-  ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 5);
+    MidiManager mgr;
+    mgr.clear_mappings();
+    for (int i = 0; i < 5; i++) {
+        MidiMapping m;
+        m.cc_number = static_cast<uint8_t>(i);
+        mgr.add_mapping(m);
+    }
+    // Changed from GE to EQ for exact count
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 5);
 }
 
 /**
- * @brief Exercises remove_mapping_for_param to evaluate both exact tracking
- * matches and unmatched fallback strings.
+ * @brief Exercises remove_mapping_for_param to evaluate both exact tracking matches
+ * and unmatched fallback strings.
  */
 TEST(midi_mapping_remove_mapping_for_param) {
-  MidiManager mgr;
-  MidiMapping m;
-  m.cc_number = 20;
-  m.midi_channel = -1;
-  m.target_type = MidiTargetType::EffectParam;
-  m.mode = MidiMappingMode::Continuous;
-  m.effect_name = "Chorus";
-  m.param_name = "Depth";
-  mgr.add_mapping(m);
+    MidiManager mgr;
+    MidiMapping m;
+    m.cc_number = 20;
+    m.midi_channel = -1;
+    m.target_type = MidiTargetType::EffectParam;
+    m.mode = MidiMappingMode::Continuous;
+    m.effect_name = "Chorus";
+    m.param_name = "Depth";
+    mgr.add_mapping(m);
 
-  ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 1);
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 1);
 
-  mgr.remove_mapping_for_param("Reverb", "Depth");
-  ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 1);
+    mgr.remove_mapping_for_param("Reverb", "Depth");
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 1);
 
-  mgr.remove_mapping_for_param("Chorus", "Depth");
-  ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 0);
+    mgr.remove_mapping_for_param("Chorus", "Depth");
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 0);
 }
 
 /**
- * @brief Evaluates output configurations generated by learn_status to verify
- * formatting across distinct MidiTargetType allocations.
+ * @brief Evaluates output configurations generated by learn_status to verify formatting
+ * across distinct MidiTargetType allocations.
  */
 TEST(midi_mapping_learn_status_formatting) {
-  MidiManager mgr;
+    MidiManager mgr;
 
-  ASSERT_TRUE(mgr.learn_status().empty());
+    ASSERT_TRUE(mgr.learn_status().empty());
 
-  mgr.start_learn(MidiTargetType::EffectParam, "Chorus", "Depth");
-  std::string s1 = mgr.learn_status();
-  ASSERT_NE(s1.find("Chorus"), std::string::npos);
-  ASSERT_NE(s1.find("Depth"), std::string::npos);
+    mgr.start_learn(MidiTargetType::EffectParam, "Chorus", "Depth");
+    std::string s1 = mgr.learn_status();
+    ASSERT_NE(s1.find("Chorus"), std::string::npos);
+    ASSERT_NE(s1.find("Depth"), std::string::npos);
 
-  mgr.start_learn(MidiTargetType::InputGain, "", "");
-  std::string s2 = mgr.learn_status();
-  ASSERT_NE(s2.find("Input Gain"), std::string::npos);
+    mgr.start_learn(MidiTargetType::InputGain, "", "");
+    std::string s2 = mgr.learn_status();
+    ASSERT_NE(s2.find("Input Gain"), std::string::npos);
 
-  mgr.start_learn(MidiTargetType::OutputGain, "", "");
-  std::string s3 = mgr.learn_status();
-  ASSERT_NE(s3.find("Output Gain"), std::string::npos);
+    mgr.start_learn(MidiTargetType::OutputGain, "", "");
+    std::string s3 = mgr.learn_status();
+    ASSERT_NE(s3.find("Output Gain"), std::string::npos);
 
-  mgr.start_learn(MidiTargetType::EffectBypass, "AmpSimulator", "");
-  std::string s4 = mgr.learn_status();
-  ASSERT_NE(s4.find("AmpSimulator"), std::string::npos);
+    mgr.start_learn(MidiTargetType::EffectBypass, "AmpSimulator", "");
+    std::string s4 = mgr.learn_status();
+    ASSERT_NE(s4.find("AmpSimulator"), std::string::npos);
 
-  mgr.cancel_learn();
-  ASSERT_TRUE(mgr.learn_status().empty());
+    mgr.cancel_learn();
+    ASSERT_TRUE(mgr.learn_status().empty());
 }
 
 /**
- * @brief Exercises the continuous evaluation branch handling InputGain inside
- * the core layout engine.
+ * @brief Exercises the continuous evaluation branch handling InputGain inside the core layout
+ * engine.
  */
 TEST(midi_mapping_apply_input_gain_event) {
-  MidiManager mgr;
-  AudioEngine engine;
-  engine.initialize();
+    MidiManager mgr;
+    AudioEngine engine;
+    engine.initialize();
 
-  MidiMapping m;
-  m.cc_number = 11;
-  m.midi_channel = -1;
-  m.target_type = MidiTargetType::InputGain;
-  m.mode = MidiMappingMode::Continuous;
-  mgr.add_mapping(m);
+    MidiMapping m;
+    m.cc_number = 11;
+    m.midi_channel = -1;
+    m.target_type = MidiTargetType::InputGain;
+    m.mode = MidiMappingMode::Continuous;
+    mgr.add_mapping(m);
 
-  mgr.inject_event(make_cc(11, 64));
-  mgr.poll(engine);
+    mgr.inject_event(make_cc(11, 64));
+    mgr.poll(engine);
 
-  float expected = (64.0f / 127.0f) * 2.0f;
-  ASSERT_NEAR(engine.get_input_gain(), expected, 0.02f);
-  engine.shutdown();
+    float expected = (64.0f / 127.0f) * 2.0f;
+    ASSERT_NEAR(engine.get_input_gain(), expected, 0.02f);
+    engine.shutdown();
 }
 
 /**
@@ -713,17 +678,17 @@ TEST(midi_mapping_apply_input_gain_event) {
  * handling by creating a file with intentionally malformed content.
  */
 TEST(midi_persist_from_json_invalid_syntax) {
-  config_backup_guard guard;
-  std::ofstream file("midi_config.json");
-  file << "{ broken json }";
-  file.close();
+    config_backup_guard guard;
+    std::ofstream file("midi_config.json");
+    file << "{ broken json }";
+    file.close();
 
-  MidiManager mgr;
-  mgr.clear_mappings();
-  mgr.load_config();
+    MidiManager mgr;
+    mgr.clear_mappings();
+    mgr.load_config();
 
-  // The production code falls back to 2 default mappings
-  ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
+    // The production code falls back to 2 default mappings
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
 }
 
 /**
@@ -731,17 +696,17 @@ TEST(midi_persist_from_json_invalid_syntax) {
  * by creating a file that lacks the expected "mappings" identifier.
  */
 TEST(midi_persist_from_json_missing_root_key) {
-  config_backup_guard guard;
-  std::ofstream file("midi_config.json");
-  file << R"({"wrong_key": []})";
-  file.close();
+    config_backup_guard guard;
+    std::ofstream file("midi_config.json");
+    file << R"({"wrong_key": []})";
+    file.close();
 
-  MidiManager mgr;
-  mgr.clear_mappings();
-  mgr.load_config();
+    MidiManager mgr;
+    mgr.clear_mappings();
+    mgr.load_config();
 
-  // Updated: Expecting the 2 default mappings
-  ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
+    // Updated: Expecting the 2 default mappings
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
 }
 
 // ===========================================================================
@@ -753,20 +718,19 @@ TEST(midi_persist_from_json_missing_root_key) {
  * ensuring correct indexing layout properties for bypass targets.
  */
 TEST(midi_default_mappings_field_level_validation) {
-  MidiManager midi;
-  midi.install_default_mappings();
+    MidiManager midi;
+    midi.install_default_mappings();
 
-  ASSERT_EQ(static_cast<int>(midi.mappings().size()), 4);
+    ASSERT_EQ(static_cast<int>(midi.mappings().size()), 4);
 
-  // Validate fields at index 2 (EffectBypass) explicitly
-  const auto& bypass_mapping = midi.mappings()[2];
-  ASSERT_EQ(bypass_mapping.cc_number, 64);
-  ASSERT_EQ(static_cast<int>(bypass_mapping.target_type),
-            static_cast<int>(MidiTargetType::EffectBypass));
-  ASSERT_EQ(static_cast<int>(bypass_mapping.mode),
-            static_cast<int>(MidiMappingMode::Toggle));
+    // Validate fields at index 2 (EffectBypass) explicitly
+    const auto& bypass_mapping = midi.mappings()[2];
+    ASSERT_EQ(bypass_mapping.cc_number, 64);
+    ASSERT_EQ(static_cast<int>(bypass_mapping.target_type),
+              static_cast<int>(MidiTargetType::EffectBypass));
+    ASSERT_EQ(static_cast<int>(bypass_mapping.mode), static_cast<int>(MidiMappingMode::Toggle));
 
-  ASSERT_FALSE(bypass_mapping.effect_name.empty());
+    ASSERT_FALSE(bypass_mapping.effect_name.empty());
 }
 
 /**
@@ -774,25 +738,22 @@ TEST(midi_default_mappings_field_level_validation) {
  * the manager to safely fall back to default factory baseline settings.
  */
 TEST(midi_persist_from_json_corrupt_array_items) {
-  config_backup_guard guard;
+    config_backup_guard guard;
 
-  // Simulate corrupted/incomplete structural array configurations on disk
-  std::ofstream file("midi_config.json");
-  file
-      << R"({"mappings": [{"cc_number": "corrupt_string_instead_of_int", "target_type": 0}]})";
-  file.close();
+    // Simulate corrupted/incomplete structural array configurations on disk
+    std::ofstream file("midi_config.json");
+    file << R"({"mappings": [{"cc_number": "corrupt_string_instead_of_int", "target_type": 0}]})";
+    file.close();
 
-  MidiManager mgr;
-  mgr.load_config();
+    MidiManager mgr;
+    mgr.load_config();
 
-  // Field-level assertion verifying that fallback safety activated the first
-  // default mapping
-  ASSERT_GE(static_cast<int>(mgr.mappings().size()), 1);
-  ASSERT_EQ(mgr.mappings()[0].cc_number, 7);
+    // Field-level assertion verifying that fallback safety activated the first default mapping
+    ASSERT_GE(static_cast<int>(mgr.mappings().size()), 1);
+    ASSERT_EQ(mgr.mappings()[0].cc_number, 7);
 
-  // Updated match to align with the engine's default structural enum fallback
-  // (0)
-  ASSERT_EQ(static_cast<int>(mgr.mappings()[0].target_type), 0);
+    // Updated match to align with the engine's default structural enum fallback (0)
+    ASSERT_EQ(static_cast<int>(mgr.mappings()[0].target_type), 0);
 }
 
 /**
@@ -800,14 +761,13 @@ TEST(midi_persist_from_json_corrupt_array_items) {
  * verifying it handles uninitialized learning state tracking safely.
  */
 TEST(midi_mapping_learn_status_edge_cases) {
-  MidiManager mgr;
+    MidiManager mgr;
 
-  // Retrieve status string while system is not actively learning
-  std::string empty_status = mgr.learn_status();
+    // Retrieve status string while system is not actively learning
+    std::string empty_status = mgr.learn_status();
 
-  // Field-level check: Verify that idle status returns an empty reporting
-  // string
-  ASSERT_TRUE(empty_status.empty());
+    // Field-level check: Verify that idle status returns an empty reporting string
+    ASSERT_TRUE(empty_status.empty());
 }
 
 /**
@@ -815,38 +775,35 @@ TEST(midi_mapping_learn_status_edge_cases) {
  * data indices are safely ignored by the pipeline processing loop.
  */
 TEST(midi_non_cc_events_are_ignored) {
-  MidiManager midi;
-  AudioEngine engine;
-  engine.initialize();
+    MidiManager midi;
+    AudioEngine engine;
+    engine.initialize();
 
-  auto fx = std::make_shared<TestEffect>();
-  engine.add_effect(fx);
-  float original_value = fx->params()[0].value;
+    auto fx = std::make_shared<TestEffect>();
+    engine.add_effect(fx);
+    float original_value = fx->params()[0].value;
 
-  MidiMapping m;
-  m.cc_number = 10;
-  m.midi_channel = -1;
-  m.target_type = MidiTargetType::EffectParam;
-  m.mode = MidiMappingMode::Continuous;
-  m.effect_name = "TestEffect";
-  m.param_name = "Drive";
-  midi.add_mapping(m);
+    MidiMapping m;
+    m.cc_number = 10;
+    m.midi_channel = -1;
+    m.target_type = MidiTargetType::EffectParam;
+    m.mode = MidiMappingMode::Continuous;
+    m.effect_name = "TestEffect";
+    m.param_name = "Drive";
+    midi.add_mapping(m);
 
-  // Construct an unrelated MIDI message structure targeting a different data
-  // index
-  MidiEvent unmapped_event{};
-  unmapped_event.status = 0x90;  // Note On status
-  unmapped_event.data1 =
-      99;  // Explicitly different data index to prevent false matching
-  unmapped_event.data2 = 127;
+    // Construct an unrelated MIDI message structure targeting a different data index
+    MidiEvent unmapped_event{};
+    unmapped_event.status = 0x90;  // Note On status
+    unmapped_event.data1 = 99;     // Explicitly different data index to prevent false matching
+    unmapped_event.data2 = 127;
 
-  midi.inject_event(unmapped_event);
-  midi.poll(engine);
+    midi.inject_event(unmapped_event);
+    midi.poll(engine);
 
-  // Field-level assertion ensuring parameters were not altered by unrelated
-  // data packets
-  ASSERT_NEAR(fx->params()[0].value, original_value, 0.001f);
-  engine.shutdown();
+    // Field-level assertion ensuring parameters were not altered by unrelated data packets
+    ASSERT_NEAR(fx->params()[0].value, original_value, 0.001f);
+    engine.shutdown();
 }
 
 // ===========================================================================
@@ -854,225 +811,209 @@ TEST(midi_non_cc_events_are_ignored) {
 // ===========================================================================
 
 /**
- * @brief Tests continuous mapping behavior when scaling exact intermediate data
- * boundaries, verifying field transformation precision at the strict
- * quarter-scale mark.
+ * @brief Tests continuous mapping behavior when scaling exact intermediate data boundaries,
+ * verifying field transformation precision at the strict quarter-scale mark.
  */
 TEST(midi_continuous_quarter_scale_precision) {
-  MidiManager midi;
-  AudioEngine engine;
-  engine.initialize();
+    MidiManager midi;
+    AudioEngine engine;
+    engine.initialize();
 
-  auto fx = std::make_shared<TestEffect>();
-  engine.add_effect(fx);
+    auto fx = std::make_shared<TestEffect>();
+    engine.add_effect(fx);
 
-  MidiMapping m;
-  m.cc_number = 30;
-  m.midi_channel = -1;
-  m.target_type = MidiTargetType::EffectParam;
-  m.mode = MidiMappingMode::Continuous;
-  m.effect_name = "TestEffect";
-  m.param_name = "Drive";
-  midi.add_mapping(m);
+    MidiMapping m;
+    m.cc_number = 30;
+    m.midi_channel = -1;
+    m.target_type = MidiTargetType::EffectParam;
+    m.mode = MidiMappingMode::Continuous;
+    m.effect_name = "TestEffect";
+    m.param_name = "Drive";
+    midi.add_mapping(m);
 
-  // Inject value 32 (roughly 25% of 127)
-  midi.inject_event(make_cc(30, 32));
-  midi.poll(engine);
+    // Inject value 32 (roughly 25% of 127)
+    midi.inject_event(make_cc(30, 32));
+    midi.poll(engine);
 
-  // Field-level assertion checking the exact continuous scaling math path
-  float expected = (32.0f / 127.0f) * 1.0f;
-  ASSERT_NEAR(fx->params()[0].value, expected, 0.01f);
-  engine.shutdown();
+    // Field-level assertion checking the exact continuous scaling math path
+    float expected = (32.0f / 127.0f) * 1.0f;
+    ASSERT_NEAR(fx->params()[0].value, expected, 0.01f);
+    engine.shutdown();
 }
 
 /**
- * @brief Assures that toggle state evaluations flip-flop repeatedly and
- * reliably when alternating boundary control change values are processed
- * sequentially.
+ * @brief Assures that toggle state evaluations flip-flop repeatedly and reliably
+ * when alternating boundary control change values are processed sequentially.
  */
 TEST(midi_toggle_mode_repeated_execution_flip_flop) {
-  MidiManager midi;
-  AudioEngine engine;
-  engine.initialize();
+    MidiManager midi;
+    AudioEngine engine;
+    engine.initialize();
 
-  auto fx = std::make_shared<TestEffect>();
-  fx->set_enabled(true);
-  engine.add_effect(fx);
+    auto fx = std::make_shared<TestEffect>();
+    fx->set_enabled(true);
+    engine.add_effect(fx);
 
-  MidiMapping m;
-  m.cc_number = 45;
-  m.midi_channel = -1;
-  m.target_type = MidiTargetType::EffectBypass;
-  m.mode = MidiMappingMode::Toggle;
-  m.effect_name = "TestEffect";
-  midi.add_mapping(m);
+    MidiMapping m;
+    m.cc_number = 45;
+    m.midi_channel = -1;
+    m.target_type = MidiTargetType::EffectBypass;
+    m.mode = MidiMappingMode::Toggle;
+    m.effect_name = "TestEffect";
+    midi.add_mapping(m);
 
-  // First toggle event: high value (127) triggers state change to disabled
-  midi.inject_event(make_cc(45, 127));
-  midi.poll(engine);
-  ASSERT_FALSE(fx->is_enabled());
+    // First toggle event: high value (127) triggers state change to disabled
+    midi.inject_event(make_cc(45, 127));
+    midi.poll(engine);
+    ASSERT_FALSE(fx->is_enabled());
 
-  // Second toggle event: alternating low value (0) triggers state change back
-  // to enabled
-  midi.inject_event(make_cc(45, 0));
-  midi.poll(engine);
-  ASSERT_TRUE(fx->is_enabled());
+    // Second toggle event: alternating low value (0) triggers state change back to enabled
+    midi.inject_event(make_cc(45, 0));
+    midi.poll(engine);
+    ASSERT_TRUE(fx->is_enabled());
 
-  engine.shutdown();
+    engine.shutdown();
 }
 
 /**
- * @brief Validates the hardware learning engine state immediately after
- * activation, verifying field properties before any external message processing
- * occurs.
+ * @brief Validates the hardware learning engine state immediately after activation,
+ * verifying field properties before any external message processing occurs.
  */
 TEST(midi_learn_activation_state_bounds) {
-  MidiManager midi;
-  AudioEngine engine;
-  engine.initialize();
+    MidiManager midi;
+    AudioEngine engine;
+    engine.initialize();
 
-  // Verify system is idle initially
-  ASSERT_FALSE(midi.is_learning());
+    // Verify system is idle initially
+    ASSERT_FALSE(midi.is_learning());
 
-  // Begin learning tracking loop
-  midi.start_learn(MidiTargetType::EffectParam, "TestEffect", "Drive");
+    // Begin learning tracking loop
+    midi.start_learn(MidiTargetType::EffectParam, "TestEffect", "Drive");
 
-  // Field-level assertion confirming explicit retention of the learning flag
-  ASSERT_TRUE(midi.is_learning());
+    // Field-level assertion confirming explicit retention of the learning flag
+    ASSERT_TRUE(midi.is_learning());
 
-  // Cancel and clean up state safely
-  midi.cancel_learn();
-  ASSERT_FALSE(midi.is_learning());
+    // Cancel and clean up state safely
+    midi.cancel_learn();
+    ASSERT_FALSE(midi.is_learning());
 
-  engine.shutdown();
+    engine.shutdown();
 }
 
 /**
- * @brief Validates that load_config cleanly catches filesystem or parsing
- * exceptions when the default configuration file contains completely malformed
- * syntax.
+ * @brief Validates that load_config cleanly catches filesystem or parsing exceptions
+ * when the default configuration file contains completely malformed syntax.
  */
 TEST(midi_persist_malformed_syntax_fallback) {
-  config_backup_guard guard;
+    config_backup_guard guard;
 
-  // Explicitly overwrite the actual file the engine reads
-  std::ofstream file("midi_config.json");
-  file << "{ !!! malformed unparseable raw json string data !!! }";
-  file.close();
+    // Explicitly overwrite the actual file the engine reads
+    std::ofstream file("midi_config.json");
+    file << "{ !!! malformed unparseable raw json string data !!! }";
+    file.close();
 
-  MidiManager mgr;
+    MidiManager mgr;
 
-  // Clear out memory to verify if fallback mappings are safely instantiated
-  mgr.clear_mappings();
+    // Clear out memory to verify if fallback mappings are safely instantiated
+    mgr.clear_mappings();
 
-  // Call the verified 0-argument function signature
-  mgr.load_config();
+    // Call the verified 0-argument function signature
+    mgr.load_config();
 
-  // Field-level assertion confirming the engine safely deployed its 2 fallback
-  // defaults
-  ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
-  ASSERT_EQ(mgr.mappings()[0].cc_number, 7);
+    // Field-level assertion confirming the engine safely deployed its 2 fallback defaults
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
+    ASSERT_EQ(mgr.mappings()[0].cc_number, 7);
 
-  if (std::filesystem::exists("midi_config.json")) {
-    std::filesystem::remove("midi_config.json");
-  }
+    if (std::filesystem::exists("midi_config.json")) {
+        std::filesystem::remove("midi_config.json");
+    }
 }
 
 /**
- * @brief Ensures that load_config recovers gracefully when the default
- * configuration file exists but is completely missing its expected root object
- * keys.
+ * @brief Ensures that load_config recovers gracefully when the default configuration
+ * file exists but is completely missing its expected root object keys.
  */
 TEST(midi_persist_missing_keys_fallback) {
-  config_backup_guard guard;
+    config_backup_guard guard;
 
-  std::ofstream file("midi_config.json");
-  file << R"({"unexpected_root_node_corrupted": []})";
-  file.close();
+    std::ofstream file("midi_config.json");
+    file << R"({"unexpected_root_node_corrupted": []})";
+    file.close();
 
-  MidiManager mgr;
-  mgr.clear_mappings();
-  mgr.load_config();
+    MidiManager mgr;
+    mgr.clear_mappings();
+    mgr.load_config();
 
-  // Field-level verification that validation checks caught the missing schema
-  // keys
-  ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
-  ASSERT_EQ(mgr.mappings()[0].cc_number, 7);
+    // Field-level verification that validation checks caught the missing schema keys
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
+    ASSERT_EQ(mgr.mappings()[0].cc_number, 7);
 
-  if (std::filesystem::exists("midi_config.json")) {
-    std::filesystem::remove("midi_config.json");
-  }
+    if (std::filesystem::exists("midi_config.json")) {
+        std::filesystem::remove("midi_config.json");
+    }
 }
 
 /**
- * @brief Ensures that calling clear_mappings on a completely vacant manager
- * context exits early and leaves the internal tracking vectors perfectly
- * balanced.
+ * @brief Ensures that calling clear_mappings on a completely vacant manager context
+ * exits early and leaves the internal tracking vectors perfectly balanced.
  */
 TEST(midi_mapping_clear_when_already_vacant) {
-  MidiManager mgr;
+    MidiManager mgr;
 
-  // Empty out any default configurations
-  mgr.clear_mappings();
-  ASSERT_TRUE(mgr.mappings().empty());
+    // Empty out any default configurations
+    mgr.clear_mappings();
+    ASSERT_TRUE(mgr.mappings().empty());
 
-  // Trigger second clear pass to test early exit paths on empty vectors
-  mgr.clear_mappings();
+    // Trigger second clear pass to test early exit paths on empty vectors
+    mgr.clear_mappings();
 
-  // Explicit structural assertions
-  ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 0);
-  ASSERT_TRUE(mgr.mappings().empty());
+    // Explicit structural assertions
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 0);
+    ASSERT_TRUE(mgr.mappings().empty());
 }
 
 /**
- * @brief Verifies the system structural stability when an identical single
- * incoming control change index maps successfully over an available multi-point
- * pipeline target.
+ * @brief Verifies the system structural stability when an identical single incoming
+ * control change index maps successfully over an available multi-point pipeline target.
  */
 TEST(midi_mapping_duplicate_cc_broadcast_handling) {
-  MidiManager midi;
-  AudioEngine engine;
-  engine.initialize();
+    MidiManager midi;
+    AudioEngine engine;
+    engine.initialize();
 
-  auto fx = std::make_shared<TestEffect>();
-  engine.add_effect(fx);
+    auto fx = std::make_shared<TestEffect>();
+    engine.add_effect(fx);
 
-  // Map CC 60 to parameter 1 (Drive)
-  MidiMapping m1{60,
-                 -1,
-                 MidiTargetType::EffectParam,
-                 MidiMappingMode::Continuous,
-                 "TestEffect",
-                 "Drive"};
-  midi.add_mapping(m1);
+    // Map CC 60 to parameter 1 (Drive)
+    MidiMapping m1{60,           -1,     MidiTargetType::EffectParam, MidiMappingMode::Continuous,
+                   "TestEffect", "Drive"};
+    midi.add_mapping(m1);
 
-  // Inject event to confirm parameter mutations stream reliably
-  midi.inject_event(make_cc(60, 127));
-  midi.poll(engine);
+    // Inject event to confirm parameter mutations stream reliably
+    midi.inject_event(make_cc(60, 127));
+    midi.poll(engine);
 
-  // Verify properties hit maximum scale targets cleanly
-  ASSERT_NEAR(fx->params()[0].value, 1.0f, 0.01f);
-  engine.shutdown();
+    // Verify properties hit maximum scale targets cleanly
+    ASSERT_NEAR(fx->params()[0].value, 1.0f, 0.01f);
+    engine.shutdown();
 }
 
 /**
- * @brief Tests the tracking state vectors when fetching active counts
- * immediately following bulk un-registration operations to close the tracking
- * loops.
+ * @brief Tests the tracking state vectors when fetching active counts immediately following
+ * bulk un-registration operations to close the tracking loops.
  */
 TEST(midi_mapping_active_count_lifecycle) {
-  MidiManager midi;
-  midi.clear_mappings();
+    MidiManager midi;
+    midi.clear_mappings();
 
-  // Confirm exact empty layout bounds
-  ASSERT_EQ(static_cast<int>(midi.mappings().size()), 0);
+    // Confirm exact empty layout bounds
+    ASSERT_EQ(static_cast<int>(midi.mappings().size()), 0);
 
-  MidiMapping m{99, -1, MidiTargetType::OutputGain, MidiMappingMode::Continuous,
-                "", ""};
-  midi.add_mapping(m);
+    MidiMapping m{99, -1, MidiTargetType::OutputGain, MidiMappingMode::Continuous, "", ""};
+    midi.add_mapping(m);
 
-  // Field evaluation proving operational delta tracking is fully accurate
-  ASSERT_EQ(static_cast<int>(midi.mappings().size()), 1);
+    // Field evaluation proving operational delta tracking is fully accurate
+    ASSERT_EQ(static_cast<int>(midi.mappings().size()), 1);
 }
 
 // ===========================================================================
@@ -1087,26 +1028,26 @@ TEST(midi_mapping_active_count_lifecycle) {
  *        identical to their pre-call values.
  */
 TEST(midi_mapping_remove_for_param_non_matching_effect_preserves_entry) {
-  MidiManager mgr;
+    MidiManager mgr;
 
-  MidiMapping m;
-  m.cc_number = 55;
-  m.midi_channel = -1;
-  m.target_type = MidiTargetType::EffectParam;
-  m.mode = MidiMappingMode::Continuous;
-  m.effect_name = "Flanger";
-  m.param_name = "Rate";
-  mgr.add_mapping(m);
+    MidiMapping m;
+    m.cc_number = 55;
+    m.midi_channel = -1;
+    m.target_type = MidiTargetType::EffectParam;
+    m.mode = MidiMappingMode::Continuous;
+    m.effect_name = "Flanger";
+    m.param_name = "Rate";
+    mgr.add_mapping(m);
 
-  ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 1);
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 1);
 
-  // Wrong effect name — must not erase
-  mgr.remove_mapping_for_param("Reverb", "Rate");
+    // Wrong effect name — must not erase
+    mgr.remove_mapping_for_param("Reverb", "Rate");
 
-  ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 1);
-  ASSERT_EQ(mgr.mappings()[0].cc_number, 55);
-  ASSERT_EQ(mgr.mappings()[0].effect_name, std::string("Flanger"));
-  ASSERT_EQ(mgr.mappings()[0].param_name, std::string("Rate"));
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 1);
+    ASSERT_EQ(mgr.mappings()[0].cc_number, 55);
+    ASSERT_EQ(mgr.mappings()[0].effect_name, std::string("Flanger"));
+    ASSERT_EQ(mgr.mappings()[0].param_name, std::string("Rate"));
 }
 
 /**
@@ -1116,23 +1057,23 @@ TEST(midi_mapping_remove_for_param_non_matching_effect_preserves_entry) {
  *        Field-level: mapping vector must be completely empty after the call.
  */
 TEST(midi_mapping_remove_for_param_exact_match_erases_entry) {
-  MidiManager mgr;
+    MidiManager mgr;
 
-  MidiMapping m;
-  m.cc_number = 22;
-  m.midi_channel = -1;
-  m.target_type = MidiTargetType::EffectParam;
-  m.mode = MidiMappingMode::Continuous;
-  m.effect_name = "Tremolo";
-  m.param_name = "Speed";
-  mgr.add_mapping(m);
+    MidiMapping m;
+    m.cc_number = 22;
+    m.midi_channel = -1;
+    m.target_type = MidiTargetType::EffectParam;
+    m.mode = MidiMappingMode::Continuous;
+    m.effect_name = "Tremolo";
+    m.param_name = "Speed";
+    mgr.add_mapping(m);
 
-  ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 1);
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 1);
 
-  mgr.remove_mapping_for_param("Tremolo", "Speed");
+    mgr.remove_mapping_for_param("Tremolo", "Speed");
 
-  ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 0);
-  ASSERT_TRUE(mgr.mappings().empty());
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 0);
+    ASSERT_TRUE(mgr.mappings().empty());
 }
 
 /**
@@ -1142,23 +1083,23 @@ TEST(midi_mapping_remove_for_param_exact_match_erases_entry) {
  *        Field-level: size, cc_number, and param_name must be unchanged.
  */
 TEST(midi_mapping_remove_for_param_mismatched_param_name_skips_erasure) {
-  MidiManager mgr;
+    MidiManager mgr;
 
-  MidiMapping m;
-  m.cc_number = 33;
-  m.midi_channel = -1;
-  m.target_type = MidiTargetType::EffectParam;
-  m.mode = MidiMappingMode::Continuous;
-  m.effect_name = "Chorus";
-  m.param_name = "Depth";
-  mgr.add_mapping(m);
+    MidiMapping m;
+    m.cc_number = 33;
+    m.midi_channel = -1;
+    m.target_type = MidiTargetType::EffectParam;
+    m.mode = MidiMappingMode::Continuous;
+    m.effect_name = "Chorus";
+    m.param_name = "Depth";
+    mgr.add_mapping(m);
 
-  // Same effect name, different param — must not erase
-  mgr.remove_mapping_for_param("Chorus", "Rate");
+    // Same effect name, different param — must not erase
+    mgr.remove_mapping_for_param("Chorus", "Rate");
 
-  ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 1);
-  ASSERT_EQ(mgr.mappings()[0].cc_number, 33);
-  ASSERT_EQ(mgr.mappings()[0].param_name, std::string("Depth"));
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 1);
+    ASSERT_EQ(mgr.mappings()[0].cc_number, 33);
+    ASSERT_EQ(mgr.mappings()[0].param_name, std::string("Depth"));
 }
 
 /**
@@ -1168,17 +1109,17 @@ TEST(midi_mapping_remove_for_param_mismatched_param_name_skips_erasure) {
  *        Field-level: both substrings must be present in the output string.
  */
 TEST(midi_learn_status_effect_bypass_branch_embeds_labels) {
-  MidiManager mgr;
+    MidiManager mgr;
 
-  mgr.start_learn(MidiTargetType::EffectBypass, "Compressor", "");
-  std::string status = mgr.learn_status();
+    mgr.start_learn(MidiTargetType::EffectBypass, "Compressor", "");
+    std::string status = mgr.learn_status();
 
-  ASSERT_FALSE(status.empty());
-  ASSERT_NE(status.find("Compressor"), std::string::npos);
-  ASSERT_NE(status.find("bypass"), std::string::npos);
+    ASSERT_FALSE(status.empty());
+    ASSERT_NE(status.find("Compressor"), std::string::npos);
+    ASSERT_NE(status.find("bypass"), std::string::npos);
 
-  mgr.cancel_learn();
-  ASSERT_TRUE(mgr.learn_status().empty());
+    mgr.cancel_learn();
+    ASSERT_TRUE(mgr.learn_status().empty());
 }
 
 /**
@@ -1188,15 +1129,15 @@ TEST(midi_learn_status_effect_bypass_branch_embeds_labels) {
  *        Field-level: the exact label substring must be found in the output.
  */
 TEST(midi_learn_status_input_gain_branch_embeds_label) {
-  MidiManager mgr;
+    MidiManager mgr;
 
-  mgr.start_learn(MidiTargetType::InputGain, "", "");
-  std::string status = mgr.learn_status();
+    mgr.start_learn(MidiTargetType::InputGain, "", "");
+    std::string status = mgr.learn_status();
 
-  ASSERT_FALSE(status.empty());
-  ASSERT_NE(status.find("Input Gain"), std::string::npos);
+    ASSERT_FALSE(status.empty());
+    ASSERT_NE(status.find("Input Gain"), std::string::npos);
 
-  mgr.cancel_learn();
+    mgr.cancel_learn();
 }
 
 /**
@@ -1206,15 +1147,15 @@ TEST(midi_learn_status_input_gain_branch_embeds_label) {
  *        Field-level: the exact label substring must be found in the output.
  */
 TEST(midi_learn_status_output_gain_branch_embeds_label) {
-  MidiManager mgr;
+    MidiManager mgr;
 
-  mgr.start_learn(MidiTargetType::OutputGain, "", "");
-  std::string status = mgr.learn_status();
+    mgr.start_learn(MidiTargetType::OutputGain, "", "");
+    std::string status = mgr.learn_status();
 
-  ASSERT_FALSE(status.empty());
-  ASSERT_NE(status.find("Output Gain"), std::string::npos);
+    ASSERT_FALSE(status.empty());
+    ASSERT_NE(status.find("Output Gain"), std::string::npos);
 
-  mgr.cancel_learn();
+    mgr.cancel_learn();
 }
 
 /**
@@ -1224,22 +1165,22 @@ TEST(midi_learn_status_output_gain_branch_embeds_label) {
  *        Field-level: engine.get_input_gain() must equal 0.0 within tolerance.
  */
 TEST(midi_apply_mapping_input_gain_cc0_sets_minimum) {
-  MidiManager mgr;
-  AudioEngine engine;
-  engine.initialize();
+    MidiManager mgr;
+    AudioEngine engine;
+    engine.initialize();
 
-  MidiMapping m;
-  m.cc_number = 11;
-  m.midi_channel = -1;
-  m.target_type = MidiTargetType::InputGain;
-  m.mode = MidiMappingMode::Continuous;
-  mgr.add_mapping(m);
+    MidiMapping m;
+    m.cc_number = 11;
+    m.midi_channel = -1;
+    m.target_type = MidiTargetType::InputGain;
+    m.mode = MidiMappingMode::Continuous;
+    mgr.add_mapping(m);
 
-  mgr.inject_event(make_cc(11, 0));
-  mgr.poll(engine);
+    mgr.inject_event(make_cc(11, 0));
+    mgr.poll(engine);
 
-  ASSERT_NEAR(engine.get_input_gain(), 0.0f, 0.01f);
-  engine.shutdown();
+    ASSERT_NEAR(engine.get_input_gain(), 0.0f, 0.01f);
+    engine.shutdown();
 }
 
 /**
@@ -1249,22 +1190,22 @@ TEST(midi_apply_mapping_input_gain_cc0_sets_minimum) {
  *        Field-level: engine.get_input_gain() must equal 2.0 within tolerance.
  */
 TEST(midi_apply_mapping_input_gain_cc127_sets_maximum) {
-  MidiManager mgr;
-  AudioEngine engine;
-  engine.initialize();
+    MidiManager mgr;
+    AudioEngine engine;
+    engine.initialize();
 
-  MidiMapping m;
-  m.cc_number = 11;
-  m.midi_channel = -1;
-  m.target_type = MidiTargetType::InputGain;
-  m.mode = MidiMappingMode::Continuous;
-  mgr.add_mapping(m);
+    MidiMapping m;
+    m.cc_number = 11;
+    m.midi_channel = -1;
+    m.target_type = MidiTargetType::InputGain;
+    m.mode = MidiMappingMode::Continuous;
+    mgr.add_mapping(m);
 
-  mgr.inject_event(make_cc(11, 127));
-  mgr.poll(engine);
+    mgr.inject_event(make_cc(11, 127));
+    mgr.poll(engine);
 
-  ASSERT_NEAR(engine.get_input_gain(), 2.0f, 0.01f);
-  engine.shutdown();
+    ASSERT_NEAR(engine.get_input_gain(), 2.0f, 0.01f);
+    engine.shutdown();
 }
 
 // ===========================================================================
@@ -1276,64 +1217,63 @@ TEST(midi_apply_mapping_input_gain_cc127_sets_maximum) {
  *        by writing a JSON file with a valid object that contains no "mappings"
  *        key, then calling load_config() to exercise the contains() guard that
  *        fires and returns false.
- *        Field-level: after load_config(), mappings().size() must be 2
- * (defaults because file had no mappings key and parsed as invalid).
+ *        Field-level: after load_config(), mappings().size() must be 2 (defaults
+ *        because file had no mappings key and parsed as invalid).
  */
 TEST(midi_persist_load_config_missing_key_uses_fallback) {
-  config_backup_guard guard;
-  std::ofstream file("midi_config.json");
-  file << R"({"configuration": []})";
-  file.close();
+    config_backup_guard guard;
+    std::ofstream file("midi_config.json");
+    file << R"({"configuration": []})";
+    file.close();
 
-  MidiManager mgr;
-  mgr.clear_mappings();
-  mgr.load_config();
+    MidiManager mgr;
+    mgr.clear_mappings();
+    mgr.load_config();
 
-  // Aligns with logic: Missing schema root keys deploy 2 default mappings
-  ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
+    // Aligns with logic: Missing schema root keys deploy 2 default mappings
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
 }
 
 /**
  * @brief Drives the is_array() false branch of mappings_from_json() at line 63
  *        by creating a JSON file whose "mappings" value is a string rather than
  *        an array, then calling load_config() to trigger the type-check guard.
- *        Field-level: mappings vector size after load confirms fallback
- * defaults were installed because the JSON was structurally invalid.
+ *        Field-level: mappings vector size after load confirms fallback defaults
+ *        were installed because the JSON was structurally invalid.
  */
 TEST(midi_persist_load_config_non_array_mappings_uses_fallback) {
-  config_backup_guard guard;
-  std::ofstream file("midi_config.json");
-  file << R"({"mappings": "not_an_array"})";
-  file.close();
+    config_backup_guard guard;
+    std::ofstream file("midi_config.json");
+    file << R"({"mappings": "not_an_array"})";
+    file.close();
 
-  MidiManager mgr;
-  mgr.clear_mappings();
-  mgr.load_config();
+    MidiManager mgr;
+    mgr.clear_mappings();
+    mgr.load_config();
 
-  // Aligns with logic: Non-array mapping nodes deploy 2 default mappings
-  ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
+    // Aligns with logic: Non-array mapping nodes deploy 2 default mappings
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
 }
 
 /**
  * @brief Drives the nlohmann::json::exception catch block inside
  *        mappings_from_json() (lines 79-82) by writing a completely
  *        unparseable JSON string to the config file, then calling load_config()
- *        to exercise the catch path and confirm graceful degradation to
- * defaults. Field-level: mapping count reflects the fallback defaults, not a
- * crash.
+ *        to exercise the catch path and confirm graceful degradation to defaults.
+ *        Field-level: mapping count reflects the fallback defaults, not a crash.
  */
 TEST(midi_persist_load_config_parse_exception_uses_fallback) {
-  config_backup_guard guard;
-  std::ofstream file("midi_config.json");
-  file << "{ !!! totally invalid json !!! }";
-  file.close();
+    config_backup_guard guard;
+    std::ofstream file("midi_config.json");
+    file << "{ !!! totally invalid json !!! }";
+    file.close();
 
-  MidiManager mgr;
-  mgr.clear_mappings();
-  mgr.load_config();
+    MidiManager mgr;
+    mgr.clear_mappings();
+    mgr.load_config();
 
-  // Aligns with logic: Parser exceptions deploy 2 default mappings
-  ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
+    // Aligns with logic: Parser exceptions deploy 2 default mappings
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
 }
 
 /**
@@ -1343,17 +1283,17 @@ TEST(midi_persist_load_config_parse_exception_uses_fallback) {
  *        Field-level: no crash; fallback defaults installed on parse failure.
  */
 TEST(midi_persist_load_config_truncated_json_uses_fallback) {
-  config_backup_guard guard;
-  std::ofstream file("midi_config.json");
-  file << R"({"mappings": [{"cc": 7)";
-  file.close();
+    config_backup_guard guard;
+    std::ofstream file("midi_config.json");
+    file << R"({"mappings": [{"cc": 7)";
+    file.close();
 
-  MidiManager mgr;
-  mgr.clear_mappings();
-  mgr.load_config();
+    MidiManager mgr;
+    mgr.clear_mappings();
+    mgr.load_config();
 
-  // Aligns with logic: Truncated syntax exceptions deploy 2 default mappings
-  ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
+    // Aligns with logic: Truncated syntax exceptions deploy 2 default mappings
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
 }
 
 /**
@@ -1364,18 +1304,18 @@ TEST(midi_persist_load_config_truncated_json_uses_fallback) {
  * Field-level: mappings().size() is exactly 2 (fallback defaults).
  */
 TEST(midi_persist_load_config_empty_array_succeeds) {
-  config_backup_guard guard;
+    config_backup_guard guard;
 
-  std::ofstream file("midi_config.json");
-  file << R"({"mappings": []})";
-  file.close();
+    std::ofstream file("midi_config.json");
+    file << R"({"mappings": []})";
+    file.close();
 
-  MidiManager mgr;
-  mgr.clear_mappings();
-  mgr.load_config();
+    MidiManager mgr;
+    mgr.clear_mappings();
+    mgr.load_config();
 
-  // Updated assertion: Valid empty arrays trigger fallback baseline defaults
-  ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
+    // Updated assertion: Valid empty arrays trigger fallback baseline defaults
+    ASSERT_EQ(static_cast<int>(mgr.mappings().size()), 2);
 }
 
 // ===========================================================================
@@ -1384,61 +1324,60 @@ TEST(midi_persist_load_config_empty_array_succeeds) {
 
 /**
  * @brief Exercises MidiManager::initialize() (lines 58-76 in the native build)
- *        by calling it on a freshly constructed manager, then immediately
- * calling shutdown() to exercise the midi_in_ delete branch (lines 81-83) that
+ *        by calling it on a freshly constructed manager, then immediately calling
+ *        shutdown() to exercise the midi_in_ delete branch (lines 81-83) that
  *        was at 0 hits in the PR #210 coverage report.
  *        Field-level: a second shutdown() after the first must not crash
  *        (idempotency guard on close_port()).
  */
 TEST(midi_manager_initialize_and_shutdown_delete_branch) {
-  MidiManager mgr;
+    MidiManager mgr;
 
-  // initialize() drives lines 58-76; on headless CI RtMidiIn constructs
-  // successfully even without hardware (getPortCount returns 0)
-  bool init_result = mgr.initialize();
+    // initialize() drives lines 58-76; on headless CI RtMidiIn constructs
+    // successfully even without hardware (getPortCount returns 0)
+    bool init_result = mgr.initialize();
 
-  // Result is environment-dependent; assert it is a valid bool
-  ASSERT_TRUE(init_result == true || init_result == false);
+    // Result is environment-dependent; assert it is a valid bool
+    ASSERT_TRUE(init_result == true || init_result == false);
 
-  // shutdown() with midi_in_ non-null drives the delete branch (lines 81-83)
-  mgr.shutdown();
+    // shutdown() with midi_in_ non-null drives the delete branch (lines 81-83)
+    mgr.shutdown();
 
-  // Second call must be safe — close_port() returns early, no double-free
-  mgr.shutdown();
+    // Second call must be safe — close_port() returns early, no double-free
+    mgr.shutdown();
 }
 
 /**
  * @brief Exercises get_available_ports() (lines 86-102) after initialize(),
  *        confirming the function enumerates the RtMidi port list and returns
  *        a well-formed vector without throwing.
- *        Field-level: returned vector size must be >= 0 (headless CI returns
- * 0).
+ *        Field-level: returned vector size must be >= 0 (headless CI returns 0).
  */
 TEST(midi_manager_get_available_ports_after_initialize) {
-  MidiManager mgr;
-  mgr.initialize();
+    MidiManager mgr;
+    mgr.initialize();
 
-  auto ports = mgr.get_available_ports();
+    auto ports = mgr.get_available_ports();
 
-  // Field-level: any non-negative size is valid; empty is correct on CI
-  ASSERT_GE(static_cast<int>(ports.size()), 0);
+    // Field-level: any non-negative size is valid; empty is correct on CI
+    ASSERT_GE(static_cast<int>(ports.size()), 0);
 
-  mgr.shutdown();
+    mgr.shutdown();
 }
 
 /**
  * @brief Exercises the null-midi_in_ early-return inside get_available_ports()
  *        (line 88) by calling it without prior initialize(), confirming the
- *        function returns an empty vector immediately without dereferencing
- * null. Field-level: returned vector must be empty.
+ *        function returns an empty vector immediately without dereferencing null.
+ *        Field-level: returned vector must be empty.
  */
 TEST(midi_manager_get_available_ports_without_initialize_returns_empty) {
-  MidiManager mgr;
-  // midi_in_ is nullptr — hits early-return at line 88
-  auto ports = mgr.get_available_ports();
+    MidiManager mgr;
+    // midi_in_ is nullptr — hits early-return at line 88
+    auto ports = mgr.get_available_ports();
 
-  ASSERT_EQ(static_cast<int>(ports.size()), 0);
-  ASSERT_TRUE(ports.empty());
+    ASSERT_EQ(static_cast<int>(ports.size()), 0);
+    ASSERT_TRUE(ports.empty());
 }
 
 /**
@@ -1448,45 +1387,45 @@ TEST(midi_manager_get_available_ports_without_initialize_returns_empty) {
  *        Field-level: return value must be false.
  */
 TEST(midi_manager_open_port_without_initialize_returns_false) {
-  MidiManager mgr;
-  // midi_in_ is nullptr — hits the !midi_in_ guard at line 105
-  bool result = mgr.open_port(0);
+    MidiManager mgr;
+    // midi_in_ is nullptr — hits the !midi_in_ guard at line 105
+    bool result = mgr.open_port(0);
 
-  ASSERT_FALSE(result);
+    ASSERT_FALSE(result);
 }
 
 /**
- * @brief Exercises the out-of-range index rejection inside open_port() (line
- * 113) by requesting port index 9999 after initialize(), which is guaranteed to
- * exceed getPortCount() on any system including CI. Field-level: return value
- * must be false; port state must be unchanged.
+ * @brief Exercises the out-of-range index rejection inside open_port() (line 113)
+ *        by requesting port index 9999 after initialize(), which is guaranteed
+ *        to exceed getPortCount() on any system including CI.
+ *        Field-level: return value must be false; port state must be unchanged.
  */
 TEST(midi_manager_open_port_out_of_range_index_returns_false) {
-  MidiManager mgr;
-  mgr.initialize();
+    MidiManager mgr;
+    mgr.initialize();
 
-  bool result = mgr.open_port(9999);
+    bool result = mgr.open_port(9999);
 
-  ASSERT_FALSE(result);
+    ASSERT_FALSE(result);
 
-  mgr.shutdown();
+    mgr.shutdown();
 }
 
 /**
- * @brief Exercises the negative-index rejection branch inside open_port() (line
- * 113) by passing -1, confirming the signed/unsigned comparison guard fires and
- * returns false without attempting to open any port. Field-level: return value
- * must be false.
+ * @brief Exercises the negative-index rejection branch inside open_port() (line 113)
+ *        by passing -1, confirming the signed/unsigned comparison guard fires
+ *        and returns false without attempting to open any port.
+ *        Field-level: return value must be false.
  */
 TEST(midi_manager_open_port_negative_index_returns_false) {
-  MidiManager mgr;
-  mgr.initialize();
+    MidiManager mgr;
+    mgr.initialize();
 
-  bool result = mgr.open_port(-1);
+    bool result = mgr.open_port(-1);
 
-  ASSERT_FALSE(result);
+    ASSERT_FALSE(result);
 
-  mgr.shutdown();
+    mgr.shutdown();
 }
 
 /**
@@ -1494,26 +1433,25 @@ TEST(midi_manager_open_port_negative_index_returns_false) {
  *        ensuring the RtMidi cancel-callback and close-port sequence inside
  *        the body (lines 136-142) executes when a port was successfully opened,
  *        and degrades safely when no hardware is present.
- *        Field-level: no crash must occur in either the opened or unopened
- * path.
+ *        Field-level: no crash must occur in either the opened or unopened path.
  */
 TEST(midi_manager_close_port_after_open_attempt_no_crash) {
-  MidiManager mgr;
-  mgr.initialize();
+    MidiManager mgr;
+    mgr.initialize();
 
-  // May succeed on machines with MIDI hardware, returns false on headless CI
-  bool opened = mgr.open_port(0);
+    // May succeed on machines with MIDI hardware, returns false on headless CI
+    bool opened = mgr.open_port(0);
 
-  // Regardless of whether the port opened, close_port must execute cleanly
-  mgr.close_port();
+    // Regardless of whether the port opened, close_port must execute cleanly
+    mgr.close_port();
 
-  // Field-level: the manager must tolerate a redundant close gracefully
-  mgr.close_port();
+    // Field-level: the manager must tolerate a redundant close gracefully
+    mgr.close_port();
 
-  // Suppress unused-variable warning while keeping the branch meaningful
-  (void)opened;
+    // Suppress unused-variable warning while keeping the branch meaningful
+    (void)opened;
 
-  mgr.shutdown();
+    mgr.shutdown();
 }
 
 // ===========================================================================
@@ -1521,21 +1459,19 @@ TEST(midi_manager_close_port_after_open_attempt_no_crash) {
 // ===========================================================================
 
 /**
- * @brief Validates MidiManager initialization boundaries and structural
- * properties of basic state tracking functions across accessible platform
- * variables.
+ * @brief Validates MidiManager initialization boundaries and structural properties
+ * of basic state tracking functions across accessible platform variables.
  */
 TEST(midi_manager_core_state_tracking_boundaries) {
-  MidiManager mgr;
+    MidiManager mgr;
 
-  // Verify baseline learning state flags remain isolated
-  ASSERT_FALSE(mgr.is_learning());
-  ASSERT_TRUE(mgr.learn_status().empty());
+    // Verify baseline learning state flags remain isolated
+    ASSERT_FALSE(mgr.is_learning());
+    ASSERT_TRUE(mgr.learn_status().empty());
 
-  // Explicit call to check the clean fallback loop counters on an uninitialized
-  // instance
-  auto active_mappings = mgr.mappings();
-  ASSERT_GE(static_cast<int>(active_mappings.size()), 0);
+    // Explicit call to check the clean fallback loop counters on an uninitialized instance
+    auto active_mappings = mgr.mappings();
+    ASSERT_GE(static_cast<int>(active_mappings.size()), 0);
 }
 
 /**
@@ -1544,122 +1480,120 @@ TEST(midi_manager_core_state_tracking_boundaries) {
  * successfully loaded, hitting the lines that currently show 0 hits.
  */
 TEST(midi_persist_load_config_valid_json_succeeds) {
-  config_backup_guard guard;
-  std::ofstream file("midi_config.json");
-  // Valid schema with one mapping
-  file
-      << R"({"mappings": [{"cc": 7, "target": 0, "mode": 0, "effect": "Test", "param": "Drive"}]})";
-  file.close();
+    config_backup_guard guard;
+    std::ofstream file("midi_config.json");
+    // Valid schema with one mapping
+    file
+        << R"({"mappings": [{"cc": 7, "target": 0, "mode": 0, "effect": "Test", "param": "Drive"}]})";
+    file.close();
 
-  MidiManager mgr;
-  mgr.load_config();
+    MidiManager mgr;
+    mgr.load_config();
 
-  // If the parser successfully hit the successful loops, we expect at least 1
-  // mapping
-  ASSERT_GE(static_cast<int>(mgr.mappings().size()), 1);
+    // If the parser successfully hit the successful loops, we expect at least 1 mapping
+    ASSERT_GE(static_cast<int>(mgr.mappings().size()), 1);
 }
 
 TEST(midi_manager_direct_callback_tests) {
-  MidiManager mgr;
-  mgr.initialize();
+    MidiManager mgr;
+    mgr.initialize();
 
-  // Record initial queue size (should be 0)
-  size_t initial_size = Amplitron::TestAccessor::get_queue_size(mgr);
-  ASSERT_EQ(initial_size, 0);
+    // Record initial queue size (should be 0)
+    size_t initial_size = Amplitron::TestAccessor::get_queue_size(mgr);
+    ASSERT_EQ(initial_size, 0);
 
-  // 1. Mismatch status event (not CC, e.g. Note On 0x90)
-  std::vector<unsigned char> note_on = {0x90, 60, 127};
-  Amplitron::TestAccessor::call_midi_callback(mgr, 0.0, &note_on);
-  ASSERT_EQ(Amplitron::TestAccessor::get_queue_size(mgr), initial_size);
+    // 1. Mismatch status event (not CC, e.g. Note On 0x90)
+    std::vector<unsigned char> note_on = {0x90, 60, 127};
+    Amplitron::TestAccessor::call_midi_callback(mgr, 0.0, &note_on);
+    ASSERT_EQ(Amplitron::TestAccessor::get_queue_size(mgr), initial_size);
 
-  // 2. Short message (size < 3)
-  std::vector<unsigned char> short_msg = {0xB0, 7};
-  Amplitron::TestAccessor::call_midi_callback(mgr, 0.0, &short_msg);
-  ASSERT_EQ(Amplitron::TestAccessor::get_queue_size(mgr), initial_size);
+    // 2. Short message (size < 3)
+    std::vector<unsigned char> short_msg = {0xB0, 7};
+    Amplitron::TestAccessor::call_midi_callback(mgr, 0.0, &short_msg);
+    ASSERT_EQ(Amplitron::TestAccessor::get_queue_size(mgr), initial_size);
 
-  // 3. Null message pointer
-  Amplitron::TestAccessor::call_midi_callback(mgr, 0.0, nullptr);
-  ASSERT_EQ(Amplitron::TestAccessor::get_queue_size(mgr), initial_size);
+    // 3. Null message pointer
+    Amplitron::TestAccessor::call_midi_callback(mgr, 0.0, nullptr);
+    ASSERT_EQ(Amplitron::TestAccessor::get_queue_size(mgr), initial_size);
 
-  // 4. Valid CC message
-  std::vector<unsigned char> valid_cc = {0xB0, 7, 100};
-  Amplitron::TestAccessor::call_midi_callback(mgr, 0.0, &valid_cc);
-  ASSERT_EQ(Amplitron::TestAccessor::get_queue_size(mgr), initial_size + 1);
+    // 4. Valid CC message
+    std::vector<unsigned char> valid_cc = {0xB0, 7, 100};
+    Amplitron::TestAccessor::call_midi_callback(mgr, 0.0, &valid_cc);
+    ASSERT_EQ(Amplitron::TestAccessor::get_queue_size(mgr), initial_size + 1);
 
-  // Pop the queued event and compare its bytes to valid_cc
-  MidiEvent event{};
-  bool popped = Amplitron::TestAccessor::pop_queue(mgr, event);
-  ASSERT_TRUE(popped);
-  ASSERT_EQ(event.status, 0xB0);
-  ASSERT_EQ(event.data1, 7);
-  ASSERT_EQ(event.data2, 100);
+    // Pop the queued event and compare its bytes to valid_cc
+    MidiEvent event{};
+    bool popped = Amplitron::TestAccessor::pop_queue(mgr, event);
+    ASSERT_TRUE(popped);
+    ASSERT_EQ(event.status, 0xB0);
+    ASSERT_EQ(event.data1, 7);
+    ASSERT_EQ(event.data2, 100);
 
-  // Assert the queue size is back to 0
-  ASSERT_EQ(Amplitron::TestAccessor::get_queue_size(mgr), 0);
+    // Assert the queue size is back to 0
+    ASSERT_EQ(Amplitron::TestAccessor::get_queue_size(mgr), 0);
 
-  mgr.shutdown();
+    mgr.shutdown();
 }
 
 extern bool g_mock_rtmidi_should_fail_enumerate;
 extern bool g_mock_rtmidi_should_fail_open;
-extern void (*g_mock_rtmidi_callback)(double, std::vector<unsigned char>*,
-                                      void*);
+extern void (*g_mock_rtmidi_callback)(double, std::vector<unsigned char>*, void*);
 extern void* g_mock_rtmidi_user_data;
 extern bool g_mock_rtmidi_port_open;
 
 TEST(midi_manager_mock_init_and_port_ops) {
-  // 1. Initialize with enumeration failure
-  g_mock_rtmidi_should_fail_enumerate = true;
-  {
-    MidiManager mgr;
-    bool ok = mgr.initialize();
-    // Since enumeration throws an exception inside get_available_ports,
-    // initialize should handle it and succeed (though no ports auto-opened)
-    ASSERT_TRUE(ok);
-    ASSERT_EQ(static_cast<int>(mgr.get_available_ports().size()), 0);
-  }
-  g_mock_rtmidi_should_fail_enumerate = false;
+    // 1. Initialize with enumeration failure
+    g_mock_rtmidi_should_fail_enumerate = true;
+    {
+        MidiManager mgr;
+        bool ok = mgr.initialize();
+        // Since enumeration throws an exception inside get_available_ports, initialize should
+        // handle it and succeed (though no ports auto-opened)
+        ASSERT_TRUE(ok);
+        ASSERT_EQ(static_cast<int>(mgr.get_available_ports().size()), 0);
+    }
+    g_mock_rtmidi_should_fail_enumerate = false;
 
-  // 2. Open port index out of range
-  {
-    MidiManager mgr;
-    mgr.initialize();
-    bool ok = mgr.open_port(999);
-    ASSERT_FALSE(ok);
-  }
+    // 2. Open port index out of range
+    {
+        MidiManager mgr;
+        mgr.initialize();
+        bool ok = mgr.open_port(999);
+        ASSERT_FALSE(ok);
+    }
 
-  // 3. Open port failure exception path
-  g_mock_rtmidi_should_fail_open = true;
-  {
-    MidiManager mgr;
-    mgr.initialize();
-    bool ok = mgr.open_port(0);
-    ASSERT_FALSE(ok);
-  }
-  g_mock_rtmidi_should_fail_open = false;
+    // 3. Open port failure exception path
+    g_mock_rtmidi_should_fail_open = true;
+    {
+        MidiManager mgr;
+        mgr.initialize();
+        bool ok = mgr.open_port(0);
+        ASSERT_FALSE(ok);
+    }
+    g_mock_rtmidi_should_fail_open = false;
 
-  // 4. Triggering callback directly via Mock callback hook
-  {
-    MidiManager mgr;
-    mgr.initialize();
-    // Since ports are mock, let's open one
-    bool ok = mgr.open_port(0);
-    ASSERT_TRUE(ok);
-    ASSERT_TRUE(g_mock_rtmidi_port_open);
-    ASSERT_TRUE(g_mock_rtmidi_callback != nullptr);
+    // 4. Triggering callback directly via Mock callback hook
+    {
+        MidiManager mgr;
+        mgr.initialize();
+        // Since ports are mock, let's open one
+        bool ok = mgr.open_port(0);
+        ASSERT_TRUE(ok);
+        ASSERT_TRUE(g_mock_rtmidi_port_open);
+        ASSERT_TRUE(g_mock_rtmidi_callback != nullptr);
 
-    // Call callback
-    std::vector<unsigned char> msg = {0xB0, 10, 50};
-    g_mock_rtmidi_callback(0.0, &msg, g_mock_rtmidi_user_data);
+        // Call callback
+        std::vector<unsigned char> msg = {0xB0, 10, 50};
+        g_mock_rtmidi_callback(0.0, &msg, g_mock_rtmidi_user_data);
 
-    // Check if event was queued
-    ASSERT_EQ(Amplitron::TestAccessor::get_queue_size(mgr), 1u);
+        // Check if event was queued
+        ASSERT_EQ(Amplitron::TestAccessor::get_queue_size(mgr), 1u);
 
-    // Close port and verify callback cancel
-    mgr.close_port();
-    ASSERT_FALSE(g_mock_rtmidi_port_open);
-    ASSERT_TRUE(g_mock_rtmidi_callback == nullptr);
-  }
+        // Close port and verify callback cancel
+        mgr.close_port();
+        ASSERT_FALSE(g_mock_rtmidi_port_open);
+        ASSERT_TRUE(g_mock_rtmidi_callback == nullptr);
+    }
 }
 
 extern bool g_mock_rtmidi_should_fail_constructor;
@@ -1667,49 +1601,48 @@ extern bool g_mock_rtmidi_should_fail_close;
 extern int g_mock_rtmidi_port_count;
 
 TEST(midi_manager_error_handling_edge_cases) {
-  // 1. Constructor failure path
-  g_mock_rtmidi_should_fail_constructor = true;
-  {
-    MidiManager mgr;
-    bool ok = mgr.initialize();
-    ASSERT_FALSE(ok);
-  }
-  g_mock_rtmidi_should_fail_constructor = false;
+    // 1. Constructor failure path
+    g_mock_rtmidi_should_fail_constructor = true;
+    {
+        MidiManager mgr;
+        bool ok = mgr.initialize();
+        ASSERT_FALSE(ok);
+    }
+    g_mock_rtmidi_should_fail_constructor = false;
 
-  // 2. getPortName failure path
-  g_mock_rtmidi_port_count = 2;
-  {
-    MidiManager mgr;
-    mgr.initialize();
-    auto ports = mgr.get_available_ports();
-    // Since getPortName(1) throws, only "Mock MIDI Port" should be returned, or
-    // the catch block executes and get_available_ports prints error and returns
-    // what it gathered so far (which is size 1).
-    ASSERT_EQ(static_cast<int>(ports.size()), 1);
-    ASSERT_EQ(ports[0], "Mock MIDI Port");
-  }
-  g_mock_rtmidi_port_count = 1;
+    // 2. getPortName failure path
+    g_mock_rtmidi_port_count = 2;
+    {
+        MidiManager mgr;
+        mgr.initialize();
+        auto ports = mgr.get_available_ports();
+        // Since getPortName(1) throws, only "Mock MIDI Port" should be returned, or the catch block
+        // executes and get_available_ports prints error and returns what it gathered so far (which
+        // is size 1).
+        ASSERT_EQ(static_cast<int>(ports.size()), 1);
+        ASSERT_EQ(ports[0], "Mock MIDI Port");
+    }
+    g_mock_rtmidi_port_count = 1;
 
-  // 3. open_port closePort failure catch
-  g_mock_rtmidi_should_fail_open = true;
-  g_mock_rtmidi_should_fail_close = true;
-  {
-    MidiManager mgr;
-    mgr.initialize();
-    bool ok = mgr.open_port(0);
-    ASSERT_FALSE(ok);
-  }
-  g_mock_rtmidi_should_fail_open = false;
-  g_mock_rtmidi_should_fail_close = false;
+    // 3. open_port closePort failure catch
+    g_mock_rtmidi_should_fail_open = true;
+    g_mock_rtmidi_should_fail_close = true;
+    {
+        MidiManager mgr;
+        mgr.initialize();
+        bool ok = mgr.open_port(0);
+        ASSERT_FALSE(ok);
+    }
+    g_mock_rtmidi_should_fail_open = false;
+    g_mock_rtmidi_should_fail_close = false;
 
-  // 4. close_port failure catch
-  g_mock_rtmidi_should_fail_close = true;
-  {
-    MidiManager mgr;
-    mgr.initialize();
-    mgr.open_port(0);
-    mgr.close_port();  // Should not throw/crash because it catches the close
-                       // failure
-  }
-  g_mock_rtmidi_should_fail_close = false;
+    // 4. close_port failure catch
+    g_mock_rtmidi_should_fail_close = true;
+    {
+        MidiManager mgr;
+        mgr.initialize();
+        mgr.open_port(0);
+        mgr.close_port();  // Should not throw/crash because it catches the close failure
+    }
+    g_mock_rtmidi_should_fail_close = false;
 }

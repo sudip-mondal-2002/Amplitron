@@ -17,18 +17,14 @@ extern void *g_mock_jack_process_arg;
 }  // namespace Amplitron
 
 extern "C" {
-jack_client_t *MOCK_jack_client_open(const char *client_name,
-                                     jack_options_t options,
+jack_client_t *MOCK_jack_client_open(const char *client_name, jack_options_t options,
                                      jack_status_t *status, ...);
 int MOCK_jack_client_close(jack_client_t *client);
-jack_port_t *MOCK_jack_port_register(jack_client_t *client,
-                                     const char *port_name,
+jack_port_t *MOCK_jack_port_register(jack_client_t *client, const char *port_name,
                                      const char *port_type, unsigned long flags,
                                      unsigned long buffer_size);
 int MOCK_jack_set_process_callback(jack_client_t *client,
-                                   int (*process_callback)(jack_nframes_t,
-                                                           void *),
-                                   void *arg);
+                                   int (*process_callback)(jack_nframes_t, void *), void *arg);
 int MOCK_jack_activate(jack_client_t *client);
 int MOCK_jack_deactivate(jack_client_t *client);
 void *MOCK_jack_port_get_buffer(jack_port_t *port, jack_nframes_t nframes);

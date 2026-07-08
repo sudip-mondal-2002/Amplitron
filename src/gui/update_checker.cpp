@@ -14,71 +14,68 @@ UpdateChecker::UpdateChecker() = default;
 UpdateChecker::~UpdateChecker() { shutdown(); }
 
 void UpdateChecker::start_check() {
-  if (!check_thread_.joinable()) {
-    check_thread_ = std::thread([this]() { this->check_for_updates(); });
-  }
+    if (!check_thread_.joinable()) {
+        check_thread_ = std::thread([this]() { this->check_for_updates(); });
+    }
 }
 
 void UpdateChecker::shutdown() {
-  shutdown_requested_ = true;
-  if (check_thread_.joinable()) {
-    check_thread_.join();
-  }
+    shutdown_requested_ = true;
+    if (check_thread_.joinable()) {
+        check_thread_.join();
+    }
 }
 
 bool UpdateChecker::has_new_release() const {
-  std::lock_guard<std::mutex> lock(mutex_);
-  return has_new_release_;
+    std::lock_guard<std::mutex> lock(mutex_);
+    return has_new_release_;
 }
 
 std::string UpdateChecker::new_release_version() const {
-  std::lock_guard<std::mutex> lock(mutex_);
-  return new_release_version_;
+    std::lock_guard<std::mutex> lock(mutex_);
+    return new_release_version_;
 }
 
 std::string UpdateChecker::new_release_url() const {
-  std::lock_guard<std::mutex> lock(mutex_);
-  return new_release_url_;
+    std::lock_guard<std::mutex> lock(mutex_);
+    return new_release_url_;
 }
 
 void UpdateChecker::check_for_updates() {
 #ifndef AMPLITRON_NO_DESKTOP_SHELL
-  const char* cmd =
-      "curl -s "
-      "https://api.github.com/repos/amplitron-dsp/Amplitron/releases/latest | "
-      "grep "
-      "'\"tag_name\":' | sed -E 's/.*\"([^\"]+)\".*/\\1/'";
-  std::array<char, 128> buffer;
-  std::string result;
+    const char* cmd =
+        "curl -s https://api.github.com/repos/amplitron-dsp/Amplitron/releases/latest | grep "
+        "'\"tag_name\":' | sed -E 's/.*\"([^\"]+)\".*/\\1/'";
+    std::array<char, 128> buffer;
+    std::string result;
 
-  struct PipeDeleter {
-    void operator()(FILE* p) const {
-      if (p) {
-        pclose(p);
-      }
+    struct PipeDeleter {
+        void operator()(FILE* p) const {
+            if (p) {
+                pclose(p);
+            }
+        }
+    };
+    std::unique_ptr<FILE, PipeDeleter> pipe(popen(cmd, "r"));
+    if (!pipe) {
+        return;
     }
-  };
-  std::unique_ptr<FILE, PipeDeleter> pipe(popen(cmd, "r"));
-  if (!pipe) {
-    return;
-  }
 
-  while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-    if (shutdown_requested_) return;
-    result += buffer.data();
-  }
-
-  if (!result.empty()) {
-    result.erase(result.find_last_not_of(" \n\r\t") + 1);
-
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (result != AMPLITRON_VERSION && !result.empty() && result[0] == 'v') {
-      has_new_release_ = true;
-      new_release_version_ = result;
-      new_release_url_ =
-          "https://github.com/amplitron-dsp/Amplitron/releases/tag/" + result;
+    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+        if (shutdown_requested_) return;
+        result += buffer.data();
     }
-  }
+
+    if (!result.empty()) {
+        result.erase(result.find_last_not_of(" \n\r\t") + 1);
+
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (result != AMPLITRON_VERSION && !result.empty() && result[0] == 'v') {
+            has_new_release_ = true;
+            new_release_version_ = result;
+            new_release_url_ = "https://github.com/amplitron-dsp/Amplitron/releases/tag/" + result;
+        }
+    }
 #endif
 }
 

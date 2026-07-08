@@ -30,46 +30,46 @@ struct EmptyState {};
  */
 template <typename Props, typename State = EmptyState>
 class UIComponent {
- public:
-  virtual ~UIComponent() = default;
+   public:
+    virtual ~UIComponent() = default;
 
-  /** @brief Push new props (inputs) into the component before render(). */
-  virtual void set_props(const Props& new_props) { props_ = new_props; }
+    /** @brief Push new props (inputs) into the component before render(). */
+    virtual void set_props(const Props& new_props) { props_ = new_props; }
 
-  /**
-   * @brief Render the component using current props_ and state_.
-   * Must be implemented by every concrete component.
-   */
-  virtual void render() = 0;
+    /**
+     * @brief Render the component using current props_ and state_.
+     * Must be implemented by every concrete component.
+     */
+    virtual void render() = 0;
 
-  /** @brief Read the current local state. */
-  const State& get_state() const { return state_; }
+    /** @brief Read the current local state. */
+    const State& get_state() const { return state_; }
 
-  /**
-   * @brief React-style setState: replace local state and trigger the
-   * optional on_state_change() hook.
-   */
-  void set_state(const State& new_state) {
-    state_ = new_state;
-    on_state_change();
-  }
+    /**
+     * @brief React-style setState: replace local state and trigger the
+     * optional on_state_change() hook.
+     */
+    void set_state(const State& new_state) {
+        state_ = new_state;
+        on_state_change();
+    }
 
-  /**
-   * @brief Functional setState: apply an updater lambda to a copy of the
-   * current state, then commit and notify.
-   */
-  void set_state(std::function<void(State&)> updater) {
-    State next = state_;
-    updater(next);
-    set_state(next);
-  }
+    /**
+     * @brief Functional setState: apply an updater lambda to a copy of the
+     * current state, then commit and notify.
+     */
+    void set_state(std::function<void(State&)> updater) {
+        State next = state_;
+        updater(next);
+        set_state(next);
+    }
 
- protected:
-  Props props_;
-  State state_;
+   protected:
+    Props props_;
+    State state_;
 
-  /** @brief Optional hook called after state has been updated. */
-  virtual void on_state_change() {}
+    /** @brief Optional hook called after state has been updated. */
+    virtual void on_state_change() {}
 };
 
 }  // namespace Amplitron

@@ -46,57 +46,56 @@ GuiManager::GuiManager(AmplitronSession& session)
       tuner_pedal_(std::make_shared<TunerPedal>()),
       gui_presets_(engine_, command_history_, session.presets()),
       gui_midi_(midi_manager_) {
-  pedal_board_ =
-      std::make_unique<PedalBoard>(engine_, command_history_, &gui_midi_);
-  gui_presets_.set_pedal_board(pedal_board_.get());
-  gui_presets_.set_midi_manager(&midi_manager_);
-  gui_analyzer_.set_expanded(engine_.is_analyzer_enabled());
+    pedal_board_ = std::make_unique<PedalBoard>(engine_, command_history_, &gui_midi_);
+    gui_presets_.set_pedal_board(pedal_board_.get());
+    gui_presets_.set_midi_manager(&midi_manager_);
+    gui_analyzer_.set_expanded(engine_.is_analyzer_enabled());
 }
 
 GuiManager::~GuiManager() { shutdown(); }
 
 bool GuiManager::initialize(int width, int height) {
-  if (!window_context_.initialize(width, height, Theme::WINDOW_TITLE)) {
-    return false;
-  }
-  PresetManager::load_config();
+    if (!window_context_.initialize(width, height, Theme::WINDOW_TITLE)) {
+        return false;
+    }
+    PresetManager::load_config();
 
-  // MIDI: load config first; if no saved mappings, install defaults
-  midi_manager_.load_config();
-  if (midi_manager_.mappings().empty()) {
-    midi_manager_.install_default_mappings();
-  }
-  midi_manager_.initialize();
+    // MIDI: load config first; if no saved mappings, install defaults
+    midi_manager_.load_config();
+    if (midi_manager_.mappings().empty()) {
+        midi_manager_.install_default_mappings();
+    }
+    midi_manager_.initialize();
 
 #ifndef AMPLITRON_NO_DESKTOP_SHELL
-  update_checker_.start_check();
+    update_checker_.start_check();
 #endif
 
-  if (pedal_board_) {
-    pedal_board_->rebuild_widgets();
-  }
+    if (pedal_board_) {
+        pedal_board_->rebuild_widgets();
+    }
 
-  initialized_ = true;
-  return true;
+    initialized_ = true;
+    return true;
 }
 
 void GuiManager::shutdown() {
-  if (!initialized_) return;
-  initialized_ = false;
+    if (!initialized_) return;
+    initialized_ = false;
 
-  midi_manager_.save_config();
-  midi_manager_.shutdown();
+    midi_manager_.save_config();
+    midi_manager_.shutdown();
 
-  engine_.clear_tuner_tap();
-  pedal_board_.reset();
+    engine_.clear_tuner_tap();
+    pedal_board_.reset();
 
-  window_context_.shutdown();
+    window_context_.shutdown();
 }
 
 void GuiManager::force_rebuild_pedal_widgets() {
-  if (pedal_board_) {
-    pedal_board_->rebuild_widgets();
-  }
+    if (pedal_board_) {
+        pedal_board_->rebuild_widgets();
+    }
 }
 
 }  // namespace Amplitron

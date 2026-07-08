@@ -9,20 +9,18 @@
 namespace Amplitron {
 
 class AudioMetricsService {
- public:
-  void update(IAudioEngine& engine, float dt);
+   public:
+    void update(IAudioEngine& engine, float dt);
 
-  const LevelAnalyzer& level_analyzer() const { return level_analyzer_; }
-  const SpectrumAnalyzer& spectrum_analyzer() const {
-    return spectrum_analyzer_;
-  }
+    const LevelAnalyzer& level_analyzer() const { return level_analyzer_; }
+    const SpectrumAnalyzer& spectrum_analyzer() const { return spectrum_analyzer_; }
 
- private:
-  LevelAnalyzer level_analyzer_;
-  SpectrumAnalyzer spectrum_analyzer_;
-  uint64_t analyzer_last_sequence_ = 0;
-  std::array<float, IAudioEngine::ANALYZER_FFT_SIZE> analyzer_input_buf_{};
-  std::array<float, IAudioEngine::ANALYZER_FFT_SIZE> analyzer_output_buf_{};
+   private:
+    LevelAnalyzer level_analyzer_;
+    SpectrumAnalyzer spectrum_analyzer_;
+    uint64_t analyzer_last_sequence_ = 0;
+    std::array<float, IAudioEngine::ANALYZER_FFT_SIZE> analyzer_input_buf_{};
+    std::array<float, IAudioEngine::ANALYZER_FFT_SIZE> analyzer_output_buf_{};
 };
 
 }  // namespace Amplitron
