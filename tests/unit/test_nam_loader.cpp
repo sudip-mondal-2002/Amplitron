@@ -407,3 +407,24 @@ TEST(nam_loader_enable_disable_toggle) {
     nl.set_enabled(true);
     ASSERT_TRUE(nl.is_enabled());
 }
+
+TEST(nam_loader_clear_without_active_model_then_process_does_not_delete) {
+    NamLoader nl;
+    nl.set_sample_rate(48000);
+    nl.clear_model();
+    float buf[8] = {};
+    nl.process(buf, 8);
+}
+
+TEST(nam_loader_load_empty_json_fails_gracefully) {
+    const std::string empty_json = "../tests/assets/empty_model.json";
+    {
+        std::ofstream f(empty_json);
+        f << "{}";
+    }
+    NamLoader nl;
+    nl.set_sample_rate(48000);
+    bool ok = nl.load_model(empty_json);
+    std::remove(empty_json.c_str());
+    ASSERT_FALSE(ok);
+}

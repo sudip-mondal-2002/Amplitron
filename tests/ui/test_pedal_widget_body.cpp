@@ -5,6 +5,8 @@
 //
 // All tests run under ScopedImGuiContext which creates a headless ImGui frame.
 
+#include <imgui_internal.h>
+
 #include <cstring>
 #include <memory>
 #include <string>
@@ -16,6 +18,7 @@
 #include "audio/effects/amp_cab/amp_simulator.h"
 #include "audio/effects/nam_loader.h"
 #include "audio/engine/audio_engine.h"
+#include "fixtures/file_dialog_mock.h"
 #include "gui/commands/command_history.h"
 #include "test_fixtures.h"
 #include "test_framework.h"
@@ -263,6 +266,103 @@ TEST_F(PresetTest, pedal_widget_body_nam_display_wrong_effect_type) {
 
     // Calling this with a non-NamLoader effect exercises the early-return path.
     TestAccessor::render_nam_loader_display(widget, ImVec2(10, 10), 190.0f, 1.0f);
+
+    ImGui::End();
+    engine.shutdown();
+}
+
+TEST_F(PresetTest, pedal_widget_body_nam_display_click_load_success) {
+    ScopedImGuiContext imgui;
+    AudioEngine engine;
+    engine.initialize();
+
+    auto nam = std::make_shared<NamLoader>();
+    PedalWidget widget(engine, nam, 0);
+
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2(1024, 768));
+    ImGui::Begin("TestWindow");
+
+    // Set up mock result for show_open_dialog
+    Amplitron::TestMocks::reset();
+    Amplitron::TestMocks::set_mock_result("../tests/assets/rtneural_test_model.json");
+
+    // Render once to submit the button so its ID exists
+    TestAccessor::render_nam_loader_display(widget, ImVec2(10.0f, 10.0f), 190.0f, 1.0f);
+
+    // Get the ID of the button
+    ImGuiID id = ImGui::GetID("Load .nam##nam_load_0");
+    ASSERT_NE(id, 0U);
+
+    // Activate the button
+    ImGuiContext& g = *GImGui;
+    g.NavActivateId = id;
+    g.NavActivateDownId = id;
+    g.NavActivatePressedId = id;
+
+    // Render again — this time the button will be considered clicked!
+    TestAccessor::render_nam_loader_display(widget, ImVec2(10.0f, 10.0f), 190.0f, 1.0f);
+
+    ImGui::End();
+    engine.shutdown();
+
+    // Verify the model got loaded!
+    ASSERT_EQ(nam->model_path(), std::string("../tests/assets/rtneural_test_model.json"));
+}
+
+TEST_F(PresetTest, pedal_widget_body_nam_display_click_load_cancel) {
+    ScopedImGuiContext imgui;
+    AudioEngine engine;
+    engine.initialize();
+
+    auto nam = std::make_shared<NamLoader>();
+    PedalWidget widget(engine, nam, 0);
+
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2(1024, 768));
+    ImGui::Begin("TestWindow");
+
+    // Set up mock result to empty string
+    Amplitron::TestMocks::reset();
+    Amplitron::TestMocks::set_mock_result("");
+
+    // Render once to submit the button
+    TestAccessor::render_nam_loader_display(widget, ImVec2(10.0f, 10.0f), 190.0f, 1.0f);
+
+    ImGuiID id = ImGui::GetID("Load .nam##nam_load_0");
+    ASSERT_NE(id, 0U);
+
+    // Activate the button
+    ImGuiContext& g = *GImGui;
+    g.NavActivateId = id;
+    g.NavActivateDownId = id;
+    g.NavActivatePressedId = id;
+
+    // Render again to trigger the click
+    TestAccessor::render_nam_loader_display(widget, ImVec2(10.0f, 10.0f), 190.0f, 1.0f);
+
+    ImGui::End();
+    engine.shutdown();
+
+    // Verify model path remains empty
+    ASSERT_TRUE(nam->model_path().empty());
+}
+
+TEST_F(PresetTest, pedal_widget_render_with_nam_loader) {
+    ScopedImGuiContext imgui;
+    AudioEngine engine;
+    engine.initialize();
+
+    auto nam = std::make_shared<NamLoader>();
+    PedalWidget widget(engine, nam, 0);
+
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2(1024, 768));
+    ImGui::Begin("TestWindow");
+
+    // Call render() directly to cover the NamLoader branches in pedal_widget.cpp
+    bool result = widget.render(1.0f);
+    ASSERT_FALSE(result);
 
     ImGui::End();
     engine.shutdown();
