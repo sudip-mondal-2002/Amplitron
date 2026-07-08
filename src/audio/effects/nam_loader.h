@@ -1,13 +1,26 @@
 #pragma once
 
-#include <RTNeural/RTNeural.h>
+// Neural Amp Modeler (NAM) pedal — loads and runs .nam ML model files
+// for realistic amp simulation using RTNeural inference engine.
+//
+// IMPORTANT: Do NOT #include <RTNeural/RTNeural.h> here.
+// RTNeural bundles its own copy of nlohmann/json (v3.11.1) which conflicts
+// with our project's nlohmann/json (v3.11.3) when both are included in the
+// same translation unit.  We forward-declare RTNeural::Model<float> here and
+// include the full RTNeural headers only in nam_loader.cpp.
 
 #include <atomic>
 #include <memory>
-#include <nlohmann/json.hpp>
 #include <string>
 
 #include "audio/effects/core/effect.h"
+
+// Forward-declare only the template — the .cpp includes the full header.
+// std::atomic<T*> works legally with an incomplete T.
+namespace RTNeural {
+template <typename T>
+class Model;
+}  // namespace RTNeural
 
 namespace Amplitron {
 

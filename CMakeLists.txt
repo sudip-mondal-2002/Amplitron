@@ -428,6 +428,8 @@ if(EMSCRIPTEN)
 
     target_link_libraries(Amplitron PRIVATE nlohmann_json::nlohmann_json)
 
+    set_target_properties(Amplitron PROPERTIES UNITY_BUILD OFF)
+
     # Emscripten linker flags for Web Audio + AudioWorklet + SharedArrayBuffer
     target_link_options(Amplitron PRIVATE
         "-sWASM=1"
@@ -509,6 +511,8 @@ elseif(ANDROID)
         GLESv3
     )
 
+    set_target_properties(main PROPERTIES UNITY_BUILD OFF)
+
 elseif(IOS)
 
     # --- iOS build: application bundle, SDL2 statically linked ---
@@ -575,6 +579,7 @@ elseif(IOS)
         XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY    ""
         XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO"
         XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED  "NO"
+        UNITY_BUILD                           OFF
     )
 
 else() # NOT EMSCRIPTEN, ANDROID, or IOS

@@ -1,6 +1,11 @@
+// Include our JSON first so RTNeural's bundled json.hpp (v3.11.1) sees it
+// already defined and skips its own conflicting declarations.
 #include "audio/effects/nam_loader.h"
 
+#include <RTNeural/RTNeural.h>
+
 #include <fstream>
+#include <nlohmann/json.hpp>
 #include <stdexcept>
 
 #include "audio/effects/core/effect_factory.h"

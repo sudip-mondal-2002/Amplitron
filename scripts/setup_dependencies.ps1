@@ -138,6 +138,10 @@ $RTNEURAL_VERSION = "1fb1f075a5d66e85bfc8f488c3f3626840cb3a1d"
 if (-not (Test-Path $RTNEURAL_DIR)) {
     Write-Host "`nFetching RTNeural (pinned to commit $RTNEURAL_VERSION)..." -ForegroundColor Yellow
     git clone https://github.com/jatinchowdhury18/RTNeural.git $RTNEURAL_DIR
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "ERROR: Failed to fetch/checkout RTNeural" -ForegroundColor Red
+        exit 1
+    }
     Push-Location $RTNEURAL_DIR
     git checkout $RTNEURAL_VERSION
     Pop-Location

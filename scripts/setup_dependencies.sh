@@ -131,15 +131,15 @@ echo "  mkdir -p build && cd build && cmake .. && make -j\$(nproc)"
 # --- RTNeural (real-time neural network inference) ---
 RTNEURAL_DIR="$EXTERNAL_DIR/RTNeural"
 RTNEURAL_VERSION="1fb1f075a5d66e85bfc8f488c3f3626840cb3a1d"
-if [ ! -d "$RTNEURAL_DIR" ];
-then
+if [ ! -d "$RTNEURAL_DIR" ]; then
     echo ""
     echo "Fetching RTNeural (pinned to commit $RTNEURAL_VERSION)..."
     git clone https://github.com/jatinchowdhury18/RTNeural.git "$RTNEURAL_DIR"
-    cd "$RTNEURAL_DIR"
-    git checkout "$RTNEURAL_VERSION"
-    cd - > /dev/null
-    echo "RTNeural fetched and pinned to $RTNEURAL_VERSION successfully."
 else
-    echo "RTNeural already present, skipping."
+    echo "RTNeural already present, verifying pinned commit..."
 fi
+cd "$RTNEURAL_DIR"
+git fetch origin
+git checkout "$RTNEURAL_VERSION"
+cd - > /dev/null
+echo "RTNeural is pinned to $RTNEURAL_VERSION."

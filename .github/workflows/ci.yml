@@ -19,6 +19,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Cache apt packages
         uses: actions/cache@v5
@@ -33,6 +34,10 @@ jobs:
             echo "Restoring cached .deb packages..."
             sudo cp ~/apt-cache/*.deb /var/cache/apt/archives/ 2>/dev/null || true
           fi
+          # Drop broken Microsoft repos that ship on GitHub-hosted Ubuntu 24.04
+          # runners and cause apt-get update to fail with NOSPLIT errors.
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list \
+                     /etc/apt/sources.list.d/azure-cli.list || true
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
             build-essential cmake ninja-build lcov \
@@ -134,6 +139,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Install Dependencies
         run: brew install portaudio sdl2 rtmidi lcov ninja
@@ -298,6 +304,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Cache Emscripten SDK & ports
         uses: actions/cache@v5
@@ -363,6 +370,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Download web build artifact
         uses: actions/download-artifact@v8
@@ -422,6 +430,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Setup MSYS2
         uses: msys2/setup-msys2@v2
@@ -575,6 +584,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5
@@ -646,6 +656,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
@@ -777,9 +788,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Install lcov
         run: |
+          # Drop broken Microsoft repos before updating
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list \
+                     /etc/apt/sources.list.d/azure-cli.list || true
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends lcov
 
