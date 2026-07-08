@@ -28,92 +28,91 @@ using namespace TestFramework;
 // ---------------------------------------------------------------------------
 
 TEST_F(PresetTest, pedal_widget_body_render_amp_cabinet_basic) {
-  ScopedImGuiContext imgui;
-  AudioEngine engine;
-  engine.initialize();
+    ScopedImGuiContext imgui;
+    AudioEngine engine;
+    engine.initialize();
 
-  auto amp = std::make_shared<AmpSimulator>();
-  PedalWidget widget(engine, amp, 0);
+    auto amp = std::make_shared<AmpSimulator>();
+    PedalWidget widget(engine, amp, 0);
 
-  ImGui::SetNextWindowPos(ImVec2(0, 0));
-  ImGui::SetNextWindowSize(ImVec2(1024, 768));
-  ImGui::Begin("TestWindow");
-  ImDrawList* dl = ImGui::GetWindowDrawList();
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2(1024, 768));
+    ImGui::Begin("TestWindow");
+    ImDrawList* dl = ImGui::GetWindowDrawList();
 
-  ImVec2 p0(10.0f, 10.0f);
-  ImVec2 p1(200.0f, 370.0f);
-  float pedal_width = 190.0f;
-  float pedal_height = 360.0f;
+    ImVec2 p0(10.0f, 10.0f);
+    ImVec2 p1(200.0f, 370.0f);
+    float pedal_width = 190.0f;
+    float pedal_height = 360.0f;
 
-  // Basic render — should not crash and must exercise every draw call
-  TestAccessor::render_amp_cabinet(widget, dl, p0, p1, pedal_width,
-                                   pedal_height, 1.0f);
+    // Basic render — should not crash and must exercise every draw call
+    TestAccessor::render_amp_cabinet(widget, dl, p0, p1, pedal_width, pedal_height, 1.0f);
 
-  ImGui::End();
-  engine.shutdown();
+    ImGui::End();
+    engine.shutdown();
 }
 
 TEST_F(PresetTest, pedal_widget_body_render_amp_cabinet_all_model_indices) {
-  // Exercise the model_idx boundary checks: valid index, negative index,
-  // out-of-bounds index
-  ScopedImGuiContext imgui;
-  AudioEngine engine;
-  engine.initialize();
+    // Exercise the model_idx boundary checks: valid index, negative index,
+    // out-of-bounds index
+    ScopedImGuiContext imgui;
+    AudioEngine engine;
+    engine.initialize();
 
-  auto amp = std::make_shared<AmpSimulator>();
-  ImGui::SetNextWindowPos(ImVec2(0, 0));
-  ImGui::SetNextWindowSize(ImVec2(1024, 768));
-  ImGui::Begin("TestWindow");
-  ImDrawList* dl = ImGui::GetWindowDrawList();
+    auto amp = std::make_shared<AmpSimulator>();
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2(1024, 768));
+    ImGui::Begin("TestWindow");
+    ImDrawList* dl = ImGui::GetWindowDrawList();
 
-  ImVec2 p0(10.0f, 10.0f);
-  ImVec2 p1(200.0f, 370.0f);
+    ImVec2 p0(10.0f, 10.0f);
+    ImVec2 p1(200.0f, 370.0f);
 
-  // Valid index = 0 (first model)
-  amp->params()[0].value = 0.0f;
-  PedalWidget w0(engine, amp, 0);
-  TestAccessor::render_amp_cabinet(w0, dl, p0, p1, 190.0f, 360.0f, 1.0f);
-  advance_frame();
+    // Valid index = 0 (first model)
+    amp->params()[0].value = 0.0f;
+    PedalWidget w0(engine, amp, 0);
+    TestAccessor::render_amp_cabinet(w0, dl, p0, p1, 190.0f, 360.0f, 1.0f);
+    advance_frame();
 
-  // Out-of-bounds index (large positive)
-  amp->params()[0].value = 9999.0f;
-  PedalWidget w1(engine, amp, 1);
-  TestAccessor::render_amp_cabinet(w1, dl, p0, p1, 190.0f, 360.0f, 1.0f);
-  advance_frame();
+    // Out-of-bounds index (large positive)
+    amp->params()[0].value = 9999.0f;
+    PedalWidget w1(engine, amp, 1);
+    TestAccessor::render_amp_cabinet(w1, dl, p0, p1, 190.0f, 360.0f, 1.0f);
+    advance_frame();
 
-  // Negative index (model_idx < 0)
-  amp->params()[0].value = -1.0f;
-  PedalWidget w2(engine, amp, 2);
-  TestAccessor::render_amp_cabinet(w2, dl, p0, p1, 190.0f, 360.0f, 1.0f);
+    // Negative index (model_idx < 0)
+    amp->params()[0].value = -1.0f;
+    PedalWidget w2(engine, amp, 2);
+    TestAccessor::render_amp_cabinet(w2, dl, p0, p1, 190.0f, 360.0f, 1.0f);
 
-  ImGui::End();
-  engine.shutdown();
+    ImGui::End();
+    engine.shutdown();
 }
 
 TEST_F(PresetTest, pedal_widget_body_render_amp_cabinet_zoom_variations) {
-  // Ensure the zoom-scaled draw calls don't crash at different zoom levels
-  ScopedImGuiContext imgui;
-  AudioEngine engine;
-  engine.initialize();
+    // Ensure the zoom-scaled draw calls don't crash at different zoom levels
+    ScopedImGuiContext imgui;
+    AudioEngine engine;
+    engine.initialize();
 
-  auto amp = std::make_shared<AmpSimulator>();
-  amp->params()[0].value = 0.0f;
-  PedalWidget widget(engine, amp, 0);
+    auto amp = std::make_shared<AmpSimulator>();
+    amp->params()[0].value = 0.0f;
+    PedalWidget widget(engine, amp, 0);
 
-  ImGui::SetNextWindowPos(ImVec2(0, 0));
-  ImGui::SetNextWindowSize(ImVec2(1024, 768));
-  ImGui::Begin("TestWindow");
-  ImDrawList* dl = ImGui::GetWindowDrawList();
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2(1024, 768));
+    ImGui::Begin("TestWindow");
+    ImDrawList* dl = ImGui::GetWindowDrawList();
 
-  ImVec2 p0(5.0f, 5.0f);
-  ImVec2 p1(205.0f, 375.0f);
+    ImVec2 p0(5.0f, 5.0f);
+    ImVec2 p1(205.0f, 375.0f);
 
-  for (float zoom : {0.5f, 1.0f, 1.5f, 2.0f}) {
-    TestAccessor::render_amp_cabinet(widget, dl, p0, p1, 200.0f, 370.0f, zoom);
-  }
+    for (float zoom : {0.5f, 1.0f, 1.5f, 2.0f}) {
+        TestAccessor::render_amp_cabinet(widget, dl, p0, p1, 200.0f, 370.0f, zoom);
+    }
 
-  ImGui::End();
-  engine.shutdown();
+    ImGui::End();
+    engine.shutdown();
 }
 
 // ---------------------------------------------------------------------------
@@ -121,128 +120,127 @@ TEST_F(PresetTest, pedal_widget_body_render_amp_cabinet_zoom_variations) {
 // ---------------------------------------------------------------------------
 
 TEST_F(PresetTest, pedal_widget_body_nam_display_no_model) {
-  // When no model is loaded, the "No model loaded" branch should render.
-  ScopedImGuiContext imgui;
-  AudioEngine engine;
-  engine.initialize();
+    // When no model is loaded, the "No model loaded" branch should render.
+    ScopedImGuiContext imgui;
+    AudioEngine engine;
+    engine.initialize();
 
-  auto nam = std::make_shared<NamLoader>();
-  // model_path() is empty by default
-  PedalWidget widget(engine, nam, 0);
+    auto nam = std::make_shared<NamLoader>();
+    // model_path() is empty by default
+    PedalWidget widget(engine, nam, 0);
 
-  ImGui::SetNextWindowPos(ImVec2(0, 0));
-  ImGui::SetNextWindowSize(ImVec2(1024, 768));
-  ImGui::Begin("TestWindow");
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2(1024, 768));
+    ImGui::Begin("TestWindow");
 
-  ImVec2 p0(10.0f, 10.0f);
-  TestAccessor::render_nam_loader_display(widget, p0, 190.0f, 1.0f);
+    ImVec2 p0(10.0f, 10.0f);
+    TestAccessor::render_nam_loader_display(widget, p0, 190.0f, 1.0f);
 
-  ImGui::End();
-  engine.shutdown();
+    ImGui::End();
+    engine.shutdown();
 }
 
 TEST_F(PresetTest, pedal_widget_body_nam_display_model_loaded_short_name) {
-  // When model_path is set and its basename is <= 20 chars, render the short
-  // name branch.
-  ScopedImGuiContext imgui;
-  AudioEngine engine;
-  engine.initialize();
+    // When model_path is set and its basename is <= 20 chars, render the short
+    // name branch.
+    ScopedImGuiContext imgui;
+    AudioEngine engine;
+    engine.initialize();
 
-  auto nam = std::make_shared<NamLoader>();
-  // Load a real model to set model_path_.
-  nam->load_model("../tests/assets/rtneural_test_model.json");
+    auto nam = std::make_shared<NamLoader>();
+    // Load a real model to set model_path_.
+    nam->load_model("../tests/assets/rtneural_test_model.json");
 
-  PedalWidget widget(engine, nam, 0);
+    PedalWidget widget(engine, nam, 0);
 
-  ImGui::SetNextWindowPos(ImVec2(0, 0));
-  ImGui::SetNextWindowSize(ImVec2(1024, 768));
-  ImGui::Begin("TestWindow");
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2(1024, 768));
+    ImGui::Begin("TestWindow");
 
-  ImVec2 p0(10.0f, 10.0f);
-  TestAccessor::render_nam_loader_display(widget, p0, 190.0f, 1.0f);
+    ImVec2 p0(10.0f, 10.0f);
+    TestAccessor::render_nam_loader_display(widget, p0, 190.0f, 1.0f);
 
-  ImGui::End();
-  engine.shutdown();
+    ImGui::End();
+    engine.shutdown();
 }
 
 TEST_F(PresetTest, pedal_widget_body_nam_display_model_with_slash_in_path) {
-  // Path contains a slash — the substr(slash + 1) branch is taken.
-  ScopedImGuiContext imgui;
-  AudioEngine engine;
-  engine.initialize();
+    // Path contains a slash — the substr(slash + 1) branch is taken.
+    ScopedImGuiContext imgui;
+    AudioEngine engine;
+    engine.initialize();
 
-  auto nam = std::make_shared<NamLoader>();
-  // load_model uses the full path, which already contains slashes.
-  nam->load_model("../tests/assets/rtneural_test_model.json");
+    auto nam = std::make_shared<NamLoader>();
+    // load_model uses the full path, which already contains slashes.
+    nam->load_model("../tests/assets/rtneural_test_model.json");
 
-  PedalWidget widget(engine, nam, 0);
+    PedalWidget widget(engine, nam, 0);
 
-  ImGui::SetNextWindowPos(ImVec2(0, 0));
-  ImGui::SetNextWindowSize(ImVec2(1024, 768));
-  ImGui::Begin("TestWindow");
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2(1024, 768));
+    ImGui::Begin("TestWindow");
 
-  ImVec2 p0(10.0f, 10.0f);
-  // render_nam_loader_display reads model_path() which contains '/' characters
-  TestAccessor::render_nam_loader_display(widget, p0, 190.0f, 1.0f);
+    ImVec2 p0(10.0f, 10.0f);
+    // render_nam_loader_display reads model_path() which contains '/' characters
+    TestAccessor::render_nam_loader_display(widget, p0, 190.0f, 1.0f);
 
-  ImGui::End();
-  engine.shutdown();
+    ImGui::End();
+    engine.shutdown();
 }
 
 TEST_F(PresetTest, pedal_widget_body_nam_display_long_name_truncated) {
-  // When the extracted basename is > 20 chars it should be truncated to 17 +
-  // "..."
-  ScopedImGuiContext imgui;
-  AudioEngine engine;
-  engine.initialize();
+    // When the extracted basename is > 20 chars it should be truncated to 17 +
+    // "..."
+    ScopedImGuiContext imgui;
+    AudioEngine engine;
+    engine.initialize();
 
-  // Build a temp file with a long basename (> 20 chars).
-  const std::string long_name =
-      "../tests/assets/very_long_model_name_over_twenty_chars.json";
-  // Write a valid RTNeural JSON to it so load_model succeeds.
-  {
-    std::ofstream f(long_name);
-    f << R"({"in_shape":[null,1],"layers":[{"type":"dense","shape":[null,1],"weights":[[[1.0]],[0.0]]}]})";
-  }
+    // Build a temp file with a long basename (> 20 chars).
+    const std::string long_name = "../tests/assets/very_long_model_name_over_twenty_chars.json";
+    // Write a valid RTNeural JSON to it so load_model succeeds.
+    {
+        std::ofstream f(long_name);
+        f << R"({"in_shape":[null,1],"layers":[{"type":"dense","shape":[null,1],"weights":[[[1.0]],[0.0]]}]})";
+    }
 
-  auto nam = std::make_shared<NamLoader>();
-  bool ok = nam->load_model(long_name);
-  // Clean up the temp file regardless of load result
-  std::remove(long_name.c_str());
+    auto nam = std::make_shared<NamLoader>();
+    bool ok = nam->load_model(long_name);
+    // Clean up the temp file regardless of load result
+    std::remove(long_name.c_str());
 
-  PedalWidget widget(engine, nam, 0);
+    PedalWidget widget(engine, nam, 0);
 
-  ImGui::SetNextWindowPos(ImVec2(0, 0));
-  ImGui::SetNextWindowSize(ImVec2(1024, 768));
-  ImGui::Begin("TestWindow");
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2(1024, 768));
+    ImGui::Begin("TestWindow");
 
-  ImVec2 p0(10.0f, 10.0f);
-  TestAccessor::render_nam_loader_display(widget, p0, 190.0f, 1.0f);
+    ImVec2 p0(10.0f, 10.0f);
+    TestAccessor::render_nam_loader_display(widget, p0, 190.0f, 1.0f);
 
-  ImGui::End();
-  engine.shutdown();
+    ImGui::End();
+    engine.shutdown();
 }
 
 TEST_F(PresetTest, pedal_widget_body_nam_display_zoom_variations) {
-  ScopedImGuiContext imgui;
-  AudioEngine engine;
-  engine.initialize();
+    ScopedImGuiContext imgui;
+    AudioEngine engine;
+    engine.initialize();
 
-  auto nam = std::make_shared<NamLoader>();
-  PedalWidget widget(engine, nam, 0);
+    auto nam = std::make_shared<NamLoader>();
+    PedalWidget widget(engine, nam, 0);
 
-  ImGui::SetNextWindowPos(ImVec2(0, 0));
-  ImGui::SetNextWindowSize(ImVec2(1024, 768));
-  ImGui::Begin("TestWindow");
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2(1024, 768));
+    ImGui::Begin("TestWindow");
 
-  ImVec2 p0(10.0f, 10.0f);
-  for (float zoom : {0.5f, 1.0f, 2.0f}) {
-    TestAccessor::render_nam_loader_display(widget, p0, 190.0f, zoom);
-    advance_frame();
-  }
+    ImVec2 p0(10.0f, 10.0f);
+    for (float zoom : {0.5f, 1.0f, 2.0f}) {
+        TestAccessor::render_nam_loader_display(widget, p0, 190.0f, zoom);
+        advance_frame();
+    }
 
-  ImGui::End();
-  engine.shutdown();
+    ImGui::End();
+    engine.shutdown();
 }
 
 // ---------------------------------------------------------------------------
@@ -250,22 +248,22 @@ TEST_F(PresetTest, pedal_widget_body_nam_display_zoom_variations) {
 // ---------------------------------------------------------------------------
 
 TEST_F(PresetTest, pedal_widget_body_nam_display_wrong_effect_type) {
-  // If effect_ is not a NamLoader, the dynamic_cast returns nullptr
-  // and render_nam_loader_display returns immediately.
-  ScopedImGuiContext imgui;
-  AudioEngine engine;
-  engine.initialize();
+    // If effect_ is not a NamLoader, the dynamic_cast returns nullptr
+    // and render_nam_loader_display returns immediately.
+    ScopedImGuiContext imgui;
+    AudioEngine engine;
+    engine.initialize();
 
-  auto amp = std::make_shared<AmpSimulator>();
-  PedalWidget widget(engine, amp, 0);
+    auto amp = std::make_shared<AmpSimulator>();
+    PedalWidget widget(engine, amp, 0);
 
-  ImGui::SetNextWindowPos(ImVec2(0, 0));
-  ImGui::SetNextWindowSize(ImVec2(1024, 768));
-  ImGui::Begin("TestWindow");
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2(1024, 768));
+    ImGui::Begin("TestWindow");
 
-  // Calling this with a non-NamLoader effect exercises the early-return path.
-  TestAccessor::render_nam_loader_display(widget, ImVec2(10, 10), 190.0f, 1.0f);
+    // Calling this with a non-NamLoader effect exercises the early-return path.
+    TestAccessor::render_nam_loader_display(widget, ImVec2(10, 10), 190.0f, 1.0f);
 
-  ImGui::End();
-  engine.shutdown();
+    ImGui::End();
+    engine.shutdown();
 }
