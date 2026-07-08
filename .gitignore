@@ -82,3 +82,8 @@ emsdk/
 build_test/
 CLAUDE.md
 Testing/
+
+# Editor temp-stream lock files (created by some IDEs/editors)
+*.temp-stream-*
+# Antigravity restore workspace
+.tmp_restore/
