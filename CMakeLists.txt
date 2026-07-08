@@ -424,7 +424,11 @@ if(EMSCRIPTEN)
     )
 
     # OpenGL ES 3 for ImGui's OpenGL3 backend on WebGL 2
-    target_compile_definitions(Amplitron PRIVATE IMGUI_IMPL_OPENGL_ES3 AMPLITRON_VERSION="${AMPLITRON_VERSION}")
+    target_compile_definitions(Amplitron PRIVATE
+        IMGUI_IMPL_OPENGL_ES3
+        AMPLITRON_VERSION="${AMPLITRON_VERSION}"
+        RTNEURAL_DEFAULT_ALIGNMENT=16
+    )
 
     target_link_libraries(Amplitron PRIVATE nlohmann_json::nlohmann_json)
 
@@ -497,6 +501,7 @@ elseif(ANDROID)
         AMPLITRON_VERSION="${AMPLITRON_VERSION}"
         AMPLITRON_NO_MIDI
         AMPLITRON_ANDROID_OBOE   # signals that Oboe backend is in use
+        RTNEURAL_DEFAULT_ALIGNMENT=16
     )
 
     target_include_directories(main PRIVATE ${OBOE_INCLUDE_DIRS})
@@ -547,6 +552,7 @@ elseif(IOS)
         AMPLITRON_VERSION="${AMPLITRON_VERSION}"
         AMPLITRON_NO_DESKTOP_SHELL
         AMPLITRON_NO_MIDI
+        RTNEURAL_DEFAULT_ALIGNMENT=16
     )
 
     if(SDL2_LIBRARIES)
