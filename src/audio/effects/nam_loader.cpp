@@ -1,5 +1,6 @@
-// Include our JSON first so RTNeural's bundled json.hpp (v3.11.1) sees it
-// already defined and skips its own conflicting declarations.
+// RTNeural's bundled modules/json/json.hpp has been replaced by a shim that
+// redirects to this project's nlohmann/json v3.11.3, eliminating the dual
+// inline-namespace ABI conflict.  Include order no longer matters.
 #include "audio/effects/nam_loader.h"
 
 #include <RTNeural/RTNeural.h>
