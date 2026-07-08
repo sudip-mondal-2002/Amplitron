@@ -37,156 +37,163 @@ namespace Amplitron {
 // Safe URL opener that avoids shell injection
 static void open_url_safe(const std::string& url) {
 #if defined(_WIN32)
-    ShellExecuteA(nullptr, "open", url.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+  ShellExecuteA(nullptr, "open", url.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 #elif defined(__APPLE__) && !TARGET_OS_IOS
-    // Use fork+exec to invoke open without shell
-    int pipefd[2];
-    if (pipe(pipefd) != 0) return;
-    pid_t pid = fork();
-    if (pid < 0) {
-        close(pipefd[0]);
-        close(pipefd[1]);
-        return;
-    }
-    if (pid == 0) {
-        close(pipefd[0]);
-        close(pipefd[1]);
-        int devnull = open("/dev/null", O_WRONLY);
-        if (devnull >= 0) {
-            dup2(devnull, STDERR_FILENO);
-            close(devnull);
-        }
-        execl("/usr/bin/open", "open", url.c_str(), nullptr);
-        _exit(1);
-    }
+  // Use fork+exec to invoke open without shell
+  int pipefd[2];
+  if (pipe(pipefd) != 0) return;
+  pid_t pid = fork();
+  if (pid < 0) {
     close(pipefd[0]);
     close(pipefd[1]);
-    int status = 0;
-    waitpid(pid, &status, 0);
+    return;
+  }
+  if (pid == 0) {
+    close(pipefd[0]);
+    close(pipefd[1]);
+    int devnull = open("/dev/null", O_WRONLY);
+    if (devnull >= 0) {
+      dup2(devnull, STDERR_FILENO);
+      close(devnull);
+    }
+    execl("/usr/bin/open", "open", url.c_str(), nullptr);
+    _exit(1);
+  }
+  close(pipefd[0]);
+  close(pipefd[1]);
+  int status = 0;
+  waitpid(pid, &status, 0);
 #elif defined(__linux__)
-    // Use fork+exec to invoke xdg-open without shell
-    int pipefd[2];
-    if (pipe(pipefd) != 0) return;
-    pid_t pid = fork();
-    if (pid < 0) {
-        close(pipefd[0]);
-        close(pipefd[1]);
-        return;
-    }
-    if (pid == 0) {
-        close(pipefd[0]);
-        close(pipefd[1]);
-        int devnull = open("/dev/null", O_WRONLY);
-        if (devnull >= 0) {
-            dup2(devnull, STDERR_FILENO);
-            close(devnull);
-        }
-        execl("/usr/bin/xdg-open", "xdg-open", url.c_str(), nullptr);
-        _exit(1);
-    }
+  // Use fork+exec to invoke xdg-open without shell
+  int pipefd[2];
+  if (pipe(pipefd) != 0) return;
+  pid_t pid = fork();
+  if (pid < 0) {
     close(pipefd[0]);
     close(pipefd[1]);
-    int status = 0;
-    waitpid(pid, &status, 0);
+    return;
+  }
+  if (pid == 0) {
+    close(pipefd[0]);
+    close(pipefd[1]);
+    int devnull = open("/dev/null", O_WRONLY);
+    if (devnull >= 0) {
+      dup2(devnull, STDERR_FILENO);
+      close(devnull);
+    }
+    execl("/usr/bin/xdg-open", "xdg-open", url.c_str(), nullptr);
+    _exit(1);
+  }
+  close(pipefd[0]);
+  close(pipefd[1]);
+  int status = 0;
+  waitpid(pid, &status, 0);
 #endif
 }
 
 void GuiManager::render_menu_bar() {
-    if (ImGui::BeginMainMenuBar()) {
-        if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("New Preset...")) {
-                gui_presets_.begin_new_preset();
-                show_save_preset_ = true;
-            }
-            if (ImGui::MenuItem("Save Preset...", "Ctrl+S")) {
-                gui_presets_.begin_save_preset();
-                show_save_preset_ = true;
-            }
-            if (ImGui::MenuItem("Load Preset...", "Ctrl+O")) {
-                show_load_preset_ = true;
-                gui_presets_.ensure_factory_presets();
-                gui_presets_.refresh_presets(true);
-            }
-            bool has_selected_preset =
-                gui_presets_.selected_preset_index() >= 0 &&
-                gui_presets_.selected_preset_index() < gui_presets_.preset_count();
-            if (ImGui::MenuItem("Delete Selected Preset", nullptr, false, has_selected_preset)) {
-                ImGui::OpenPopup("Confirm Delete Preset");
-            }
+  if (ImGui::BeginMainMenuBar()) {
+    if (ImGui::BeginMenu("File")) {
+      if (ImGui::MenuItem("New Preset...")) {
+        gui_presets_.begin_new_preset();
+        show_save_preset_ = true;
+      }
+      if (ImGui::MenuItem("Save Preset...", "Ctrl+S")) {
+        gui_presets_.begin_save_preset();
+        show_save_preset_ = true;
+      }
+      if (ImGui::MenuItem("Load Preset...", "Ctrl+O")) {
+        show_load_preset_ = true;
+        gui_presets_.ensure_factory_presets();
+        gui_presets_.refresh_presets(true);
+      }
+      bool has_selected_preset =
+          gui_presets_.selected_preset_index() >= 0 &&
+          gui_presets_.selected_preset_index() < gui_presets_.preset_count();
+      if (ImGui::MenuItem("Delete Selected Preset", nullptr, false,
+                          has_selected_preset)) {
+        ImGui::OpenPopup("Confirm Delete Preset");
+      }
 
-            if (ImGui::BeginPopupModal("Confirm Delete Preset", nullptr,
-                                       ImGuiWindowFlags_AlwaysAutoResize)) {
-                ImGui::Text(
-                    "Are you sure you want to delete the selected preset?\nThis action cannot be "
-                    "undone.");
-                ImGui::Separator();
-                if (ImGui::Button("Delete", ImVec2(120, 0))) {
-                    gui_presets_.delete_preset_by_index(gui_presets_.selected_preset_index());
-                    ImGui::CloseCurrentPopup();
-                }
-                ImGui::SameLine();
-                if (ImGui::Button("Cancel", ImVec2(120, 0))) {
-                    ImGui::CloseCurrentPopup();
-                }
-                ImGui::EndPopup();
-            }
-            if (ImGui::MenuItem("Copy Preset to Clipboard")) {
-                std::string json_string = gui_presets_.serialise_current_preset_to_json();
-                if (!json_string.empty()) {
+      if (ImGui::BeginPopupModal("Confirm Delete Preset", nullptr,
+                                 ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text(
+            "Are you sure you want to delete the selected preset?\nThis action "
+            "cannot be "
+            "undone.");
+        ImGui::Separator();
+        if (ImGui::Button("Delete", ImVec2(120, 0))) {
+          gui_presets_.delete_preset_by_index(
+              gui_presets_.selected_preset_index());
+          ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+          ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+      }
+      if (ImGui::MenuItem("Copy Preset to Clipboard")) {
+        std::string json_string =
+            gui_presets_.serialise_current_preset_to_json();
+        if (!json_string.empty()) {
 #ifdef __EMSCRIPTEN__
-                    // Web build — use browser Clipboard API
-                    EM_ASM(
-                        {
-                            var text = UTF8ToString($0);
-                            if (navigator.clipboard && window.isSecureContext) {
-                                navigator.clipboard.writeText(text)
-                                    .then(function(){
-                                        // success
-                                    })
-                                    .catch(function(err) {
-                                        console.error("Clipboard write failed: ", err);
-                                        window.prompt(
-                                            "Press Ctrl+C or Cmd+C to copy the preset JSON:", text);
-                                    });
-                            } else {
-                                try {
-                                    var textArea = document.createElement("textarea");
-                                    textArea.value = text;
-                                    textArea.style.top = "0";
-                                    textArea.style.left = "0";
-                                    textArea.style.position = "fixed";
-                                    document.body.appendChild(textArea);
-                                    textArea.focus();
-                                    textArea.select();
-                                    var successful = document.execCommand('copy');
-                                    if (!successful) {
-                                        window.prompt(
-                                            "Press Ctrl+C or Cmd+C to copy the preset JSON:", text);
-                                    }
-                                    document.body.removeChild(textArea);
-                                } catch (err) {
-                                    window.prompt("Press Ctrl+C or Cmd+C to copy the preset JSON:",
-                                                  text);
-                                }
-                            }
-                        },
-                        json_string.c_str());
-#else
-                    // Native build — ImGui clipboard works fine
-                    ImGui::SetClipboardText(json_string.c_str());
-#endif
-                    toast_message_ = "Preset copied to clipboard!";
-                    toast_timer_ = 2.0f;
+          // Web build — use browser Clipboard API
+          EM_ASM(
+              {
+                var text = UTF8ToString($0);
+                if (navigator.clipboard && window.isSecureContext) {
+                  navigator.clipboard.writeText(text)
+                      .then(function(){
+                          // success
+                      })
+                      .catch(function(err) {
+                        console.error("Clipboard write failed: ", err);
+                        window.prompt(
+                            "Press Ctrl+C or Cmd+C to copy the preset JSON:",
+                            text);
+                      });
                 } else {
-                    toast_message_ = "Failed to copy: empty preset.";
-                    toast_timer_ = 2.0f;
+                  try {
+                    var textArea = document.createElement("textarea");
+                    textArea.value = text;
+                    textArea.style.top = "0";
+                    textArea.style.left = "0";
+                    textArea.style.position = "fixed";
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    var successful = document.execCommand('copy');
+                    if (!successful) {
+                      window.prompt(
+                          "Press Ctrl+C or Cmd+C to copy the preset JSON:",
+                          text);
+                    }
+                    document.body.removeChild(textArea);
+                  } catch (err) {
+                    window.prompt(
+                        "Press Ctrl+C or Cmd+C to copy the preset JSON:", text);
+                  }
                 }
-            }
+              },
+              json_string.c_str());
+#else
+          // Native build — ImGui clipboard works fine
+          ImGui::SetClipboardText(json_string.c_str());
+#endif
+          toast_message_ = "Preset copied to clipboard!";
+          toast_timer_ = 2.0f;
+        } else {
+          toast_message_ = "Failed to copy: empty preset.";
+          toast_timer_ = 2.0f;
+        }
+      }
 #ifdef __EMSCRIPTEN__
-            if (ImGui::MenuItem("Share current pedalboard")) {
-                std::string json_string = gui_presets_.serialise_current_preset_to_json();
-                if (!json_string.empty()) {
-                    // clang-format off
+      if (ImGui::MenuItem("Share current pedalboard")) {
+        std::string json_string =
+            gui_presets_.serialise_current_preset_to_json();
+        if (!json_string.empty()) {
+          // clang-format off
                     EM_ASM(
                         {
                             if (typeof window.sharePresetToUrl === 'function') {
@@ -194,234 +201,238 @@ void GuiManager::render_menu_bar() {
                             }
                         },
                         json_string.c_str());
-                    // clang-format on
-                    toast_message_ = "Link copied to clipboard!";
-                    toast_timer_ = 2.0f;
-                }
-            }
+          // clang-format on
+          toast_message_ = "Link copied to clipboard!";
+          toast_timer_ = 2.0f;
+        }
+      }
 #endif
-            ImGui::Separator();
+      ImGui::Separator();
 #ifndef AMPLITRON_NO_DESKTOP_SHELL
-            if (ImGui::MenuItem("Change Presets Directory...")) {
-                std::string chosen = show_folder_dialog("Select Presets Directory");
-                if (!chosen.empty()) {
-                    PresetManager::set_presets_dir(chosen);
-                    PresetManager::save_config();
-                    gui_presets_.refresh_presets(false);
-                }
-            }
-            if (ImGui::MenuItem("Reset to Default Presets Directory")) {
-                ImGui::OpenPopup("Confirm Reset Presets Dir");
-            }
+      if (ImGui::MenuItem("Change Presets Directory...")) {
+        std::string chosen = show_folder_dialog("Select Presets Directory");
+        if (!chosen.empty()) {
+          PresetManager::set_presets_dir(chosen);
+          PresetManager::save_config();
+          gui_presets_.refresh_presets(false);
+        }
+      }
+      if (ImGui::MenuItem("Reset to Default Presets Directory")) {
+        ImGui::OpenPopup("Confirm Reset Presets Dir");
+      }
 
-            if (ImGui::BeginPopupModal("Confirm Reset Presets Dir", nullptr,
-                                       ImGuiWindowFlags_AlwaysAutoResize)) {
-                ImGui::Text("Reset presets directory to the default internal path?");
-                ImGui::Separator();
-                if (ImGui::Button("Reset", ImVec2(120, 0))) {
-                    PresetManager::set_presets_dir("");
-                    PresetManager::save_config();
-                    gui_presets_.refresh_presets(false);
-                    ImGui::CloseCurrentPopup();
-                }
-                ImGui::SameLine();
-                if (ImGui::Button("Cancel", ImVec2(120, 0))) {
-                    ImGui::CloseCurrentPopup();
-                }
-                ImGui::EndPopup();
-            }
+      if (ImGui::BeginPopupModal("Confirm Reset Presets Dir", nullptr,
+                                 ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Reset presets directory to the default internal path?");
+        ImGui::Separator();
+        if (ImGui::Button("Reset", ImVec2(120, 0))) {
+          PresetManager::set_presets_dir("");
+          PresetManager::save_config();
+          gui_presets_.refresh_presets(false);
+          ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+          ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+      }
 #endif
-            ImGui::Separator();
-            if (ImGui::MenuItem("Settings")) show_settings_ = true;
-            ImGui::Separator();
-            if (ImGui::MenuItem("Quit", "Alt+F4")) {
-                SDL_Event quit_event;
-                quit_event.type = SDL_QUIT;
-                SDL_PushEvent(&quit_event);
-            }
-            ImGui::EndMenu();
+      ImGui::Separator();
+      if (ImGui::MenuItem("Settings")) show_settings_ = true;
+      ImGui::Separator();
+      if (ImGui::MenuItem("Quit", "Alt+F4")) {
+        SDL_Event quit_event;
+        quit_event.type = SDL_QUIT;
+        SDL_PushEvent(&quit_event);
+      }
+      ImGui::EndMenu();
+    }
+    if (ImGui::BeginMenu("Edit")) {
+      bool can_undo = command_history_.can_undo();
+      bool can_redo = command_history_.can_redo();
+
+      const char* undo_label = command_history_.undo_description();
+      char undo_buf[64] = "Undo";
+      if (undo_label)
+        snprintf(undo_buf, sizeof(undo_buf), "Undo %s", undo_label);
+
+      const char* redo_label = command_history_.redo_description();
+      char redo_buf[64] = "Redo";
+      if (redo_label)
+        snprintf(redo_buf, sizeof(redo_buf), "Redo %s", redo_label);
+
+      if (ImGui::MenuItem(undo_buf, "Ctrl+Z", false, can_undo)) {
+        if (command_history_.undo() && pedal_board_) {
+          pedal_board_->rebuild_widgets();
         }
-        if (ImGui::BeginMenu("Edit")) {
-            bool can_undo = command_history_.can_undo();
-            bool can_redo = command_history_.can_redo();
-
-            const char* undo_label = command_history_.undo_description();
-            char undo_buf[64] = "Undo";
-            if (undo_label) snprintf(undo_buf, sizeof(undo_buf), "Undo %s", undo_label);
-
-            const char* redo_label = command_history_.redo_description();
-            char redo_buf[64] = "Redo";
-            if (redo_label) snprintf(redo_buf, sizeof(redo_buf), "Redo %s", redo_label);
-
-            if (ImGui::MenuItem(undo_buf, "Ctrl+Z", false, can_undo)) {
-                if (command_history_.undo() && pedal_board_) {
-                    pedal_board_->rebuild_widgets();
-                }
-            }
-            if (ImGui::MenuItem(redo_buf, "Ctrl+Shift+Z", false, can_redo)) {
-                if (command_history_.redo() && pedal_board_) {
-                    pedal_board_->rebuild_widgets();
-                }
-            }
-            ImGui::EndMenu();
+      }
+      if (ImGui::MenuItem(redo_buf, "Ctrl+Shift+Z", false, can_redo)) {
+        if (command_history_.redo() && pedal_board_) {
+          pedal_board_->rebuild_widgets();
         }
-        if (ImGui::BeginMenu("Audio")) {
-            if (engine_.is_running()) {
-                if (ImGui::MenuItem("Stop Audio", "M")) engine_.stop();
-            } else {
-                if (ImGui::MenuItem("Start Audio", "M")) {
-                    engine_.restart();
-                }
-            }
-            ImGui::Separator();
-            if (ImGui::MenuItem("Restart Audio")) {
-                engine_.restart();
-            }
-            ImGui::EndMenu();
+      }
+      ImGui::EndMenu();
+    }
+    if (ImGui::BeginMenu("Audio")) {
+      if (engine_.is_running()) {
+        if (ImGui::MenuItem("Stop Audio", "M")) engine_.stop();
+      } else {
+        if (ImGui::MenuItem("Start Audio", "M")) {
+          engine_.restart();
         }
-        if (ImGui::BeginMenu("Utilities")) {
-            if (ImGui::MenuItem("Open Tuner", nullptr, show_tuner_)) {
-                set_show_tuner(!show_tuner_);
-            }
-            if (ImGui::MenuItem("MIDI Settings", nullptr, show_midi_)) {
-                show_midi_ = !show_midi_;
-            }
-            ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu("Help")) {
-            if (ImGui::MenuItem("Keyboard Shortcuts", "F1")) {
-                show_keyboard_shortcuts_ = true;
-            }
-            ImGui::EndMenu();
-        }
-
-        // Status bar (right-aligned items computed dynamically)
-        float bar_w = ImGui::GetWindowWidth();
-        float padding = 8.0f;
-
-        // Build a vector of status items from right to left (for right-alignment)
-        struct StatusItem {
-            std::string label;
-            bool is_clickable = false;
-        };
-        std::vector<StatusItem> items;
-
-        // Preset status with dirty indicator
-        std::string preset_label = "Preset: " + gui_presets_.current_preset_name();
-        if (gui_presets_.is_dirty()) {
-            preset_label += " *";
-        }
-        items.push_back({preset_label, false});
-
-        // Sample rate (rightmost)
-        char sr_buf[16];
-        snprintf(sr_buf, sizeof(sr_buf), "%dHz", engine_.get_sample_rate());
-        items.push_back({sr_buf, false});
-
-        // Audio status (LIVE/STOPPED)
-        items.push_back({engine_.is_running() ? "LIVE" : "STOPPED", false});
-
-        // Recording indicator if recording
-        if (engine_.recorder().is_recording()) {
-            char rec_dur[32];
-            snprintf(rec_dur, sizeof(rec_dur), "%.1fs", engine_.recorder().get_duration());
-            items.push_back({rec_dur, false});
-            items.push_back({"REC", false});
-        }
-
-        // MIDI status
-        items.push_back({midi_manager_.is_port_open() ? "MIDI" : "MIDI", true});
-
-        // Check for update (leftmost of right-aligned group)
-        bool show_update = false;
-        std::string update_version;
-        std::string update_url;
-        if (update_checker_.has_new_release()) {
-            show_update = true;
-            update_version = update_checker_.new_release_version();
-            update_url = update_checker_.new_release_url();
-        }
-
-        if (show_update) {
-            std::string release_text = "New Release Available: " + update_version;
-            items.push_back({release_text, true});  // Clickable
-        }
-
-        // Measure widths and compute right-aligned positions
-        float x_pos = bar_w - padding;
-        for (auto it = items.rbegin(); it != items.rend(); ++it) {
-            ImVec2 text_size = ImGui::CalcTextSize(it->label.c_str());
-            x_pos -= text_size.x + padding;
-        }
-
-        // Render items from left to right
-        x_pos = bar_w - padding;
-        for (auto it = items.rbegin(); it != items.rend(); ++it) {
-            ImVec2 text_size = ImGui::CalcTextSize(it->label.c_str());
-            x_pos -= text_size.x + padding;
-
-            ImGui::SameLine(x_pos);
-
-            if (it->label.find("MIDI") == 0) {
-                if (midi_manager_.is_port_open()) {
-                    ImGui::TextColored(Theme::Live(), "%s", it->label.c_str());
-                } else {
-                    ImGui::TextColored(ImVec4(0.4f, 0.4f, 0.4f, 1.0f), "%s", it->label.c_str());
-                }
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip(midi_manager_.is_port_open()
-                                          ? "MIDI Connected. Click for settings."
-                                          : "MIDI Disconnected. Click for settings.");
-                    ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-                }
-                if (ImGui::IsItemClicked()) {
-                    show_midi_ = !show_midi_;
-                }
-            } else if (it->label == "LIVE") {
-                ImGui::TextColored(Theme::Live(), "%s", it->label.c_str());
-            } else if (it->label == "STOPPED") {
-                ImGui::TextColored(Theme::Stopped(), "%s", it->label.c_str());
-            } else if (it->label == "REC") {
-                float t = static_cast<float>(ImGui::GetTime());
-                ImGui::TextColored(Theme::RecBlink(t), "%s", it->label.c_str());
-            } else if (it->label.find("New Release") == 0) {
-                ImGui::TextColored(Theme::GoldHot(), "%s", it->label.c_str());
-                if (ImGui::IsItemHovered()) {
-                    ImGui::SetTooltip("Click to open release in browser");
-                    ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-                }
-                if (ImGui::IsItemClicked()) {
-                    open_url_safe(update_url);
-                }
-            } else {
-                ImGui::Text("%s", it->label.c_str());
-            }
-        }
-
-        ImGui::EndMainMenuBar();
+      }
+      ImGui::Separator();
+      if (ImGui::MenuItem("Restart Audio")) {
+        engine_.restart();
+      }
+      ImGui::EndMenu();
+    }
+    if (ImGui::BeginMenu("Utilities")) {
+      if (ImGui::MenuItem("Open Tuner", nullptr, show_tuner_)) {
+        set_show_tuner(!show_tuner_);
+      }
+      if (ImGui::MenuItem("MIDI Settings", nullptr, show_midi_)) {
+        show_midi_ = !show_midi_;
+      }
+      ImGui::EndMenu();
+    }
+    if (ImGui::BeginMenu("Help")) {
+      if (ImGui::MenuItem("Keyboard Shortcuts", "F1")) {
+        show_keyboard_shortcuts_ = true;
+      }
+      ImGui::EndMenu();
     }
 
-    // Error banner when audio is stopped
-    if (!engine_.is_running()) {
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.35f, 0.08f, 0.08f, 0.95f));
-        ImGui::BeginChild("AudioErrorBanner", ImVec2(0, 36), true);
-        ImGui::TextColored(Theme::Stopped(), "Audio stream is STOPPED.");
-        ImGui::SameLine();
-        if (ImGui::SmallButton("Restart Audio")) {
-            engine_.restart();
-        }
-        ImGui::SameLine();
-        if (ImGui::SmallButton("Settings")) {
-            show_settings_ = true;
-        }
-        std::string err = engine_.get_last_error();
-        if (!err.empty()) {
-            ImGui::SameLine();
-            ImGui::TextColored(Theme::GoldHot(), "  %s", err.c_str());
-        }
-        ImGui::EndChild();
-        ImGui::PopStyleColor();
+    // Status bar (right-aligned items computed dynamically)
+    float bar_w = ImGui::GetWindowWidth();
+    float padding = 8.0f;
+
+    // Build a vector of status items from right to left (for right-alignment)
+    struct StatusItem {
+      std::string label;
+      bool is_clickable = false;
+    };
+    std::vector<StatusItem> items;
+
+    // Preset status with dirty indicator
+    std::string preset_label = "Preset: " + gui_presets_.current_preset_name();
+    if (gui_presets_.is_dirty()) {
+      preset_label += " *";
     }
+    items.push_back({preset_label, false});
+
+    // Sample rate (rightmost)
+    char sr_buf[16];
+    snprintf(sr_buf, sizeof(sr_buf), "%dHz", engine_.get_sample_rate());
+    items.push_back({sr_buf, false});
+
+    // Audio status (LIVE/STOPPED)
+    items.push_back({engine_.is_running() ? "LIVE" : "STOPPED", false});
+
+    // Recording indicator if recording
+    if (engine_.recorder().is_recording()) {
+      char rec_dur[32];
+      snprintf(rec_dur, sizeof(rec_dur), "%.1fs",
+               engine_.recorder().get_duration());
+      items.push_back({rec_dur, false});
+      items.push_back({"REC", false});
+    }
+
+    // MIDI status
+    items.push_back({midi_manager_.is_port_open() ? "MIDI" : "MIDI", true});
+
+    // Check for update (leftmost of right-aligned group)
+    bool show_update = false;
+    std::string update_version;
+    std::string update_url;
+    if (update_checker_.has_new_release()) {
+      show_update = true;
+      update_version = update_checker_.new_release_version();
+      update_url = update_checker_.new_release_url();
+    }
+
+    if (show_update) {
+      std::string release_text = "New Release Available: " + update_version;
+      items.push_back({release_text, true});  // Clickable
+    }
+
+    // Measure widths and compute right-aligned positions
+    float x_pos = bar_w - padding;
+    for (auto it = items.rbegin(); it != items.rend(); ++it) {
+      ImVec2 text_size = ImGui::CalcTextSize(it->label.c_str());
+      x_pos -= text_size.x + padding;
+    }
+
+    // Render items from left to right
+    x_pos = bar_w - padding;
+    for (auto it = items.rbegin(); it != items.rend(); ++it) {
+      ImVec2 text_size = ImGui::CalcTextSize(it->label.c_str());
+      x_pos -= text_size.x + padding;
+
+      ImGui::SameLine(x_pos);
+
+      if (it->label.find("MIDI") == 0) {
+        if (midi_manager_.is_port_open()) {
+          ImGui::TextColored(Theme::Live(), "%s", it->label.c_str());
+        } else {
+          ImGui::TextColored(ImVec4(0.4f, 0.4f, 0.4f, 1.0f), "%s",
+                             it->label.c_str());
+        }
+        if (ImGui::IsItemHovered()) {
+          ImGui::SetTooltip(midi_manager_.is_port_open()
+                                ? "MIDI Connected. Click for settings."
+                                : "MIDI Disconnected. Click for settings.");
+          ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+        }
+        if (ImGui::IsItemClicked()) {
+          show_midi_ = !show_midi_;
+        }
+      } else if (it->label == "LIVE") {
+        ImGui::TextColored(Theme::Live(), "%s", it->label.c_str());
+      } else if (it->label == "STOPPED") {
+        ImGui::TextColored(Theme::Stopped(), "%s", it->label.c_str());
+      } else if (it->label == "REC") {
+        float t = static_cast<float>(ImGui::GetTime());
+        ImGui::TextColored(Theme::RecBlink(t), "%s", it->label.c_str());
+      } else if (it->label.find("New Release") == 0) {
+        ImGui::TextColored(Theme::GoldHot(), "%s", it->label.c_str());
+        if (ImGui::IsItemHovered()) {
+          ImGui::SetTooltip("Click to open release in browser");
+          ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+        }
+        if (ImGui::IsItemClicked()) {
+          open_url_safe(update_url);
+        }
+      } else {
+        ImGui::Text("%s", it->label.c_str());
+      }
+    }
+
+    ImGui::EndMainMenuBar();
+  }
+
+  // Error banner when audio is stopped
+  if (!engine_.is_running()) {
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.35f, 0.08f, 0.08f, 0.95f));
+    ImGui::BeginChild("AudioErrorBanner", ImVec2(0, 36), true);
+    ImGui::TextColored(Theme::Stopped(), "Audio stream is STOPPED.");
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Restart Audio")) {
+      engine_.restart();
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Settings")) {
+      show_settings_ = true;
+    }
+    std::string err = engine_.get_last_error();
+    if (!err.empty()) {
+      ImGui::SameLine();
+      ImGui::TextColored(Theme::GoldHot(), "  %s", err.c_str());
+    }
+    ImGui::EndChild();
+    ImGui::PopStyleColor();
+  }
 }
 
 }  // namespace Amplitron

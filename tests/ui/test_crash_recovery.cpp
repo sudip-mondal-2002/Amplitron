@@ -10,15 +10,15 @@
 #include "test_framework.h"
 
 TEST(crash_recovery_prompt_returns_false_in_headless_build) {
-    // With AMPLITRON_HEADLESS defined, promptRestoreSession() must return false
-    // immediately and must not block waiting for any GUI dialog.
-    bool restore = promptRestoreSession();
-    ASSERT_FALSE(restore);
+  // With AMPLITRON_HEADLESS defined, promptRestoreSession() must return false
+  // immediately and must not block waiting for any GUI dialog.
+  bool restore = promptRestoreSession();
+  ASSERT_FALSE(restore);
 }
 
 TEST(crash_recovery_prompt_multiple_calls_are_stable) {
-    // Repeated calls must each return false without side effects.
-    for (int i = 0; i < 5; ++i) {
-        ASSERT_FALSE(promptRestoreSession());
-    }
+  // Repeated calls must each return false without side effects.
+  for (int i = 0; i < 5; ++i) {
+    ASSERT_FALSE(promptRestoreSession());
+  }
 }

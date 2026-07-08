@@ -14,31 +14,31 @@ namespace Amplitron {
  * Captures the full chain state before clearing so that undo() can restore it.
  */
 class ClearAllCommand : public Command {
-   public:
-    explicit ClearAllCommand(IAudioEngine& engine) : engine_(engine) {
-        for (auto& fx : engine_.effects()) {
-            saved_.push_back(fx);
-        }
+ public:
+  explicit ClearAllCommand(IAudioEngine& engine) : engine_(engine) {
+    for (auto& fx : engine_.effects()) {
+      saved_.push_back(fx);
     }
+  }
 
-    bool execute() override {
-        while (!engine_.effects().empty()) {
-            engine_.remove_effect(static_cast<int>(engine_.effects().size()) - 1);
-        }
-        return true;
+  bool execute() override {
+    while (!engine_.effects().empty()) {
+      engine_.remove_effect(static_cast<int>(engine_.effects().size()) - 1);
     }
+    return true;
+  }
 
-    void undo() override {
-        for (auto& fx : saved_) {
-            engine_.add_effect(fx);
-        }
+  void undo() override {
+    for (auto& fx : saved_) {
+      engine_.add_effect(fx);
     }
+  }
 
-    const char* description() const override { return "Clear All"; }
+  const char* description() const override { return "Clear All"; }
 
-   private:
-    IAudioEngine& engine_;
-    std::vector<std::shared_ptr<Effect>> saved_;
+ private:
+  IAudioEngine& engine_;
+  std::vector<std::shared_ptr<Effect>> saved_;
 };
 
 }  // namespace Amplitron

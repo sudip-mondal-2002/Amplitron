@@ -437,6 +437,7 @@ if(EMSCRIPTEN)
     # Emscripten linker flags for Web Audio + AudioWorklet + SharedArrayBuffer
     target_link_options(Amplitron PRIVATE
         "-sWASM=1"
+        
         "-sUSE_SDL=2"
         "-sMIN_WEBGL_VERSION=2"
         "-sMAX_WEBGL_VERSION=2"

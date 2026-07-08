@@ -7,28 +7,28 @@
 namespace Amplitron {
 
 class PresetSerializer : public IPresetSerializer {
-   public:
-    PresetSerializer() = default;
-    ~PresetSerializer() override = default;
-    std::string serialize(const PresetData& preset) override;
-    bool deserialize(const std::string& json_str, PresetData& preset) override;
+ public:
+  PresetSerializer() = default;
+  ~PresetSerializer() override = default;
+  std::string serialize(const PresetData& preset) override;
+  bool deserialize(const std::string& json_str, PresetData& preset) override;
 };
 
 class PresetStorage : public IPresetStorage {
-   public:
-    PresetStorage() = default;
-    ~PresetStorage() override = default;
-    bool save(const std::string& filepath, const std::string& data) override;
-    std::string load(const std::string& filepath) override;
-    std::vector<std::string> list() override;
-    bool remove(const std::string& filepath) override;
+ public:
+  PresetStorage() = default;
+  ~PresetStorage() override = default;
+  bool save(const std::string& filepath, const std::string& data) override;
+  std::string load(const std::string& filepath) override;
+  std::vector<std::string> list() override;
+  bool remove(const std::string& filepath) override;
 };
 
 class PresetMigrator : public IPresetMigrator {
-   public:
-    PresetMigrator() = default;
-    ~PresetMigrator() override = default;
-    std::string migrate(const std::string& raw_json) override;
+ public:
+  PresetMigrator() = default;
+  ~PresetMigrator() override = default;
+  std::string migrate(const std::string& raw_json) override;
 };
 
 }  // namespace Amplitron

@@ -11,20 +11,26 @@ class IMidiManager;
 
 // Stub implementation for non-desktop platforms
 class GuiMidi {
-   public:
-    explicit GuiMidi(IMidiManager& midi) : midi_(midi) {}
-    void render(bool&) {}
-    bool render_learn_menu_item(const std::string&, const std::string&) { return false; }
-    bool render_learn_bypass_item(const std::string&) { return false; }
-    bool render_remove_mapping_item(const std::string&, const std::string&) { return false; }
-    bool render_remove_bypass_item(const std::string&) { return false; }
-    std::string get_mapping_info(const std::string&, const std::string&) const { return ""; }
+ public:
+  explicit GuiMidi(IMidiManager& midi) : midi_(midi) {}
+  void render(bool&) {}
+  bool render_learn_menu_item(const std::string&, const std::string&) {
+    return false;
+  }
+  bool render_learn_bypass_item(const std::string&) { return false; }
+  bool render_remove_mapping_item(const std::string&, const std::string&) {
+    return false;
+  }
+  bool render_remove_bypass_item(const std::string&) { return false; }
+  std::string get_mapping_info(const std::string&, const std::string&) const {
+    return "";
+  }
 
-    const IMidiManager& midi() const { return midi_; }
-    IMidiManager& manager() { return midi_; }
+  const IMidiManager& midi() const { return midi_; }
+  IMidiManager& manager() { return midi_; }
 
-   private:
-    IMidiManager& midi_;
+ private:
+  IMidiManager& midi_;
 };
 
 #else
@@ -37,51 +43,53 @@ class GuiMidi {
  * popups to enable MIDI Learn.
  */
 class GuiMidi {
-   public:
-    explicit GuiMidi(IMidiManager& midi);
+ public:
+  explicit GuiMidi(IMidiManager& midi);
 
-    /** @brief Render the MIDI settings floating window. */
-    void render(bool& show);
+  /** @brief Render the MIDI settings floating window. */
+  void render(bool& show);
 
-    /**
-     * @brief Render a "MIDI Learn" item inside a knob's right-click popup.
-     * @return true if learn was activated (caller should close the popup).
-     */
-    bool render_learn_menu_item(const std::string& effect_name, const std::string& param_name);
+  /**
+   * @brief Render a "MIDI Learn" item inside a knob's right-click popup.
+   * @return true if learn was activated (caller should close the popup).
+   */
+  bool render_learn_menu_item(const std::string& effect_name,
+                              const std::string& param_name);
 
-    /**
-     * @brief Render a "MIDI Learn (Bypass)" item for effect bypass toggle.
-     * @return true if learn was activated.
-     */
-    bool render_learn_bypass_item(const std::string& effect_name);
+  /**
+   * @brief Render a "MIDI Learn (Bypass)" item for effect bypass toggle.
+   * @return true if learn was activated.
+   */
+  bool render_learn_bypass_item(const std::string& effect_name);
 
-    /**
-     * @brief Render a "Remove MIDI Mapping" item if one exists.
-     * @return true if mapping was removed.
-     */
-    bool render_remove_mapping_item(const std::string& effect_name, const std::string& param_name);
+  /**
+   * @brief Render a "Remove MIDI Mapping" item if one exists.
+   * @return true if mapping was removed.
+   */
+  bool render_remove_mapping_item(const std::string& effect_name,
+                                  const std::string& param_name);
 
-    /**
-     * @brief Render a "Remove MIDI Bypass Mapping" item if one exists.
-     * @return true if mapping was removed.
-     */
-    bool render_remove_bypass_item(const std::string& effect_name);
+  /**
+   * @brief Render a "Remove MIDI Bypass Mapping" item if one exists.
+   * @return true if mapping was removed.
+   */
+  bool render_remove_bypass_item(const std::string& effect_name);
 
-    /**
-     * @brief Get a formatted string describing the MIDI mapping for a parameter.
-     */
-    std::string get_mapping_info(const std::string& effect_name,
-                                 const std::string& param_name) const;
+  /**
+   * @brief Get a formatted string describing the MIDI mapping for a parameter.
+   */
+  std::string get_mapping_info(const std::string& effect_name,
+                               const std::string& param_name) const;
 
-    /** @brief Access the underlying MIDI manager (const). */
-    const IMidiManager& midi() const { return midi_; }
+  /** @brief Access the underlying MIDI manager (const). */
+  const IMidiManager& midi() const { return midi_; }
 
-    /** @brief Access the underlying MIDI manager (mutable). */
-    IMidiManager& manager() { return midi_; }
+  /** @brief Access the underlying MIDI manager (mutable). */
+  IMidiManager& manager() { return midi_; }
 
-   private:
-    IMidiManager& midi_;
-    std::vector<std::string> cached_ports_;
+ private:
+  IMidiManager& midi_;
+  std::vector<std::string> cached_ports_;
 };
 
 #endif  // AMPLITRON_NO_MIDI

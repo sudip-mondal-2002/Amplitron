@@ -15,47 +15,49 @@ namespace Amplitron {
  * All effect types self-register via EffectRegistrar.
  */
 class EffectFactory {
-   public:
-    using Creator = std::function<std::shared_ptr<Effect>()>;
+ public:
+  using Creator = std::function<std::shared_ptr<Effect>()>;
 
-    static EffectFactory& instance() {
-        static EffectFactory factory;
-        return factory;
+  static EffectFactory& instance() {
+    static EffectFactory factory;
+    return factory;
+  }
+
+  void register_effect(const std::string& type_name, Creator creator) {
+    if (creators_.count(type_name) > 0) {
+      throw std::runtime_error("Duplicate effect registration: " + type_name);
     }
+    creators_.emplace(type_name, std::move(creator));
+  }
 
-    void register_effect(const std::string& type_name, Creator creator) {
-        if (creators_.count(type_name) > 0) {
-            throw std::runtime_error("Duplicate effect registration: " + type_name);
-        }
-        creators_.emplace(type_name, std::move(creator));
+  std::shared_ptr<Effect> create(const std::string& type_name) const {
+    auto it = creators_.find(type_name);
+    if (it != creators_.end()) {
+      return it->second();
     }
+    return nullptr;
+  }
 
-    std::shared_ptr<Effect> create(const std::string& type_name) const {
-        auto it = creators_.find(type_name);
-        if (it != creators_.end()) {
-            return it->second();
-        }
-        return nullptr;
+  std::vector<std::string> registered_types() const {
+    std::vector<std::string> types;
+    types.reserve(creators_.size());
+    for (auto& [name, _] : creators_) {
+      types.push_back(name);
     }
+    return types;
+  }
 
-    std::vector<std::string> registered_types() const {
-        std::vector<std::string> types;
-        types.reserve(creators_.size());
-        for (auto& [name, _] : creators_) {
-            types.push_back(name);
-        }
-        return types;
-    }
+  std::shared_ptr<Effect> create_from_type(const std::string& type_name) const {
+    return create(type_name);
+  }
 
-    std::shared_ptr<Effect> create_from_type(const std::string& type_name) const {
-        return create(type_name);
-    }
+  std::vector<std::string> get_all_type_names() const {
+    return registered_types();
+  }
 
-    std::vector<std::string> get_all_type_names() const { return registered_types(); }
-
-   private:
-    EffectFactory() = default;
-    std::unordered_map<std::string, Creator> creators_;
+ private:
+  EffectFactory() = default;
+  std::unordered_map<std::string, Creator> creators_;
 };
 
 /**
@@ -65,10 +67,10 @@ class EffectFactory {
  */
 template <typename T>
 struct EffectRegistrar {
-    explicit EffectRegistrar(const std::string& type_name) {
-        EffectFactory::instance().register_effect(type_name,
-                                                  []() { return std::make_shared<T>(); });
-    }
+  explicit EffectRegistrar(const std::string& type_name) {
+    EffectFactory::instance().register_effect(
+        type_name, []() { return std::make_shared<T>(); });
+  }
 };
 
 }  // namespace Amplitron
