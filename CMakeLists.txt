@@ -838,6 +838,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/ui/test_window_context.cpp
         tests/ui/test_pedal_widget_knobs.cpp
         tests/ui/test_pedal_widget.cpp
+        tests/ui/test_pedal_widget_body.cpp
         tests/unit/test_session_manager.cpp
         tests/unit/test_preset_components.cpp
         tests/unit/test_cli.cpp
