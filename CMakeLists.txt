@@ -17,6 +17,7 @@ else()
     set(DEFAULT_WITH_JACK OFF)
 endif()
 option(WITH_JACK "Enable JACK audio backend (Linux only)" ${DEFAULT_WITH_JACK})
+option(BUILD_CLAP_PLUGIN "Build Amplitron CLAP plugin target" ON)
 
 # Build type
 if(NOT CMAKE_BUILD_TYPE)
@@ -968,7 +969,62 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
 
     set_target_properties(amplitron-tests PROPERTIES UNITY_BUILD OFF)
 
-    # Copy presets into build directory alongside the executable
+
+# --- Plugin processor tests ---
+if(NOT EMSCRIPTEN AND NOT ANDROID AND NOT IOS)
+    add_executable(amplitron-plugin-tests
+        tests/plugin/test_plugin_processor.cpp
+        src/plugin/amplitron_plugin_processor.cpp
+    )
+
+    target_include_directories(amplitron-plugin-tests PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/external
+    )
+
+    target_link_libraries(amplitron-plugin-tests PRIVATE
+        nlohmann_json::nlohmann_json
+    )
+
+    if(TARGET GTest::gtest_main)
+        target_link_libraries(amplitron-plugin-tests PRIVATE GTest::gtest_main)
+    elseif(TARGET gtest_main)
+        target_link_libraries(amplitron-plugin-tests PRIVATE gtest_main)
+    endif()
+
+    target_compile_definitions(amplitron-plugin-tests PRIVATE
+        AMPLITRON_VERSION="${AMPLITRON_VERSION}"
+    )
+endif()
+
+# --- CLAP plugin export target ---
+if(BUILD_CLAP_PLUGIN AND NOT EMSCRIPTEN AND NOT ANDROID AND NOT IOS)
+    add_library(AmplitronCLAP MODULE
+        src/plugin/amplitron_plugin_processor.cpp
+        src/plugin/clap/amplitron_clap_stub.cpp
+    )
+
+    target_include_directories(AmplitronCLAP PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/external
+    )
+
+    target_link_libraries(AmplitronCLAP PRIVATE
+        nlohmann_json::nlohmann_json
+    )
+
+    target_compile_definitions(AmplitronCLAP PRIVATE
+        AMPLITRON_VERSION="${AMPLITRON_VERSION}"
+    )
+
+    set_target_properties(AmplitronCLAP PROPERTIES
+        OUTPUT_NAME "Amplitron"
+        PREFIX ""
+        SUFFIX ".clap"
+    )
+endif()
+
+# Copy presets into build directory alongside the executable
     add_custom_command(TARGET Amplitron POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${CMAKE_SOURCE_DIR}/presets"
