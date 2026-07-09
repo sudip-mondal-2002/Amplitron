@@ -83,7 +83,10 @@ jobs:
           test ! -e "$INSTALL_PREFIX/bin/assets"
 
       - name: Run Tests
-        run: cd build && ./amplitron-tests --junitxml=junit.xml
+        run: |
+          cd build
+          ./amplitron-tests --junitxml=junit.xml
+          ./amplitron-plugin-tests --gtest_output=xml:junit-plugin.xml
 
       - name: Generate Linux Coverage
         if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
@@ -116,6 +119,7 @@ jobs:
           path: |
             coverage.filtered.info
             build/junit.xml
+          build/junit-plugin.xml
           retention-days: 1
 
       - name: Upload Build
@@ -195,7 +199,10 @@ jobs:
           test ! -e "$INSTALL_PREFIX/bin/assets"
 
       - name: Run Tests
-        run: cd build && ./amplitron-tests --junitxml=junit.xml
+        run: |
+          cd build
+          ./amplitron-tests --junitxml=junit.xml
+          ./amplitron-plugin-tests --gtest_output=xml:junit-plugin.xml
 
       - name: Generate macOS Coverage
         if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
@@ -220,6 +227,7 @@ jobs:
           path: |
             coverage.filtered.info
             build/junit.xml
+          build/junit-plugin.xml
           retention-days: 1
 
       - name: Bundle Dylibs
@@ -512,7 +520,10 @@ jobs:
 
       - name: Run Tests
         shell: msys2 {0}
-        run: cd build && ./amplitron-tests.exe --junitxml=junit.xml
+        run: |
+          cd build
+          ./amplitron-tests.exe --junitxml=junit.xml
+          ./amplitron-plugin-tests.exe --gtest_output=xml:junit-plugin.xml
 
       - name: Generate Windows Coverage
         if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
@@ -528,6 +539,7 @@ jobs:
             --directory build/CMakeFiles/amplitron_core.dir \
             --directory build/CMakeFiles/Amplitron.dir \
             --directory build/CMakeFiles/amplitron-tests.dir \
+            --directory build/CMakeFiles/amplitron-plugin-tests.dir \
             --output-file coverage.info $LCOV_IGNORE 2>&1 | tail -20
           sed -i 's|\\|/|g' coverage.info
           sed -i 's|/build/../|/|g' coverage.info
@@ -545,6 +557,7 @@ jobs:
           path: |
             coverage.filtered.info
             build/junit.xml
+          build/junit-plugin.xml
           retention-days: 1
 
       - name: Collect Binaries

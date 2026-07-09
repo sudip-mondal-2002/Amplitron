@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
-
 #include <nlohmann/json.hpp>
 
 namespace Amplitron {
@@ -51,24 +50,43 @@ void AmplitronPluginProcessor::set_parameter_normalized(uint32_t index, float no
     }
 
     auto& parameter = parameters_[index];
-    parameter.value = denormalize(
-        clamp01(normalized_value),
-        parameter.info.min_value,
-        parameter.info.max_value
-    );
+    parameter.value =
+        denormalize(clamp01(normalized_value), parameter.info.min_value, parameter.info.max_value);
 }
 
-void AmplitronPluginProcessor::process(const float* const* inputs,
-                                       float* const* outputs,
-                                       uint32_t frames,
-                                       uint32_t input_channels,
+float AmplitronPluginProcessor::get_parameter_plain(uint32_t index) const {
+    if (index >= parameters_.size()) {
+        return 0.0f;
+    }
+
+    return parameters_[index].value;
+}
+
+void AmplitronPluginProcessor::set_parameter_plain(uint32_t index, float plain_value) {
+    if (index >= parameters_.size()) {
+        return;
+    }
+
+    auto& parameter = parameters_[index];
+    parameter.value = std::clamp(plain_value, parameter.info.min_value, parameter.info.max_value);
+}
+
+int32_t AmplitronPluginProcessor::parameter_index_for_id(uint32_t id) const {
+    for (uint32_t index = 0; index < parameters_.size(); ++index) {
+        if (parameters_[index].info.id == id) {
+            return static_cast<int32_t>(index);
+        }
+    }
+
+    return -1;
+}
+
+void AmplitronPluginProcessor::process(const float* const* inputs, float* const* outputs,
+                                       uint32_t frames, uint32_t input_channels,
                                        uint32_t output_channels) {
     if (outputs == nullptr || frames == 0 || output_channels == 0) {
         return;
     }
-
-    const bool bypass = parameters_.size() > 2 && parameters_[2].value >= 0.5f;
-    (void)bypass;
 
     for (uint32_t channel = 0; channel < output_channels; ++channel) {
         float* out = outputs[channel];
@@ -85,9 +103,6 @@ void AmplitronPluginProcessor::process(const float* const* inputs,
 
         for (uint32_t frame = 0; frame < frames; ++frame) {
             const float sample = in != nullptr ? in[frame] : 0.0f;
-
-            // Phase 1: safe pass-through block processor.
-            // Next phase will route this through Amplitron's effect chain.
             out[frame] = std::isfinite(sample) ? sample : 0.0f;
         }
     }
@@ -101,12 +116,10 @@ std::string AmplitronPluginProcessor::save_state_json() const {
     state["parameters"] = nlohmann::json::array();
 
     for (const auto& parameter : parameters_) {
-        state["parameters"].push_back({
-            {"id", parameter.info.id},
-            {"name", parameter.info.name},
-            {"module", parameter.info.module},
-            {"value", parameter.value}
-        });
+        state["parameters"].push_back({{"id", parameter.info.id},
+                                       {"name", parameter.info.name},
+                                       {"module", parameter.info.module},
+                                       {"value", parameter.value}});
     }
 
     return state.dump();
@@ -121,20 +134,14 @@ bool AmplitronPluginProcessor::load_state_json(const std::string& state_text) {
         }
 
         for (const auto& saved_parameter : state["parameters"]) {
-            const uint32_t id = saved_parameter.value(
-                "id",
-                std::numeric_limits<uint32_t>::max()
-            );
+            const uint32_t id = saved_parameter.value("id", std::numeric_limits<uint32_t>::max());
 
             const float value = saved_parameter.value("value", 0.0f);
 
             for (auto& parameter : parameters_) {
                 if (parameter.info.id == id) {
-                    parameter.value = std::clamp(
-                        value,
-                        parameter.info.min_value,
-                        parameter.info.max_value
-                    );
+                    parameter.value =
+                        std::clamp(value, parameter.info.min_value, parameter.info.max_value);
                     break;
                 }
             }
@@ -146,19 +153,13 @@ bool AmplitronPluginProcessor::load_state_json(const std::string& state_text) {
     }
 }
 
-float AmplitronPluginProcessor::clamp01(float value) {
-    return std::clamp(value, 0.0f, 1.0f);
-}
+float AmplitronPluginProcessor::clamp01(float value) { return std::clamp(value, 0.0f, 1.0f); }
 
-float AmplitronPluginProcessor::denormalize(float normalized,
-                                            float min_value,
-                                            float max_value) {
+float AmplitronPluginProcessor::denormalize(float normalized, float min_value, float max_value) {
     return min_value + normalized * (max_value - min_value);
 }
 
-float AmplitronPluginProcessor::normalize(float value,
-                                          float min_value,
-                                          float max_value) {
+float AmplitronPluginProcessor::normalize(float value, float min_value, float max_value) {
     if (std::abs(max_value - min_value) < 1.0e-6f) {
         return 0.0f;
     }
@@ -166,4 +167,4 @@ float AmplitronPluginProcessor::normalize(float value,
     return clamp01((value - min_value) / (max_value - min_value));
 }
 
-} // namespace Amplitron
+}  // namespace Amplitron

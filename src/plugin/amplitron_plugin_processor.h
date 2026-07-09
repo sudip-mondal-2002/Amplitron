@@ -17,7 +17,7 @@ struct PluginParameterInfo {
 };
 
 class AmplitronPluginProcessor {
-public:
+   public:
     AmplitronPluginProcessor();
 
     void prepare(double sample_rate, uint32_t max_block_size);
@@ -28,17 +28,17 @@ public:
 
     float get_parameter_normalized(uint32_t index) const;
     void set_parameter_normalized(uint32_t index, float normalized_value);
+    float get_parameter_plain(uint32_t index) const;
+    void set_parameter_plain(uint32_t index, float plain_value);
+    int32_t parameter_index_for_id(uint32_t id) const;
 
-    void process(const float* const* inputs,
-                 float* const* outputs,
-                 uint32_t frames,
-                 uint32_t input_channels,
-                 uint32_t output_channels);
+    void process(const float* const* inputs, float* const* outputs, uint32_t frames,
+                 uint32_t input_channels, uint32_t output_channels);
 
     std::string save_state_json() const;
     bool load_state_json(const std::string& state);
 
-private:
+   private:
     struct RuntimeParameter {
         PluginParameterInfo info;
         float value{};
@@ -53,4 +53,4 @@ private:
     static float normalize(float value, float min_value, float max_value);
 };
 
-} // namespace Amplitron
+}  // namespace Amplitron

@@ -834,7 +834,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         )
     endif()
 
-    # GUI + ImGui + platform-specific sources for testing
+# GUI + ImGui + platform-specific sources for testing
     set(TEST_GUI_SOURCES
         src/gui/gui_manager.cpp
         src/gui/window_context.cpp
@@ -892,7 +892,8 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${SDL2_INCLUDE_DIRS}
         ${OPENGL_INCLUDE_DIR}
         ${RTMIDI_INCLUDE_DIRS}
-    )
+
+    ${clap_SOURCE_DIR}/include)
 
     if(WITH_JACK AND UNIX AND NOT APPLE AND JACK_INCLUDE_DIRS)
         target_include_directories(amplitron-tests PRIVATE ${JACK_INCLUDE_DIRS})
@@ -947,7 +948,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         )
     endif()
 
-    target_link_libraries(amplitron-tests PRIVATE
+target_link_libraries(amplitron-tests PRIVATE
         nlohmann_json::nlohmann_json
         ${PORTAUDIO_LIBRARIES}
         ${SDL2_LIBRARIES}
@@ -970,17 +971,38 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
     set_target_properties(amplitron-tests PROPERTIES UNITY_BUILD OFF)
 
 
+
+# --- CLAP SDK headers ---
+if(BUILD_CLAP_PLUGIN AND NOT EMSCRIPTEN AND NOT ANDROID AND NOT IOS)
+    FetchContent_Declare(
+        clap
+        GIT_REPOSITORY https://github.com/free-audio/clap.git
+        GIT_TAG cd94482ba5941ae410809b6fbaed3bc851044270
+        GIT_SHALLOW TRUE
+    )
+
+    FetchContent_GetProperties(clap)
+    if(NOT clap_POPULATED)
+        FetchContent_Populate(clap)
+    endif()
+endif()
+
+
 # --- Plugin processor tests ---
-if(NOT EMSCRIPTEN AND NOT ANDROID AND NOT IOS)
+if(BUILD_CLAP_PLUGIN AND NOT EMSCRIPTEN AND NOT ANDROID AND NOT IOS)
     add_executable(amplitron-plugin-tests
         tests/plugin/test_plugin_processor.cpp
+        tests/plugin/test_clap_plugin.cpp
         src/plugin/amplitron_plugin_processor.cpp
-    )
+        src/plugin/clap/amplitron_clap_plugin.cpp
+
+        src/plugin/clap/amplitron_clap_entry.cpp)
 
     target_include_directories(amplitron-plugin-tests PRIVATE
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/external
-    )
+
+        ${CMAKE_BINARY_DIR}/_deps/clap-src/include)
 
     target_link_libraries(amplitron-plugin-tests PRIVATE
         nlohmann_json::nlohmann_json
@@ -995,19 +1017,23 @@ if(NOT EMSCRIPTEN AND NOT ANDROID AND NOT IOS)
     target_compile_definitions(amplitron-plugin-tests PRIVATE
         AMPLITRON_VERSION="${AMPLITRON_VERSION}"
     )
+
+    add_test(NAME amplitron-plugin-tests COMMAND amplitron-plugin-tests)
 endif()
 
 # --- CLAP plugin export target ---
 if(BUILD_CLAP_PLUGIN AND NOT EMSCRIPTEN AND NOT ANDROID AND NOT IOS)
     add_library(AmplitronCLAP MODULE
         src/plugin/amplitron_plugin_processor.cpp
-        src/plugin/clap/amplitron_clap_stub.cpp
+        src/plugin/clap/amplitron_clap_plugin.cpp
+        src/plugin/clap/amplitron_clap_entry.cpp
     )
 
     target_include_directories(AmplitronCLAP PRIVATE
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/external
-    )
+
+        ${CMAKE_BINARY_DIR}/_deps/clap-src/include)
 
     target_link_libraries(AmplitronCLAP PRIVATE
         nlohmann_json::nlohmann_json
