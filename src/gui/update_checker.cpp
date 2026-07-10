@@ -7,6 +7,16 @@
 
 #include "common.h"
 
+#ifdef _WIN32
+#ifndef popen
+#define popen _popen
+#endif
+
+#ifndef pclose
+#define pclose _pclose
+#endif
+#endif
+
 namespace Amplitron {
 
 UpdateChecker::UpdateChecker() = default;

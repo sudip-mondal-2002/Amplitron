@@ -283,6 +283,9 @@ bool GuiManager::run_frame() {
         gui_settings_.set_props(build_settings_props());
         gui_settings_.render(show_settings_);
     }
+    if (show_dsp_profiler_) {
+        gui_dsp_profiler_.render(&show_dsp_profiler_, engine_.get_dsp_profiler_snapshot());
+    }
     if (show_save_preset_) gui_presets_.render_save_popup(show_save_preset_);
     if (show_load_preset_) gui_presets_.render_load_popup(show_load_preset_);
     if (gui_recording_.needs_save_dialog()) {

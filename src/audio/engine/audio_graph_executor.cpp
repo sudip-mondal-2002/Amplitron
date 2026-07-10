@@ -1,6 +1,7 @@
 #include "audio/engine/audio_graph_executor.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cstring>
 
 #include "audio/engine/analyzer_capture.h"
@@ -129,7 +130,8 @@ void AudioGraphExecutor::process(const float* input, float* output, int num_samp
         return;
     }
 
-    for (const auto& step : execution_plan_) {
+    for (size_t step_index = 0; step_index < execution_plan_.size(); ++step_index) {
+        const auto& step = execution_plan_[step_index];
         float* node_input = sum_buffer_.data();
 
         bool is_input_source = false;
@@ -160,6 +162,8 @@ void AudioGraphExecutor::process(const float* input, float* output, int num_samp
         }
 
         float* node_output = buffer_pool_[step.buffer_index].data();
+
+        const auto module_start = std::chrono::steady_clock::now();
 
         if (step.processor) {
             step.processor->process(node_input, node_output, num_samples);

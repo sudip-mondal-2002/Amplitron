@@ -11,6 +11,7 @@
 #include "gui/commands/command_history.h"
 #include "gui/state/snapshot_manager.h"
 #include "gui/views/gui_analyzer.h"
+#include "gui/views/gui_dsp_profiler.h"
 #include "gui/views/gui_keyboard_shortcuts.h"
 #include "gui/views/gui_midi.h"
 #include "gui/views/gui_presets.h"
@@ -106,6 +107,7 @@ class GuiManager {
 
     // ── Visibility flags (owned here, passed to child render calls) ──
     bool show_settings_ = false;
+    bool show_dsp_profiler_ = false;
     bool show_save_preset_ = false;
     bool show_load_preset_ = false;
     bool show_tuner_ = false;
@@ -117,6 +119,7 @@ class GuiManager {
     // ── Reactive child components ──
     GuiSettings gui_settings_;
     GuiPresets gui_presets_;
+    GuiDspProfiler gui_dsp_profiler_;
     GuiRecording gui_recording_;
     GuiTuner gui_tuner_;
     GuiAnalyzer gui_analyzer_;

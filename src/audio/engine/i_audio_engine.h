@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "audio/backend/audio_device_info.h"
+#include "audio/engine/dsp_performance_profiler.h"
 
 namespace Amplitron {
 
@@ -79,6 +80,13 @@ class IAudioMetricsService {
     virtual bool consume_output_clipped() = 0;
 
     virtual float get_cpu_load() const = 0;
+    virtual DspProfilerSnapshot get_dsp_profiler_snapshot() const { return {}; }
+
+    virtual void reset_dsp_profiler() {}
+
+    virtual void record_profiler_underrun() {}
+
+    virtual void record_profiler_overrun() {}
 };
 
 /**

@@ -7,6 +7,7 @@
 
 #include "audio/effects/core/effect.h"
 #include "audio/engine/audio_graph.h"
+#include "audio/engine/dsp_performance_profiler.h"
 
 namespace Amplitron {
 

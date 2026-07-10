@@ -11,6 +11,7 @@ namespace Amplitron {
 
 void AudioEngine::process_audio(const float* input, float* output, int frame_count) {
     auto t_start = std::chrono::steady_clock::now();
+    dsp_profiler_.begin_callback(frame_count, sample_rate_, buffer_size_);
 
     if (frame_count > static_cast<int>(process_buffer_.size())) {
         process_buffer_.resize(frame_count, 0.0f);
@@ -119,9 +120,17 @@ void AudioEngine::process_audio(const float* input, float* output, int frame_cou
 
     auto t_end = std::chrono::steady_clock::now();
     float duration_us = std::chrono::duration<float, std::micro>(t_end - t_start).count();
+
     callback_duration_us_.store(duration_us, std::memory_order_relaxed);
-    float budget_us = (static_cast<float>(frame_count) / sample_rate_) * 1e6f;
-    cpu_load_.store(duration_us / budget_us, std::memory_order_relaxed);
+
+    const float budget_us =
+        sample_rate_ > 0
+            ? (static_cast<float>(frame_count) / static_cast<float>(sample_rate_)) * 1e6f
+            : 0.0f;
+
+    cpu_load_.store(budget_us > 0.0f ? duration_us / budget_us : 0.0f, std::memory_order_relaxed);
+
+    dsp_profiler_.end_callback(duration_us);
 }
 
 }  // namespace Amplitron
