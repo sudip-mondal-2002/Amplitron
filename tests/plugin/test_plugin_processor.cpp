@@ -104,3 +104,47 @@ TEST(PluginProcessor, InvalidStateReturnsFalse) {
 
     EXPECT_FALSE(processor.load_state_json("not json"));
 }
+
+
+// Extra coverage for processor guard paths
+TEST(PluginProcessor, HandlesOutOfRangeParameterAccess) {
+    Amplitron::AmplitronPluginProcessor processor;
+
+    const uint32_t invalid_index = static_cast<uint32_t>(processor.parameter_count() + 10);
+
+    (void)processor.parameter_info(invalid_index);
+    EXPECT_FLOAT_EQ(processor.get_parameter_normalized(invalid_index), 0.0f);
+
+    processor.set_parameter_normalized(invalid_index, 0.75f);
+
+    EXPECT_FLOAT_EQ(processor.get_parameter_plain(invalid_index), 0.0f);
+
+    processor.set_parameter_plain(invalid_index, 12.0f);
+
+    EXPECT_EQ(processor.parameter_index_for_id(999999u), -1);
+}
+
+TEST(PluginProcessor, HandlesMissingOutputBuffers) {
+    Amplitron::AmplitronPluginProcessor processor;
+
+    float input_channel[4] = {0.1f, -0.2f, 0.3f, -0.4f};
+    const float* inputs[] = {input_channel};
+
+    processor.process(inputs, nullptr, 4, 1, 1);
+
+    float* null_outputs[] = {nullptr};
+    processor.process(inputs, null_outputs, 4, 1, 1);
+
+    float output_channel[4] = {};
+    float* outputs[] = {output_channel};
+    processor.process(inputs, outputs, 0, 1, 1);
+
+    SUCCEED();
+}
+
+TEST(PluginProcessor, RejectsStateWithoutParameterArray) {
+    Amplitron::AmplitronPluginProcessor processor;
+
+    EXPECT_FALSE(processor.load_state_json(R"({})"));
+    EXPECT_FALSE(processor.load_state_json(R"({"parameters":{}})"));
+}

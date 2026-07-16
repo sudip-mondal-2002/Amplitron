@@ -432,3 +432,195 @@ TEST(ClapPlugin, StateLoadRejectsInvalidJson) {
 
     plugin->destroy(plugin);
 }
+
+
+// Extra coverage for CLAP guard paths
+namespace {
+
+struct NullInputEventList {
+    clap_input_events_t events{};
+
+    NullInputEventList() {
+        events.ctx = this;
+        events.size = size;
+        events.get = get;
+    }
+
+    static uint32_t CLAP_ABI size(const clap_input_events_t*) {
+        return 1;
+    }
+
+    static const clap_event_header_t* CLAP_ABI get(const clap_input_events_t*, uint32_t) {
+        return nullptr;
+    }
+};
+
+struct InvalidInputEventList {
+    clap_input_events_t events{};
+    clap_event_header_t header{};
+
+    InvalidInputEventList() {
+        header.size = sizeof(header);
+        header.space_id = 0;
+        header.type = 0;
+
+        events.ctx = this;
+        events.size = size;
+        events.get = get;
+    }
+
+    static uint32_t CLAP_ABI size(const clap_input_events_t*) {
+        return 1;
+    }
+
+    static const clap_event_header_t* CLAP_ABI get(const clap_input_events_t* list, uint32_t) {
+        return &static_cast<const InvalidInputEventList*>(list->ctx)->header;
+    }
+};
+
+struct ZeroWriteStream {
+    clap_ostream_t stream{};
+
+    ZeroWriteStream() {
+        stream.ctx = this;
+        stream.write = write;
+    }
+
+    static int64_t CLAP_ABI write(const clap_ostream_t*, const void*, uint64_t) {
+        return 0;
+    }
+};
+
+struct NegativeReadStream {
+    clap_istream_t stream{};
+
+    NegativeReadStream() {
+        stream.ctx = this;
+        stream.read = read;
+    }
+
+    static int64_t CLAP_ABI read(const clap_istream_t*, void*, uint64_t) {
+        return -1;
+    }
+};
+
+} // namespace
+
+TEST(ClapPlugin, EntryFactoryRejectsInvalidFactoryIds) {
+    EXPECT_EQ(clap_entry.get_factory(nullptr), nullptr);
+    EXPECT_EQ(clap_entry.get_factory("unknown.factory"), nullptr);
+}
+
+TEST(ClapPlugin, LifecycleRejectsNullPluginCalls) {
+    const clap_plugin_t* plugin = Amplitron::create_amplitron_clap_plugin(nullptr);
+    ASSERT_NE(plugin, nullptr);
+
+    EXPECT_FALSE(plugin->init(nullptr));
+    EXPECT_FALSE(plugin->activate(nullptr, 48000.0, 64, 512));
+
+    plugin->deactivate(nullptr);
+
+    EXPECT_FALSE(plugin->start_processing(nullptr));
+
+    plugin->stop_processing(nullptr);
+    plugin->reset(nullptr);
+
+    clap_process_t process{};
+    EXPECT_EQ(plugin->process(nullptr, &process), CLAP_PROCESS_ERROR);
+    EXPECT_EQ(plugin->process(plugin, nullptr), CLAP_PROCESS_ERROR);
+
+    EXPECT_FALSE(plugin->start_processing(plugin));
+
+    plugin->destroy(plugin);
+}
+
+TEST(ClapPlugin, LifecycleHandlesResetAndEmptyProcess) {
+    const clap_plugin_t* plugin = Amplitron::create_amplitron_clap_plugin(nullptr);
+    ASSERT_NE(plugin, nullptr);
+
+    ASSERT_TRUE(plugin->init(plugin));
+    ASSERT_TRUE(plugin->activate(plugin, 48000.0, 64, 512));
+    ASSERT_TRUE(plugin->start_processing(plugin));
+
+    plugin->reset(plugin);
+
+    clap_process_t process{};
+    process.frames_count = 0;
+    process.audio_outputs = nullptr;
+    process.audio_outputs_count = 0;
+
+    EXPECT_EQ(plugin->process(plugin, &process), CLAP_PROCESS_CONTINUE);
+
+    plugin->stop_processing(plugin);
+    plugin->deactivate(plugin);
+    plugin->destroy(plugin);
+}
+
+TEST(ClapPlugin, ExtensionRejectsNullAndUnknownIds) {
+    const clap_plugin_t* plugin = Amplitron::create_amplitron_clap_plugin(nullptr);
+    ASSERT_NE(plugin, nullptr);
+
+    EXPECT_EQ(plugin->get_extension(plugin, nullptr), nullptr);
+    EXPECT_EQ(plugin->get_extension(plugin, "unknown.extension"), nullptr);
+
+    plugin->on_main_thread(plugin);
+
+    plugin->destroy(plugin);
+}
+
+TEST(ClapPlugin, ParamsHandleGuardPathsAndTextConversion) {
+    const clap_plugin_t* plugin = Amplitron::create_amplitron_clap_plugin(nullptr);
+    ASSERT_NE(plugin, nullptr);
+
+    const auto* params = static_cast<const clap_plugin_params_t*>(
+        plugin->get_extension(plugin, CLAP_EXT_PARAMS));
+    ASSERT_NE(params, nullptr);
+
+    NullInputEventList null_events;
+    InvalidInputEventList invalid_events;
+
+    params->flush(plugin, &null_events.events, nullptr);
+    params->flush(plugin, &invalid_events.events, nullptr);
+
+    double value = 123.0;
+    EXPECT_FALSE(params->get_value(plugin, 999999u, &value));
+
+    char buffer[32] = {};
+    EXPECT_FALSE(params->value_to_text(plugin, 0, 1.25, nullptr, sizeof(buffer)));
+    EXPECT_FALSE(params->value_to_text(plugin, 0, 1.25, buffer, 0));
+    EXPECT_TRUE(params->value_to_text(plugin, 0, 1.25, buffer, sizeof(buffer)));
+
+    double parsed = 0.0;
+    EXPECT_FALSE(params->text_to_value(plugin, 0, nullptr, &parsed));
+    EXPECT_FALSE(params->text_to_value(plugin, 0, "1.25", nullptr));
+    EXPECT_FALSE(params->text_to_value(plugin, 0, "not-a-number", &parsed));
+    EXPECT_TRUE(params->text_to_value(plugin, 0, "3.5", &parsed));
+    EXPECT_DOUBLE_EQ(parsed, 3.5);
+
+    plugin->destroy(plugin);
+}
+
+TEST(ClapPlugin, StateExtensionRejectsInvalidStreams) {
+    const clap_plugin_t* plugin = Amplitron::create_amplitron_clap_plugin(nullptr);
+    ASSERT_NE(plugin, nullptr);
+
+    const auto* state = static_cast<const clap_plugin_state_t*>(
+        plugin->get_extension(plugin, CLAP_EXT_STATE));
+    ASSERT_NE(state, nullptr);
+
+    clap_ostream_t output_without_writer{};
+    EXPECT_FALSE(state->save(plugin, nullptr));
+    EXPECT_FALSE(state->save(plugin, &output_without_writer));
+
+    ZeroWriteStream zero_writer;
+    EXPECT_FALSE(state->save(plugin, &zero_writer.stream));
+
+    clap_istream_t input_without_reader{};
+    EXPECT_FALSE(state->load(plugin, nullptr));
+    EXPECT_FALSE(state->load(plugin, &input_without_reader));
+
+    NegativeReadStream negative_reader;
+    EXPECT_FALSE(state->load(plugin, &negative_reader.stream));
+
+    plugin->destroy(plugin);
+}
