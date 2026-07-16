@@ -105,7 +105,6 @@ TEST(PluginProcessor, InvalidStateReturnsFalse) {
     EXPECT_FALSE(processor.load_state_json("not json"));
 }
 
-
 // Extra coverage for processor guard paths
 TEST(PluginProcessor, HandlesOutOfRangeParameterAccess) {
     Amplitron::AmplitronPluginProcessor processor;

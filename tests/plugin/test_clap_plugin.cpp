@@ -433,7 +433,6 @@ TEST(ClapPlugin, StateLoadRejectsInvalidJson) {
     plugin->destroy(plugin);
 }
 
-
 // Extra coverage for CLAP guard paths
 namespace {
 
@@ -446,9 +445,7 @@ struct NullInputEventList {
         events.get = get;
     }
 
-    static uint32_t CLAP_ABI size(const clap_input_events_t*) {
-        return 1;
-    }
+    static uint32_t CLAP_ABI size(const clap_input_events_t*) { return 1; }
 
     static const clap_event_header_t* CLAP_ABI get(const clap_input_events_t*, uint32_t) {
         return nullptr;
@@ -469,9 +466,7 @@ struct InvalidInputEventList {
         events.get = get;
     }
 
-    static uint32_t CLAP_ABI size(const clap_input_events_t*) {
-        return 1;
-    }
+    static uint32_t CLAP_ABI size(const clap_input_events_t*) { return 1; }
 
     static const clap_event_header_t* CLAP_ABI get(const clap_input_events_t* list, uint32_t) {
         return &static_cast<const InvalidInputEventList*>(list->ctx)->header;
@@ -486,9 +481,7 @@ struct ZeroWriteStream {
         stream.write = write;
     }
 
-    static int64_t CLAP_ABI write(const clap_ostream_t*, const void*, uint64_t) {
-        return 0;
-    }
+    static int64_t CLAP_ABI write(const clap_ostream_t*, const void*, uint64_t) { return 0; }
 };
 
 struct NegativeReadStream {
@@ -499,12 +492,10 @@ struct NegativeReadStream {
         stream.read = read;
     }
 
-    static int64_t CLAP_ABI read(const clap_istream_t*, void*, uint64_t) {
-        return -1;
-    }
+    static int64_t CLAP_ABI read(const clap_istream_t*, void*, uint64_t) { return -1; }
 };
 
-} // namespace
+}  // namespace
 
 TEST(ClapPlugin, EntryFactoryRejectsInvalidFactoryIds) {
     EXPECT_EQ(clap_entry.get_factory(nullptr), nullptr);
@@ -572,8 +563,8 @@ TEST(ClapPlugin, ParamsHandleGuardPathsAndTextConversion) {
     const clap_plugin_t* plugin = Amplitron::create_amplitron_clap_plugin(nullptr);
     ASSERT_NE(plugin, nullptr);
 
-    const auto* params = static_cast<const clap_plugin_params_t*>(
-        plugin->get_extension(plugin, CLAP_EXT_PARAMS));
+    const auto* params =
+        static_cast<const clap_plugin_params_t*>(plugin->get_extension(plugin, CLAP_EXT_PARAMS));
     ASSERT_NE(params, nullptr);
 
     NullInputEventList null_events;
@@ -604,8 +595,8 @@ TEST(ClapPlugin, StateExtensionRejectsInvalidStreams) {
     const clap_plugin_t* plugin = Amplitron::create_amplitron_clap_plugin(nullptr);
     ASSERT_NE(plugin, nullptr);
 
-    const auto* state = static_cast<const clap_plugin_state_t*>(
-        plugin->get_extension(plugin, CLAP_EXT_STATE));
+    const auto* state =
+        static_cast<const clap_plugin_state_t*>(plugin->get_extension(plugin, CLAP_EXT_STATE));
     ASSERT_NE(state, nullptr);
 
     clap_ostream_t output_without_writer{};
