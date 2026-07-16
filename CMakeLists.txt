@@ -988,22 +988,6 @@ if(BUILD_CLAP_PLUGIN AND NOT EMSCRIPTEN AND NOT ANDROID AND NOT IOS)
 endif()
 
 
-if(BUILD_CLAP_PLUGIN AND TARGET amplitron-tests)
-    target_sources(amplitron-tests PRIVATE
-        src/plugin/amplitron_plugin_processor.cpp
-        src/plugin/clap/amplitron_clap_plugin.cpp
-        src/plugin/clap/amplitron_clap_entry.cpp
-        tests/plugin/test_plugin_processor.cpp
-        tests/plugin/test_clap_plugin.cpp
-    )
-
-    target_include_directories(amplitron-tests PRIVATE
-        ${CMAKE_SOURCE_DIR}/src
-        ${CMAKE_SOURCE_DIR}/external
-        ${CMAKE_BINARY_DIR}/_deps/clap-src/include
-    )
-endif()
-
 # --- Plugin processor tests ---
 if(BUILD_CLAP_PLUGIN AND NOT EMSCRIPTEN AND NOT ANDROID AND NOT IOS)
     add_executable(amplitron-plugin-tests
@@ -1035,6 +1019,14 @@ if(BUILD_CLAP_PLUGIN AND NOT EMSCRIPTEN AND NOT ANDROID AND NOT IOS)
     )
 
     add_test(NAME amplitron-plugin-tests COMMAND amplitron-plugin-tests)
+    if(TARGET amplitron-tests)
+        add_dependencies(amplitron-tests amplitron-plugin-tests)
+        add_custom_command(TARGET amplitron-tests POST_BUILD
+            COMMAND $<TARGET_FILE:amplitron-plugin-tests>
+            WORKING_DIRECTORY $<TARGET_FILE_DIR:amplitron-plugin-tests>
+            COMMENT "Running plugin tests for coverage"
+        )
+    endif()
 endif()
 
 # --- CLAP plugin export target ---
