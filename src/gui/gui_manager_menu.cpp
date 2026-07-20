@@ -286,6 +286,9 @@ void GuiManager::render_menu_bar() {
             if (ImGui::MenuItem("MIDI Settings", nullptr, show_midi_)) {
                 show_midi_ = !show_midi_;
             }
+            if (ImGui::MenuItem("DSP Performance Profiler", nullptr, show_dsp_profiler_)) {
+                show_dsp_profiler_ = !show_dsp_profiler_;
+            }
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Help")) {

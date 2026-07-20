@@ -96,8 +96,24 @@ bool devices_share_host_api(int input_dev, int output_dev) {
 // Real callback implementation
 int pa_audio_callback(const void* input, void* output, unsigned long frame_count,
                       const PaStreamCallbackTimeInfo* /*time_info*/,
-                      PaStreamCallbackFlags /*status_flags*/, void* user_data) {
+                      PaStreamCallbackFlags status_flags, void* user_data) {
     auto* engine = static_cast<IAudioEngine*>(user_data);
+
+    if (!engine) {
+        if (output) {
+            std::memset(output, 0, frame_count * 2 * sizeof(float));
+        }
+        return paContinue;
+    }
+
+    if ((status_flags & paInputUnderflow) || (status_flags & paOutputUnderflow)) {
+        engine->record_profiler_underrun();
+    }
+
+    if ((status_flags & paInputOverflow) || (status_flags & paOutputOverflow)) {
+        engine->record_profiler_overrun();
+    }
+
     const auto* in = static_cast<const float*>(input);
     auto* out = static_cast<float*>(output);
 
