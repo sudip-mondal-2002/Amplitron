@@ -21,7 +21,7 @@ jobs:
           fetch-depth: 0
 
       - name: Cache apt packages
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         id: apt-cache
         with:
           path: ~/apt-cache
@@ -300,7 +300,7 @@ jobs:
           fetch-depth: 0
 
       - name: Cache Emscripten SDK & ports
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         id: emsdk-cache
         with:
           path: |
@@ -440,7 +440,7 @@ jobs:
           cache: true
 
       - name: Restore ccache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         continue-on-error: true
         with:
           path: .ccache
@@ -660,7 +660,7 @@ jobs:
 
       - name: Cache SDL2 iOS static library
         id: sdl2-ios-cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/sdl2-ios
           key: sdl2-ios-arm64-2.30.12
