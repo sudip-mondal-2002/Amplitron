@@ -90,6 +90,7 @@ class Effect : public IProcessor, public IParameterizable, public ISerializable,
         // that uses the EffectParam vector.
 
         virtual nlohmann::json get_params() const override;
+        virtual void set_params(const nlohmann::json& /*j*/) override {}
 
         // Reset all parameters to their factory default values
         virtual void reset_to_defaults() {
