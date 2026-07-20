@@ -115,34 +115,22 @@ bool PedalWidget::render(float zoom) {
     float bar_w = 6.0f * zoom;
     float bar_h = 2.0f * zoom;
     float spacing = 3.0f * zoom;
-    
+
     ImU32 icon_col = ImGui::GetColorU32(ImGuiCol_Text);
 
     // Left slider vertical line
-    dl->AddRectFilled(
-        ImVec2(cx - spacing - line_w*0.5f, cy - line_h*0.5f),
-        ImVec2(cx - spacing + line_w*0.5f, cy + line_h*0.5f),
-        icon_col
-    );
+    dl->AddRectFilled(ImVec2(cx - spacing - line_w * 0.5f, cy - line_h * 0.5f),
+                      ImVec2(cx - spacing + line_w * 0.5f, cy + line_h * 0.5f), icon_col);
     // Left slider horizontal bar
-    dl->AddRectFilled(
-        ImVec2(cx - spacing - bar_w*0.5f, cy + spacing - bar_h*0.5f),
-        ImVec2(cx - spacing + bar_w*0.5f, cy + spacing + bar_h*0.5f),
-        icon_col
-    );
+    dl->AddRectFilled(ImVec2(cx - spacing - bar_w * 0.5f, cy + spacing - bar_h * 0.5f),
+                      ImVec2(cx - spacing + bar_w * 0.5f, cy + spacing + bar_h * 0.5f), icon_col);
 
     // Right slider vertical line
-    dl->AddRectFilled(
-        ImVec2(cx + spacing - line_w*0.5f, cy - line_h*0.5f),
-        ImVec2(cx + spacing + line_w*0.5f, cy + line_h*0.5f),
-        icon_col
-    );
+    dl->AddRectFilled(ImVec2(cx + spacing - line_w * 0.5f, cy - line_h * 0.5f),
+                      ImVec2(cx + spacing + line_w * 0.5f, cy + line_h * 0.5f), icon_col);
     // Right slider horizontal bar
-    dl->AddRectFilled(
-        ImVec2(cx + spacing - bar_w*0.5f, cy - spacing - bar_h*0.5f),
-        ImVec2(cx + spacing + bar_w*0.5f, cy - spacing + bar_h*0.5f),
-        icon_col
-    );
+    dl->AddRectFilled(ImVec2(cx + spacing - bar_w * 0.5f, cy - spacing - bar_h * 0.5f),
+                      ImVec2(cx + spacing + bar_w * 0.5f, cy - spacing + bar_h * 0.5f), icon_col);
 
     if (ImGui::IsItemHovered()) {
         ImGui::SetTooltip("Toggle pedal spectrum analyzer");
