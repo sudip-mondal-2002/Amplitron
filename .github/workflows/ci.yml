@@ -479,6 +479,7 @@ jobs:
           mkdir -p build && cd build
           cmake -G Ninja -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
             -DAMPLITRON_VERSION="${{ steps.version.outputs.version }}" \
+            -DBUILD_CLAP_PLUGIN=ON \
             -DCMAKE_C_FLAGS="$COV_FLAGS" \
             -DCMAKE_CXX_FLAGS="$COV_FLAGS" \
             -DCMAKE_EXE_LINKER_FLAGS="$LINK_FLAGS" \
@@ -487,6 +488,7 @@ jobs:
             -DCMAKE_UNITY_BUILD=ON \
             ..
           ninja -j$NUMBER_OF_PROCESSORS
+          ninja AmplitronCLAP
           ccache -s
 
       - name: Install Smoke Test
@@ -553,6 +555,16 @@ jobs:
         run: |
           mkdir -p staging
           cp build/amplitron.exe staging/Amplitron.exe
+
+          CLAP_FILE=$(find build -name "Amplitron.clap" -type f | head -1)
+          if [ -z "$CLAP_FILE" ]; then
+            echo "Error: Amplitron.clap was not generated"
+            echo "Available build files:"
+            find build -type f
+            exit 1
+          fi
+          cp "$CLAP_FILE" staging/Amplitron.clap
+
           for dll in libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll SDL2.dll; do
             cp /mingw64/bin/$dll staging/ 2>/dev/null || true
           done
