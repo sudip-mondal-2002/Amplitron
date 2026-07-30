@@ -48,6 +48,9 @@ class AnalyzerCapture : public IAnalyzerProvider {
     int capture_index_ = 0;
     int samples_since_publish_ = 0;
 
+    static constexpr int SLOT_FREE = -1;
+    static constexpr int SLOT_RESERVED = -2;
+
     // Mutex-protected snapshots
     mutable std::mutex mutex_;
     std::array<float, ANALYZER_FFT_SIZE> snapshot_input_{};
@@ -56,7 +59,8 @@ class AnalyzerCapture : public IAnalyzerProvider {
 
     // Per-pedal analyzer captures
     struct PedalCapture {
-        std::atomic<int> node_id_{-1};
+        std::atomic<int> node_id_{SLOT_FREE};
+        std::atomic<uint32_t> active_writers_{0};
         std::array<float, ANALYZER_FFT_SIZE> capture_input_{};
         std::array<float, ANALYZER_FFT_SIZE> capture_output_{};
         std::atomic<int> capture_index_{0};
