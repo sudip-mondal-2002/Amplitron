@@ -2,6 +2,7 @@
 
 #include <imgui.h>
 
+#include "audio/dsp/spectrum_analyzer.h"
 #include "audio/effects/core/effect.h"
 #include "common.h"
 
@@ -29,6 +30,7 @@ class PedalWidget {
      * @param index  Position in the signal chain (used for ImGui IDs).
      */
     PedalWidget(IAudioEngine& engine, std::shared_ptr<Effect> effect, int index);
+    ~PedalWidget();
 
     /**
      * @brief Render the pedal widget for one frame.
@@ -74,6 +76,7 @@ class PedalWidget {
     void render_footswitch_and_extras(ImDrawList* dl, ImVec2 p0, ImVec2 p1, float pedal_width,
                                       float pedal_height, bool is_amp, bool enabled,
                                       bool& should_remove, float zoom);
+    void render_spectrum_overlay(ImDrawList* dl, ImVec2 pedal_pos, float pedal_width, float zoom);
 
     IAudioEngine& engine_;
     std::shared_ptr<Effect> effect_;
@@ -92,6 +95,12 @@ class PedalWidget {
 
     ImVec4 pedal_color_;  ///< Pedal body color derived from effect type.
     ImVec4 led_color_;    ///< LED / accent color derived from effect type.
+
+    bool analyzer_open_ = false;
+    SpectrumAnalyzer spectrum_analyzer_;
+    uint64_t analyzer_last_sequence_ = 0;
+    std::array<float, SpectrumAnalyzer::FFT_SIZE> analyzer_input_buf_{};
+    std::array<float, SpectrumAnalyzer::FFT_SIZE> analyzer_output_buf_{};
 
     /** @brief Look up pedal_color_ and led_color_ from the theme table. */
     void assign_colors();

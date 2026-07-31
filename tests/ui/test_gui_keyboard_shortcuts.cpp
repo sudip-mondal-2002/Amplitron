@@ -97,3 +97,9 @@ TEST_F(PresetTest, gui_keyboard_shortcuts_click_close_button) {
     // The show flag should now be set to false after clicking Close
     ASSERT_FALSE(show);
 }
+
+TEST_F(PresetTest, gui_keyboard_shortcuts_render_default_forwarding) {
+    ScopedImGuiContext imgui;
+    GuiKeyboardShortcuts gks;
+    gks.render();
+}

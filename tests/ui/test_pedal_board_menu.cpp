@@ -5,20 +5,20 @@
 #include "audio/effects/amp_cab/amp_simulator.h"
 #include "audio/effects/distortion/overdrive.h"
 #include "gui/commands/command_history.h"
+#include "test_fixtures.h"
+#include "test_framework.h"
 #define private public
 #include "gui/pedalboard/pedal_board.h"
 #include "gui/pedalboard/pedal_widget.h"
 #undef private
 #include "gui/views/gui_midi.h"
 #include "midi/midi_manager.h"
-#include "test_fixtures.h"
-#include "test_framework.h"
 
 using namespace Amplitron;
 using namespace TestFramework;
 
-static ImGuiID get_item_id(const char *window_substr, const char *item_id_str) {
-    ImGuiContext &g = *GImGui;
+static ImGuiID get_item_id(const char* window_substr, const char* item_id_str) {
+    ImGuiContext& g = *GImGui;
     ImGuiID popup_id = ImGui::GetID(window_substr);
     char popup_window_name[64];
     snprintf(popup_window_name, sizeof(popup_window_name), "##Popup_%08x", popup_id);
@@ -32,10 +32,10 @@ static ImGuiID get_item_id(const char *window_substr, const char *item_id_str) {
     return 0;
 }
 
-static void click_item(const char *window_substr, const char *item_id_str) {
+static void click_item(const char* window_substr, const char* item_id_str) {
     ImGuiID id = get_item_id(window_substr, item_id_str);
     if (id != 0) {
-        ImGuiContext &g = *GImGui;
+        ImGuiContext& g = *GImGui;
         g.NavActivateId = id;
         g.NavActivateDownId = id;
         g.NavActivatePressedId = id;
@@ -244,7 +244,7 @@ TEST_F(PresetTest, test_pedal_board_menu_extended) {
                                                      "+ Signal Splitter Node (1 In -> N-Out)",
                                                      "+ Signal Mixer Node (N-In -> 1 Out)"};
 
-    for (const auto &eff_name : effects_to_add) {
+    for (const auto& eff_name : effects_to_add) {
         ImGui::OpenPopup("AddPedalPopup");
         TestAccessor::render_add_pedal_menu(board);
         advance_test_frame();
@@ -265,7 +265,7 @@ TEST_F(PresetTest, test_pedal_board_menu_extended) {
     const std::vector<std::string> amp_models = {"Clean American", "British Crunch",
                                                  "High Gain Modern", "Jazz Warm"};
 
-    for (const auto &model_name : amp_models) {
+    for (const auto& model_name : amp_models) {
         ImGui::OpenPopup("AmpSelectorPopup");
         TestAccessor::render_amp_selector(board);
         advance_test_frame();

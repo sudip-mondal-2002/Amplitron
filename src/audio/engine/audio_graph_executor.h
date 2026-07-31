@@ -38,6 +38,8 @@ class PassthroughProcessor : public INodeProcessor {
     }
 };
 
+class AnalyzerCapture;
+
 class AudioGraphExecutor {
    public:
     friend class AudioEngine;
@@ -80,7 +82,7 @@ class AudioGraphExecutor {
     // Hot-path processing (Strictly allocation-free and lock-free)
     // Adjust the pedal->process signature if your pedals process strictly in-place
     void process(const float* input, float* output, int num_samples,
-                 DspPerformanceProfiler* profiler = nullptr);
+                 AnalyzerCapture* capture = nullptr, DspPerformanceProfiler* profiler = nullptr);
     void update_mixer_gain(int node_id, int pin_index, float gain);
 
     std::shared_ptr<Effect> get_effect_by_node_id(int node_id) const {
