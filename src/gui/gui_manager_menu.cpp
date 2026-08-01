@@ -285,6 +285,9 @@ void GuiManager::render_menu_bar() {
             }
             if (ImGui::MenuItem("MIDI Settings", nullptr, show_midi_)) {
                 show_midi_ = !show_midi_;
+                if (show_midi_) {
+                    midi_manager_.initialize();
+                }
             }
             if (ImGui::MenuItem("DSP Performance Profiler", nullptr, show_dsp_profiler_)) {
                 show_dsp_profiler_ = !show_dsp_profiler_;
@@ -379,6 +382,9 @@ void GuiManager::render_menu_bar() {
                 }
                 if (ImGui::IsItemClicked()) {
                     show_midi_ = !show_midi_;
+                    if (show_midi_) {
+                        midi_manager_.initialize();
+                    }
                 }
             } else if (it->label == "LIVE") {
                 ImGui::TextColored(Theme::Live(), "%s", it->label.c_str());

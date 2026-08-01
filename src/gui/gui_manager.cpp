@@ -65,7 +65,9 @@ bool GuiManager::initialize(int width, int height) {
     if (midi_manager_.mappings().empty()) {
         midi_manager_.install_default_mappings();
     }
+#ifndef __EMSCRIPTEN__
     midi_manager_.initialize();
+#endif
 
 #ifndef AMPLITRON_NO_DESKTOP_SHELL
     update_checker_.start_check();
