@@ -1,38 +1,331 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Amplitron - Professional Guitar Amp Simulator</title>
-        <meta
-            name="description"
-            content="Amplitron is a professional guitar amp simulator with real-time audio processing, 12 studio-quality effects, amp modeling, and ultra-low latency. Available for Windows, macOS, Linux, and Web."
-        />
-        <link rel="icon" type="image/x-icon" href="favicon.ico" />
-        <link rel="icon" type="image/svg+xml" href="icon.svg" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link
-            href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap"
-            rel="stylesheet"
-        />
-        <link rel="stylesheet" href="styles.css" />
-        <link
-            rel="stylesheet"
-            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
-        />
-        <script src="script.js"></script>
-    </head>
-    <body>
-        <!-- Sticky navbar -->
-        <nav id="navbar">
-            <div class="nav-logo">AMPLITRON</div>
-            <button class="hamburger" id="hamburger">☰</button>
-            <div class="nav-links" id="navLinks">
-                <a href="#features">Features</a>
-                <a href="#downloads">Downloads</a>
-                <a href="#requirements">Requirements</a>
-                <a href="#contact">Contact</a>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amplitron - Professional Guitar Amp Simulator</title>
+    <meta name="description" content="Amplitron is a professional guitar amp simulator with real-time audio processing, 12 studio-quality effects, amp modeling, and ultra-low latency. Available for Windows, macOS, Linux, and Web.">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <style>
+    html {
+        scroll-padding-top: 96px;
+}    
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --gold: #c8a84a;
+            --gold-hot: #e6c76a;
+            --brown-dark: #1c1a18;
+            --brown-mid: #2a2620;
+            --brown-light: #3d3832;
+            --text-primary: #e8e6e3;
+            --text-dim: #a8a6a3;
+            --green-live: #7fff7f;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, var(--brown-dark) 0%, var(--brown-mid) 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 60px 20px 40px;
+            background: linear-gradient(180deg, rgba(200, 168, 74, 0.1) 0%, transparent 100%);
+        }
+
+        .header-icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 20px;
+            filter: drop-shadow(0 4px 16px rgba(200, 168, 74, 0.3));
+        }
+
+        .header-icon img {
+            width: 100%;
+            height: 100%;
+        }
+
+        .logo {
+            font-size: 4rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-hot) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            letter-spacing: -2px;
+        }
+
+        .tagline {
+            font-size: 1.5rem;
+            color: var(--text-dim);
+            margin-bottom: 30px;
+        }
+
+        .hero {
+            background: var(--brown-light);
+            border-radius: 16px;
+            padding: 40px;
+            margin: 40px 0;
+            border: 2px solid rgba(200, 168, 74, 0.2);
+        }
+
+        .hero h2 {
+            color: var(--gold);
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin: 40px 0;
+        }
+
+        .feature-card {
+            background: var(--brown-light);
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid rgba(200, 168, 74, 0.15);
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--gold);
+        }
+
+        .feature-card h3 {
+            color: var(--gold);
+            margin-bottom: 12px;
+            font-size: 1.3rem;
+        }
+
+        .feature-card p {
+            color: var(--text-dim);
+            font-size: 0.95rem;
+        }
+
+        .downloads {
+            margin: 60px 0;
+        }
+
+        .downloads h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 40px;
+            color: var(--gold);
+        }
+
+        .download-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .download-card {
+            background: var(--brown-light);
+            padding: 40px;
+            border-radius: 16px;
+            text-align: center;
+            border: 2px solid rgba(200, 168, 74, 0.2);
+            transition: all 0.3s;
+        }
+
+        .download-card:hover {
+            border-color: var(--gold);
+            box-shadow: 0 8px 24px rgba(200, 168, 74, 0.2);
+        }
+
+        .platform-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .download-card h3 {
+            color: var(--text-primary);
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+
+        .download-card .version {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+
+        .download-btn {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-hot) 100%);
+            color: var(--brown-dark);
+            padding: 16px 40px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1.1rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(200, 168, 74, 0.4);
+        }
+
+        .requirements {
+            background: var(--brown-mid);
+            padding: 30px;
+            border-radius: 12px;
+            margin: 40px 0;
+            border-left: 4px solid var(--gold);
+        }
+
+        .requirements h3 {
+            color: var(--gold);
+            margin-bottom: 15px;
+        }
+
+        .requirements ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .requirements li {
+            padding: 8px 0;
+            color: var(--text-dim);
+            padding-left: 24px;
+            position: relative;
+        }
+
+        .requirements li:before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: var(--gold);
+        }
+
+        .installation {
+            margin: 60px 0;
+        }
+
+        .installation h2 {
+            color: var(--gold);
+            font-size: 2rem;
+            margin-bottom: 30px;
+        }
+
+        .install-steps {
+            background: var(--brown-light);
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .install-steps h4 {
+            color: var(--gold-hot);
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .install-steps ol {
+            padding-left: 20px;
+        }
+
+        .install-steps li {
+            margin: 10px 0;
+            color: var(--text-dim);
+        }
+
+        .install-steps code {
+            background: var(--brown-dark);
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: var(--green-live);
+            font-family: 'Courier New', monospace;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            margin-top: 80px;
+            border-top: 1px solid rgba(200, 168, 74, 0.2);
+        }
+
+        footer p {
+            color: var(--text-dim);
+            margin: 10px 0;
+        }
+
+        footer a {
+            color: var(--gold);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            color: var(--gold-hot);
+            text-decoration: underline;
+        }
+
+        .badge {
+            display: inline-block;
+            background: rgba(127, 255, 127, 0.1);
+            color: var(--green-live);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .logo {
+                font-size: 2.5rem;
+            }
+
+            .tagline {
+                font-size: 1.2rem;
+            }
+
+            .hero {
+                padding: 30px 20px;
+            }
+
+            .download-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+    <script>
+        !function(t,e){var o,n,p,r;e.__SV||(window.posthog && window.posthog.__loaded)||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="ci init Pi Ci ft Oi Fi ki capture calculateEventProperties Ui register register_once register_for_session unregister unregister_for_session Bi getFeatureFlag getFeatureFlagPayload getFeatureFlagResult isFeatureEnabled reloadFeatureFlags updateFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSurveysLoaded onSessionId getSurveys getActiveMatchingSurveys renderSurvey displaySurvey cancelPendingSurvey canRenderSurvey canRenderSurveyAsync identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException startExceptionAutocapture stopExceptionAutocapture loadToolbar get_property getSessionProperty ji Di createPersonProfile setInternalOrTestUser zi Ti Hi opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing get_explicit_consent_status is_capturing clear_opt_in_out_capturing Ai debug bt Ni getPageViewId captureTraceFeedback captureTraceMetric Ei".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+        posthog.init('phc_ecTrgEi1Wfx1rgTVwSZxCWt9swjuWiKaXAYssHhHLNr', {
+            api_host: 'https://t.amplitron.sudipmondal.co.in',
+            ui_host: 'https://us.posthog.com',
+            person_profiles: 'identified_only',
+        })
+    </script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-icon">
+                <img src="icon.svg" alt="Amplitron">
             </div>
         </nav>
 
