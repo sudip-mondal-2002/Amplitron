@@ -931,8 +931,6 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${CMAKE_SOURCE_DIR}/external/RTNeural
     )
 
-    ${clap_SOURCE_DIR}/include)
-
     if(WITH_JACK AND UNIX AND NOT APPLE AND JACK_INCLUDE_DIRS)
         target_include_directories(amplitron-tests PRIVATE ${JACK_INCLUDE_DIRS})
     endif()
