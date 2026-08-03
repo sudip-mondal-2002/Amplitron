@@ -8,130 +8,140 @@
 
 namespace Amplitron {
 
-void PedalWidget::render_amp_cabinet(ImDrawList* dl, ImVec2 p0, ImVec2 p1, float pedal_width,
-                                     float pedal_height, float zoom) {
-    (void)pedal_height;
-    ImU32 cab_body = IM_COL32(30, 22, 16, 255);
-    ImU32 cab_border = IM_COL32(90, 70, 40, 255);
-    ImU32 cab_grille = IM_COL32(18, 14, 10, 255);
-    ImU32 cab_grille_line = IM_COL32(38, 30, 22, 180);
+void PedalWidget::render_amp_cabinet(ImDrawList* dl, ImVec2 p0, ImVec2 p1,
+                                     float pedal_width, float pedal_height,
+                                     float zoom) {
+  (void)pedal_height;
+  ImU32 cab_body = IM_COL32(30, 22, 16, 255);
+  ImU32 cab_border = IM_COL32(90, 70, 40, 255);
+  ImU32 cab_grille = IM_COL32(18, 14, 10, 255);
+  ImU32 cab_grille_line = IM_COL32(38, 30, 22, 180);
 
-    dl->AddRectFilled(p0, p1, cab_body, Theme::ROUNDING_MD * zoom);
-    dl->AddRect(p0, p1, cab_border, Theme::ROUNDING_MD * zoom, 0, 2.5f * zoom);
+  dl->AddRectFilled(p0, p1, cab_body, Theme::ROUNDING_MD * zoom);
+  dl->AddRect(p0, p1, cab_border, Theme::ROUNDING_MD * zoom, 0, 2.5f * zoom);
 
-    dl->AddRectFilled(ImVec2(p0.x + 6 * zoom, p0.y + 6 * zoom),
-                      ImVec2(p1.x - 6 * zoom, p0.y + 10 * zoom), Theme::ACCENT_GOLD_DIM,
-                      2.0f * zoom);
+  dl->AddRectFilled(ImVec2(p0.x + 6 * zoom, p0.y + 6 * zoom),
+                    ImVec2(p1.x - 6 * zoom, p0.y + 10 * zoom),
+                    Theme::ACCENT_GOLD_DIM, 2.0f * zoom);
 
-    ImVec2 plate_p0 = ImVec2(p0.x + 8 * zoom, p0.y + 14 * zoom);
-    ImVec2 plate_p1 = ImVec2(p1.x - 8 * zoom, p0.y + 50 * zoom);
-    dl->AddRectFilled(plate_p0, plate_p1, IM_COL32(46, 38, 28, 220), Theme::ROUNDING_SM * zoom);
-    dl->AddRect(plate_p0, plate_p1, IM_COL32(70, 58, 38, 180), Theme::ROUNDING_SM * zoom, 0,
+  ImVec2 plate_p0 = ImVec2(p0.x + 8 * zoom, p0.y + 14 * zoom);
+  ImVec2 plate_p1 = ImVec2(p1.x - 8 * zoom, p0.y + 50 * zoom);
+  dl->AddRectFilled(plate_p0, plate_p1, IM_COL32(46, 38, 28, 220),
+                    Theme::ROUNDING_SM * zoom);
+  dl->AddRect(plate_p0, plate_p1, IM_COL32(70, 58, 38, 180),
+              Theme::ROUNDING_SM * zoom, 0, 1.0f * zoom);
+
+  ImGui::SetCursorScreenPos(ImVec2(p0.x + 12 * zoom, p0.y + 18 * zoom));
+  ImGui::PushStyleColor(ImGuiCol_Text, Theme::Gold());
+  ImGui::Text("AMP");
+  ImGui::PopStyleColor();
+
+  int model_idx = static_cast<int>(effect_->params()[0].value);
+  const auto& models = get_amp_models();
+  const char* model_name = "Unknown";
+  if (model_idx >= 0 && model_idx < static_cast<int>(models.size())) {
+    model_name = models[model_idx].name;
+  }
+  ImVec2 mn_size = ImGui::CalcTextSize(model_name);
+  float mn_x = p0.x + (pedal_width - mn_size.x) * 0.5f;
+  ImGui::SetCursorScreenPos(ImVec2(mn_x, p0.y + 33 * zoom));
+  ImGui::PushStyleColor(ImGuiCol_Text, Theme::TextPrimary());
+  ImGui::Text("%s", model_name);
+  ImGui::PopStyleColor();
+
+  float led_x = p1.x - 22 * zoom;
+  float led_y = p0.y + 26 * zoom;
+  dl->AddCircleFilled(ImVec2(led_x, led_y), 5 * zoom, Theme::LED_GREEN);
+  dl->AddCircleFilled(ImVec2(led_x, led_y), 8 * zoom,
+                      Theme::LED_GREEN_GLOW & 0x30FFFFFF);
+
+  float grille_top = p1.y - 100 * zoom;
+  float grille_bottom = p1.y - 12 * zoom;
+  float grille_left = p0.x + 12 * zoom;
+  float grille_right = p1.x - 12 * zoom;
+
+  dl->AddRectFilled(ImVec2(grille_left, grille_top),
+                    ImVec2(grille_right, grille_bottom), cab_grille,
+                    Theme::ROUNDING_SM * zoom);
+  dl->AddRect(ImVec2(grille_left, grille_top),
+              ImVec2(grille_right, grille_bottom), IM_COL32(50, 40, 28, 180),
+              Theme::ROUNDING_SM * zoom, 0, 1.0f * zoom);
+
+  for (float gy = grille_top + 6 * zoom; gy < grille_bottom - 4 * zoom;
+       gy += 5.0f * zoom) {
+    dl->AddLine(ImVec2(grille_left + 4 * zoom, gy),
+                ImVec2(grille_right - 4 * zoom, gy), cab_grille_line,
                 1.0f * zoom);
+  }
 
-    ImGui::SetCursorScreenPos(ImVec2(p0.x + 12 * zoom, p0.y + 18 * zoom));
-    ImGui::PushStyleColor(ImGuiCol_Text, Theme::Gold());
-    ImGui::Text("AMP");
-    ImGui::PopStyleColor();
-
-    int model_idx = static_cast<int>(effect_->params()[0].value);
-    const auto& models = get_amp_models();
-    const char* model_name = "Unknown";
-    if (model_idx >= 0 && model_idx < static_cast<int>(models.size())) {
-        model_name = models[model_idx].name;
-    }
-    ImVec2 mn_size = ImGui::CalcTextSize(model_name);
-    float mn_x = p0.x + (pedal_width - mn_size.x) * 0.5f;
-    ImGui::SetCursorScreenPos(ImVec2(mn_x, p0.y + 33 * zoom));
-    ImGui::PushStyleColor(ImGuiCol_Text, Theme::TextPrimary());
-    ImGui::Text("%s", model_name);
-    ImGui::PopStyleColor();
-
-    float led_x = p1.x - 22 * zoom;
-    float led_y = p0.y + 26 * zoom;
-    dl->AddCircleFilled(ImVec2(led_x, led_y), 5 * zoom, Theme::LED_GREEN);
-    dl->AddCircleFilled(ImVec2(led_x, led_y), 8 * zoom, Theme::LED_GREEN_GLOW & 0x30FFFFFF);
-
-    float grille_top = p1.y - 100 * zoom;
-    float grille_bottom = p1.y - 12 * zoom;
-    float grille_left = p0.x + 12 * zoom;
-    float grille_right = p1.x - 12 * zoom;
-
-    dl->AddRectFilled(ImVec2(grille_left, grille_top), ImVec2(grille_right, grille_bottom),
-                      cab_grille, Theme::ROUNDING_SM * zoom);
-    dl->AddRect(ImVec2(grille_left, grille_top), ImVec2(grille_right, grille_bottom),
-                IM_COL32(50, 40, 28, 180), Theme::ROUNDING_SM * zoom, 0, 1.0f * zoom);
-
-    for (float gy = grille_top + 6 * zoom; gy < grille_bottom - 4 * zoom; gy += 5.0f * zoom) {
-        dl->AddLine(ImVec2(grille_left + 4 * zoom, gy), ImVec2(grille_right - 4 * zoom, gy),
-                    cab_grille_line, 1.0f * zoom);
-    }
-
-    dl->AddRectFilled(ImVec2(p0.x + 6 * zoom, p1.y - 10 * zoom),
-                      ImVec2(p1.x - 6 * zoom, p1.y - 6 * zoom), Theme::ACCENT_GOLD_DIM,
-                      2.0f * zoom);
+  dl->AddRectFilled(ImVec2(p0.x + 6 * zoom, p1.y - 10 * zoom),
+                    ImVec2(p1.x - 6 * zoom, p1.y - 6 * zoom),
+                    Theme::ACCENT_GOLD_DIM, 2.0f * zoom);
 }
 
-void PedalWidget::render_nam_loader_display(ImVec2 p0, float pedal_width, float zoom) {
-    auto* nam = dynamic_cast<NamLoader*>(effect_.get());
-    if (!nam) return;
+void PedalWidget::render_nam_loader_display(ImVec2 p0, float pedal_width,
+                                            float zoom) {
+  auto* nam = dynamic_cast<NamLoader*>(effect_.get());
+  if (!nam) return;
 
-    // Collect deferred old-model garbage once per frame on the GUI thread.
-    // This makes model_path() a pure, side-effect-free accessor.
-    nam->collect_garbage();
+  // Collect deferred old-model garbage once per frame on the GUI thread.
+  // This makes model_path() a pure, side-effect-free accessor.
+  nam->collect_garbage();
 
-    // --- Poll for a file asynchronously uploaded (web / Emscripten only) ---
-    // On native builds poll_uploaded_file_path() always returns "" immediately,
-    // so this block is a no-op outside of the web build.
-    {
-        std::string pending = poll_uploaded_file_path();
-        if (!pending.empty()) {
-            nam->load_model(pending);
-        }
+  // --- Poll for a file asynchronously uploaded (web / Emscripten only) ---
+  // On native builds poll_uploaded_file_path() always returns "" immediately,
+  // so this block is a no-op outside of the web build.
+  {
+    std::string pending = poll_uploaded_file_path();
+    if (!pending.empty()) {
+      nam->load_model(pending);
     }
+  }
 
-    float btn_w = pedal_width - 30 * zoom;
-    ImGui::SetCursorScreenPos(ImVec2(p0.x + 15 * zoom, p0.y + 50 * zoom));
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.10f, 0.25f, 0.15f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.15f, 0.40f, 0.20f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.20f, 0.55f, 0.25f, 1.0f));
+  float btn_w = pedal_width - 30 * zoom;
+  ImGui::SetCursorScreenPos(ImVec2(p0.x + 15 * zoom, p0.y + 50 * zoom));
+  ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.10f, 0.25f, 0.15f, 1.0f));
+  ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
+                        ImVec4(0.15f, 0.40f, 0.20f, 1.0f));
+  ImGui::PushStyleColor(ImGuiCol_ButtonActive,
+                        ImVec4(0.20f, 0.55f, 0.25f, 1.0f));
 
-    char load_id[64];
-    snprintf(load_id, sizeof(load_id), "Load .nam##nam_load_%d", index_);
+  char load_id[64];
+  snprintf(load_id, sizeof(load_id), "Load .nam##nam_load_%d", index_);
 
-    if (ImGui::Button(load_id, ImVec2(btn_w, 22 * zoom))) {
-        // On native: show_open_dialog opens a blocking native file picker and
-        // returns the chosen path synchronously.
-        // On web: show_open_dialog triggers the browser file input and returns
-        // "".  The JS FileReader callback writes the file into Emscripten FS
-        // and calls amplitron_on_file_uploaded(), which sets the pending path.
-        // The per-frame poll above picks it up on the next rendered frame.
-        std::string path = show_open_dialog("Load NAM Model", "NAM Model", "nam");
-        if (!path.empty()) {
-            nam->load_model(path);
-        }
+  if (ImGui::Button(load_id, ImVec2(btn_w, 22 * zoom))) {
+    // On native: show_open_dialog opens a blocking native file picker and
+    // returns the chosen path synchronously.
+    // On web: show_open_dialog triggers the browser file input and returns
+    // "".  The JS FileReader callback writes the file into Emscripten FS
+    // and calls amplitron_on_file_uploaded(), which sets the pending path.
+    // The per-frame poll above picks it up on the next rendered frame.
+    std::string path = show_open_dialog("Load NAM Model", "NAM Model", "nam");
+    if (!path.empty()) {
+      nam->load_model(path);
     }
-    ImGui::PopStyleColor(3);
+  }
+  ImGui::PopStyleColor(3);
 
-    float display_y = p0.y + 78 * zoom;
-    if (!nam->model_path().empty()) {
-        std::string model_name = nam->model_path();
-        size_t slash = model_name.find_last_of("/\\");
-        if (slash != std::string::npos) model_name = model_name.substr(slash + 1);
-        if (model_name.size() > 20) model_name = model_name.substr(0, 17) + "...";
+  float display_y = p0.y + 78 * zoom;
+  if (!nam->model_path().empty()) {
+    std::string model_name = nam->model_path();
+    size_t slash = model_name.find_last_of("/\\");
+    if (slash != std::string::npos) model_name = model_name.substr(slash + 1);
+    if (model_name.size() > 20) model_name = model_name.substr(0, 17) + "...";
 
-        ImVec2 name_size = ImGui::CalcTextSize(model_name.c_str());
-        float cx = p0.x + pedal_width * 0.5f;
-        ImGui::SetCursorScreenPos(ImVec2(cx - name_size.x * 0.5f, display_y));
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.80f, 0.40f, 1.0f));
-        ImGui::TextUnformatted(model_name.c_str());
-        ImGui::PopStyleColor();
-    } else {
-        ImGui::SetCursorScreenPos(ImVec2(p0.x + 15 * zoom, display_y));
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
-        ImGui::TextUnformatted("No model loaded");
-        ImGui::PopStyleColor();
-    }
+    ImVec2 name_size = ImGui::CalcTextSize(model_name.c_str());
+    float cx = p0.x + pedal_width * 0.5f;
+    ImGui::SetCursorScreenPos(ImVec2(cx - name_size.x * 0.5f, display_y));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.80f, 0.40f, 1.0f));
+    ImGui::TextUnformatted(model_name.c_str());
+    ImGui::PopStyleColor();
+  } else {
+    ImGui::SetCursorScreenPos(ImVec2(p0.x + 15 * zoom, display_y));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
+    ImGui::TextUnformatted("No model loaded");
+    ImGui::PopStyleColor();
+  }
 }
 
 }  // namespace Amplitron
