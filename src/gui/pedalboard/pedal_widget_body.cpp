@@ -76,6 +76,16 @@ void PedalWidget::render_nam_loader_display(ImVec2 p0, float pedal_width, float 
     auto* nam = dynamic_cast<NamLoader*>(effect_.get());
     if (!nam) return;
 
+    // --- Poll for a file asynchronously uploaded (web / Emscripten only) ---
+    // On native builds poll_uploaded_file_path() always returns "" immediately,
+    // so this block is a no-op outside of the web build.
+    {
+        std::string pending = poll_uploaded_file_path();
+        if (!pending.empty()) {
+            nam->load_model(pending);
+        }
+    }
+
     float btn_w = pedal_width - 30 * zoom;
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 15 * zoom, p0.y + 50 * zoom));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.10f, 0.25f, 0.15f, 1.0f));
@@ -86,6 +96,12 @@ void PedalWidget::render_nam_loader_display(ImVec2 p0, float pedal_width, float 
     snprintf(load_id, sizeof(load_id), "Load .nam##nam_load_%d", index_);
 
     if (ImGui::Button(load_id, ImVec2(btn_w, 22 * zoom))) {
+        // On native: show_open_dialog opens a blocking native file picker and
+        // returns the chosen path synchronously.
+        // On web: show_open_dialog triggers the browser file input and returns
+        // "".  The JS FileReader callback writes the file into Emscripten FS
+        // and calls amplitron_on_file_uploaded(), which sets the pending path.
+        // The per-frame poll above picks it up on the next rendered frame.
         std::string path = show_open_dialog("Load NAM Model", "NAM Model", "nam");
         if (!path.empty()) {
             nam->load_model(path);
