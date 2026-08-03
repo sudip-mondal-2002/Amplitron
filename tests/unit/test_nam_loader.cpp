@@ -428,7 +428,7 @@ TEST(nam_loader_load_empty_json_fails_gracefully) {
     const std::string empty_json = "./empty_model_test_tmp.json";
     {
         std::ofstream f(empty_json);
-        ASSERT_TRUE(f.is_open()) << "Failed to open temp file: " << empty_json;
+        ASSERT_TRUE(f.is_open());
         f << "{}";
     }
     NamLoader nl;
