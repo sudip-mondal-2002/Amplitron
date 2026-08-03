@@ -76,6 +76,10 @@ void PedalWidget::render_nam_loader_display(ImVec2 p0, float pedal_width, float 
     auto* nam = dynamic_cast<NamLoader*>(effect_.get());
     if (!nam) return;
 
+    // Collect deferred old-model garbage once per frame on the GUI thread.
+    // This makes model_path() a pure, side-effect-free accessor.
+    nam->collect_garbage();
+
     // --- Poll for a file asynchronously uploaded (web / Emscripten only) ---
     // On native builds poll_uploaded_file_path() always returns "" immediately,
     // so this block is a no-op outside of the web build.

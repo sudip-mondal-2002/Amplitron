@@ -208,6 +208,9 @@ TEST_F(PresetTest, pedal_widget_body_nam_display_long_name_truncated) {
 
     auto nam = std::make_shared<NamLoader>();
     bool ok = nam->load_model(long_name);
+    // Assert load succeeded before removing the temp file so a silent failure
+    // cannot cause the test to exercise the "No model loaded" branch.
+    ASSERT_TRUE(ok);
     // Clean up the temp file regardless of load result
     std::remove(long_name.c_str());
 

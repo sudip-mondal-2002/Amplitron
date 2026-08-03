@@ -35,19 +35,19 @@ NamLoader::~NamLoader() {
 }
 
 bool NamLoader::load_model(const std::string& path) {
-    // Sweep old models on GUI thread (thread-safe, lock-free GC)
-    auto* to_delete = old_model_to_delete_.exchange(nullptr, std::memory_order_acquire);
-    delete to_delete;
+    // Sweep any deferred old-model garbage accumulated since the last load.
+    collect_garbage();
 
     std::ifstream f(path);
     if (!f.good()) {
-        clear_model();
+        // Do NOT call clear_model() — a failed open must leave any
+        // previously loaded model active and unchanged.
         return false;
     }
     try {
         auto temp_model = RTNeural::json_parser::parseJson<float>(f);
         if (!temp_model) {
-            clear_model();
+            // Parse returned null — leave prior model intact.
             return false;
         }
         temp_model->reset();
@@ -60,7 +60,7 @@ bool NamLoader::load_model(const std::string& path) {
         clear_pending_.store(false, std::memory_order_release);
         return true;
     } catch (...) {
-        clear_model();
+        // Parse threw — leave prior model intact.
         return false;
     }
 }
@@ -76,10 +76,14 @@ void NamLoader::clear_model() {
 }
 
 const std::string& NamLoader::model_path() const {
-    // Sweep old models on GUI thread
+    // Pure accessor — no side effects.  Callers responsible for GC via
+    // collect_garbage() (load_model calls it; GUI calls it once per frame).
+    return model_path_;
+}
+
+void NamLoader::collect_garbage() {
     auto* to_delete = old_model_to_delete_.exchange(nullptr, std::memory_order_acquire);
     delete to_delete;
-    return model_path_;
 }
 
 void NamLoader::process(float* buffer, int num_samples) {

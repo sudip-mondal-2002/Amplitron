@@ -46,8 +46,14 @@ class NamLoader : public Effect {
     bool load_model(const std::string& path);
     /** Clears the loaded model. */
     void clear_model();
-    /** Returns the path of the currently loaded .nam file. */
+    /** Returns the path of the currently loaded .nam file (side-effect-free). */
     const std::string& model_path() const;
+    /**
+     * Collects deferred old-model garbage on the GUI/caller thread.
+     * Call once per frame from any GUI path that reads model state so
+     * old RTNeural models are freed without relying on model_path().
+     */
+    void collect_garbage();
 
    private:
     std::vector<EffectParam> params_;

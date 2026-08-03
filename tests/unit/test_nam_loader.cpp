@@ -1,5 +1,9 @@
+#include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
+#include <fstream>
+#include <string>
 #include <thread>
 
 #include "audio/effects/nam_loader.h"
@@ -350,8 +354,9 @@ TEST(nam_loader_destructor_with_old_model_to_delete) {
 // ---- model_path() GC sweep ----
 
 TEST(nam_loader_model_path_sweeps_old_models) {
-    // model_path() exchanges old_model_to_delete_; this exercises the
-    // deferred GC in the const accessor.
+    // collect_garbage() exchanges old_model_to_delete_; this exercises the
+    // deferred GC path on the GUI thread without relying on model_path() side
+    // effects.
     NamLoader nl;
     nl.set_sample_rate(48000);
 
@@ -362,7 +367,8 @@ TEST(nam_loader_model_path_sweeps_old_models) {
     ASSERT_TRUE(nl.load_model("../tests/assets/rtneural_test_model.json"));
     nl.process(buf, 8);  // active = model_2, old_to_delete = model_1
 
-    // model_path() should exchange and delete model_1.
+    // Explicit GC sweep (formerly done as a side effect of model_path()).
+    nl.collect_garbage();
     ASSERT_FALSE(nl.model_path().empty());
 }
 
@@ -417,9 +423,12 @@ TEST(nam_loader_clear_without_active_model_then_process_does_not_delete) {
 }
 
 TEST(nam_loader_load_empty_json_fails_gracefully) {
-    const std::string empty_json = "../tests/assets/empty_model.json";
+    // Write an empty JSON object to a temp file in the build dir (not the
+    // source tree) so the test is self-contained.
+    const std::string empty_json = "./empty_model_test_tmp.json";
     {
         std::ofstream f(empty_json);
+        ASSERT_TRUE(f.is_open()) << "Failed to open temp file: " << empty_json;
         f << "{}";
     }
     NamLoader nl;
@@ -427,4 +436,22 @@ TEST(nam_loader_load_empty_json_fails_gracefully) {
     bool ok = nl.load_model(empty_json);
     std::remove(empty_json.c_str());
     ASSERT_FALSE(ok);
+}
+
+// ---- Failed replacement retains prior model ----
+
+TEST(nam_loader_failed_replacement_retains_prior_model) {
+    // A failed load_model() must NOT clear the previously loaded model.
+    // This verifies the behaviour introduced by removing clear_model() from
+    // the file-open / parse-null / exception failure paths.
+    NamLoader nl;
+    nl.set_sample_rate(48000);
+    ASSERT_TRUE(nl.load_model("../tests/assets/rtneural_test_model.json"));
+
+    // Attempt to replace with an invalid path.
+    bool ok = nl.load_model("/nonexistent/path/model.nam");
+    ASSERT_FALSE(ok);
+
+    // Prior model path must be unchanged.
+    ASSERT_EQ(nl.model_path(), std::string("../tests/assets/rtneural_test_model.json"));
 }
