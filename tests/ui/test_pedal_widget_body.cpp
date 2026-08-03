@@ -11,9 +11,6 @@
 #include <memory>
 #include <string>
 
-#define private public
-#include "gui/pedalboard/pedal_widget.h"
-#undef private
 
 #include "audio/effects/amp_cab/amp_simulator.h"
 #include "audio/effects/nam_loader.h"
