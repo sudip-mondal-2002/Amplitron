@@ -152,6 +152,11 @@ class IAnalyzerProvider {
     virtual uint64_t get_analyzer_sequence() const = 0;
     virtual bool copy_analyzer_snapshot(float* input_dest, float* output_dest,
                                         int sample_count) const = 0;
+    virtual bool register_pedal_analyzer(int node_id) = 0;
+    virtual void unregister_pedal_analyzer(int node_id) = 0;
+    virtual uint64_t get_pedal_analyzer_sequence(int node_id) const = 0;
+    virtual bool copy_pedal_analyzer_snapshot(int node_id, float* input_dest, float* output_dest,
+                                              int sample_count) const = 0;
 };
 
 /**

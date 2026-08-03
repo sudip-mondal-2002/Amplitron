@@ -7,6 +7,7 @@
 
 #include "audio/effects/distortion/distortion.h"
 #include "audio/effects/distortion/overdrive.h"
+#include "audio/engine/analyzer_capture.h"
 #include "audio/engine/audio_engine.h"
 #include "test_fixtures.h"
 #include "test_framework.h"
@@ -542,4 +543,112 @@ TEST_F(AudioEngineTest, ProcessAudioResizesInternalBuffersWhenFrameCountExceedsC
     // Check that the internal buffers resized accordingly
     ASSERT_GE(engine.test_process_buffer().size(), static_cast<size_t>(large_frame_count));
     ASSERT_GE(engine.test_process_buffer_right().size(), static_cast<size_t>(large_frame_count));
+}
+
+TEST_F(AudioEngineTest, GetterTestCoverage) {
+    ASSERT_EQ(engine.test_process_buffer().size(), 16384u);
+    ASSERT_EQ(engine.test_process_buffer_right().size(), 16384u);
+    ASSERT_NEAR(engine.test_process_buffer()[0], 0.0f, 1e-6f);
+    ASSERT_NEAR(engine.test_process_buffer_right()[0], 0.0f, 1e-6f);
+    ASSERT_NE(engine.test_audio_shadow_executor(), nullptr);
+    ASSERT_TRUE(engine.test_audio_shadow_executor()->test_execution_plan().empty());
+}
+
+TEST(AnalyzerCapturePedalRegistration) {
+    AnalyzerCapture capture;
+    // Enabled by default is false
+    ASSERT_FALSE(capture.is_analyzer_enabled());
+
+    // Register first 4 slots successfully
+    ASSERT_TRUE(capture.register_pedal_analyzer(10));
+    ASSERT_TRUE(capture.register_pedal_analyzer(20));
+    ASSERT_TRUE(capture.register_pedal_analyzer(30));
+    ASSERT_TRUE(capture.register_pedal_analyzer(40));
+
+    // 5th should fail
+    ASSERT_FALSE(capture.register_pedal_analyzer(50));
+
+    // Duplicate registrations should return true/succeed immediately
+    ASSERT_TRUE(capture.register_pedal_analyzer(10));
+    ASSERT_TRUE(capture.register_pedal_analyzer(30));
+
+    // Register with negative node ID should fail
+    ASSERT_FALSE(capture.register_pedal_analyzer(-1));
+    ASSERT_FALSE(capture.register_pedal_analyzer(-99));
+
+    // Unregister invalid or unregistered ID has no effect/safe
+    capture.unregister_pedal_analyzer(-5);
+    capture.unregister_pedal_analyzer(999);
+
+    // Unregister active pedal analyzer
+    capture.unregister_pedal_analyzer(20);
+    // Slot 20 is now free, registration should succeed
+    ASSERT_TRUE(capture.register_pedal_analyzer(50));
+}
+
+TEST(AnalyzerCapturePedalPublishAndSnapshot) {
+    AnalyzerCapture capture;
+    // Enable capture
+    capture.set_analyzer_enabled(true);
+    ASSERT_TRUE(capture.is_analyzer_enabled());
+
+    int node_id = 15;
+    ASSERT_TRUE(capture.register_pedal_analyzer(node_id));
+
+    // Initial sequence is 0
+    ASSERT_EQ(capture.get_pedal_analyzer_sequence(node_id), 0u);
+
+    // Attempting snapshot copy when sequence is 0 should fail
+    std::vector<float> input_snap(2048, 0.0f);
+    std::vector<float> output_snap(2048, 0.0f);
+    ASSERT_FALSE(
+        capture.copy_pedal_analyzer_snapshot(node_id, input_snap.data(), output_snap.data(), 1024));
+    ASSERT_FALSE(capture.copy_pedal_analyzer_snapshot(node_id, nullptr, output_snap.data(), 1024));
+    ASSERT_FALSE(capture.copy_pedal_analyzer_snapshot(node_id, input_snap.data(), nullptr, 1024));
+    ASSERT_FALSE(
+        capture.copy_pedal_analyzer_snapshot(node_id, input_snap.data(), output_snap.data(), -5));
+    ASSERT_FALSE(capture.copy_pedal_analyzer_snapshot(999, input_snap.data(), output_snap.data(),
+                                                      1024));  // unregistered
+
+    // Sequence for unregistered node
+    ASSERT_EQ(capture.get_pedal_analyzer_sequence(999), 0u);
+
+    // Feed pedal capture with samples < HOP_SIZE (1024). Should not publish snapshot yet.
+    std::vector<float> input_samples(512, 0.25f);
+    std::vector<float> output_samples(512, 0.75f);
+    capture.capture_pedal(node_id, input_samples.data(), output_samples.data(), 512);
+    ASSERT_EQ(capture.get_pedal_analyzer_sequence(node_id), 0u);
+
+    // Feed another 512 samples. Total is 1024 (>= HOP_SIZE), so it should publish.
+    capture.capture_pedal(node_id, input_samples.data(), output_samples.data(), 512);
+    ASSERT_GT(capture.get_pedal_analyzer_sequence(node_id), 0u);
+
+    // Now copy snapshot should succeed
+    bool success =
+        capture.copy_pedal_analyzer_snapshot(node_id, input_snap.data(), output_snap.data(), 2048);
+    ASSERT_TRUE(success);
+    ASSERT_NEAR(input_snap[1024], 0.25f, 1e-6f);
+    ASSERT_NEAR(output_snap[1024], 0.75f, 1e-6f);
+
+    // Test capture_pedal for unregistered node (no-op)
+    capture.capture_pedal(999, input_samples.data(), output_samples.data(), 512);
+}
+
+TEST_F(AudioEngineTest, AudioEnginePedalAnalyzerWrappers) {
+    engine.set_analyzer_enabled(true);
+    ASSERT_TRUE(engine.is_analyzer_enabled());
+
+    int node_id = 88;
+    ASSERT_TRUE(engine.register_pedal_analyzer(node_id));
+    ASSERT_EQ(engine.get_pedal_analyzer_sequence(node_id), 0u);
+
+    std::vector<float> input_snap(2048, 0.0f);
+    std::vector<float> output_snap(2048, 0.0f);
+    ASSERT_FALSE(
+        engine.copy_pedal_analyzer_snapshot(node_id, input_snap.data(), output_snap.data(), 1024));
+
+    engine.unregister_pedal_analyzer(node_id);
+    // Registration should fail / be cleaned up
+    ASSERT_FALSE(
+        engine.copy_pedal_analyzer_snapshot(node_id, input_snap.data(), output_snap.data(), 1024));
 }

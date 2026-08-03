@@ -22,7 +22,7 @@ jobs:
           persist-credentials: false
 
       - name: Cache apt packages
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         id: apt-cache
         with:
           path: ~/apt-cache
@@ -307,7 +307,7 @@ jobs:
           persist-credentials: false
 
       - name: Cache Emscripten SDK & ports
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         id: emsdk-cache
         with:
           path: |
@@ -379,7 +379,7 @@ jobs:
           path: web-build/
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: "20"
           cache: "npm"
@@ -449,7 +449,7 @@ jobs:
           cache: true
 
       - name: Restore ccache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         continue-on-error: true
         with:
           path: .ccache
@@ -488,6 +488,7 @@ jobs:
           mkdir -p build && cd build
           cmake -G Ninja -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
             -DAMPLITRON_VERSION="${{ steps.version.outputs.version }}" \
+            -DBUILD_CLAP_PLUGIN=ON \
             -DCMAKE_C_FLAGS="$COV_FLAGS" \
             -DCMAKE_CXX_FLAGS="$COV_FLAGS" \
             -DCMAKE_EXE_LINKER_FLAGS="$LINK_FLAGS" \
@@ -496,6 +497,7 @@ jobs:
             -DCMAKE_UNITY_BUILD=ON \
             ..
           ninja -j$NUMBER_OF_PROCESSORS
+          ninja AmplitronCLAP
           ccache -s
 
       - name: Install Smoke Test
@@ -562,6 +564,16 @@ jobs:
         run: |
           mkdir -p staging
           cp build/amplitron.exe staging/Amplitron.exe
+
+          CLAP_FILE=$(find build -name "Amplitron.clap" -type f | head -1)
+          if [ -z "$CLAP_FILE" ]; then
+            echo "Error: Amplitron.clap was not generated"
+            echo "Available build files:"
+            find build -type f
+            exit 1
+          fi
+          cp "$CLAP_FILE" staging/Amplitron.clap
+
           for dll in libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll SDL2.dll; do
             cp /mingw64/bin/$dll staging/ 2>/dev/null || true
           done
@@ -674,7 +686,7 @@ jobs:
 
       - name: Cache SDL2 iOS static library
         id: sdl2-ios-cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/sdl2-ios
           key: sdl2-ios-arm64-2.30.12

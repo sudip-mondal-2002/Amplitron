@@ -218,6 +218,11 @@ class AudioEngine : public IAudioEngine {
      */
     bool copy_analyzer_snapshot(float* input_dest, float* output_dest,
                                 int sample_count) const override;
+    bool register_pedal_analyzer(int node_id) override;
+    void unregister_pedal_analyzer(int node_id) override;
+    uint64_t get_pedal_analyzer_sequence(int node_id) const override;
+    bool copy_pedal_analyzer_snapshot(int node_id, float* input_dest, float* output_dest,
+                                      int sample_count) const override;
 
     /**
      * @brief Set the master input gain (enqueued to audio thread via SPSC queue).

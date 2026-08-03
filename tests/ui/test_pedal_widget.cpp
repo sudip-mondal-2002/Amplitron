@@ -163,3 +163,51 @@ TEST_F(PresetTest, test_pedal_widget_footswitch_click_interaction) {
     ImGui::End();
     engine.shutdown();
 }
+
+TEST_F(PresetTest, test_pedal_widget_analyzer_toggle_and_render) {
+    ScopedImGuiContext imgui;
+    AudioEngine engine;
+    ASSERT_TRUE(engine.initialize());
+
+    auto od = std::make_shared<Overdrive>();
+    PedalWidget widget(engine, od, 0);
+
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2(1024, 768));
+    ImGui::Begin("TestWindow");
+
+    // 1. Initial State: Analyzer should be closed
+    ASSERT_FALSE(widget.analyzer_open_);
+
+    // 2. Set to true and register analyzer manually
+    widget.analyzer_open_ = true;
+    ASSERT_TRUE(engine.register_pedal_analyzer(0));
+
+    // Feed mock data
+    std::vector<float> input_samples(1024, 0.4f);
+    std::vector<float> output_samples(1024, 0.8f);
+    engine.analyzer_capture_->capture_pedal(0, input_samples.data(), output_samples.data(), 1024);
+
+    // Render 1: Should copy snapshot and draw the curves
+    widget.render(1.0f);
+
+    // Render 1.5: Sequence number is now equal, should hit the else decay branch
+    widget.render(1.0f);
+
+    // 3. Set to false and unregister analyzer
+    widget.analyzer_open_ = false;
+    engine.unregister_pedal_analyzer(0);
+
+    // Render 2: Should render standard pedal
+    widget.render(1.0f);
+
+    ImGui::End();
+
+    // 4. Test destructor behavior when analyzer is open
+    {
+        PedalWidget temp_widget(engine, od, 1);
+        temp_widget.analyzer_open_ = true;
+    }
+
+    engine.shutdown();
+}

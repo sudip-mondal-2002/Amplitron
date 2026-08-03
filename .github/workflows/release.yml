@@ -41,6 +41,7 @@ jobs:
           | Platform | File | Type |
           |----------|------|------|
           | **Windows** 10/11 (64-bit) | `Amplitron-Windows-Setup.exe` | Installer |
+          | **CLAP Plugin** Windows x64 | `Amplitron-CLAP-Windows-x64.zip` | DAW Plugin |
           | **macOS** 10.15+ | `Amplitron-macOS.dmg` | Disk Image |
           | **Linux** x64 | `Amplitron-Linux-x64.tar.gz` | Archive |
           | **Android** 8.0+ (arm64 / x86_64) | `Amplitron-Android.apk` | APK (sideload) |
@@ -52,6 +53,11 @@ jobs:
           1. Run `Amplitron-Windows-Setup.exe`
           2. If SmartScreen appears, click **"More info"** → **"Run anyway"**
           3. Follow the setup wizard — creates Start Menu & Desktop shortcuts
+
+          **CLAP Plugin**
+          1. Download `Amplitron-CLAP-Windows-x64.zip`
+          2. Extract `Amplitron.clap`
+          3. Copy it to your CLAP plugin folder or load it through a CLAP-supported DAW
 
           **macOS**
           1. Open `Amplitron-macOS.dmg`, drag Amplitron to Applications
@@ -103,6 +109,44 @@ jobs:
       with:
         tag_name: v${{ needs.create-release.outputs.version }}
         files: Amplitron-Windows-Setup.exe
+
+  package-clap-windows:
+    name: Package CLAP Plugin
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Download Windows Build
+      uses: actions/download-artifact@v8
+      with:
+        name: windows-build
+        path: artifacts/windows
+        run-id: ${{ github.event.workflow_run.id }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Package CLAP Plugin
+      run: |
+        CLAP_FILE=$(find artifacts/windows -name "Amplitron.clap" -type f | head -1)
+
+        if [ -z "$CLAP_FILE" ]; then
+          echo "Error: Amplitron.clap not found in windows-build artifact"
+          echo "Available files:"
+          find artifacts/windows -type f
+          exit 1
+        fi
+
+        mkdir -p Amplitron-CLAP-Windows-x64
+        cp "$CLAP_FILE" Amplitron-CLAP-Windows-x64/Amplitron.clap
+        cp README.md Amplitron-CLAP-Windows-x64/ || true
+        zip -r Amplitron-CLAP-Windows-x64.zip Amplitron-CLAP-Windows-x64
+        ls -lh Amplitron-CLAP-Windows-x64.zip
+
+    - name: Upload to Release
+      uses: softprops/action-gh-release@v3
+      with:
+        tag_name: v${{ needs.create-release.outputs.version }}
+        files: Amplitron-CLAP-Windows-x64.zip
 
   package-macos:
     name: Package macOS DMG
@@ -330,7 +374,7 @@ jobs:
 
   deploy-website:
     name: Deploy Download Page + Web Demo
-    needs: [create-release, package-windows, package-macos, package-linux, package-android, package-ios]
+    needs: [create-release, package-windows, package-clap-windows, package-macos, package-linux, package-android, package-ios]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v7
