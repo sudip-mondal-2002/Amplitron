@@ -24,6 +24,12 @@ PedalWidget::PedalWidget(IAudioEngine& engine, std::shared_ptr<Effect> effect, i
     assign_colors();
 }
 
+PedalWidget::~PedalWidget() {
+    if (analyzer_open_) {
+        engine_.unregister_pedal_analyzer(index_);
+    }
+}
+
 /** @brief Look up pedal_color_ and led_color_ from the theme's effect color
  * table. */
 void PedalWidget::assign_colors() {
