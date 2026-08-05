@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cstring>
 #include <fstream>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <thread>
 
@@ -476,4 +477,102 @@ TEST(nam_loader_rapid_reloads_defer_garbage_without_audio_deletion) {
     }
     nl.collect_garbage();
     ASSERT_EQ(nl.model_path(), std::string("../tests/assets/rtneural_test_model.json"));
+}
+
+TEST(nam_loader_load_model_async_completes_successfully) {
+    NamLoader nl;
+    nl.set_sample_rate(48000);
+    nl.load_model_async("../tests/assets/rtneural_test_model.json");
+
+    int max_wait = 100;
+    while (nl.is_loading() && max_wait-- > 0) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    ASSERT_FALSE(nl.is_loading());
+
+    float buf[16] = {0.2f};
+    nl.process(buf, 16);
+    nl.collect_garbage();
+    ASSERT_EQ(nl.model_path(), std::string("../tests/assets/rtneural_test_model.json"));
+}
+
+TEST(nam_loader_parse_linear_arch_json_model) {
+    const std::string path = "./test_linear_nam.json";
+    {
+        std::ofstream f(path);
+        nlohmann::json j;
+        j["architecture"] = "Linear";
+        j["config"] = {{"input_size", 1}, {"output_size", 1}, {"bias", true}};
+        j["weights"] = nlohmann::json::array({0.5f, 0.1f});
+        f << j.dump();
+    }
+    NamLoader nl;
+    nl.set_sample_rate(48000);
+    bool ok = nl.load_model(path);
+    std::remove(path.c_str());
+    ASSERT_TRUE(ok);
+}
+
+TEST(nam_loader_parse_lstm_arch_json_model) {
+    const std::string path = "./test_lstm_nam.json";
+    {
+        std::ofstream f(path);
+        nlohmann::json j;
+        j["architecture"] = "LSTM";
+        j["config"] = {{"input_size", 1}, {"hidden_size", 4}, {"num_layers", 1}};
+        std::vector<float> w(100, 0.01f);
+        j["weights"] = w;
+        f << j.dump();
+    }
+    NamLoader nl;
+    nl.set_sample_rate(48000);
+    bool ok = nl.load_model(path);
+    std::remove(path.c_str());
+    ASSERT_TRUE(ok);
+}
+
+TEST(nam_loader_parse_gated_wavenet_relu_json_model) {
+    const std::string path = "./test_wavenet_gated_nam.json";
+    {
+        std::ofstream f(path);
+        nlohmann::json j;
+        j["architecture"] = "WaveNet";
+        j["config"]["head_scale"] = 0.9f;
+        j["config"]["layers"] =
+            nlohmann::json::array({{{"channels", 4},
+                                    {"kernel_size", 2},
+                                    {"head_size", 2},
+                                    {"gated", true},
+                                    {"head_bias", true},
+                                    {"activation", "ReLU"},
+                                    {"dilations", nlohmann::json::array({1, 2})}}});
+        std::vector<float> w(200, 0.02f);
+        j["weights"] = w;
+        f << j.dump();
+    }
+    NamLoader nl;
+    nl.set_sample_rate(48000);
+    bool ok = nl.load_model(path);
+    std::remove(path.c_str());
+    ASSERT_TRUE(ok);
+}
+
+TEST(nam_loader_parse_raw_config_layers_json_model) {
+    const std::string path = "./test_config_layers_nam.json";
+    {
+        std::ofstream f(path);
+        nlohmann::json j;
+        j["config"]["layers"] = nlohmann::json::array(
+            {{{"type", "dense"},
+              {"shape", nlohmann::json::array({nullptr, 1})},
+              {"weights",
+               nlohmann::json::array({nlohmann::json::array({nlohmann::json::array({1.0f})}),
+                                      nlohmann::json::array({0.0f})})}}});
+        f << j.dump();
+    }
+    NamLoader nl;
+    nl.set_sample_rate(48000);
+    bool ok = nl.load_model(path);
+    std::remove(path.c_str());
+    ASSERT_TRUE(ok);
 }
