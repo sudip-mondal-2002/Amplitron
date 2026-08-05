@@ -4,6 +4,8 @@
 #include <chrono>
 #include <cstring>
 
+#include "audio/engine/analyzer_capture.h"
+
 namespace Amplitron {
 
 AudioGraphExecutor::AudioGraphExecutor() {}
@@ -118,7 +120,7 @@ void AudioGraphExecutor::update_transport_state(float bpm) {
 }
 
 void AudioGraphExecutor::process(const float* input, float* output, int num_samples,
-                                 DspPerformanceProfiler* profiler) {
+                                 AnalyzerCapture* capture, DspPerformanceProfiler* profiler) {
     if (num_samples > max_block_size_) {
         std::memset(output, 0, static_cast<size_t>(num_samples) * sizeof(float));
         return;
@@ -170,12 +172,14 @@ void AudioGraphExecutor::process(const float* input, float* output, int num_samp
         }
 
         const auto module_end = std::chrono::steady_clock::now();
-
         if (profiler) {
             const float elapsed_us =
                 std::chrono::duration<float, std::micro>(module_end - module_start).count();
+            profiler->record_module_time(step.node_id, elapsed_us);
+        }
 
-            profiler->record_module_time(static_cast<int>(step_index), elapsed_us);
+        if (capture) {
+            capture->capture_pedal(step.node_id, node_input, node_output, num_samples);
         }
     }
 

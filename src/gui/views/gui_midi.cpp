@@ -224,7 +224,7 @@ bool GuiMidi::render_learn_menu_item(const std::string& effect_name,
         }
     }
 
-    if (ImGui::MenuItem("MIDI Learn")) {
+    if (ImGui::MenuItem("MIDI Learn") && midi_.initialize()) {
         midi_.start_learn(MidiTargetType::EffectParam, effect_name, param_name);
         return true;
     }
@@ -232,7 +232,7 @@ bool GuiMidi::render_learn_menu_item(const std::string& effect_name,
 }
 
 bool GuiMidi::render_learn_bypass_item(const std::string& effect_name) {
-    if (ImGui::MenuItem("MIDI Learn (Bypass)")) {
+    if (ImGui::MenuItem("MIDI Learn (Bypass)") && midi_.initialize()) {
         midi_.start_learn(MidiTargetType::EffectBypass, effect_name, "");
         return true;
     }

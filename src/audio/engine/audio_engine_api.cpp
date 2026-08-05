@@ -70,4 +70,22 @@ bool AudioEngine::copy_analyzer_snapshot(float* input_dest, float* output_dest,
     return analyzer_capture_->copy_analyzer_snapshot(input_dest, output_dest, sample_count);
 }
 
+bool AudioEngine::register_pedal_analyzer(int node_id) {
+    return analyzer_capture_->register_pedal_analyzer(node_id);
+}
+
+void AudioEngine::unregister_pedal_analyzer(int node_id) {
+    analyzer_capture_->unregister_pedal_analyzer(node_id);
+}
+
+uint64_t AudioEngine::get_pedal_analyzer_sequence(int node_id) const {
+    return analyzer_capture_->get_pedal_analyzer_sequence(node_id);
+}
+
+bool AudioEngine::copy_pedal_analyzer_snapshot(int node_id, float* input_dest, float* output_dest,
+                                               int sample_count) const {
+    return analyzer_capture_->copy_pedal_analyzer_snapshot(node_id, input_dest, output_dest,
+                                                           sample_count);
+}
+
 }  // namespace Amplitron
