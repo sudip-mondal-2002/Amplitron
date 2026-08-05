@@ -51,18 +51,49 @@ if (typeof window === 'undefined') {
             headers: newHeaders,
           });
         })
-        .catch(function (e) {
-          console.error(e);
+        .catch((e) => {
+          console.error("Fetch failed:", e);
+          return new Response("Network error",
+            { status: 503,
+              statusText: "Service Unavailable",
+              headers: { "Content-Type": "text/plain", },
+            });
         })
     );
   });
 } else {
   // Window context — register the service worker
   (async function () {
-    if (window.crossOriginIsolated !== false) return;
+    if (!("serviceWorker" in navigator)){
+      console.warn("Service workers are not supported in this browser.");
+      return;
+    }
+    if (window.crossOriginIsolated !== false) {
+      sessionStorage.removeItem("coiReloaded");
+      return;
+    }
 
-    const registration = await navigator.serviceWorker
-      .register(window.document.currentScript.src)
+    const scriptUrl = window.document.currentScript?.src;
+
+if (!scriptUrl) {
+  console.warn("Unable to determine current service worker script URL.");
+  return;
+}
+
+const existingRegistration = await navigator.serviceWorker.getRegistration();
+
+const existingScriptUrl =
+  existingRegistration?.active?.scriptURL ??
+  existingRegistration?.waiting?.scriptURL ??
+  existingRegistration?.installing?.scriptURL;
+
+if (existingScriptUrl === scriptUrl) {
+  console.log("COOP/COEP Service Worker already registered.");
+  return;
+}
+
+const registration = await navigator.serviceWorker
+      .register(scriptUrl)
       .catch((e) =>
         console.error("COOP/COEP Service Worker failed to register:", e)
       );
@@ -72,14 +103,22 @@ if (typeof window === 'undefined') {
       if (registration.installing) {
         const sw = registration.installing || registration.waiting;
         await new Promise((resolve) => {
-          sw.addEventListener("statechange", (e) => {
-            if (e.target.state === "activated") {
+          const sw = registration.installing || registration.waiting;
+          if (!sw) return resolve();
+          const onStateChange = () => {
+            if (sw.state === "activated") {
+              sw.removeEventListener("statechange", onStateChange);
               resolve();
             }
-          });
+          };
+          sw.addEventListener("statechange", onStateChange);
         });
       }
-      window.location.reload();
+      const RELOAD_KEY = "coiReloaded";
+      if (!sessionStorage.getItem(RELOAD_KEY)) {
+        sessionStorage.setItem(RELOAD_KEY, "true");
+        window.location.reload();
+      }
     }
   })();
 }
