@@ -442,6 +442,11 @@ if(EMSCRIPTEN)
         RTNEURAL_DEFAULT_ALIGNMENT=16
     )
 
+    # WebAssembly SIMD substantially reduces the per-sample cost of the neural model.
+    # Keep the native targets unchanged; this is supported by all browsers that can run
+    # the SharedArrayBuffer/AudioWorklet build used here.
+    target_compile_options(Amplitron PRIVATE -O3 -msimd128)
+
     target_link_libraries(Amplitron PRIVATE nlohmann_json::nlohmann_json)
 
     set_target_properties(Amplitron PROPERTIES UNITY_BUILD OFF)
@@ -449,6 +454,7 @@ if(EMSCRIPTEN)
     # Emscripten linker flags for Web Audio + AudioWorklet + SharedArrayBuffer
     target_link_options(Amplitron PRIVATE
         "-sWASM=1"
+        "-msimd128"
         
         "-sUSE_SDL=2"
         "-sMIN_WEBGL_VERSION=2"

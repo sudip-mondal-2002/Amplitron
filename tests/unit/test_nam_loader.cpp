@@ -513,6 +513,52 @@ TEST(nam_loader_parse_linear_arch_json_model) {
     ASSERT_TRUE(ok);
 }
 
+TEST(nam_loader_load_uses_stripped_parent_path_fallback) {
+    const std::string filename = "nam_loader_path_fallback_tmp.json";
+    {
+        std::ofstream f(filename);
+        ASSERT_TRUE(f.is_open());
+        f << R"({"in_shape":[null,1],"layers":[{"type":"dense","shape":[null,1],"weights":[[[1.0]],[0.0]]}]})";
+    }
+
+    NamLoader nl;
+    bool ok = nl.load_model("../" + filename);
+    std::remove(filename.c_str());
+    ASSERT_TRUE(ok);
+}
+
+TEST(nam_loader_parse_top_level_layers_json_model) {
+    const std::string path = "./test_top_level_layers_nam.json";
+    {
+        std::ofstream f(path);
+        ASSERT_TRUE(f.is_open());
+        f << R"({"layers":[{"type":"dense","shape":[null,1],"weights":[[[1.0]],[0.0]]}]})";
+    }
+
+    NamLoader nl;
+    bool ok = nl.load_model(path);
+    std::remove(path.c_str());
+    ASSERT_TRUE(ok);
+}
+
+TEST(nam_loader_parse_linear_arch_without_bias) {
+    const std::string path = "./test_linear_no_bias_nam.json";
+    {
+        std::ofstream f(path);
+        ASSERT_TRUE(f.is_open());
+        nlohmann::json j;
+        j["architecture"] = "Linear";
+        j["config"] = {{"input_size", 1}, {"output_size", 1}, {"bias", false}};
+        j["weights"] = nlohmann::json::array({0.5f});
+        f << j.dump();
+    }
+
+    NamLoader nl;
+    bool ok = nl.load_model(path);
+    std::remove(path.c_str());
+    ASSERT_TRUE(ok);
+}
+
 TEST(nam_loader_parse_lstm_arch_json_model) {
     const std::string path = "./test_lstm_nam.json";
     {
@@ -526,6 +572,25 @@ TEST(nam_loader_parse_lstm_arch_json_model) {
     }
     NamLoader nl;
     nl.set_sample_rate(48000);
+    bool ok = nl.load_model(path);
+    std::remove(path.c_str());
+    ASSERT_TRUE(ok);
+}
+
+TEST(nam_loader_parse_lstm_arch_with_dense_head) {
+    const std::string path = "./test_lstm_head_nam.json";
+    {
+        std::ofstream f(path);
+        ASSERT_TRUE(f.is_open());
+        nlohmann::json j;
+        j["architecture"] = "LSTM";
+        j["config"] = {{"input_size", 1}, {"hidden_size", 2}, {"num_layers", 1}};
+        // 40 recurrent parameters followed by a two-weight, one-bias dense head.
+        j["weights"] = std::vector<float>(43, 0.01f);
+        f << j.dump();
+    }
+
+    NamLoader nl;
     bool ok = nl.load_model(path);
     std::remove(path.c_str());
     ASSERT_TRUE(ok);
@@ -555,6 +620,58 @@ TEST(nam_loader_parse_gated_wavenet_relu_json_model) {
     bool ok = nl.load_model(path);
     std::remove(path.c_str());
     ASSERT_TRUE(ok);
+}
+
+TEST(nam_loader_parse_wavenet_uses_default_dilation) {
+    const std::string path = "./test_wavenet_default_dilation_nam.json";
+    {
+        std::ofstream f(path);
+        ASSERT_TRUE(f.is_open());
+        nlohmann::json j;
+        j["architecture"] = "WaveNet";
+        j["config"]["layers"] =
+            nlohmann::json::array({{{"channels", 1}, {"kernel_size", 1}, {"head_size", 1}}});
+        j["weights"] = std::vector<float>(8, 0.02f);
+        f << j.dump();
+    }
+
+    NamLoader nl;
+    bool ok = nl.load_model(path);
+    std::remove(path.c_str());
+    ASSERT_TRUE(ok);
+}
+
+TEST(nam_loader_async_missing_file_finishes_without_changing_model) {
+    NamLoader nl;
+    nl.load_model_async("/nonexistent/path/async-model.nam");
+
+    int max_wait = 100;
+    while (nl.is_loading() && max_wait-- > 0) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    ASSERT_FALSE(nl.is_loading());
+    ASSERT_TRUE(nl.model_path().empty());
+}
+
+TEST(nam_loader_async_malformed_json_finishes_without_changing_model) {
+    const std::string path = "./test_async_malformed_nam.json";
+    {
+        std::ofstream f(path);
+        ASSERT_TRUE(f.is_open());
+        f << "{not valid JSON";
+    }
+
+    NamLoader nl;
+    nl.load_model_async(path);
+    int max_wait = 100;
+    while (nl.is_loading() && max_wait-- > 0) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    std::remove(path.c_str());
+
+    ASSERT_FALSE(nl.is_loading());
+    ASSERT_TRUE(nl.model_path().empty());
 }
 
 TEST(nam_loader_parse_raw_config_layers_json_model) {

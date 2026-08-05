@@ -86,15 +86,17 @@ void PedalWidget::render_nam_loader_display(ImVec2 p0, float pedal_width, float 
     {
         std::string pending = poll_uploaded_file_path();
         if (!pending.empty() && !nam->is_loading()) {
-            // Use the non-blocking async loader to avoid freezing the browser.
-            nam->load_model_async(pending);
+            // Model construction is intentionally synchronous here. Emscripten's std::async
+            // worker path can terminate on C++ exceptions and leave loading_ permanently set.
+            // The direct WaveNet builder keeps this main-thread operation short and predictable.
+            nam->load_model(pending);
         }
     }
 
     float btn_w = pedal_width - 30 * zoom;
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 15 * zoom, p0.y + 50 * zoom));
 
-    // Disable the button while an async load is running to prevent
+    // Disable the button while an asynchronous native load is running to prevent
     // stacking duplicate loads.
     bool is_loading = nam->is_loading();
     if (is_loading) ImGui::BeginDisabled();
@@ -113,7 +115,7 @@ void PedalWidget::render_nam_loader_display(ImVec2 p0, float pedal_width, float 
         // "".  The JS FileReader callback writes the file into Emscripten FS
         // and calls amplitron_on_file_uploaded(), which sets the pending path.
         // The per-frame poll above picks it up on the next rendered frame via
-        // load_model_async(), keeping the main thread unblocked.
+        // load_model() on the next frame.
         std::string path = show_open_dialog("Load NAM Model", "NAM Model", "nam");
         if (!path.empty()) {
             // Native path: synchronous load is fine (blocking file picker
