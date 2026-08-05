@@ -85,13 +85,20 @@ void PedalWidget::render_nam_loader_display(ImVec2 p0, float pedal_width, float 
     // so this block is a no-op outside of the web build.
     {
         std::string pending = poll_uploaded_file_path();
-        if (!pending.empty()) {
-            nam->load_model(pending);
+        if (!pending.empty() && !nam->is_loading()) {
+            // Use the non-blocking async loader to avoid freezing the browser.
+            nam->load_model_async(pending);
         }
     }
 
     float btn_w = pedal_width - 30 * zoom;
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 15 * zoom, p0.y + 50 * zoom));
+
+    // Disable the button while an async load is running to prevent
+    // stacking duplicate loads.
+    bool is_loading = nam->is_loading();
+    if (is_loading) ImGui::BeginDisabled();
+
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.10f, 0.25f, 0.15f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.15f, 0.40f, 0.20f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.20f, 0.55f, 0.25f, 1.0f));
@@ -105,16 +112,26 @@ void PedalWidget::render_nam_loader_display(ImVec2 p0, float pedal_width, float 
         // On web: show_open_dialog triggers the browser file input and returns
         // "".  The JS FileReader callback writes the file into Emscripten FS
         // and calls amplitron_on_file_uploaded(), which sets the pending path.
-        // The per-frame poll above picks it up on the next rendered frame.
+        // The per-frame poll above picks it up on the next rendered frame via
+        // load_model_async(), keeping the main thread unblocked.
         std::string path = show_open_dialog("Load NAM Model", "NAM Model", "nam");
         if (!path.empty()) {
+            // Native path: synchronous load is fine (blocking file picker
+            // already froze the UI; parsing is fast on native).
             nam->load_model(path);
         }
     }
     ImGui::PopStyleColor(3);
+    if (is_loading) ImGui::EndDisabled();
 
     float display_y = p0.y + 78 * zoom;
-    if (!nam->model_path().empty()) {
+    if (is_loading) {
+        // Show a "Loading..." indicator while the async parse is running.
+        ImGui::SetCursorScreenPos(ImVec2(p0.x + 15 * zoom, display_y));
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.80f, 0.70f, 0.20f, 1.0f));
+        ImGui::TextUnformatted("Loading...");
+        ImGui::PopStyleColor();
+    } else if (!nam->model_path().empty()) {
         std::string model_name = nam->model_path();
         size_t slash = model_name.find_last_of("/\\");
         if (slash != std::string::npos) model_name = model_name.substr(slash + 1);

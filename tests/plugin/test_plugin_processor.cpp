@@ -1,4 +1,4 @@
-#include <gtest/gtest.h>
+#include "test_framework.h"
 
 #include <cmath>
 #include <string>

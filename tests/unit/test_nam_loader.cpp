@@ -102,14 +102,23 @@ TEST(nam_loader_load_success_model_loaded_flag) {
 
 // ---- Load: incompatible format ----
 
-TEST(nam_loader_load_incompatible_format_fails_gracefully) {
-    // test_model.nam uses the NAM WaveNet schema (version/architecture/config)
-    // which is incompatible with RTNeural's parseJson (expects in_shape/layers).
-    // load_model must catch the parse exception and return false.
+TEST(nam_loader_load_standard_nam_wavenet_file_succeeds) {
+    // test_model.nam uses the standard NAM WaveNet schema (version/architecture/config/weights).
+    // convert_nam_json_to_rtneural transforms it so load_model succeeds.
     NamLoader nl;
     nl.set_sample_rate(48000);
 
     bool result = nl.load_model("../tests/assets/test_model.nam");
+    ASSERT_TRUE(result);
+    ASSERT_FALSE(nl.model_path().empty());
+}
+
+TEST(nam_loader_load_corrupted_json_fails_gracefully) {
+    // A non-existent or corrupted JSON file must return false without altering state.
+    NamLoader nl;
+    nl.set_sample_rate(48000);
+
+    bool result = nl.load_model("invalid_non_existent_path.json");
     ASSERT_FALSE(result);
     ASSERT_TRUE(nl.model_path().empty());
 }
@@ -453,5 +462,18 @@ TEST(nam_loader_failed_replacement_retains_prior_model) {
     ASSERT_FALSE(ok);
 
     // Prior model path must be unchanged.
+    ASSERT_EQ(nl.model_path(), std::string("../tests/assets/rtneural_test_model.json"));
+}
+
+TEST(nam_loader_rapid_reloads_defer_garbage_without_audio_deletion) {
+    NamLoader nl;
+    nl.set_sample_rate(48000);
+
+    float buf[16] = {0.1f};
+    for (int i = 0; i < 5; ++i) {
+        ASSERT_TRUE(nl.load_model("../tests/assets/rtneural_test_model.json"));
+        nl.process(buf, 16);
+    }
+    nl.collect_garbage();
     ASSERT_EQ(nl.model_path(), std::string("../tests/assets/rtneural_test_model.json"));
 }

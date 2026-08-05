@@ -335,6 +335,19 @@ class TestSuite {
         }                                                                                   \
     } while (0)
 
+#define ASSERT_LE(a, b)                                                                     \
+    do {                                                                                    \
+        auto _a = (a);                                                                      \
+        auto _b = (b);                                                                      \
+        if (!(_a <= _b)) {                                                                  \
+            std::ostringstream ss;                                                          \
+            ss << "ASSERT_LE failed: " #a " <= " #b " (" << _a << " > " << _b << ") (line " \
+               << __LINE__ << ")";                                                          \
+            TestFramework::TestSuite::instance().fail(ss.str());                            \
+            return;                                                                         \
+        }                                                                                   \
+    } while (0)
+
 #define ASSERT_THROW(expr, ExceptionType)                                                  \
     do {                                                                                   \
         bool caught = false;                                                               \
@@ -352,5 +365,19 @@ class TestSuite {
             return;                                                                        \
         }                                                                                  \
     } while (0)
+
+#define EXPECT_TRUE(expr) ASSERT_TRUE(expr)
+#define EXPECT_FALSE(expr) ASSERT_FALSE(expr)
+#define EXPECT_EQ(a, b) ASSERT_EQ(a, b)
+#define EXPECT_NE(a, b) ASSERT_NE(a, b)
+#define EXPECT_GT(a, b) ASSERT_GT(a, b)
+#define EXPECT_GE(a, b) ASSERT_GE(a, b)
+#define EXPECT_LT(a, b) ASSERT_LT(a, b)
+#define EXPECT_LE(a, b) ASSERT_LE(a, b)
+#define EXPECT_NEAR(a, b, eps) ASSERT_NEAR(a, b, eps)
+#define EXPECT_FLOAT_EQ(a, b) ASSERT_NEAR(a, b, 0.0001f)
+#define EXPECT_DOUBLE_EQ(a, b) ASSERT_NEAR(a, b, 0.000001)
+#define EXPECT_STREQ(a, b) ASSERT_EQ(std::string(a), std::string(b))
+#define SUCCEED() do {} while (0)
 
 }  // namespace TestFramework

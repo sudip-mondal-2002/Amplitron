@@ -53,7 +53,7 @@ std::string show_open_dialog(const std::string& /*title*/, const std::string& /*
     // and populate s_pending_open_path for the next frame.
     //
     // Note: EM_ASM_({ ... }, arg) passes a C++ value into JS as $0.
-    EM_ASM(
+    EM_ASM_(
         {
             var ext = UTF8ToString($0);
             var accept = ext ? ('.' + ext) : '*';

@@ -78,15 +78,24 @@ set(CMAKE_WARN_DEPRECATED ${OLD_CMAKE_WARN_DEPRECATED})
 
 find_package(GTest QUIET)
 if(NOT TARGET GTest::gtest AND NOT EMSCRIPTEN AND NOT ANDROID AND NOT IOS)
-    include(FetchContent)
-    FetchContent_Declare(
-        googletest
-        GIT_REPOSITORY https://github.com/google/googletest.git
-        GIT_TAG        release-1.12.1
-        GIT_SHALLOW    TRUE
-    )
-    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-    FetchContent_MakeAvailable(googletest)
+    # Only attempt to fetch googletest when the source directory is absent
+    # (first-time configure with network access).  In offline / CI-cached
+    # environments, set FETCHCONTENT_FULLY_DISCONNECTED=ON (or rely on the
+    # cached _deps/googletest-src directory) so the build does not fail
+    # trying to reach github.com.  The main amplitron-tests binary uses its
+    # own custom test framework and does NOT require GTest; only the smaller
+    # amplitron-plugin-tests target needs it.
+    if(NOT FETCHCONTENT_FULLY_DISCONNECTED)
+        include(FetchContent)
+        FetchContent_Declare(
+            googletest
+            GIT_REPOSITORY https://github.com/google/googletest.git
+            GIT_TAG        release-1.12.1
+            GIT_SHALLOW    TRUE
+        )
+        set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+        FetchContent_MakeAvailable(googletest)
+    endif()
 endif()
 
 file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/external")
@@ -1030,6 +1039,7 @@ endif()
 # --- Plugin processor tests ---
 if(BUILD_CLAP_PLUGIN AND NOT EMSCRIPTEN AND NOT ANDROID AND NOT IOS)
     add_executable(amplitron-plugin-tests
+        tests/test_main.cpp
         tests/plugin/test_plugin_processor.cpp
         tests/plugin/test_clap_plugin.cpp
         src/plugin/amplitron_plugin_processor.cpp
@@ -1039,6 +1049,7 @@ if(BUILD_CLAP_PLUGIN AND NOT EMSCRIPTEN AND NOT ANDROID AND NOT IOS)
 
     target_include_directories(amplitron-plugin-tests PRIVATE
         ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/tests
         ${CMAKE_SOURCE_DIR}/external
 
         ${CMAKE_BINARY_DIR}/_deps/clap-src/include)

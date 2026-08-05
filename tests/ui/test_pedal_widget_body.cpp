@@ -195,7 +195,10 @@ TEST_F(PresetTest, pedal_widget_body_nam_display_long_name_truncated) {
     engine.initialize();
 
     // Build a temp file with a long basename (> 20 chars).
-    const std::string long_name = "../tests/assets/very_long_model_name_over_twenty_chars.json";
+    std::string long_name = "../tests/assets/very_long_model_name_over_twenty_chars.json";
+    if (!std::filesystem::exists("../tests/assets")) {
+        long_name = "tests/assets/very_long_model_name_over_twenty_chars.json";
+    }
     // Write a valid RTNeural JSON to it so load_model succeeds.
     {
         std::ofstream f(long_name);
