@@ -1,5 +1,4 @@
 #include <clap/clap.h>
-#include "test_framework.h"
 
 #include <algorithm>
 #include <cstring>
@@ -7,6 +6,7 @@
 #include <vector>
 
 #include "plugin/clap/amplitron_clap_plugin.h"
+#include "test_framework.h"
 
 TEST(ClapPlugin, DescriptorIsValid) {
     const clap_plugin_descriptor_t* descriptor = Amplitron::get_amplitron_clap_descriptor();

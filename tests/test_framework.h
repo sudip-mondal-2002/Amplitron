@@ -378,6 +378,8 @@ class TestSuite {
 #define EXPECT_FLOAT_EQ(a, b) ASSERT_NEAR(a, b, 0.0001f)
 #define EXPECT_DOUBLE_EQ(a, b) ASSERT_NEAR(a, b, 0.000001)
 #define EXPECT_STREQ(a, b) ASSERT_EQ(std::string(a), std::string(b))
-#define SUCCEED() do {} while (0)
+#define SUCCEED() \
+    do {          \
+    } while (0)
 
 }  // namespace TestFramework

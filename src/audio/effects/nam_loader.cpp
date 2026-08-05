@@ -47,7 +47,8 @@ static std::ifstream open_model_file(const std::string& path) {
     std::ifstream f(path);
     if (f.good()) return f;
 
-    // Fallbacks for relative test paths depending on process CWD (e.g. running from build/ vs project root)
+    // Fallbacks for relative test paths depending on process CWD (e.g. running
+    // from build/ vs project root)
     if (path.rfind("../", 0) == 0) {
         std::string stripped = path.substr(3);
         std::ifstream f2(stripped);
@@ -74,7 +75,8 @@ static nlohmann::json convert_nam_json_to_rtneural(const nlohmann::json& j) {
 
     if (j.contains("config") && j["config"].is_object() && j["config"].contains("layers")) {
         const auto& layers = j["config"]["layers"];
-        if (layers.is_array() && !layers.empty() && layers[0].contains("type") && layers[0].contains("weights")) {
+        if (layers.is_array() && !layers.empty() && layers[0].contains("type") &&
+            layers[0].contains("weights")) {
             nlohmann::json res;
             res["in_shape"] = nlohmann::json::array({nullptr, 1});
             res["layers"] = layers;
@@ -178,7 +180,8 @@ static nlohmann::json convert_nam_json_to_rtneural(const nlohmann::json& j) {
                 nlohmann::json dense_layer;
                 dense_layer["type"] = "dense";
                 dense_layer["shape"] = nlohmann::json::array({nullptr, 1});
-                dense_layer["weights"] = nlohmann::json::array({head_w, nlohmann::json::array({head_b})});
+                dense_layer["weights"] =
+                    nlohmann::json::array({head_w, nlohmann::json::array({head_b})});
                 rt_layers.push_back(dense_layer);
             }
 
@@ -205,13 +208,17 @@ static nlohmann::json convert_nam_json_to_rtneural(const nlohmann::json& j) {
                         dilations.push_back(1);
                     }
 
-                    // 1. Receptive field input conv: PyTorch shape [channels, current_in, 1]
+                    // 1. Receptive field input conv: PyTorch shape [channels, current_in,
+                    // 1]
                     int rf_out = channels;
-                    std::vector<std::vector<std::vector<float>>> rf_3d(1, std::vector<std::vector<float>>(current_in, std::vector<float>(rf_out, 0.0f)));
+                    std::vector<std::vector<std::vector<float>>> rf_3d(
+                        1, std::vector<std::vector<float>>(current_in,
+                                                           std::vector<float>(rf_out, 0.0f)));
                     for (int co = 0; co < rf_out; ++co) {
                         for (int ci = 0; ci < current_in; ++ci) {
                             for (int k = 0; k < 1; ++k) {
-                                float val = (idx < weights.size()) ? weights[idx++].get<float>() : 0.0f;
+                                float val =
+                                    (idx < weights.size()) ? weights[idx++].get<float>() : 0.0f;
                                 rf_3d[k][ci][co] = val;
                             }
                         }
@@ -232,11 +239,14 @@ static nlohmann::json convert_nam_json_to_rtneural(const nlohmann::json& j) {
                     for (int dil : dilations) {
                         int conv_out = gated ? channels * 2 : channels;
                         // Dilated Conv1D weights: PyTorch [conv_out, layer_in, kernel_size]
-                        std::vector<std::vector<std::vector<float>>> c_3d(kernel_size, std::vector<std::vector<float>>(layer_in, std::vector<float>(conv_out, 0.0f)));
+                        std::vector<std::vector<std::vector<float>>> c_3d(
+                            kernel_size, std::vector<std::vector<float>>(
+                                             layer_in, std::vector<float>(conv_out, 0.0f)));
                         for (int co = 0; co < conv_out; ++co) {
                             for (int ci = 0; ci < layer_in; ++ci) {
                                 for (int k = 0; k < kernel_size; ++k) {
-                                    float val = (idx < weights.size()) ? weights[idx++].get<float>() : 0.0f;
+                                    float val =
+                                        (idx < weights.size()) ? weights[idx++].get<float>() : 0.0f;
                                     c_3d[k][ci][co] = val;
                                 }
                             }
@@ -258,10 +268,12 @@ static nlohmann::json convert_nam_json_to_rtneural(const nlohmann::json& j) {
                         rt_layers.push_back(dil_conv);
 
                         // 1x1 conv (Dense) residual: PyTorch [channels, conv_out]
-                        std::vector<std::vector<float>> res_2d(conv_out, std::vector<float>(channels, 0.0f));
+                        std::vector<std::vector<float>> res_2d(conv_out,
+                                                               std::vector<float>(channels, 0.0f));
                         for (int co = 0; co < channels; ++co) {
                             for (int ci = 0; ci < conv_out; ++ci) {
-                                float val = (idx < weights.size()) ? weights[idx++].get<float>() : 0.0f;
+                                float val =
+                                    (idx < weights.size()) ? weights[idx++].get<float>() : 0.0f;
                                 res_2d[ci][co] = val;
                             }
                         }
@@ -277,7 +289,8 @@ static nlohmann::json convert_nam_json_to_rtneural(const nlohmann::json& j) {
                         res_dense["weights"] = nlohmann::json::array({res_w, res_b});
                         rt_layers.push_back(res_dense);
 
-                        // 1x1 head conv (Dense) weights: advance idx past side-branch weights
+                        // 1x1 head conv (Dense) weights: advance idx past side-branch
+                        // weights
                         for (int co = 0; co < head_size; ++co) {
                             for (int ci = 0; ci < channels; ++ci) {
                                 if (idx < weights.size()) idx++;
@@ -305,7 +318,8 @@ static nlohmann::json convert_nam_json_to_rtneural(const nlohmann::json& j) {
                 nlohmann::json final_dense;
                 final_dense["type"] = "dense";
                 final_dense["shape"] = nlohmann::json::array({nullptr, 1});
-                final_dense["weights"] = nlohmann::json::array({final_w, nlohmann::json::array({final_b * head_scale})});
+                final_dense["weights"] =
+                    nlohmann::json::array({final_w, nlohmann::json::array({final_b * head_scale})});
                 rt_layers.push_back(final_dense);
 
                 res["layers"] = rt_layers;
@@ -417,8 +431,8 @@ void NamLoader::push_garbage(RTNeural::Model<float>* old) {
     if (!old) return;
     for (size_t i = 0; i < kMaxGarbageSlots; ++i) {
         RTNeural::Model<float>* expected = nullptr;
-        if (old_models_to_delete_[i].compare_exchange_strong(expected, old, std::memory_order_release,
-                                                            std::memory_order_relaxed)) {
+        if (old_models_to_delete_[i].compare_exchange_strong(
+                expected, old, std::memory_order_release, std::memory_order_relaxed)) {
             return;
         }
     }
