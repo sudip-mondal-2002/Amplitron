@@ -1,4 +1,7 @@
 #include <imgui.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 #include <cmath>
 #include <unordered_map>
@@ -109,6 +112,30 @@ void PedalBoard::render_signal_chain() {
             ui_state.zoom = 1.0f;
             ui_state.target_zoom = 1.0f;
         }
+#ifdef __EMSCRIPTEN__
+        EM_ASM({
+            var canvas = document.getElementById('canvas');
+            if ($0) {
+                if (canvas) {
+                    if (canvas.requestFullscreen) {
+                        canvas.requestFullscreen();
+                    } else if (canvas.webkitRequestFullscreen) {
+                        canvas.webkitRequestFullscreen();
+                    } else if (canvas.msRequestFullscreen) {
+                        canvas.msRequestFullscreen();
+                    }
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        }, ui_state.is_fullscreen);
+#endif
     }
     std::vector<int> stale_ids;
     for (auto it = ui_state.node_positions.begin(); it != ui_state.node_positions.end();) {

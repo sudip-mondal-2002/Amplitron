@@ -49,33 +49,13 @@ void KnobComponent::render(const char* imgui_id, const KnobProps& props, float z
         s_active_knob_id = imgui_id;
     }
 
-    // 2. Mouse Panning/Rotary Drag Action
+    // 2. Mouse Drag Action (pure vertical linear drag)
     if (is_active && s_active_knob_id == imgui_id) {
-        float mdx = ImGui::GetIO().MousePos.x - ImGui::GetIO().MousePosPrev.x;
         float mdy = ImGui::GetIO().MousePos.y - ImGui::GetIO().MousePosPrev.y;
 
-        if (mdx != 0.0f || mdy != 0.0f) {
-            ImVec2 mouse = ImGui::GetIO().MousePos;
-            float dx = mouse.x - center.x;
-            float dy = mouse.y - center.y;
-            float dist = std::sqrt(dx * dx + dy * dy);
-
-            float value_delta = 0.0f;
-            if (dist > 5.0f && dist < knob_radius * 5.0f) {
-                float prev_x = mouse.x - mdx;
-                float prev_y = mouse.y - mdy;
-                float curr_angle = std::atan2(mouse.y - center.y, mouse.x - center.x);
-                float prev_angle = std::atan2(prev_y - center.y, prev_x - center.x);
-
-                float angle_delta = curr_angle - prev_angle;
-                if (angle_delta > PI) angle_delta -= TWO_PI;
-                if (angle_delta < -PI) angle_delta += TWO_PI;
-
-                value_delta = (angle_delta / ARC_RANGE) * range;
-            } else {
-                float sensitivity = 0.007f;
-                value_delta = -mdy * sensitivity * range;
-            }
+        if (mdy != 0.0f) {
+            float sensitivity = 0.007f;
+            float value_delta = -mdy * sensitivity * range;
 
             if (ImGui::GetIO().KeyShift) value_delta *= 0.2f;
             if (ImGui::GetIO().KeyCtrl) value_delta *= 3.0f;
