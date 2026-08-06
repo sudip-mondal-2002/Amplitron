@@ -459,37 +459,14 @@
         if (Module && Module.ccall) {
           try {
             if (Module.ccall('want_capture_mouse', 'boolean')) {
+              e.preventDefault();
               return;
             }
-          } catch (err) { }
-        }
-        var canvasHovered = false;
-        if (Module && Module.ccall) {
-          try {
-            canvasHovered = Module.ccall('is_canvas_hovered', 'boolean');
           } catch (err) {
-            console.warn('[Amplitron] is_canvas_hovered bridge error:', err);
+            console.warn('[Amplitron] want_capture_mouse bridge error:', err);
           }
         }
-        if (e.ctrlKey) {
-          e.preventDefault();
-          var dscale = -e.deltaY * 0.005;
-          if (dscale < -0.08) dscale = -0.08;
-          if (dscale > 0.08) dscale = 0.08;
-          var rect = c.getBoundingClientRect();
-          var localX = e.clientX - rect.left;
-          var localY = e.clientY - rect.top;
-          if (Module && Module.ccall) {
-            Module.ccall('on_canvas_touch_gesture', null, ['number', 'number', 'number', 'number', 'number'], [0, 0, dscale, localX, localY]);
-          }
-        } else if (canvasHovered) {
-          e.preventDefault();
-          var dx = -e.deltaX;
-          var dy = -e.deltaY;
-          if (Module && Module.ccall) {
-            Module.ccall('on_canvas_touch_gesture', null, ['number', 'number', 'number', 'number', 'number'], [dx, dy, 0.0, 0, 0]);
-          }
-        }
+        e.preventDefault();
       }, { passive: false });
     })();
   </script>

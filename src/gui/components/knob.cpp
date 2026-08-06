@@ -51,7 +51,7 @@ void KnobComponent::render(const char* imgui_id, const KnobProps& props, float z
 
     // 2. Mouse Drag Action (pure vertical linear drag)
     if (is_active && s_active_knob_id == imgui_id) {
-        float mdy = ImGui::GetIO().MousePos.y - ImGui::GetIO().MousePosPrev.y;
+        float mdy = ImGui::GetIO().MouseDelta.y;
 
         if (mdy != 0.0f) {
             float sensitivity = 0.007f;

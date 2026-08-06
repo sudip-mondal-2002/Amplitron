@@ -107,34 +107,48 @@ void PedalBoard::render_signal_chain() {
     ImGui::SetCursorScreenPos(ImVec2(canvas_pos.x + canvas_size.x - 70, canvas_pos.y + 10));
     ImGui::SetNextItemAllowOverlap();
     if (ImGui::Button(ui_state.is_fullscreen ? "Exit FS" : "Full Screen")) {
+#ifdef __EMSCRIPTEN__
+        EM_ASM({
+            var canvas = document.getElementById('canvas');
+            var isFS = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+            if (!isFS) {
+                if (canvas) {
+                    var p = null;
+                    if (canvas.requestFullscreen) {
+                        p = canvas.requestFullscreen();
+                    } else if (canvas.webkitRequestFullscreen) {
+                        p = canvas.webkitRequestFullscreen();
+                    } else if (canvas.msRequestFullscreen) {
+                        p = canvas.msRequestFullscreen();
+                    }
+                    if (p && p.catch) {
+                        p.catch(function(err) {
+                            console.warn('[Fullscreen] Request failed:', err);
+                        });
+                    }
+                }
+            } else {
+                var p = null;
+                if (document.exitFullscreen) {
+                    p = document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    p = document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    p = document.msExitFullscreen();
+                }
+                if (p && p.catch) {
+                    p.catch(function(err) {
+                        console.warn('[Fullscreen] Exit failed:', err);
+                    });
+                }
+            }
+        });
+#else
         ui_state.is_fullscreen = !ui_state.is_fullscreen;
         if (!ui_state.is_fullscreen) {
             ui_state.zoom = 1.0f;
             ui_state.target_zoom = 1.0f;
         }
-#ifdef __EMSCRIPTEN__
-        EM_ASM({
-            var canvas = document.getElementById('canvas');
-            if ($0) {
-                if (canvas) {
-                    if (canvas.requestFullscreen) {
-                        canvas.requestFullscreen();
-                    } else if (canvas.webkitRequestFullscreen) {
-                        canvas.webkitRequestFullscreen();
-                    } else if (canvas.msRequestFullscreen) {
-                        canvas.msRequestFullscreen();
-                    }
-                }
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                } else if (document.webkitExitFullscreen) {
-                    document.webkitExitFullscreen();
-                } else if (document.msExitFullscreen) {
-                    document.msExitFullscreen();
-                }
-            }
-        }, ui_state.is_fullscreen);
 #endif
     }
     std::vector<int> stale_ids;
