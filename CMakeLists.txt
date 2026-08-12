@@ -1018,6 +1018,7 @@ if(BUILD_CLAP_PLUGIN AND NOT EMSCRIPTEN AND NOT ANDROID AND NOT IOS)
     )
 
     add_test(NAME amplitron-plugin-tests COMMAND amplitron-plugin-tests)
+    add_test(NAME amplitron-tests COMMAND amplitron-tests)
     if(TARGET amplitron-tests)
         add_dependencies(amplitron-tests amplitron-plugin-tests)
         add_custom_command(TARGET amplitron-tests POST_BUILD

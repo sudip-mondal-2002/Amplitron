@@ -142,11 +142,7 @@ void PedalBoard::render_signal_chain() {
             }
         });
 #else
-        ui_state.is_fullscreen = !ui_state.is_fullscreen;
-        if (!ui_state.is_fullscreen) {
-            ui_state.zoom = 1.0f;
-            ui_state.target_zoom = 1.0f;
-        }
+        ui_state.toggle_fullscreen_native();
 #endif
     }
     std::vector<int> stale_ids;

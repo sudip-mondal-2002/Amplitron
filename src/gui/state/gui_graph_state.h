@@ -38,6 +38,14 @@ class GuiGraphState {
     int active_src_pin_id = -1;
     ImVec2 active_src_pin_pos = ImVec2(0.0f, 0.0f);
 
+    void toggle_fullscreen_native() {
+        is_fullscreen = !is_fullscreen;
+        if (!is_fullscreen) {
+            zoom = 1.0f;
+            target_zoom = 1.0f;
+        }
+    }
+
     void set_default_position_if_missing(int node_id, float default_x, float default_y) {
         if (node_positions.find(node_id) == node_positions.end()) {
             node_positions[node_id] = {ImVec2(default_x, default_y), false, ImVec2(0, 0)};
