@@ -99,5 +99,9 @@ void GuiManager::force_rebuild_pedal_widgets() {
         pedal_board_->rebuild_widgets();
     }
 }
+void GuiManager::show_toast(const std::string& message) {
+    toast_message_ = message;
+    toast_timer_ = 2.0f;  // Show for 2 seconds
+}
 
 }  // namespace Amplitron
