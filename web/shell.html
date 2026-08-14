@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,7 +8,12 @@
   <!-- coi-serviceworker: enables SharedArrayBuffer on GitHub Pages (no COOP/COEP headers needed) -->
   <script src="coi-serviceworker.js"></script>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
       background: #141210;
       color: #e0dcd4;
@@ -19,6 +25,7 @@
       min-height: 100vh;
       overflow: hidden;
     }
+
     #canvas {
       border: 0;
       outline: none;
@@ -27,10 +34,14 @@
       display: block;
       touch-action: none;
     }
+
     /* Loading overlay */
     #loading {
       position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
       background: #141210;
       display: flex;
       flex-direction: column;
@@ -39,17 +50,24 @@
       z-index: 100;
       transition: opacity 0.5s;
     }
-    #loading.hidden { opacity: 0; pointer-events: none; }
+
+    #loading.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
     #loading h1 {
       font-size: 2rem;
       margin-bottom: 1rem;
       color: #f0a030;
     }
+
     #loading .subtitle {
       font-size: 0.9rem;
       color: #888;
       margin-bottom: 2rem;
     }
+
     .progress-bar {
       width: 300px;
       height: 6px;
@@ -58,20 +76,26 @@
       overflow: hidden;
       margin-bottom: 1rem;
     }
+
     .progress-bar .fill {
       height: 100%;
       background: #f0a030;
       width: 0%;
       transition: width 0.3s;
     }
+
     #status {
       font-size: 0.8rem;
       color: #666;
     }
+
     /* Audio unlock prompt */
     #audio-unlock {
       position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
       background: rgba(20, 18, 16, 0.95);
       display: none;
       flex-direction: column;
@@ -80,32 +104,39 @@
       z-index: 200;
       cursor: pointer;
     }
+
     #audio-unlock h2 {
       font-size: 1.5rem;
       color: #f0a030;
       margin-bottom: 1rem;
     }
+
     #audio-unlock p {
       color: #aaa;
       font-size: 0.9rem;
     }
   </style>
   <script>
-    !function(t,e){var o,n,p,r;e.__SV||(window.posthog && window.posthog.__loaded)||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="ci init Pi Ci ft Oi Fi ki capture calculateEventProperties Ui register register_once register_for_session unregister unregister_for_session Bi getFeatureFlag getFeatureFlagPayload getFeatureFlagResult isFeatureEnabled reloadFeatureFlags updateFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSurveysLoaded onSessionId getSurveys getActiveMatchingSurveys renderSurvey displaySurvey cancelPendingSurvey canRenderSurvey canRenderSurveyAsync identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException startExceptionAutocapture stopExceptionAutocapture loadToolbar get_property getSessionProperty ji Di createPersonProfile setInternalOrTestUser zi Ti Hi opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing get_explicit_consent_status is_capturing clear_opt_in_out_capturing Ai debug bt Ni getPageViewId captureTraceFeedback captureTraceMetric Ei".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+    !function (t, e) { var o, n, p, r; e.__SV || (window.posthog && window.posthog.__loaded) || (window.posthog = e, e._i = [], e.init = function (i, s, a) { function g(t, e) { var o = e.split("."); 2 == o.length && (t = t[o[0]], e = o[1]), t[e] = function () { t.push([e].concat(Array.prototype.slice.call(arguments, 0))) } } (p = t.createElement("script")).type = "text/javascript", p.crossOrigin = "anonymous", p.async = !0, p.src = s.api_host.replace(".i.posthog.com", "-assets.i.posthog.com") + "/static/array.js", (r = t.getElementsByTagName("script")[0]).parentNode.insertBefore(p, r); var u = e; for (void 0 !== a ? u = e[a] = [] : a = "posthog", u.people = u.people || [], u.toString = function (t) { var e = "posthog"; return "posthog" !== a && (e += "." + a), t || (e += " (stub)"), e }, u.people.toString = function () { return u.toString(1) + ".people (stub)" }, o = "ci init Pi Ci ft Oi Fi ki capture calculateEventProperties Ui register register_once register_for_session unregister unregister_for_session Bi getFeatureFlag getFeatureFlagPayload getFeatureFlagResult isFeatureEnabled reloadFeatureFlags updateFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSurveysLoaded onSessionId getSurveys getActiveMatchingSurveys renderSurvey displaySurvey cancelPendingSurvey canRenderSurvey canRenderSurveyAsync identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException startExceptionAutocapture stopExceptionAutocapture loadToolbar get_property getSessionProperty ji Di createPersonProfile setInternalOrTestUser zi Ti Hi opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing get_explicit_consent_status is_capturing clear_opt_in_out_capturing Ai debug bt Ni getPageViewId captureTraceFeedback captureTraceMetric Ei".split(" "), n = 0; n < o.length; n++)g(u, o[n]); e._i.push([i, s, a]) }, e.__SV = 1) }(document, window.posthog || []);
     posthog.init('phc_ecTrgEi1Wfx1rgTVwSZxCWt9swjuWiKaXAYssHhHLNr', {
-        api_host: 'https://t.amplitron.sudipmondal.co.in',
-        ui_host: 'https://us.posthog.com',
-        person_profiles: 'identified_only',
+      api_host: 'https://t.amplitron.sudipmondal.co.in',
+      ui_host: 'https://us.posthog.com',
+      person_profiles: 'identified_only',
     })
   </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js" integrity="sha512-qtX0GLM3qX8rxJN1gyDfcnMFFrKvixfoEOwbBib9VafR5vbChV5LeE5wSI/x+IlCkTY5ZFddFDCCfaVJJNnuKQ==" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"
+    integrity="sha512-qtX0GLM3qX8rxJN1gyDfcnMFFrKvixfoEOwbBib9VafR5vbChV5LeE5wSI/x+IlCkTY5ZFddFDCCfaVJJNnuKQ=="
+    crossorigin="anonymous"></script>
 </head>
+
 <body>
   <!-- Loading screen -->
   <div id="loading">
     <h1>Amplitron</h1>
     <div class="subtitle">Guitar Amp Simulator</div>
-    <div class="progress-bar"><div class="fill" id="progress-fill"></div></div>
+    <div class="progress-bar">
+      <div class="fill" id="progress-fill"></div>
+    </div>
     <div id="status">Initializing...</div>
   </div>
 
@@ -113,8 +144,10 @@
   <div id="audio-unlock" onclick="this.style.display='none';">
     <h2>Click anywhere to enable audio</h2>
     <p>Browsers require a user gesture to start audio playback.</p>
-    <p style="margin-top: 1.5rem; padding: 10px 20px; background: rgba(240,160,48,0.1); border: 1px solid rgba(240,160,48,0.3); border-radius: 6px; color: #ccc; font-size: 0.8rem; max-width: 480px;">
-      <strong style="color: #f0a030;">Note:</strong> This web demo may have higher latency and reduced audio quality compared to the
+    <p
+      style="margin-top: 1.5rem; padding: 10px 20px; background: rgba(240,160,48,0.1); border: 1px solid rgba(240,160,48,0.3); border-radius: 6px; color: #ccc; font-size: 0.8rem; max-width: 480px;">
+      <strong style="color: #f0a030;">Note:</strong> This web demo may have higher latency and reduced audio quality
+      compared to the
       <a href="../" style="color: #f0a030; text-decoration: underline;">native desktop builds</a>.
       For the best experience, download the native version for your platform.
     </p>
@@ -150,10 +183,10 @@
     var loadingEl = document.getElementById('loading');
 
     var Module = {
-      canvas: (function() { return document.getElementById('canvas'); })(),
-      print: function(text) { console.log(text); },
-      printErr: function(text) { console.error(text); },
-      setStatus: function(text) {
+      canvas: (function () { return document.getElementById('canvas'); })(),
+      print: function (text) { console.log(text); },
+      printErr: function (text) { console.error(text); },
+      setStatus: function (text) {
         if (!text) {
           // Loading complete
           loadingEl.classList.add('hidden');
@@ -169,7 +202,7 @@
           progressEl.style.width = pct + '%';
         }
       },
-      onRuntimeInitialized: function() {
+      onRuntimeInitialized: function () {
         console.log('[Amplitron] WASM runtime ready.');
       }
     };
@@ -179,381 +212,385 @@
         window._amplitronPresetDir = dir.name;
         return dir.name;
 
-      } catch(e) {
+      } catch (e) {
         console.log('Directory picker cancelled');
         return '';
       }
 
     };
 
-    window.amplitronSaveFile = async function(filename, dataPtr, dataLen){
-      try{
+    window.amplitronSaveFile = async function (filename, dataPtr, dataLen) {
+      try {
         const data = Module.HEAPU8.slice(dataPtr, dataPtr + dataLen);
-        const blob = new Blob([data], {type: 'audio/wav'});
+        const blob = new Blob([data], { type: 'audio/wav' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = filename;
         a.click();
         URL.revokeObjectURL(url);
-      } catch(e) {
+      } catch (e) {
         console.log('Save failed:', e);
       }
     };
 
-  // ==========================================
-  // Web MIDI API Bridge
-  // ==========================================
+    // ==========================================
+    // Web MIDI API Bridge
+    // ==========================================
 
-  function initMIDI() {
-    // Check browser support
-    if (!navigator.requestMIDIAccess) {
-      console.warn('[MIDI] Web MIDI API not supported in this browser');
-      updateMIDIStatus('MIDI not supported');
-      return;
-    }
-
-    navigator.requestMIDIAccess()
-      .then(onMIDISuccess)
-      .catch(() => {
+    function initMIDI() {
+      // Check browser support
+      if (!navigator.requestMIDIAccess) {
+        console.warn('[MIDI] Web MIDI API not supported in this browser');
         updateMIDIStatus('MIDI not supported');
-      });
-  }
+        return;
+      }
 
-  function onMIDISuccess(midiAccess) {
-    console.log('[MIDI] Access granted');
+      navigator.requestMIDIAccess()
+        .then(onMIDISuccess)
+        .catch(() => {
+          updateMIDIStatus('MIDI not supported');
+        });
+    }
 
-    // Iterate through all available MIDI input ports
-    const inputs = midiAccess.inputs.values();
-    let inputCount = 0;
-    let firstInputName = "";
+    function onMIDISuccess(midiAccess) {
+      console.log('[MIDI] Access granted');
 
-    for (let input of inputs) {
-      if (inputCount === 0) firstInputName = input.name;
-      inputCount++;
-      console.log(`[MIDI] Input ${inputCount}: ${input.name}`);
+      // Iterate through all available MIDI input ports
+      const inputs = midiAccess.inputs.values();
+      let inputCount = 0;
+      let firstInputName = "";
 
-      // Attach event listener to this input port
-      input.addEventListener('midimessage', handleMIDIMessage);
+      for (let input of inputs) {
+        if (inputCount === 0) firstInputName = input.name;
+        inputCount++;
+        console.log(`[MIDI] Input ${inputCount}: ${input.name}`);
 
-      // Notify C++ about the device
+        // Attach event listener to this input port
+        input.addEventListener('midimessage', handleMIDIMessage);
+
+        // Notify C++ about the device
+        if (Module && Module.ccall) {
+          Module.ccall(
+            'on_midi_device_connected',
+            null,
+            ['string'],
+            [input.name]
+          );
+        }
+      }
+
+      if (inputCount > 0) {
+        updateMIDIStatus(`MIDI Active: ${firstInputName}`);
+        console.log(`[MIDI] Listening on ${inputCount} input port(s)`);
+      } else {
+        updateMIDIStatus('📭 No MIDI devices detected (connect a controller)');
+      }
+
+      // Handle dynamic MIDI port connections/disconnections
+      midiAccess.addEventListener('statechange', handleMIDIStateChange);
+    }
+
+    function onMIDIFailure(error) {
+      console.error('[MIDI] Permission denied or error:', error);
+      updateMIDIStatus('MIDI not supported');
+    }
+
+    function handleMIDIMessage(event) {
+      const [status, data1, data2] = event.data;
+
+      // Extract message type from status byte
+      const messageType = status & 0xF0;
+      const channel = status & 0x0F;
+
+      // Only handle Control Change (CC) messages: 0xB0-0xBF
+      if (messageType !== 0xB0) {
+        return;  // Ignore other MIDI message types
+      }
+
+      const cc = data1;        // CC number (0-127)
+      const value = data2;     // CC value (0-127)
+
+      console.log(`[MIDI] CC ${cc} = ${value} on channel ${channel}`);
+
+      // Call C++ handler via Emscripten
       if (Module && Module.ccall) {
-        Module.ccall(
-          'on_midi_device_connected',
-          null,
-          ['string'],
-          [input.name]
-        );
+        try {
+          Module.ccall(
+            'on_midi_cc',
+            null,  // return type
+            ['number', 'number', 'number'],  // argument types
+            [channel, cc, value]  // arguments
+          );
+        } catch (err) {
+          console.error('[MIDI] Error calling on_midi_cc:', err);
+        }
       }
     }
 
-    if (inputCount > 0) {
-      updateMIDIStatus(`MIDI Active: ${firstInputName}`);
-      console.log(`[MIDI] Listening on ${inputCount} input port(s)`);
-    } else {
-      updateMIDIStatus('📭 No MIDI devices detected (connect a controller)');
+    function handleMIDIStateChange(event) {
+      console.log(`[MIDI] Port state changed: ${event.port.name} (${event.port.state})`);
+      // Could refresh the device list, but keeping it simple for now
     }
 
-    // Handle dynamic MIDI port connections/disconnections
-    midiAccess.addEventListener('statechange', handleMIDIStateChange);
-  }
-
-  function onMIDIFailure(error) {
-    console.error('[MIDI] Permission denied or error:', error);
-    updateMIDIStatus('MIDI not supported');
-  }
-
-  function handleMIDIMessage(event) {
-    const [status, data1, data2] = event.data;
-
-    // Extract message type from status byte
-    const messageType = status & 0xF0;
-    const channel = status & 0x0F;
-
-    // Only handle Control Change (CC) messages: 0xB0-0xBF
-    if (messageType !== 0xB0) {
-      return;  // Ignore other MIDI message types
-    }
-
-    const cc = data1;        // CC number (0-127)
-    const value = data2;     // CC value (0-127)
-
-    console.log(`[MIDI] CC ${cc} = ${value} on channel ${channel}`);
-
-    // Call C++ handler via Emscripten
-    if (Module && Module.ccall) {
-      try {
-        Module.ccall(
-          'on_midi_cc',
-          null,  // return type
-          ['number', 'number', 'number'],  // argument types
-          [channel, cc, value]  // arguments
-        );
-      } catch (err) {
-        console.error('[MIDI] Error calling on_midi_cc:', err);
+    function updateMIDIStatus(message) {
+      const statusEl = document.getElementById('midi-status');
+      if (statusEl) {
+        statusEl.textContent = message;
       }
     }
-  }
 
-  function handleMIDIStateChange(event) {
-    console.log(`[MIDI] Port state changed: ${event.port.name} (${event.port.state})`);
-    // Could refresh the device list, but keeping it simple for now
-  }
+    // Request MIDI access after audio is unlocked
+    const audioUnlockEl = document.getElementById('audio-unlock');
+    if (audioUnlockEl) {
+      audioUnlockEl.addEventListener('click', function (e) {
+        this.style.display = 'none';
 
-  function updateMIDIStatus(message) {
-    const statusEl = document.getElementById('midi-status');
-    if (statusEl) {
-      statusEl.textContent = message;
+        // Request MIDI after a brief delay to let audio settle
+        setTimeout(() => {
+          console.log('[MIDI] Requesting Web MIDI access...');
+          initMIDI();
+        }, 100);
+      });
     }
-  }
+    (function () {
+      var prevDist = 0;
+      var prevMidX = 0;
+      var prevMidY = 0;
+      var tracking = false;
+      var singleTouchId = null;
 
-  // Request MIDI access after audio is unlocked
-  const audioUnlockEl = document.getElementById('audio-unlock');
-  if (audioUnlockEl) {
-    audioUnlockEl.addEventListener('click', function(e) {
-      this.style.display = 'none';
+      var c = document.getElementById('canvas');
+      if (!c) return;
 
-      // Request MIDI after a brief delay to let audio settle
-      setTimeout(() => {
-        console.log('[MIDI] Requesting Web MIDI access...');
-        initMIDI();
-      }, 100);
-    });
-  }
-  (function() {
-    var prevDist = 0;
-    var prevMidX = 0;
-    var prevMidY = 0;
-    var tracking = false;
-    var singleTouchId = null;
+      c.addEventListener('mousedown', function (e) {
+        c.focus();
+      });
 
-    var c = document.getElementById('canvas');
-    if (!c) return;
+      function dist(t) {
+        var dx = t[1].clientX - t[0].clientX;
+        var dy = t[1].clientY - t[0].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+      }
 
-    function dist(t) {
-      var dx = t[1].clientX - t[0].clientX;
-      var dy = t[1].clientY - t[0].clientY;
-      return Math.sqrt(dx * dx + dy * dy);
-    }
+      function getCanvasCoords(clientX, clientY) {
+        var rect = c.getBoundingClientRect();
+        return { x: clientX - rect.left, y: clientY - rect.top };
+      }
 
-    function getCanvasCoords(clientX, clientY) {
-      var rect = c.getBoundingClientRect();
-      return { x: clientX - rect.left, y: clientY - rect.top };
-    }
+      c.addEventListener('touchstart', function (e) {
+        e.preventDefault();
+        if (e.touches.length === 2) {
+          // Cancel any in-progress single-touch interaction
+          if (singleTouchId !== null) {
+            singleTouchId = null;
+            if (Module && Module.ccall) {
+              Module.ccall('on_canvas_touch_cancel', null, []);
+            }
+          }
+          tracking = true;
+          prevDist = dist(e.touches);
+          prevMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+          prevMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        } else if (e.touches.length === 1) {
+          tracking = false;
+          singleTouchId = e.touches[0].identifier;
+          var coords = getCanvasCoords(e.touches[0].clientX, e.touches[0].clientY);
+          if (Module && Module.ccall) {
+            Module.ccall('on_canvas_touch_down', null, ['number', 'number'], [coords.x, coords.y]);
+          }
+        }
+      }, { passive: false });
 
-    c.addEventListener('touchstart', function(e) {
-      e.preventDefault();
-      if (e.touches.length === 2) {
-        // Cancel any in-progress single-touch interaction
+      c.addEventListener('touchmove', function (e) {
+        e.preventDefault();
+        if (tracking && e.touches.length === 2) {
+          var d = dist(e.touches);
+          var mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+          var my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+          var dscale = prevDist > 0 ? (d - prevDist) / prevDist : 0;
+          var dx = mx - prevMidX;
+          var dy = my - prevMidY;
+          prevDist = d;
+          prevMidX = mx;
+          prevMidY = my;
+          var rect = c.getBoundingClientRect();
+          var localX = mx - rect.left;
+          var localY = my - rect.top;
+          if (Module && Module.ccall) {
+            Module.ccall('on_canvas_touch_gesture', null, ['number', 'number', 'number', 'number', 'number'], [dx, dy, dscale, localX, localY]);
+          }
+        } else if (e.touches.length === 1 && singleTouchId !== null) {
+          var coords = getCanvasCoords(e.touches[0].clientX, e.touches[0].clientY);
+          if (Module && Module.ccall) {
+            Module.ccall('on_canvas_touch_move', null, ['number', 'number'], [coords.x, coords.y]);
+          }
+        }
+      }, { passive: false });
+
+      c.addEventListener('touchend', function (e) {
+        e.preventDefault();
+        if (singleTouchId !== null) {
+          for (var i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === singleTouchId) {
+              var coords = getCanvasCoords(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
+              if (Module && Module.ccall) {
+                Module.ccall('on_canvas_touch_up', null, ['number', 'number'], [coords.x, coords.y]);
+              }
+              break;
+            }
+          }
+          singleTouchId = null;
+        }
+        if (e.touches.length < 2) tracking = false;
+      });
+
+      c.addEventListener('touchcancel', function () {
+        tracking = false;
         if (singleTouchId !== null) {
           singleTouchId = null;
           if (Module && Module.ccall) {
             Module.ccall('on_canvas_touch_cancel', null, []);
           }
         }
-        tracking = true;
-        prevDist = dist(e.touches);
-        prevMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-        prevMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-      } else if (e.touches.length === 1) {
-        tracking = false;
-        singleTouchId = e.touches[0].identifier;
-        var coords = getCanvasCoords(e.touches[0].clientX, e.touches[0].clientY);
-        if (Module && Module.ccall) {
-          Module.ccall('on_canvas_touch_down', null, ['number', 'number'], [coords.x, coords.y]);
-        }
-      }
-    }, { passive: false });
+      });
 
-    c.addEventListener('touchmove', function(e) {
-      e.preventDefault();
-      if (tracking && e.touches.length === 2) {
-        var d = dist(e.touches);
-        var mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-        var my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-        var dscale = prevDist > 0 ? (d - prevDist) / prevDist : 0;
-        var dx = mx - prevMidX;
-        var dy = my - prevMidY;
-        prevDist = d;
-        prevMidX = mx;
-        prevMidY = my;
-        var rect = c.getBoundingClientRect();
-        var localX = mx - rect.left;
-        var localY = my - rect.top;
+      c.addEventListener('wheel', function (e) {
         if (Module && Module.ccall) {
-          Module.ccall('on_canvas_touch_gesture', null, ['number','number','number','number','number'], [dx, dy, dscale, localX, localY]);
-        }
-      } else if (e.touches.length === 1 && singleTouchId !== null) {
-        var coords = getCanvasCoords(e.touches[0].clientX, e.touches[0].clientY);
-        if (Module && Module.ccall) {
-          Module.ccall('on_canvas_touch_move', null, ['number', 'number'], [coords.x, coords.y]);
-        }
-      }
-    }, { passive: false });
-
-    c.addEventListener('touchend', function(e) {
-      e.preventDefault();
-      if (singleTouchId !== null) {
-        for (var i = 0; i < e.changedTouches.length; i++) {
-          if (e.changedTouches[i].identifier === singleTouchId) {
-            var coords = getCanvasCoords(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
-            if (Module && Module.ccall) {
-              Module.ccall('on_canvas_touch_up', null, ['number', 'number'], [coords.x, coords.y]);
+          try {
+            if (Module.ccall('want_capture_mouse', 'boolean')) {
+              e.preventDefault();
+              return;
             }
-            break;
+          } catch (err) {
+            console.warn('[Amplitron] want_capture_mouse bridge error:', err);
           }
         }
-        singleTouchId = null;
-      }
-      if (e.touches.length < 2) tracking = false;
-    });
-
-    c.addEventListener('touchcancel', function() {
-      tracking = false;
-      if (singleTouchId !== null) {
-        singleTouchId = null;
-        if (Module && Module.ccall) {
-          Module.ccall('on_canvas_touch_cancel', null, []);
-        }
-      }
-    });
-
-    c.addEventListener('wheel', function(e) {
-      var canvasHovered = false;
-      if (Module && Module.ccall) {
-        try {
-          canvasHovered = Module.ccall('is_canvas_hovered', 'boolean');
-        } catch (err) {
-          console.warn('[Amplitron] is_canvas_hovered bridge error:', err);
-        }
-      }
-      if (e.ctrlKey) {
         e.preventDefault();
-        var dscale = -e.deltaY * 0.005;
-        if (dscale < -0.08) dscale = -0.08;
-        if (dscale > 0.08) dscale = 0.08;
-        var rect = c.getBoundingClientRect();
-        var localX = e.clientX - rect.left;
-        var localY = e.clientY - rect.top;
-        if (Module && Module.ccall) {
-          Module.ccall('on_canvas_touch_gesture', null, ['number','number','number','number','number'], [0, 0, dscale, localX, localY]);
-        }
-      } else if (canvasHovered) {
-        e.preventDefault();
-        var dx = -e.deltaX;
-        var dy = -e.deltaY;
-        if (Module && Module.ccall) {
-          Module.ccall('on_canvas_touch_gesture', null, ['number','number','number','number','number'], [dx, dy, 0.0, 0, 0]);
-        }
-      }
-    }, { passive: false });
-  })();
+      }, { passive: false });
+    })();
   </script>
   <script>
     window.sharePresetToUrl = function (jsonStr) {
-        try {
-            if (!jsonStr) {
-                console.error('[PresetShare] Empty preset JSON provided.');
-                return;
-            }
-
-            // Compress using lz-string
-            const compressed = LZString.compressToEncodedURIComponent(jsonStr);
-
-            // Update URL hash
-            const url = new URL(window.location);
-            const hashParams = new URLSearchParams(url.hash.replace('#', ''));
-            hashParams.set('preset', compressed);
-            url.hash = hashParams.toString();
-            // Generate the shareable string
-            let shareableUrl = url.toString();
-            if (shareableUrl.includes('localhost') || shareableUrl.includes('127.0.0.1')) {
-                const prodBase = 'https://sudip-mondal-2002.github.io/Amplitron/demo/';
-                shareableUrl = prodBase + url.hash;
-            }
-
-            // Copy to clipboard FIRST to avoid history.pushState consuming the user activation token
-            if (navigator.clipboard && window.isSecureContext) {
-                navigator.clipboard.writeText(shareableUrl).then(() => {
-                    console.log('[PresetShare] URL copied to clipboard.');
-                }).catch(err => {
-                    console.error('[PresetShare] Clipboard write failed:', err);
-                    fallbackCopyTextToClipboard(shareableUrl);
-                });
-            } else {
-                fallbackCopyTextToClipboard(shareableUrl);
-            }
-
-            // Update URL hash LAST
-            history.pushState(null, '', url);
-        } catch (err) {
-            console.error('[PresetShare] Error during preset sharing:', err);
+      try {
+        if (!jsonStr) {
+          console.error('[PresetShare] Empty preset JSON provided.');
+          return;
         }
+
+        // Compress using lz-string
+        const compressed = LZString.compressToEncodedURIComponent(jsonStr);
+
+        // Update URL hash
+        const url = new URL(window.location);
+        const hashParams = new URLSearchParams(url.hash.replace('#', ''));
+        hashParams.set('preset', compressed);
+        url.hash = hashParams.toString();
+        // Generate the shareable string
+        let shareableUrl = url.toString();
+        if (shareableUrl.includes('localhost') || shareableUrl.includes('127.0.0.1')) {
+          const prodBase = 'https://sudip-mondal-2002.github.io/Amplitron/demo/';
+          shareableUrl = prodBase + url.hash;
+        }
+
+        // Copy to clipboard FIRST to avoid history.pushState consuming the user activation token
+        if (navigator.clipboard && window.isSecureContext) {
+          navigator.clipboard.writeText(shareableUrl).then(() => {
+            console.log('[PresetShare] URL copied to clipboard.');
+          }).catch(err => {
+            console.error('[PresetShare] Clipboard write failed:', err);
+            fallbackCopyTextToClipboard(shareableUrl);
+          });
+        } else {
+          fallbackCopyTextToClipboard(shareableUrl);
+        }
+
+        // Update URL hash LAST
+        history.pushState(null, '', url);
+      } catch (err) {
+        console.error('[PresetShare] Error during preset sharing:', err);
+      }
     };
 
     function fallbackCopyTextToClipboard(text) {
-        var textArea = document.createElement("textarea");
-        textArea.value = text;
-        // Avoid scrolling to bottom
-        textArea.style.top = "0";
-        textArea.style.left = "0";
-        textArea.style.position = "fixed";
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
+      var textArea = document.createElement("textarea");
+      textArea.value = text;
+      // Avoid scrolling to bottom
+      textArea.style.top = "0";
+      textArea.style.left = "0";
+      textArea.style.position = "fixed";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
 
-        try {
-            var successful = document.execCommand('copy');
-            if (!successful) {
-                window.prompt("Press Ctrl+C or Cmd+C to copy the link:", text);
-            }
-            var msg = successful ? 'successful' : 'unsuccessful';
-            console.log('[PresetShare] Fallback copy ' + msg);
-        } catch (err) {
-            console.error('[PresetShare] Fallback copy failed', err);
-            window.prompt("Press Ctrl+C or Cmd+C to copy the link:", text);
+      try {
+        var successful = document.execCommand('copy');
+        if (!successful) {
+          window.prompt("Press Ctrl+C or Cmd+C to copy the link:", text);
         }
-        document.body.removeChild(textArea);
+        var msg = successful ? 'successful' : 'unsuccessful';
+        console.log('[PresetShare] Fallback copy ' + msg);
+      } catch (err) {
+        console.error('[PresetShare] Fallback copy failed', err);
+        window.prompt("Press Ctrl+C or Cmd+C to copy the link:", text);
+      }
+      document.body.removeChild(textArea);
     }
 
     const MAX_COMPRESSED_PRESET_LEN = 12000;
     const MAX_DECOMPRESSED_PRESET_LEN = 500000;
 
-    window.hydrateSharedPreset = function() {
-        const params = new URLSearchParams(window.location.hash.replace('#', ''));
-        const presetPayload = params.get('preset');
+    window.hydrateSharedPreset = function () {
+      const params = new URLSearchParams(window.location.hash.replace('#', ''));
+      const presetPayload = params.get('preset');
 
-        if (presetPayload) {
-            if (presetPayload.length > MAX_COMPRESSED_PRESET_LEN) return;
-            try {
-                console.log('[PresetShare] Shared preset detected. Decompressing...');
-                const decompressedJson = LZString.decompressFromEncodedURIComponent(presetPayload);
+      if (presetPayload) {
+        if (presetPayload.length > MAX_COMPRESSED_PRESET_LEN) return;
+        try {
+          console.log('[PresetShare] Shared preset detected. Decompressing...');
+          const decompressedJson = LZString.decompressFromEncodedURIComponent(presetPayload);
 
-                if (decompressedJson && decompressedJson.length <= MAX_DECOMPRESSED_PRESET_LEN) {
-                    // Pass JSON string to C++ for deserialization
-                    Module.ccall(
-                        'import_preset_json',
-                        'void',
-                        ['string'],
-                        [decompressedJson]
-                    );
-                    console.log('[PresetShare] Preset successfully re-hydrated.');
+          if (decompressedJson && decompressedJson.length <= MAX_DECOMPRESSED_PRESET_LEN) {
+            // Pass JSON string to C++ for deserialization
+            Module.ccall(
+              'import_preset_json',
+              'void',
+              ['string'],
+              [decompressedJson]
+            );
+            console.log('[PresetShare] Preset successfully re-hydrated.');
 
-                    // Clear URL to prevent re-hydration on refresh
-                    const url = new URL(window.location);
-                    const hashParams = new URLSearchParams(url.hash.replace('#', ''));
-                    hashParams.delete('preset');
-                    url.hash = hashParams.toString();
-                    history.replaceState(null, '', url);
-                } else {
-                    console.warn('[PresetShare] Decompression resulted in empty payload. Invalid URL?');
-                }
-            } catch (err) {
-                console.error('[PresetShare] Failed to hydrate preset:', err);
-            }
+            // Clear URL to prevent re-hydration on refresh
+            const url = new URL(window.location);
+            const hashParams = new URLSearchParams(url.hash.replace('#', ''));
+            hashParams.delete('preset');
+            url.hash = hashParams.toString();
+            history.replaceState(null, '', url);
+          } else {
+            console.warn('[PresetShare] Decompression resulted in empty payload. Invalid URL?');
+          }
+        } catch (err) {
+          console.error('[PresetShare] Failed to hydrate preset:', err);
         }
+      }
     };
+
+    function handleFullscreenChange() {
+      var isFS = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+      if (Module && Module.ccall) {
+        try {
+          Module.ccall('set_fullscreen_state', null, ['boolean'], [isFS]);
+        } catch (err) {
+          console.error('[Fullscreen] Error calling set_fullscreen_state:', err);
+        }
+      }
+    }
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
   </script>
   {{{ SCRIPT }}}
 </body>
+
 </html>

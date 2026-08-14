@@ -294,6 +294,57 @@ TEST_F(PresetTest, KnobComponent_LinearFallbackDrag_WhenMouseTooFarFromCenter) {
     ImGui::End();
 }
 
+TEST_F(PresetTest, KnobComponent_InvalidMousePos_NoDelta) {
+    ScopedImGuiContext imgui;
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2(1024, 768));
+    ImGui::Begin("TestWindow");
+
+    float val = 50.0f;
+    KnobProps props;
+    props.name = "Gain";
+    props.value = val;
+    props.min_val = 0.0f;
+    props.max_val = 100.0f;
+    props.default_val = 50.0f;
+    props.on_value_changed = [&](float v) {
+        val = v;
+        props.value = v;
+    };
+
+    ImVec2 center = ImGui::GetCursorScreenPos();
+    center.x += 100;
+    center.y += 100;
+    ImGuiIO& io = ImGui::GetIO();
+
+    // Initial render
+    io.MousePos = center;
+    KnobComponent::render("K_Invalid", props, 1.0f, center);
+    advance_frame();
+
+    // Start drag
+    io.MousePos = center;
+    io.MouseDown[0] = true;
+    io.MouseClicked[0] = true;
+    KnobComponent::render("K_Invalid", props, 1.0f, center);
+    advance_frame();
+
+    // Invalid drag frame (e.g. mouse leaves window and position becomes invalid)
+    io.MouseClicked[0] = false;
+    io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+    io.MouseDelta = ImVec2(0, 0);
+    KnobComponent::render("K_Invalid", props, 1.0f, center);
+    advance_frame();
+
+    // Release
+    io.MouseDown[0] = false;
+    KnobComponent::render("K_Invalid", props, 1.0f, center);
+    advance_frame();
+
+    ImGui::End();
+    ASSERT_EQ(val, 50.0f);
+}
+
 TEST_F(PresetTest, KnobComponent_DoubleClick_ResetsToDefault_CallsBothCallbacks) {
     ScopedImGuiContext imgui;
     ImGui::SetNextWindowPos(ImVec2(0, 0));

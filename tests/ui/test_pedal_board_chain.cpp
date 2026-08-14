@@ -42,6 +42,34 @@ static void click_item(const char* window_substr, const char* item_id_str) {
     }
 }
 
+TEST(GuiGraphState, ToggleFullscreenNativeEntersWithoutResettingZoom) {
+    GuiGraphState state;
+
+    state.is_fullscreen = false;
+    state.zoom = 2.5f;
+    state.target_zoom = 2.5f;
+
+    state.toggle_fullscreen_native();
+
+    ASSERT_TRUE(state.is_fullscreen);
+    ASSERT_NEAR(state.zoom, 2.5f, 0.0001f);
+    ASSERT_NEAR(state.target_zoom, 2.5f, 0.0001f);
+}
+
+TEST(GuiGraphState, ToggleFullscreenNativeExitResetsZoom) {
+    GuiGraphState state;
+
+    state.is_fullscreen = true;
+    state.zoom = 3.0f;
+    state.target_zoom = 3.0f;
+
+    state.toggle_fullscreen_native();
+
+    ASSERT_FALSE(state.is_fullscreen);
+    ASSERT_NEAR(state.zoom, 1.0f, 0.0001f);
+    ASSERT_NEAR(state.target_zoom, 1.0f, 0.0001f);
+}
+
 TEST_F(PresetTest, test_pedal_board_chain_scrolling_and_zooming) {
     ScopedImGuiContext imgui;
     AudioEngine engine;

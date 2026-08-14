@@ -1,4 +1,7 @@
 #include <imgui.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 #include <cmath>
 #include <unordered_map>
@@ -11,7 +14,7 @@
 #include "gui/views/gui_midi.h"
 namespace Amplitron {
 void PedalBoard::render_signal_chain() {
-    auto &ui_state = GuiGraphState::get_instance();
+    auto& ui_state = GuiGraphState::get_instance();
     // canvas_hovered is updated after the InvisibleButton is drawn (see below)
     float dt = ImGui::GetIO().DeltaTime;
     float lerp_factor = 1.0f - std::exp(-30.0f * dt);
@@ -42,8 +45,8 @@ void PedalBoard::render_signal_chain() {
     } else {
         ui_state.scrolling = ui_state.target_scrolling;
     }
-    auto &audio_graph = engine_.graph();
-    ImDrawList *draw_list = ImGui::GetWindowDrawList();
+    auto& audio_graph = engine_.graph();
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
     ImVec2 canvas_pos = ImGui::GetCursorScreenPos();
     ImVec2 canvas_size = ImGui::GetContentRegionAvail();
     ImVec2 canvas_end = ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y);
@@ -104,16 +107,48 @@ void PedalBoard::render_signal_chain() {
     ImGui::SetCursorScreenPos(ImVec2(canvas_pos.x + canvas_size.x - 70, canvas_pos.y + 10));
     ImGui::SetNextItemAllowOverlap();
     if (ImGui::Button(ui_state.is_fullscreen ? "Exit FS" : "Full Screen")) {
-        ui_state.is_fullscreen = !ui_state.is_fullscreen;
-        if (!ui_state.is_fullscreen) {
-            ui_state.zoom = 1.0f;
-            ui_state.target_zoom = 1.0f;
-        }
+#ifdef __EMSCRIPTEN__
+        EM_ASM({
+            var canvas = document.getElementById('canvas');
+            var isFS = !!(document.fullscreenElement || document.webkitFullscreenElement ||
+                          document.mozFullScreenElement || document.msFullscreenElement);
+            if (!isFS) {
+                if (canvas) {
+                    var p = null;
+                    if (canvas.requestFullscreen) {
+                        p = canvas.requestFullscreen();
+                    } else if (canvas.webkitRequestFullscreen) {
+                        p = canvas.webkitRequestFullscreen();
+                    } else if (canvas.msRequestFullscreen) {
+                        p = canvas.msRequestFullscreen();
+                    }
+                    if (p && p.catch) {
+                        p.catch(
+                            function(err) { console.warn('[Fullscreen] Request failed:', err); });
+                    }
+                }
+            } else {
+                var p = null;
+                if (document.exitFullscreen) {
+                    p = document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    p = document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    p = document.msExitFullscreen();
+                }
+                if (p && p.catch) {
+                    p.catch(function(err) { console.warn('[Fullscreen] Exit failed:', err); });
+                }
+            }
+        });
+#else
+        ui_state.toggle_fullscreen_native();
+#endif
     }
     std::vector<int> stale_ids;
     for (auto it = ui_state.node_positions.begin(); it != ui_state.node_positions.end();) {
         bool found = false;
-        for (const auto &node : audio_graph.get_nodes()) {
+        for (const auto& node : audio_graph.get_nodes()) {
             if (node.id == it->first) {
                 found = true;
                 break;
@@ -146,13 +181,13 @@ void PedalBoard::render_signal_chain() {
     }
     // Give all new nodes a default position at the end of the chain without
     // shifting existing nodes
-    for (const auto &node : audio_graph.get_nodes()) {
+    for (const auto& node : audio_graph.get_nodes()) {
         if (ui_state.node_positions.find(node.id) == ui_state.node_positions.end()) {
             if (node.x != 0.0f || node.y != 0.0f) {
                 ui_state.node_positions[node.id] = {ImVec2(node.x, node.y), false, ImVec2(0, 0)};
             } else {
                 float max_right = 40.0f;
-                for (const auto &existing_node : audio_graph.get_nodes()) {
+                for (const auto& existing_node : audio_graph.get_nodes()) {
                     auto pos_it = ui_state.node_positions.find(existing_node.id);
                     if (pos_it != ui_state.node_positions.end()) {
                         float width =
@@ -176,13 +211,13 @@ void PedalBoard::render_signal_chain() {
     bool is_running = engine_.is_running();
     int node_to_delete = -1;
     std::unordered_map<int, ImVec2> pin_positions_cache;
-    for (const auto &node : audio_graph.get_nodes()) {
-        auto &node_layout = ui_state.node_positions[node.id];
+    for (const auto& node : audio_graph.get_nodes()) {
+        auto& node_layout = ui_state.node_positions[node.id];
         ImVec2 node_screen_pos = ImVec2(offset.x + node_layout.position.x * ui_state.zoom,
                                         offset.y + node_layout.position.y * ui_state.zoom);
-        PedalWidget *target_widget = nullptr;
+        PedalWidget* target_widget = nullptr;
         if (node.routing_type == NodeRoutingType::StandardEffect) {
-            for (auto &w : widgets_) {
+            for (auto& w : widgets_) {
                 if (w->get_effect() == node.pedal) {
                     target_widget = w.get();
                     break;
@@ -378,7 +413,7 @@ void PedalBoard::render_signal_chain() {
             // --- COLOR & PULSE CALCULATIONS (SHARED) ---
             ImU32 flow_col = IM_COL32(200, 230, 255, 255);
             if (target_widget) {
-                const auto *colors = get_effect_color(target_widget->get_effect()->name());
+                const auto* colors = get_effect_color(target_widget->get_effect()->name());
                 flow_col = ImGui::ColorConvertFloat4ToU32(colors->led_color);
             }
 
@@ -453,7 +488,7 @@ void PedalBoard::render_signal_chain() {
             }
             if (ImGui::IsMouseHoveringRect(flow_p1, flow_p2) &&
                 (target_widget || !node.name.empty())) {
-                const char *name =
+                const char* name =
                     target_widget ? target_widget->get_effect()->name() : node.name.c_str();
                 ImGui::SetTooltip("%s (%s)", name, enabled ? "Active" : "Bypassed");
             }
@@ -547,7 +582,7 @@ void PedalBoard::render_signal_chain() {
                         ui_state.active_src_pin_pos = pin_pos;
                     } else if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
                         auto links = audio_graph.get_links();  // copy
-                        for (const auto &l : links) {
+                        for (const auto& l : links) {
                             if (l.source_pin_id == pin_id) {
                                 history_.execute(
                                     std::make_unique<RemoveGraphLinkCommand>(engine_, l));
@@ -562,9 +597,9 @@ void PedalBoard::render_signal_chain() {
     }
     // Process Deletions safely after iterating
     if (node_to_delete != -1) {
-        auto *node_ptr = audio_graph.find_node(node_to_delete);
+        auto* node_ptr = audio_graph.find_node(node_to_delete);
         if (node_ptr && node_ptr->routing_type == NodeRoutingType::StandardEffect) {
-            auto &effects = engine_.effects();
+            auto& effects = engine_.effects();
             for (size_t i = 0; i < effects.size(); ++i) {
                 if (effects[i] == node_ptr->pedal) {
                     history_.execute(
@@ -583,7 +618,7 @@ void PedalBoard::render_signal_chain() {
     }
     // Draw Patch Cables
     int link_to_delete = -1;
-    for (const auto &link : audio_graph.get_links()) {
+    for (const auto& link : audio_graph.get_links()) {
         if (pin_positions_cache.count(link.source_pin_id) &&
             pin_positions_cache.count(link.dest_pin_id)) {
             ImVec2 p1 = pin_positions_cache[link.source_pin_id];
@@ -635,7 +670,7 @@ void PedalBoard::render_signal_chain() {
     }
 
     if (link_to_delete != -1) {
-        for (const auto &l : audio_graph.get_links()) {
+        for (const auto& l : audio_graph.get_links()) {
             if (l.id == link_to_delete) {
                 history_.execute(std::make_unique<RemoveGraphLinkCommand>(engine_, l));
                 break;

@@ -3,6 +3,7 @@ project(Amplitron VERSION 1.0.0 LANGUAGES CXX C)
 include(GNUInstallDirs)
 
 enable_testing()
+set(FETCHCONTENT_QUIET OFF)
 
 set(AMPLITRON_VERSION "0.0.0" CACHE STRING "Application version (set by CI)")
 
@@ -62,9 +63,8 @@ endif()
 include(FetchContent)
 FetchContent_Declare(
     nlohmann_json
-    GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG        v3.11.3
-    GIT_SHALLOW    TRUE
+    URL            https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.tar.gz
+    URL_HASH       SHA256=0d8ef5af7f9794e3263480193c491549b2ba6cc74bb018906202ada498a79406
 )
 set(JSON_BuildTests OFF CACHE INTERNAL "Disable nlohmann/json tests")
 set(JSON_Install    OFF CACHE INTERNAL "Disable nlohmann/json install")
@@ -81,9 +81,8 @@ if(NOT TARGET GTest::gtest AND NOT EMSCRIPTEN AND NOT ANDROID AND NOT IOS)
     include(FetchContent)
     FetchContent_Declare(
         googletest
-        GIT_REPOSITORY https://github.com/google/googletest.git
-        GIT_TAG        release-1.12.1
-        GIT_SHALLOW    TRUE
+        URL            https://github.com/google/googletest/archive/refs/tags/release-1.12.1.tar.gz
+        URL_HASH       SHA256=81964fe578e9bd7c94dfdb09c8e4d6e6759e19967e397dbea48d1c10e45d0df2
     )
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(googletest)
@@ -1019,6 +1018,7 @@ if(BUILD_CLAP_PLUGIN AND NOT EMSCRIPTEN AND NOT ANDROID AND NOT IOS)
     )
 
     add_test(NAME amplitron-plugin-tests COMMAND amplitron-plugin-tests)
+    add_test(NAME amplitron-tests COMMAND amplitron-tests)
     if(TARGET amplitron-tests)
         add_dependencies(amplitron-tests amplitron-plugin-tests)
         add_custom_command(TARGET amplitron-tests POST_BUILD

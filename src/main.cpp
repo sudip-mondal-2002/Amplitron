@@ -186,6 +186,19 @@ extern "C" EMSCRIPTEN_KEEPALIVE void on_canvas_touch_cancel() {
     io.AddMouseButtonEvent(0, false);
 }
 
+extern "C" EMSCRIPTEN_KEEPALIVE void set_fullscreen_state(bool fs) {
+    auto& ui = Amplitron::GuiGraphState::get_instance();
+    ui.is_fullscreen = fs;
+    if (!fs) {
+        ui.zoom = 1.0f;
+        ui.target_zoom = 1.0f;
+    }
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE bool want_capture_mouse() {
+    return ImGui::GetCurrentContext() ? ImGui::GetIO().WantCaptureMouse : false;
+}
+
 extern "C" EMSCRIPTEN_KEEPALIVE bool is_canvas_hovered() {
     return Amplitron::GuiGraphState::get_instance().canvas_hovered;
 }
