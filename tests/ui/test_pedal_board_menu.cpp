@@ -241,6 +241,7 @@ TEST_F(PresetTest, test_pedal_board_menu_extended) {
                                                      "Pitch Shifter",
                                                      "Equalizer",
                                                      "Cabinet Sim",
+                                                     "NAM Loader",
                                                      "+ Signal Splitter Node (1 In -> N-Out)",
                                                      "+ Signal Mixer Node (N-In -> 1 Out)"};
 

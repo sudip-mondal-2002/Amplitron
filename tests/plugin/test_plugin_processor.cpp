@@ -1,10 +1,9 @@
-#include <gtest/gtest.h>
-
 #include <cmath>
 #include <string>
 #include <vector>
 
 #include "plugin/amplitron_plugin_processor.h"
+#include "test_framework.h"
 
 using Amplitron::AmplitronPluginProcessor;
 

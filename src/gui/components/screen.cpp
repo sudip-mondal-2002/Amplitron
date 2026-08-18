@@ -6,6 +6,7 @@
 
 #include "audio/effects/amp_cab/cabinet_sim.h"
 #include "audio/effects/dynamics/multiband_compressor.h"
+#include "audio/effects/nam_loader.h"
 #include "audio/effects/utility/looper.h"
 #include "audio/effects/utility/tuner.h"
 #include "audio/engine/audio_engine.h"

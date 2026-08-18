@@ -17,7 +17,8 @@
 
 namespace Amplitron {
 
-/** @brief Construct PedalWidget and look up color scheme for the effect type. */
+/** @brief Construct PedalWidget and look up color scheme for the effect type.
+ */
 PedalWidget::PedalWidget(IAudioEngine& engine, std::shared_ptr<Effect> effect, int index)
     : engine_(engine), effect_(std::move(effect)), index_(index) {
     assign_colors();
@@ -29,15 +30,16 @@ PedalWidget::~PedalWidget() {
     }
 }
 
-/** @brief Look up pedal_color_ and led_color_ from the theme's effect color table. */
+/** @brief Look up pedal_color_ and led_color_ from the theme's effect color
+ * table. */
 void PedalWidget::assign_colors() {
     const auto* entry = get_effect_color(effect_->name());
     pedal_color_ = entry->pedal_color;
     led_color_ = entry->led_color;
 }
 
-/** @brief Render the full pedal widget (body, knobs, switch, LED). @return true if remove
- * requested. */
+/** @brief Render the full pedal widget (body, knobs, switch, LED). @return true
+ * if remove requested. */
 bool PedalWidget::render(float zoom) {
     bool should_remove = false;
 
@@ -70,7 +72,8 @@ bool PedalWidget::render(float zoom) {
         render_standard_pedal(dl, p0, p1, pedal_width, enabled, zoom);
     }
 
-    // Dim the pedal body when bypassed so the inactive state is immediately obvious
+    // Dim the pedal body when bypassed so the inactive state is immediately
+    // obvious
     if (!enabled && !is_amp) {
         dl->AddRectFilled(p0, p1, Theme::PEDAL_BYPASS_OVERLAY, Theme::ROUNDING_MD * zoom);
     }
@@ -169,6 +172,12 @@ bool PedalWidget::render(float zoom) {
         ScreenComponent::render(dl, p0, pedal_width, zoom, props);
     }
 
+    // --- NAM Loader custom display ---
+    bool is_nam_loader = !is_amp && (std::strcmp(effect_->name(), "NAM Loader") == 0);
+    if (is_nam_loader) {
+        render_nam_loader_display(p0, pedal_width, zoom);
+    }
+
     if (is_looper) {
         ScreenProps props;
         props.type = ScreenType::Looper;
@@ -192,7 +201,7 @@ bool PedalWidget::render(float zoom) {
         };
         ScreenComponent::render(dl, p0, pedal_width, zoom, props);
     } else {
-        render_knobs(dl, p0, pedal_width, is_amp, is_tuner, is_ir_cab, zoom);
+        render_knobs(dl, p0, pedal_width, is_amp, is_tuner, is_ir_cab || is_nam_loader, zoom);
     }
 
     render_footswitch_and_extras(dl, p0, p1, pedal_width, pedal_height, is_amp, enabled,

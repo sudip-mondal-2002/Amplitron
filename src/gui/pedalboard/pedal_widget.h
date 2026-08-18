@@ -34,7 +34,8 @@ class PedalWidget {
 
     /**
      * @brief Render the pedal widget for one frame.
-     * @return true if the user clicked the remove button and the pedal should be deleted.
+     * @return true if the user clicked the remove button and the pedal should be
+     * deleted.
      */
     bool render(float zoom = 1.0f);
 
@@ -49,7 +50,8 @@ class PedalWidget {
 
     /**
      * @brief Inject a CommandHistory for recording undo-able parameter changes.
-     * @param history Pointer to the shared history (may be nullptr to disable undo).
+     * @param history Pointer to the shared history (may be nullptr to disable
+     * undo).
      */
     void set_history(CommandHistory* history) { history_ = history; }
 
@@ -71,6 +73,7 @@ class PedalWidget {
                             float pedal_height, float zoom);
     void render_standard_pedal(ImDrawList* dl, ImVec2 p0, ImVec2 p1, float pedal_width,
                                bool enabled, float zoom);
+    void render_nam_loader_display(ImVec2 p0, float pedal_width, float zoom);
     void render_knobs(ImDrawList* dl, ImVec2 p0, float pedal_width, bool is_amp, bool is_tuner,
                       bool is_ir_cab, float zoom);
     void render_footswitch_and_extras(ImDrawList* dl, ImVec2 p0, ImVec2 p1, float pedal_width,
@@ -106,7 +109,8 @@ class PedalWidget {
     void assign_colors();
 
     /**
-     * @brief Push a ParameterChangeCommand to the history (value already applied).
+     * @brief Push a ParameterChangeCommand to the history (value already
+     * applied).
      * @param param_index Index of the changed parameter.
      * @param old_val     Value before the change.
      * @param new_val     Value after the change.

@@ -1,6 +1,8 @@
 #include <cstdio>
 
 #include "audio/effects/amp_cab/amp_simulator.h"
+#include "audio/effects/nam_loader.h"
+#include "gui/dialogs/file_dialog.h"
 #include "gui/pedalboard/pedal_widget.h"
 #include "gui/theme/theme.h"
 
@@ -68,6 +70,87 @@ void PedalWidget::render_amp_cabinet(ImDrawList* dl, ImVec2 p0, ImVec2 p1, float
     dl->AddRectFilled(ImVec2(p0.x + 6 * zoom, p1.y - 10 * zoom),
                       ImVec2(p1.x - 6 * zoom, p1.y - 6 * zoom), Theme::ACCENT_GOLD_DIM,
                       2.0f * zoom);
+}
+
+void PedalWidget::render_nam_loader_display(ImVec2 p0, float pedal_width, float zoom) {
+    auto* nam = dynamic_cast<NamLoader*>(effect_.get());
+    if (!nam) return;
+
+    // Collect deferred old-model garbage once per frame on the GUI thread.
+    // This makes model_path() a pure, side-effect-free accessor.
+    nam->collect_garbage();
+
+    // --- Poll for a file asynchronously uploaded (web / Emscripten only) ---
+    // On native builds poll_uploaded_file_path() always returns "" immediately,
+    // so this block is a no-op outside of the web build.
+    {
+        std::string pending = poll_uploaded_file_path();
+        if (!pending.empty() && !nam->is_loading()) {
+            // Model construction is intentionally synchronous here. Emscripten's std::async
+            // worker path can terminate on C++ exceptions and leave loading_ permanently set.
+            // The direct WaveNet builder keeps this main-thread operation short and predictable.
+            nam->load_model(pending);
+        }
+    }
+
+    float btn_w = pedal_width - 30 * zoom;
+    ImGui::SetCursorScreenPos(ImVec2(p0.x + 15 * zoom, p0.y + 50 * zoom));
+
+    // Disable the button while an asynchronous native load is running to prevent
+    // stacking duplicate loads.
+    bool is_loading = nam->is_loading();
+    if (is_loading) ImGui::BeginDisabled();
+
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.10f, 0.25f, 0.15f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.15f, 0.40f, 0.20f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.20f, 0.55f, 0.25f, 1.0f));
+
+    char load_id[64];
+    snprintf(load_id, sizeof(load_id), "Load .nam##nam_load_%d", index_);
+
+    if (ImGui::Button(load_id, ImVec2(btn_w, 22 * zoom))) {
+        // On native: show_open_dialog opens a blocking native file picker and
+        // returns the chosen path synchronously.
+        // On web: show_open_dialog triggers the browser file input and returns
+        // "".  The JS FileReader callback writes the file into Emscripten FS
+        // and calls amplitron_on_file_uploaded(), which sets the pending path.
+        // The per-frame poll above picks it up on the next rendered frame via
+        // load_model() on the next frame.
+        std::string path = show_open_dialog("Load NAM Model", "NAM Model", "nam");
+        if (!path.empty()) {
+            // Native path: synchronous load is fine (blocking file picker
+            // already froze the UI; parsing is fast on native).
+            nam->load_model(path);
+        }
+    }
+    ImGui::PopStyleColor(3);
+    if (is_loading) ImGui::EndDisabled();
+
+    float display_y = p0.y + 78 * zoom;
+    if (is_loading) {
+        // Show a "Loading..." indicator while the async parse is running.
+        ImGui::SetCursorScreenPos(ImVec2(p0.x + 15 * zoom, display_y));
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.80f, 0.70f, 0.20f, 1.0f));
+        ImGui::TextUnformatted("Loading...");
+        ImGui::PopStyleColor();
+    } else if (!nam->model_path().empty()) {
+        std::string model_name = nam->model_path();
+        size_t slash = model_name.find_last_of("/\\");
+        if (slash != std::string::npos) model_name = model_name.substr(slash + 1);
+        if (model_name.size() > 20) model_name = model_name.substr(0, 17) + "...";
+
+        ImVec2 name_size = ImGui::CalcTextSize(model_name.c_str());
+        float cx = p0.x + pedal_width * 0.5f;
+        ImGui::SetCursorScreenPos(ImVec2(cx - name_size.x * 0.5f, display_y));
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.20f, 0.80f, 0.40f, 1.0f));
+        ImGui::TextUnformatted(model_name.c_str());
+        ImGui::PopStyleColor();
+    } else {
+        ImGui::SetCursorScreenPos(ImVec2(p0.x + 15 * zoom, display_y));
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
+        ImGui::TextUnformatted("No model loaded");
+        ImGui::PopStyleColor();
+    }
 }
 
 }  // namespace Amplitron

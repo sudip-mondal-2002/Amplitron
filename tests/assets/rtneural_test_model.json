@@ -1,0 +1,13 @@
+{
+    "in_shape": [null, 1],
+    "layers": [
+        {
+            "type": "dense",
+            "shape": [null, 1],
+            "weights": [
+                [[1.0]],
+                [0.0]
+            ]
+        }
+    ]
+}

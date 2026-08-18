@@ -26,4 +26,10 @@ std::string show_open_dialog(const std::string& title = "Open File",
 // Returns empty string if user cancelled
 std::string show_folder_dialog(const std::string& title = "Select Folder");
 
+// Non-blocking poll for a file path that was asynchronously uploaded by the
+// browser (Emscripten / web builds only).  On all native platforms this always
+// returns "".  Call once per rendered frame from widgets that need async file
+// loading (e.g. the NAM Loader pedal on web).
+std::string poll_uploaded_file_path();
+
 }  // namespace Amplitron

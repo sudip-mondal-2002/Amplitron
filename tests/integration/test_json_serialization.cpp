@@ -342,6 +342,9 @@ TEST(json_can_load_existing_factory_presets) {
 
     for (const auto &path : factory_presets) {
         std::ifstream f(path);
+        if (!f.is_open()) f.open("../" + path);
+        if (!f.is_open()) f.open("build/" + path);
+        if (!f.is_open()) f.open("../build/" + path);
         if (!f.is_open()) continue;  // Skip if not found in test environment
 
         std::string content((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());

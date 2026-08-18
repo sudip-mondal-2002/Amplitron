@@ -38,7 +38,9 @@ inline bool assert_eq_values(const A& a, const B& b) {
 struct TestResult {
     std::string name;
     bool passed;
-    std::string message;
+    // All failure messages accumulated during the test (EXPECT_ variants can
+    // fire multiple times; ASSERT_ aborts after the first via return).
+    std::vector<std::string> messages;
 };
 
 class Test {
@@ -71,17 +73,19 @@ class TestSuite {
             }
             current_test_ = name;
             current_failed_ = false;
+            current_messages_.clear();
             try {
                 fn();
             } catch (const std::exception& e) {
                 current_failed_ = true;
-                results_.push_back({name, false, std::string("EXCEPTION: ") + e.what()});
+                current_messages_.push_back(std::string("EXCEPTION: ") + e.what());
             }
             if (!current_failed_) {
-                results_.push_back({name, true, ""});
+                results_.push_back({name, true, {}});
                 ++passed;
                 std::cout << "  PASS  " << name << std::endl;
             } else {
+                results_.push_back({name, false, current_messages_});
                 ++failed;
             }
         }
@@ -96,7 +100,9 @@ class TestSuite {
             for (auto& r : results_) {
                 if (!r.passed) {
                     std::cout << "    FAIL  " << r.name << std::endl;
-                    std::cout << "          " << r.message << std::endl;
+                    for (const auto& msg : r.messages) {
+                        std::cout << "          " << msg << std::endl;
+                    }
                 }
             }
             std::cout << std::endl;
@@ -110,12 +116,14 @@ class TestSuite {
     }
 
     void fail(const std::string& msg) {
+        // Always record the message — EXPECT_ variants can fire multiple times
+        // within the same test and all messages must be preserved.
+        current_messages_.push_back(msg);
         if (!current_failed_) {
             current_failed_ = true;
-            results_.push_back({current_test_, false, msg});
             std::cout << "  FAIL  " << current_test_ << std::endl;
-            std::cout << "        " << msg << std::endl;
         }
+        std::cout << "        " << msg << std::endl;
     }
 
    private:
@@ -169,8 +177,14 @@ class TestSuite {
             xml << "    <testcase name=\"" << escape_xml(test_name) << "\" classname=\""
                 << escape_xml(suite_name) << "\" time=\"0.0\">\n";
             if (!r.passed) {
-                xml << "      <failure message=\"" << escape_xml(r.message)
-                    << "\" type=\"AssertionError\">" << escape_xml(r.message) << "</failure>\n";
+                // Concatenate all failure messages into a single <failure> element.
+                std::string combined;
+                for (size_t i = 0; i < r.messages.size(); ++i) {
+                    if (i > 0) combined += "\n";
+                    combined += r.messages[i];
+                }
+                xml << "      <failure message=\"" << escape_xml(combined)
+                    << "\" type=\"AssertionError\">" << escape_xml(combined) << "</failure>\n";
             }
             xml << "    </testcase>\n";
         }
@@ -183,6 +197,8 @@ class TestSuite {
     std::vector<TestResult> results_;
     std::string current_test_;
     bool current_failed_ = false;
+    // Messages accumulated by fail() for the currently-running test.
+    std::vector<std::string> current_messages_;
 };
 
 // Macros
@@ -335,6 +351,19 @@ class TestSuite {
         }                                                                                   \
     } while (0)
 
+#define ASSERT_LE(a, b)                                                                     \
+    do {                                                                                    \
+        auto _a = (a);                                                                      \
+        auto _b = (b);                                                                      \
+        if (!(_a <= _b)) {                                                                  \
+            std::ostringstream ss;                                                          \
+            ss << "ASSERT_LE failed: " #a " <= " #b " (" << _a << " > " << _b << ") (line " \
+               << __LINE__ << ")";                                                          \
+            TestFramework::TestSuite::instance().fail(ss.str());                            \
+            return;                                                                         \
+        }                                                                                   \
+    } while (0)
+
 #define ASSERT_THROW(expr, ExceptionType)                                                  \
     do {                                                                                   \
         bool caught = false;                                                               \
@@ -351,6 +380,129 @@ class TestSuite {
             TestFramework::TestSuite::instance().fail(ss.str());                           \
             return;                                                                        \
         }                                                                                  \
+    } while (0)
+
+// Non-fatal EXPECT_ variants: report the failure but continue test execution.
+// Unlike ASSERT_ macros these do NOT return from the enclosing function.
+#define EXPECT_TRUE(expr)                                                     \
+    do {                                                                      \
+        if (!(expr)) {                                                        \
+            std::ostringstream _ss;                                           \
+            _ss << "EXPECT_TRUE failed: " #expr " (line " << __LINE__ << ")"; \
+            TestFramework::TestSuite::instance().fail(_ss.str());             \
+        }                                                                     \
+    } while (0)
+
+#define EXPECT_FALSE(expr)                                                     \
+    do {                                                                       \
+        if ((expr)) {                                                          \
+            std::ostringstream _ss;                                            \
+            _ss << "EXPECT_FALSE failed: " #expr " (line " << __LINE__ << ")"; \
+            TestFramework::TestSuite::instance().fail(_ss.str());              \
+        }                                                                      \
+    } while (0)
+
+#define EXPECT_EQ(a, b)                                                                       \
+    do {                                                                                      \
+        auto _a = (a);                                                                        \
+        auto _b = (b);                                                                        \
+        if (!TestFramework::assert_eq_values(_a, _b)) {                                       \
+            std::ostringstream _ss;                                                           \
+            _ss << "EXPECT_EQ failed: " #a " == " #b " (" << _a << " != " << _b << ") (line " \
+                << __LINE__ << ")";                                                           \
+            TestFramework::TestSuite::instance().fail(_ss.str());                             \
+        }                                                                                     \
+    } while (0)
+
+#define EXPECT_NE(a, b)                                                                           \
+    do {                                                                                          \
+        auto _a = (a);                                                                            \
+        auto _b = (b);                                                                            \
+        if (_a == _b) {                                                                           \
+            std::ostringstream _ss;                                                               \
+            _ss << "EXPECT_NE failed: " #a " != " #b " (" << _a << ") (line " << __LINE__ << ")"; \
+            TestFramework::TestSuite::instance().fail(_ss.str());                                 \
+        }                                                                                         \
+    } while (0)
+
+#define EXPECT_GT(a, b)                                                                      \
+    do {                                                                                     \
+        auto _a = (a);                                                                       \
+        auto _b = (b);                                                                       \
+        if (!(_a > _b)) {                                                                    \
+            std::ostringstream _ss;                                                          \
+            _ss << "EXPECT_GT failed: " #a " > " #b " (" << _a << " <= " << _b << ") (line " \
+                << __LINE__ << ")";                                                          \
+            TestFramework::TestSuite::instance().fail(_ss.str());                            \
+        }                                                                                    \
+    } while (0)
+
+#define EXPECT_GE(a, b)                                                                      \
+    do {                                                                                     \
+        auto _a = (a);                                                                       \
+        auto _b = (b);                                                                       \
+        if (!(_a >= _b)) {                                                                   \
+            std::ostringstream _ss;                                                          \
+            _ss << "EXPECT_GE failed: " #a " >= " #b " (" << _a << " < " << _b << ") (line " \
+                << __LINE__ << ")";                                                          \
+            TestFramework::TestSuite::instance().fail(_ss.str());                            \
+        }                                                                                    \
+    } while (0)
+
+#define EXPECT_LT(a, b)                                                                      \
+    do {                                                                                     \
+        auto _a = (a);                                                                       \
+        auto _b = (b);                                                                       \
+        if (!(_a < _b)) {                                                                    \
+            std::ostringstream _ss;                                                          \
+            _ss << "EXPECT_LT failed: " #a " < " #b " (" << _a << " >= " << _b << ") (line " \
+                << __LINE__ << ")";                                                          \
+            TestFramework::TestSuite::instance().fail(_ss.str());                            \
+        }                                                                                    \
+    } while (0)
+
+#define EXPECT_LE(a, b)                                                                      \
+    do {                                                                                     \
+        auto _a = (a);                                                                       \
+        auto _b = (b);                                                                       \
+        if (!(_a <= _b)) {                                                                   \
+            std::ostringstream _ss;                                                          \
+            _ss << "EXPECT_LE failed: " #a " <= " #b " (" << _a << " > " << _b << ") (line " \
+                << __LINE__ << ")";                                                          \
+            TestFramework::TestSuite::instance().fail(_ss.str());                            \
+        }                                                                                    \
+    } while (0)
+
+#define EXPECT_NEAR(a, b, eps)                                                                    \
+    do {                                                                                          \
+        /* Cast to double so unsigned subtraction cannot wrap. */                                 \
+        double _a = static_cast<double>(a);                                                       \
+        double _b = static_cast<double>(b);                                                       \
+        double _diff = _a - _b;                                                                   \
+        if (std::fabs(_diff) > static_cast<double>(eps)) {                                        \
+            std::ostringstream _ss;                                                               \
+            _ss << "EXPECT_NEAR failed: |" #a " - " #b "| <= " #eps << " (" << _a << " vs " << _b \
+                << ", diff=" << std::fabs(_diff) << ") (line " << __LINE__ << ")";                \
+            TestFramework::TestSuite::instance().fail(_ss.str());                                 \
+        }                                                                                         \
+    } while (0)
+
+#define EXPECT_FLOAT_EQ(a, b) EXPECT_NEAR(a, b, 0.0001f)
+#define EXPECT_DOUBLE_EQ(a, b) EXPECT_NEAR(a, b, 0.000001)
+#define EXPECT_STREQ(a, b)                                                               \
+    do {                                                                                 \
+        std::string _a(a);                                                               \
+        std::string _b(b);                                                               \
+        if (_a != _b) {                                                                  \
+            std::ostringstream _ss;                                                      \
+            _ss << "EXPECT_STREQ failed: " #a " == " #b " (\"" << _a << "\" != \"" << _b \
+                << "\") (line " << __LINE__ << ")";                                      \
+            TestFramework::TestSuite::instance().fail(_ss.str());                        \
+        }                                                                                \
+    } while (0)
+
+#define SUCCEED() \
+    do {          \
     } while (0)
 
 }  // namespace TestFramework
