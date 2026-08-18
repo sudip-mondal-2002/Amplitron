@@ -725,6 +725,7 @@ jobs:
         run: |
           PRODUCTS_DIR=$(xcodebuild -project build-ios/Amplitron.xcodeproj \
             -scheme Amplitron -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
             -showBuildSettings 2>/dev/null \
             | grep ' BUILT_PRODUCTS_DIR' | awk '{print $3}')
           echo "products_dir=$PRODUCTS_DIR" >> $GITHUB_OUTPUT
@@ -740,6 +741,7 @@ jobs:
             -scheme Amplitron \
             -configuration Release \
             -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
             ONLY_ACTIVE_ARCH=YES \
             CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
             build 2>&1 | tee /tmp/xcode.log | xcpretty --color
