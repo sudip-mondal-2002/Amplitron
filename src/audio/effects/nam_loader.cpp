@@ -390,8 +390,7 @@ void NamLoader::load_model_async(const std::string& path) {
     // compare_exchange fails and we return immediately, preserving single-load
     // semantics without a TOCTOU window.
     bool expected = false;
-    if (!loading_.compare_exchange_strong(expected, true,
-                                          std::memory_order_acq_rel,
+    if (!loading_.compare_exchange_strong(expected, true, std::memory_order_acq_rel,
                                           std::memory_order_acquire)) {
         return;
     }
