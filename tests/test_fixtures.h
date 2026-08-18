@@ -174,6 +174,18 @@ struct TestAccessor {
                              bool is_amp, bool is_tuner, bool is_ir_cab, float zoom) {
         w.render_knobs(dl, p0, pedal_width, is_amp, is_tuner, is_ir_cab, zoom);
     }
+    static void render_amp_cabinet(PedalWidget& w, ImDrawList* dl, ImVec2 p0, ImVec2 p1,
+                                   float pedal_width, float pedal_height, float zoom) {
+        w.render_amp_cabinet(dl, p0, p1, pedal_width, pedal_height, zoom);
+    }
+    static void render_nam_loader_display(PedalWidget& w, ImVec2 p0, float pedal_width,
+                                          float zoom) {
+        w.render_nam_loader_display(p0, pedal_width, zoom);
+    }
+    static void render_standard_pedal(PedalWidget& w, ImDrawList* dl, ImVec2 p0, ImVec2 p1,
+                                      float pedal_width, bool enabled, float zoom) {
+        w.render_standard_pedal(dl, p0, p1, pedal_width, enabled, zoom);
+    }
 
     // PedalBoard accessors
     static void render_add_pedal_menu(PedalBoard& b) { b.render_add_pedal_menu(); }

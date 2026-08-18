@@ -12,16 +12,36 @@
         <link rel="icon" type="image/svg+xml" href="icon.svg" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <!-- Load Cinzel + DM Sans asynchronously to avoid render-blocking -->
         <link
             href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap"
             rel="stylesheet"
+            media="print"
+            onload="this.media='all'"
         />
+        <noscript>
+            <link
+                href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap"
+                rel="stylesheet"
+            />
+        </noscript>
         <link rel="stylesheet" href="styles.css" />
+        <!-- Load only the 6 Material Symbols icons used on this page (subsetted via icon_names).
+             display=block prevents raw ligature text flashing before the icon glyph loads. -->
         <link
             rel="stylesheet"
-            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
+            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=design_services,devices,favorite,headphones,music_note_2,save&display=block"
+            media="print"
+            onload="this.media='all'"
         />
-        <script src="script.js"></script>
+        <noscript>
+            <link
+                rel="stylesheet"
+                href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=design_services,devices,favorite,headphones,music_note_2,save&display=block"
+            />
+        </noscript>
+        <!-- defer: script uses DOMContentLoaded, so defer is safe and removes the parser-blocking penalty -->
+        <script src="script.js" defer></script>
     </head>
     <body>
         <!-- Sticky navbar -->
@@ -39,7 +59,15 @@
         <div class="container">
             <header>
                 <div class="header-icon">
-                    <img src="icon.svg" alt="Amplitron" />
+                    <!-- fetchpriority=high: this is the LCP element; hint the browser to load it early -->
+                    <img
+                        src="icon.svg"
+                        alt="Amplitron"
+                        width="120"
+                        height="120"
+                        loading="eager"
+                        fetchpriority="high"
+                    />
                 </div>
                 <h1 class="logo">AMPLITRON</h1>
                 <p class="tagline">Professional Guitar Amp Simulator</p>

@@ -78,15 +78,24 @@ set(CMAKE_WARN_DEPRECATED ${OLD_CMAKE_WARN_DEPRECATED})
 
 find_package(GTest QUIET)
 if(NOT TARGET GTest::gtest AND NOT EMSCRIPTEN AND NOT ANDROID AND NOT IOS)
-    include(FetchContent)
-    FetchContent_Declare(
-        googletest
-        GIT_REPOSITORY https://github.com/google/googletest.git
-        GIT_TAG        release-1.12.1
-        GIT_SHALLOW    TRUE
-    )
-    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-    FetchContent_MakeAvailable(googletest)
+    # Only attempt to fetch googletest when the source directory is absent
+    # (first-time configure with network access).  In offline / CI-cached
+    # environments, set FETCHCONTENT_FULLY_DISCONNECTED=ON (or rely on the
+    # cached _deps/googletest-src directory) so the build does not fail
+    # trying to reach github.com.  The main amplitron-tests binary uses its
+    # own custom test framework and does NOT require GTest; only the smaller
+    # amplitron-plugin-tests target needs it.
+    if(NOT FETCHCONTENT_FULLY_DISCONNECTED)
+        include(FetchContent)
+        FetchContent_Declare(
+            googletest
+            GIT_REPOSITORY https://github.com/google/googletest.git
+            GIT_TAG        release-1.12.1
+            GIT_SHALLOW    TRUE
+        )
+        set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+        FetchContent_MakeAvailable(googletest)
+    endif()
 endif()
 
 file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/external")
@@ -266,6 +275,7 @@ set(APP_SOURCES
     src/audio/effects/core/effect.cpp
     src/audio/effects/distortion/distortion.cpp
     src/audio/effects/distortion/overdrive.cpp
+    src/audio/effects/nam_loader.cpp
     src/audio/effects/delay_reverb/delay.cpp
     src/audio/effects/delay_reverb/reverb.cpp
     src/audio/effects/modulation/chorus.cpp
@@ -421,15 +431,31 @@ if(EMSCRIPTEN)
         ${IMGUI_DIR}
         ${IMGUI_DIR}/backends
     )
+    target_include_directories(Amplitron SYSTEM PRIVATE
+        ${CMAKE_SOURCE_DIR}/external/RTNeural
+    )
 
     # OpenGL ES 3 for ImGui's OpenGL3 backend on WebGL 2
-    target_compile_definitions(Amplitron PRIVATE IMGUI_IMPL_OPENGL_ES3 AMPLITRON_VERSION="${AMPLITRON_VERSION}")
+    target_compile_definitions(Amplitron PRIVATE
+        IMGUI_IMPL_OPENGL_ES3
+        AMPLITRON_VERSION="${AMPLITRON_VERSION}"
+        RTNEURAL_DEFAULT_ALIGNMENT=16
+    )
+
+    # WebAssembly SIMD substantially reduces the per-sample cost of the neural model.
+    # Keep the native targets unchanged; this is supported by all browsers that can run
+    # the SharedArrayBuffer/AudioWorklet build used here.
+    target_compile_options(Amplitron PRIVATE -O3 -msimd128)
 
     target_link_libraries(Amplitron PRIVATE nlohmann_json::nlohmann_json)
+
+    set_target_properties(Amplitron PROPERTIES UNITY_BUILD OFF)
 
     # Emscripten linker flags for Web Audio + AudioWorklet + SharedArrayBuffer
     target_link_options(Amplitron PRIVATE
         "-sWASM=1"
+        "-msimd128"
+        
         "-sUSE_SDL=2"
         "-sMIN_WEBGL_VERSION=2"
         "-sMAX_WEBGL_VERSION=2"
@@ -438,7 +464,8 @@ if(EMSCRIPTEN)
         "-sWASM_WORKERS=1"
         "-pthread"
         "-sSHARED_MEMORY=1"
-        "-sEXPORTED_RUNTIME_METHODS=['ccall','cwrap']"
+        "-sEXPORTED_RUNTIME_METHODS=['ccall','cwrap','FS']"
+        "-sEXPORTED_FUNCTIONS=['_main','_amplitron_on_file_uploaded']"
         "-sSTACK_SIZE=1048576"
         "-sPTHREAD_POOL_SIZE=4"
         "-Wno-pthreads-mem-growth"
@@ -489,6 +516,9 @@ elseif(ANDROID)
         ${IMGUI_DIR}
         ${IMGUI_DIR}/backends
     )
+    target_include_directories(main SYSTEM PRIVATE
+        ${CMAKE_SOURCE_DIR}/external/RTNeural
+    )
     if(SDL2_SOURCE_DIR)
         target_include_directories(main PRIVATE ${SDL2_SOURCE_DIR}/include)
     endif()
@@ -498,6 +528,7 @@ elseif(ANDROID)
         AMPLITRON_VERSION="${AMPLITRON_VERSION}"
         AMPLITRON_NO_MIDI
         AMPLITRON_ANDROID_OBOE   # signals that Oboe backend is in use
+        RTNEURAL_DEFAULT_ALIGNMENT=16
     )
 
     target_include_directories(main PRIVATE ${OBOE_INCLUDE_DIRS})
@@ -511,6 +542,8 @@ elseif(ANDROID)
         EGL
         GLESv3
     )
+
+    set_target_properties(main PROPERTIES UNITY_BUILD OFF)
 
 elseif(IOS)
 
@@ -532,6 +565,9 @@ elseif(IOS)
         ${IMGUI_DIR}
         ${IMGUI_DIR}/backends
     )
+    target_include_directories(Amplitron SYSTEM PRIVATE
+        ${CMAKE_SOURCE_DIR}/external/RTNeural
+    )
     if(SDL2_INCLUDE_DIRS)
         target_include_directories(Amplitron PRIVATE ${SDL2_INCLUDE_DIRS})
     elseif(SDL2_SOURCE_DIR)
@@ -543,6 +579,7 @@ elseif(IOS)
         AMPLITRON_VERSION="${AMPLITRON_VERSION}"
         AMPLITRON_NO_DESKTOP_SHELL
         AMPLITRON_NO_MIDI
+        RTNEURAL_DEFAULT_ALIGNMENT=16
     )
 
     if(SDL2_LIBRARIES)
@@ -575,6 +612,7 @@ elseif(IOS)
         XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY    ""
         XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO"
         XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED  "NO"
+        UNITY_BUILD                           OFF
     )
 
 else() # NOT EMSCRIPTEN, ANDROID, or IOS
@@ -633,6 +671,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         src/audio/effects/core/effect.cpp
         src/audio/effects/distortion/distortion.cpp
         src/audio/effects/distortion/overdrive.cpp
+        src/audio/effects/nam_loader.cpp
         src/audio/effects/delay_reverb/delay.cpp
         src/audio/effects/delay_reverb/reverb.cpp
         src/audio/effects/modulation/chorus.cpp
@@ -674,6 +713,9 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${SDL2_INCLUDE_DIRS}
         ${RTMIDI_INCLUDE_DIRS}
     )
+    target_include_directories(amplitron_core SYSTEM PRIVATE
+        ${CMAKE_SOURCE_DIR}/external/RTNeural
+    )
     if(WITH_JACK AND UNIX AND NOT APPLE AND JACK_INCLUDE_DIRS)
         target_include_directories(amplitron_core PRIVATE ${JACK_INCLUDE_DIRS})
     endif()
@@ -683,6 +725,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
     target_compile_definitions(amplitron_core PRIVATE
         AMPLITRON_HAS_MIDI
         AMPLITRON_VERSION="${AMPLITRON_VERSION}"
+        RTNEURAL_DEFAULT_ALIGNMENT=16
     )
     if(WITH_JACK AND UNIX AND NOT APPLE)
         target_compile_definitions(amplitron_core PRIVATE WITH_JACK)
@@ -715,6 +758,9 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${OPENGL_INCLUDE_DIR}
         ${RTMIDI_INCLUDE_DIRS}
     )
+    target_include_directories(Amplitron SYSTEM PRIVATE
+        ${CMAKE_SOURCE_DIR}/external/RTNeural
+    )
 
     if(WITH_JACK AND UNIX AND NOT APPLE AND JACK_INCLUDE_DIRS)
         target_include_directories(Amplitron PRIVATE ${JACK_INCLUDE_DIRS})
@@ -723,6 +769,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
     target_compile_definitions(Amplitron PRIVATE
         AMPLITRON_VERSION="${AMPLITRON_VERSION}"
         AMPLITRON_HAS_MIDI
+        RTNEURAL_DEFAULT_ALIGNMENT=16
     )
 
     if(WITH_JACK AND UNIX AND NOT APPLE)
@@ -774,6 +821,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/unit/test_pitch_shifter.cpp
         tests/unit/test_effects_utility.cpp
         tests/unit/test_looper.cpp
+        tests/unit/test_nam_loader.cpp
         tests/unit/test_theme.cpp
         tests/unit/test_command_history.cpp
         tests/unit/test_effect_base.cpp
@@ -818,6 +866,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         tests/ui/test_window_context.cpp
         tests/ui/test_pedal_widget_knobs.cpp
         tests/ui/test_pedal_widget.cpp
+        tests/ui/test_pedal_widget_body.cpp
         tests/unit/test_session_manager.cpp
         tests/unit/test_preset_components.cpp
         tests/unit/test_cli.cpp
@@ -899,8 +948,10 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         ${SDL2_INCLUDE_DIRS}
         ${OPENGL_INCLUDE_DIR}
         ${RTMIDI_INCLUDE_DIRS}
-
-    ${clap_SOURCE_DIR}/include)
+    )
+    target_include_directories(amplitron-tests SYSTEM PRIVATE
+        ${CMAKE_SOURCE_DIR}/external/RTNeural
+    )
 
     if(WITH_JACK AND UNIX AND NOT APPLE AND JACK_INCLUDE_DIRS)
         target_include_directories(amplitron-tests PRIVATE ${JACK_INCLUDE_DIRS})
@@ -913,6 +964,7 @@ else() # NOT EMSCRIPTEN, ANDROID, or IOS
         AMPLITRON_TESTS
         AMPLITRON_TEST_NATIVE_DIALOGS
         SDL_MAIN_HANDLED
+        RTNEURAL_DEFAULT_ALIGNMENT=16
         "Pa_GetDeviceCount=MOCK_Pa_GetDeviceCount"
         "Pa_GetDeviceInfo=MOCK_Pa_GetDeviceInfo"
         "Pa_GetHostApiInfo=MOCK_Pa_GetHostApiInfo"
@@ -975,6 +1027,8 @@ target_link_libraries(amplitron-tests PRIVATE
         target_link_libraries(amplitron-tests PRIVATE dl pthread)
     endif()
 
+    set_target_properties(amplitron_core PROPERTIES UNITY_BUILD OFF)
+    set_target_properties(Amplitron PROPERTIES UNITY_BUILD OFF)
     set_target_properties(amplitron-tests PROPERTIES UNITY_BUILD OFF)
 
 
@@ -998,6 +1052,7 @@ endif()
 # --- Plugin processor tests ---
 if(BUILD_CLAP_PLUGIN AND NOT EMSCRIPTEN AND NOT ANDROID AND NOT IOS)
     add_executable(amplitron-plugin-tests
+        tests/test_main.cpp
         tests/plugin/test_plugin_processor.cpp
         tests/plugin/test_clap_plugin.cpp
         src/plugin/amplitron_plugin_processor.cpp
@@ -1007,6 +1062,7 @@ if(BUILD_CLAP_PLUGIN AND NOT EMSCRIPTEN AND NOT ANDROID AND NOT IOS)
 
     target_include_directories(amplitron-plugin-tests PRIVATE
         ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/tests
         ${CMAKE_SOURCE_DIR}/external
 
         ${CMAKE_BINARY_DIR}/_deps/clap-src/include)

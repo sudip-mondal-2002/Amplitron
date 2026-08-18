@@ -189,4 +189,8 @@ std::string show_save_dialog(const std::string& default_name, const std::string&
 
 #endif  // AMPLITRON_HEADLESS
 
+// poll_uploaded_file_path() is a no-op on all native (non-web) platforms.
+// File uploads are handled synchronously by the native file dialogs above.
+std::string poll_uploaded_file_path() { return ""; }
+
 }  // namespace Amplitron

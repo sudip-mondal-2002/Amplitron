@@ -2,27 +2,27 @@
 
 #include <cstdio>
 
-#include "audio/effects/amp_cab/amp_simulator.h"
-#include "audio/effects/amp_cab/cabinet_sim.h"
-#include "audio/effects/delay_reverb/delay.h"
-#include "audio/effects/delay_reverb/reverb.h"
-#include "audio/effects/distortion/distortion.h"
-#include "audio/effects/distortion/overdrive.h"
-#include "audio/effects/dynamics/compressor.h"
-#include "audio/effects/dynamics/multiband_compressor.h"
-#include "audio/effects/dynamics/noise_gate.h"
-#include "audio/effects/eq_filter/equalizer.h"
-#include "audio/effects/eq_filter/wah.h"
-#include "audio/effects/modulation/chorus.h"
-#include "audio/effects/modulation/flanger.h"
-#include "audio/effects/modulation/phaser.h"
+#include "audio/effects/amp_simulator.h"
+#include "audio/effects/cabinet_sim.h"
+#include "audio/effects/chorus.h"
+#include "audio/effects/compressor.h"
+#include "audio/effects/delay.h"
+#include "audio/effects/distortion.h"
+#include "audio/effects/equalizer.h"
+#include "audio/effects/flanger.h"
+#include "audio/effects/looper.h"
+#include "audio/effects/multiband_compressor.h"
 #include "audio/effects/nam_loader.h"
-#include "audio/effects/pitch/octaver.h"
-#include "audio/effects/pitch/pitch_shifter.h"
-#include "audio/effects/utility/looper.h"
-#include "gui/pedalboard/pedal_board.h"
-#include "gui/theme/theme.h"
-#include "gui/views/gui_midi.h"
+#include "audio/effects/noise_gate.h"
+#include "audio/effects/octaver.h"
+#include "audio/effects/overdrive.h"
+#include "audio/effects/phaser.h"
+#include "audio/effects/pitch_shifter.h"
+#include "audio/effects/reverb.h"
+#include "audio/effects/wah.h"
+#include "gui/gui_midi.h"
+#include "gui/pedal_board.h"
+#include "gui/theme.h"
 #include "midi/midi_manager.h"
 
 namespace Amplitron {
@@ -100,6 +100,9 @@ void PedalBoard::render_add_pedal_menu() {
         if (ImGui::MenuItem("Cabinet Sim")) {
             add_effect_and_show(std::make_shared<CabinetSim>());
         }
+
+        ImGui::Separator();
+        ImGui::TextColored(ImVec4(0.20f, 0.80f, 0.60f, 1.0f), "ML MODELS");
         if (ImGui::MenuItem("NAM Loader")) {
             add_effect_and_show(std::make_shared<NamLoader>());
         }
@@ -108,13 +111,13 @@ void PedalBoard::render_add_pedal_menu() {
         ImGui::TextDisabled("Routing Utility Blocks");
 
         // --- NEW MODULAR DAG INSTANTIATION ENTRIES ---
-        if (ImGui::MenuItem("+ Signal Splitter Node (1 In -> N-Out)")) {
-            history_.execute(std::make_unique<AddGraphNodeCommand>(
-                engine_, "Splitter", NodeRoutingType::Splitter, nullptr, ImVec2(0, 0)));
+        if (ImGui::MenuItem("+ Signal Splitter Node (1 In -> 2 Out)")) {
+            engine_.graph().add_node("Splitter", NodeRoutingType::Splitter, nullptr);
+            engine_.commit_graph_changes();
         }
-        if (ImGui::MenuItem("+ Signal Mixer Node (N-In -> 1 Out)")) {
-            history_.execute(std::make_unique<AddGraphNodeCommand>(
-                engine_, "Mixer", NodeRoutingType::Mixer, nullptr, ImVec2(0, 0), 2));
+        if (ImGui::MenuItem("+ Signal Mixer Node (2 In -> 1 Out)")) {
+            engine_.graph().add_node("Mixer", NodeRoutingType::Mixer, nullptr);
+            engine_.commit_graph_changes();
         }
 
         ImGui::EndPopup();
@@ -122,7 +125,7 @@ void PedalBoard::render_add_pedal_menu() {
 }
 
 void PedalBoard::render_amp_selector() {
-    const auto &models = get_amp_models();
+    const auto& models = get_amp_models();
     int amp_idx = find_amp_index();
 
     if (amp_idx < 0) {
@@ -133,10 +136,10 @@ void PedalBoard::render_amp_selector() {
         amp_idx = find_amp_index();
     }
 
-    const char *current_label = "Amp";
+    const char* current_label = "Amp";
     int current_model = 0;
     if (amp_idx >= 0) {
-        auto &amp_fx = engine_.effects()[amp_idx];
+        auto& amp_fx = engine_.effects()[amp_idx];
         current_model = static_cast<int>(amp_fx->params()[0].value);
         if (current_model >= 0 && current_model < static_cast<int>(models.size())) {
             current_label = models[current_model].name;
@@ -171,7 +174,7 @@ void PedalBoard::render_amp_selector() {
 // ============================================================
 void PedalBoard::render_midi_menu() {
     if (!gui_midi_) return;
-    auto &midi = gui_midi_->manager();
+    auto& midi = gui_midi_->manager();
 
     if (ImGui::Button("MIDI")) {
         ImGui::OpenPopup("MidiMenuPopup");
@@ -217,7 +220,7 @@ void PedalBoard::render_midi_menu() {
         ImGui::Separator();
 
         // Show active mappings count
-        auto &mappings = midi.mappings();
+        auto& mappings = midi.mappings();
         ImGui::TextDisabled("%zu active mappings", mappings.size());
 
         ImGui::EndPopup();

@@ -89,7 +89,14 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Install NSIS
-      run: sudo apt-get update && sudo apt-get install -y nsis
+      run: |
+        export DEBIAN_FRONTEND=noninteractive
+        sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list \
+                   /etc/apt/sources.list.d/azure-cli.list \
+                   /etc/apt/sources.list.d/ubuntu-toolchain-r-*.list || true
+        sudo apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout="30" -o Acquire::https::Timeout="30"
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+          -o Acquire::Retries=3 -o Acquire::http::Timeout="30" -o Acquire::https::Timeout="30" nsis
 
     - name: Prepare Files
       run: |
