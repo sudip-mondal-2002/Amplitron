@@ -7,6 +7,7 @@
 
 #include <fstream>
 #include <future>
+#include <mutex>
 #include <nlohmann/json.hpp>
 #include <stdexcept>
 #include <thread>
@@ -289,11 +290,12 @@ static std::unique_ptr<RTNeural::Model<float>> build_wavenet_model(const nlohman
     }
 
     auto* output = new RTNeural::Dense<float>(current_in, 1);
+    const float head_scale = config.value("head_scale", 1.0f);
     std::vector<std::vector<float>> output_weights(1, std::vector<float>(current_in));
     for (int in = 0; in < current_in; ++in) {
-        output_weights[0][in] = next_weight(weights, index);
+        output_weights[0][in] = next_weight(weights, index) * head_scale;
     }
-    const float output_bias = next_weight(weights, index) * config.value("head_scale", 1.0f);
+    const float output_bias = next_weight(weights, index) * head_scale;
     output->setWeights(output_weights);
     output->setBias(&output_bias);
     model->addLayer(output);
@@ -306,6 +308,9 @@ static std::unique_ptr<RTNeural::Model<float>> parse_model(const nlohmann::json&
         const auto& submodels = raw_json.value("config", nlohmann::json::object())
                                     .value("submodels", nlohmann::json::array());
         if (submodels.empty() || !submodels.back().contains("model")) return {};
+        // Use submodels.back() — SlimmableContainer stores submodels in
+        // ascending quality order, so the last entry is the largest/most
+        // accurate variant available.
         model_json = &submodels.back()["model"];
     }
 
@@ -353,25 +358,46 @@ bool NamLoader::load_model(const std::string& path) {
         auto* old_pending = pending_model_.exchange(temp_model.release());
         delete old_pending;
 
-        model_path_ = path;
+        {
+            std::lock_guard<std::mutex> lk(model_path_mutex_);
+            model_path_ = path;
+            load_error_.clear();
+        }
         model_loaded_.store(true, std::memory_order_release);
         clear_pending_.store(false, std::memory_order_release);
         return true;
+    } catch (const std::exception& ex) {
+        loading_.store(false, std::memory_order_release);
+        {
+            std::lock_guard<std::mutex> lk(model_path_mutex_);
+            load_error_ = ex.what();
+        }
+        // Parse threw — leave prior model intact.
+        return false;
     } catch (...) {
         loading_.store(false, std::memory_order_release);
+        {
+            std::lock_guard<std::mutex> lk(model_path_mutex_);
+            load_error_ = "Unknown parse error";
+        }
         // Parse threw — leave prior model intact.
         return false;
     }
 }
 
 void NamLoader::load_model_async(const std::string& path) {
-    // If already loading, ignore the duplicate request.
-    if (loading_.load(std::memory_order_acquire)) return;
+    // Atomically claim the loading slot.  If loading_ is already true the
+    // compare_exchange fails and we return immediately, preserving single-load
+    // semantics without a TOCTOU window.
+    bool expected = false;
+    if (!loading_.compare_exchange_strong(expected, true,
+                                          std::memory_order_acq_rel,
+                                          std::memory_order_acquire)) {
+        return;
+    }
 
     // Collect deferred garbage before kicking off a new load.
     collect_garbage();
-
-    loading_.store(true, std::memory_order_release);
 
     // Capture path by value so the lambda owns it.
     load_future_ = std::async(std::launch::async, [this, path]() {
@@ -385,6 +411,10 @@ void NamLoader::load_model_async(const std::string& path) {
             f >> raw_j;
             auto temp_model = parse_model(raw_j);
             if (!temp_model) {
+                {
+                    std::lock_guard<std::mutex> lk(model_path_mutex_);
+                    load_error_ = "Model format not supported or parse returned null";
+                }
                 loading_.store(false, std::memory_order_release);
                 return;
             }
@@ -393,21 +423,32 @@ void NamLoader::load_model_async(const std::string& path) {
             auto* old_pending = pending_model_.exchange(temp_model.release());
             delete old_pending;
 
-            // model_path_ is only read on the GUI thread so writing it from
-            // the loader thread is safe here (GUI won't be in load_model_async
-            // again because loading_ is still true).
-            model_path_ = path;
+            // model_path_ is only read on the GUI thread; hold the mutex
+            // while writing so model_path() never observes a torn string.
+            {
+                std::lock_guard<std::mutex> lk(model_path_mutex_);
+                model_path_ = path;
+                load_error_.clear();
+            }
             model_loaded_.store(true, std::memory_order_release);
             clear_pending_.store(false, std::memory_order_release);
+        } catch (const std::exception& ex) {
+            std::lock_guard<std::mutex> lk(model_path_mutex_);
+            load_error_ = ex.what();
         } catch (...) {
-            // Silently swallow parse errors — leave prior model intact.
+            std::lock_guard<std::mutex> lk(model_path_mutex_);
+            load_error_ = "Unknown async parse error";
         }
         loading_.store(false, std::memory_order_release);
     });
 }
 
 void NamLoader::clear_model() {
-    model_path_.clear();
+    {
+        std::lock_guard<std::mutex> lk(model_path_mutex_);
+        model_path_.clear();
+        load_error_.clear();
+    }
     model_loaded_.store(false, std::memory_order_release);
 
     auto* old = pending_model_.exchange(nullptr);
@@ -416,10 +457,20 @@ void NamLoader::clear_model() {
     clear_pending_.store(true, std::memory_order_release);
 }
 
-const std::string& NamLoader::model_path() const {
-    // Pure accessor — no side effects.  Callers responsible for GC via
-    // collect_garbage() (load_model calls it; GUI calls it once per frame).
+std::string NamLoader::model_path() const {
+    std::lock_guard<std::mutex> lk(model_path_mutex_);
     return model_path_;
+}
+
+std::string NamLoader::load_error() const {
+    std::lock_guard<std::mutex> lk(model_path_mutex_);
+    return load_error_;
+}
+
+void NamLoader::wait_for_load() {
+    if (load_future_.valid()) {
+        load_future_.wait();
+    }
 }
 
 void NamLoader::push_garbage(RTNeural::Model<float>* old) {
@@ -476,6 +527,11 @@ void NamLoader::check_pending_model() {
 }
 
 void NamLoader::reset() {
+    // NOTE: active_model_ is owned by the audio thread. Calling reset()
+    // directly from the GUI thread is a data race. If the command-queue
+    // mechanism is available this should be routed through it instead.
+    // For now, reset() is only safe to call from the audio thread or
+    // between process() calls (e.g. sample-rate change from the DAW host).
     auto* model = active_model_;
     if (model) {
         model->reset();

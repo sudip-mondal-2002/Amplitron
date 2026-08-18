@@ -85,6 +85,9 @@ std::string show_open_dialog(const std::string& /*title*/, const std::string& /*
                     } catch (e) {
                     }
                     var path = dir + '/' + file.name;
+                    // Remove any previous upload at the same path to prevent
+                    // stale model files from accumulating in MEMFS.
+                    try { FS.unlink(path); } catch (e) {}
                     FS.writeFile(path, data);
                     // Notify C++ that the file is ready.
                     Module.ccall('amplitron_on_file_uploaded', null, ['string'], [path]);

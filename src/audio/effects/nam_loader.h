@@ -12,6 +12,7 @@
 #include <atomic>
 #include <future>
 #include <memory>
+#include <mutex>
 #include <string>
 
 #include "audio/effects/core/effect.h"
@@ -55,8 +56,18 @@ class NamLoader : public Effect {
     bool is_loading() const { return loading_.load(std::memory_order_acquire); }
     /** Clears the loaded model. */
     void clear_model();
-    /** Returns the path of the currently loaded .nam file (side-effect-free). */
-    const std::string& model_path() const;
+    /** Returns a copy of the path of the currently loaded .nam file.
+     *  Thread-safe: acquires model_path_mutex_ internally. */
+    std::string model_path() const;
+    /** Returns the last load error message, or "" if there was none.
+     *  Only populated when load_model / load_model_async fail with an
+     *  exception; file-open failures leave it empty. */
+    std::string load_error() const;
+    /**
+     * Blocks until the background load future completes.  Useful in
+     * tests to avoid polling loops that time out on slow CI runners.
+     */
+    void wait_for_load();
     /**
      * Collects deferred old-model garbage on the GUI/caller thread.
      * Call once per frame from any GUI path that reads model state so
@@ -66,7 +77,11 @@ class NamLoader : public Effect {
 
    private:
     std::vector<EffectParam> params_;
+    // Protects model_path_ and load_error_ for GUI/loader thread access.
+    // The audio thread never touches these fields.
+    mutable std::mutex model_path_mutex_;
     std::string model_path_;
+    std::string load_error_;
     std::atomic<bool> model_loaded_{false};
     // Set to true while an async background load is running.
     std::atomic<bool> loading_{false};
@@ -77,6 +92,10 @@ class NamLoader : public Effect {
     // Atomic model swap: GUI thread stores, audio thread consumes
     std::atomic<RTNeural::Model<float>*> pending_model_{nullptr};
     RTNeural::Model<float>* active_model_ = nullptr;
+    // IMPORTANT: push_garbage() silently drops the pointer when all slots are
+    // occupied because the audio thread cannot delete it safely, causing a
+    // leak.  Do NOT lower kMaxGarbageSlots — it exists precisely to prevent
+    // this from happening under any realistic rapid-reload scenario.
     static constexpr size_t kMaxGarbageSlots = 16;
     mutable std::atomic<RTNeural::Model<float>*> old_models_to_delete_[kMaxGarbageSlots]{};
     std::atomic<bool> clear_pending_{false};

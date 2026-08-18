@@ -484,10 +484,9 @@ TEST(nam_loader_load_model_async_completes_successfully) {
     nl.set_sample_rate(48000);
     nl.load_model_async("../tests/assets/rtneural_test_model.json");
 
-    int max_wait = 100;
-    while (nl.is_loading() && max_wait-- > 0) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
+    // Use wait_for_load() for deterministic completion instead of a timed
+    // poll that can expire on slow CI runners.
+    nl.wait_for_load();
     ASSERT_FALSE(nl.is_loading());
 
     float buf[16] = {0.2f};
@@ -500,6 +499,7 @@ TEST(nam_loader_parse_linear_arch_json_model) {
     const std::string path = "./test_linear_nam.json";
     {
         std::ofstream f(path);
+        ASSERT_TRUE(f.is_open());
         nlohmann::json j;
         j["architecture"] = "Linear";
         j["config"] = {{"input_size", 1}, {"output_size", 1}, {"bias", true}};
@@ -600,6 +600,7 @@ TEST(nam_loader_parse_gated_wavenet_relu_json_model) {
     const std::string path = "./test_wavenet_gated_nam.json";
     {
         std::ofstream f(path);
+        ASSERT_TRUE(f.is_open());
         nlohmann::json j;
         j["architecture"] = "WaveNet";
         j["config"]["head_scale"] = 0.9f;
@@ -620,9 +621,27 @@ TEST(nam_loader_parse_gated_wavenet_relu_json_model) {
     bool ok = nl.load_model(path);
     std::remove(path.c_str());
     ASSERT_TRUE(ok);
+
+    // Run a known input and verify the model runs without producing NaN/Inf.
+    // Gated layers with ReLU and uniform weights can produce exactly 0 for
+    // some inputs; we only require finite output here.
+    float buf[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+    nl.process(buf, 4);  // tick 1: pending -> active
+    nl.process(buf, 4);  // tick 2: steady-state output
+    for (int i = 0; i < 4; ++i) {
+        ASSERT_TRUE(std::isfinite(buf[i]));
+    }
 }
 
 TEST(nam_loader_parse_wavenet_uses_default_dilation) {
+    // Minimal single-channel, kernel-size-1, single-dilation WaveNet.
+    // With all weights = 0.02:
+    //   receptive conv: out = 0.02 * in
+    //   dilation conv:  out = 0.02 * prev (+ bias 0.02), tanh-activated
+    //   residual dense: out = 0.02 * activated
+    //   output dense (head_scale=1): w=0.02, bias=0.02
+    // The exact value varies with RTNeural internals, but it must be
+    // finite and non-zero for a unit input.
     const std::string path = "./test_wavenet_default_dilation_nam.json";
     {
         std::ofstream f(path);
@@ -639,17 +658,47 @@ TEST(nam_loader_parse_wavenet_uses_default_dilation) {
     bool ok = nl.load_model(path);
     std::remove(path.c_str());
     ASSERT_TRUE(ok);
+
+    // Verify the model produces finite, non-zero output on a unit input.
+    float buf[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+    nl.process(buf, 4);  // pending -> active
+    nl.process(buf, 4);  // steady-state
+    for (int i = 0; i < 4; ++i) {
+        ASSERT_TRUE(std::isfinite(buf[i]));
+        ASSERT_TRUE(buf[i] != 0.0f);
+    }
+
+    // Verify head_scale=1.0 (default) versus explicit 2.0 produces a larger
+    // output level, confirming head_scale is applied to the weights.
+    NamLoader nl2;
+    const std::string path2 = "./test_wavenet_head_scale_nam.json";
+    {
+        std::ofstream f(path2);
+        ASSERT_TRUE(f.is_open());
+        nlohmann::json j;
+        j["architecture"] = "WaveNet";
+        j["config"]["head_scale"] = 2.0f;
+        j["config"]["layers"] =
+            nlohmann::json::array({{{"channels", 1}, {"kernel_size", 1}, {"head_size", 1}}});
+        j["weights"] = std::vector<float>(8, 0.02f);
+        f << j.dump();
+    }
+    bool ok2 = nl2.load_model(path2);
+    std::remove(path2.c_str());
+    ASSERT_TRUE(ok2);
+
+    float buf2[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+    nl2.process(buf2, 4);
+    nl2.process(buf2, 4);
+    // head_scale=2 should produce approximately 2x the head_scale=1 output.
+    ASSERT_TRUE(std::fabs(buf2[3]) > std::fabs(buf[3]));
 }
 
 TEST(nam_loader_async_missing_file_finishes_without_changing_model) {
     NamLoader nl;
     nl.load_model_async("/nonexistent/path/async-model.nam");
 
-    int max_wait = 100;
-    while (nl.is_loading() && max_wait-- > 0) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-
+    nl.wait_for_load();
     ASSERT_FALSE(nl.is_loading());
     ASSERT_TRUE(nl.model_path().empty());
 }
@@ -664,10 +713,7 @@ TEST(nam_loader_async_malformed_json_finishes_without_changing_model) {
 
     NamLoader nl;
     nl.load_model_async(path);
-    int max_wait = 100;
-    while (nl.is_loading() && max_wait-- > 0) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
+    nl.wait_for_load();
     std::remove(path.c_str());
 
     ASSERT_FALSE(nl.is_loading());
