@@ -5,6 +5,7 @@
 
 #include <RTNeural/RTNeural.h>
 
+#include <cstdint>
 #include <fstream>
 #include <future>
 #include <mutex>
@@ -303,15 +304,20 @@ static std::unique_ptr<RTNeural::Model<float>> build_wavenet_model(const nlohman
 }
 
 static std::unique_ptr<RTNeural::Model<float>> parse_model(const nlohmann::json& raw_json) {
+    nlohmann::json submodel_storage;
     const nlohmann::json* model_json = &raw_json;
     if (raw_json.value("architecture", "") == "SlimmableContainer") {
-        const auto& submodels = raw_json.value("config", nlohmann::json::object())
-                                    .value("submodels", nlohmann::json::array());
-        if (submodels.empty() || !submodels.back().contains("model")) return {};
-        // Use submodels.back() — SlimmableContainer stores submodels in
-        // ascending quality order, so the last entry is the largest/most
-        // accurate variant available.
-        model_json = &submodels.back()["model"];
+        if (raw_json.contains("config") && raw_json["config"].contains("submodels") &&
+            raw_json["config"]["submodels"].is_array()) {
+            const auto& submodels = raw_json["config"]["submodels"];
+            if (submodels.empty() || !submodels.back().contains("model")) return {};
+            // Store selected submodel in submodel_storage so model_json remains valid
+            // throughout the remainder of parse_model execution.
+            submodel_storage = submodels.back()["model"];
+            model_json = &submodel_storage;
+        } else {
+            return {};
+        }
     }
 
     // A2 WaveNet models use residual connections, per-layer kernel sizes, and activation
@@ -398,8 +404,14 @@ void NamLoader::load_model_async(const std::string& path) {
     // Collect deferred garbage before kicking off a new load.
     collect_garbage();
 
+    // Snapshot the current generation so we can detect a clear_model() that
+    // races with parsing.  If clear_model() increments load_generation_ while
+    // the lambda is running, we discard the result instead of overwriting the
+    // cleared state.
+    const uint32_t my_gen = load_generation_.load(std::memory_order_acquire);
+
     // Capture path by value so the lambda owns it.
-    load_future_ = std::async(std::launch::async, [this, path]() {
+    load_future_ = std::async(std::launch::async, [this, path, my_gen]() {
         std::ifstream f = open_model_file(path);
         if (!f.good()) {
             loading_.store(false, std::memory_order_release);
@@ -418,6 +430,15 @@ void NamLoader::load_model_async(const std::string& path) {
                 return;
             }
             temp_model->reset();
+
+            // If clear_model() was called while we were parsing, discard this
+            // result — the caller has already expressed that no model should
+            // be active.  The temporary model is simply destroyed here.
+            if (load_generation_.load(std::memory_order_acquire) != my_gen) {
+                // temp_model unique_ptr destructor frees the model.
+                loading_.store(false, std::memory_order_release);
+                return;
+            }
 
             auto* old_pending = pending_model_.exchange(temp_model.release());
             delete old_pending;
@@ -443,6 +464,10 @@ void NamLoader::load_model_async(const std::string& path) {
 }
 
 void NamLoader::clear_model() {
+    // Advance the generation so any in-flight async load knows it has been
+    // superseded and should discard its result.
+    load_generation_.fetch_add(1, std::memory_order_acq_rel);
+
     {
         std::lock_guard<std::mutex> lk(model_path_mutex_);
         model_path_.clear();

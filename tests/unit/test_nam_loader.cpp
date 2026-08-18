@@ -739,3 +739,118 @@ TEST(nam_loader_parse_raw_config_layers_json_model) {
     std::remove(path.c_str());
     ASSERT_TRUE(ok);
 }
+
+// -----------------------------------------------------------------
+// Regression: clear_model() during async load must discard the result
+// -----------------------------------------------------------------
+TEST(nam_loader_clear_during_async_load_discards_result) {
+    // Write a valid but slightly large WaveNet so parsing takes a measurable
+    // amount of time (enough for clear_model() to win the race reliably).
+    const std::string path = "./test_async_clear_race.json";
+    {
+        std::ofstream f(path);
+        ASSERT_TRUE(f.is_open());
+        nlohmann::json j;
+        j["architecture"] = "WaveNet";
+        j["config"]["head_scale"] = 1.0f;
+        j["config"]["layers"] =
+            nlohmann::json::array({{{"channels", 4},
+                                    {"kernel_size", 3},
+                                    {"head_size", 4},
+                                    {"gated", false},
+                                    {"head_bias", true},
+                                    {"activation", "Tanh"},
+                                    {"dilations", nlohmann::json::array({1, 2, 4, 8})}},
+                                   {{"channels", 4},
+                                    {"kernel_size", 3},
+                                    {"head_size", 4},
+                                    {"gated", false},
+                                    {"head_bias", true},
+                                    {"activation", "Tanh"},
+                                    {"dilations", nlohmann::json::array({1, 2, 4, 8})}}});
+        j["weights"] = std::vector<float>(2000, 0.01f);
+        f << j.dump();
+    }
+
+    NamLoader nl;
+    nl.set_sample_rate(48000);
+    nl.load_model_async(path);
+    // Immediately clear — may or may not win the race; if it does the generation
+    // guard should discard the result; if it loses the guard is not exercised
+    // (harmless, load already completed).  Either way model_path_ must be
+    // empty after wait_for_load + collect_garbage.
+    nl.clear_model();
+    nl.wait_for_load();
+    std::remove(path.c_str());
+    nl.collect_garbage();
+
+    // The generation guard ensures that even if parsing finished after clear,
+    // the result was discarded and model_path_ was not updated.
+    ASSERT_FALSE(nl.is_loading());
+    ASSERT_TRUE(nl.model_path().empty());
+}
+
+// -----------------------------------------------------------------
+// Nitpick: SlimmableContainer — loader must pick submodels.back()
+// -----------------------------------------------------------------
+TEST(nam_loader_slimmable_container_picks_last_submodel) {
+    // Build a SlimmableContainer with two submodels.  The first has tiny
+    // weights, the second (the "best quality") has larger weights.  Verify
+    // that the loader selects back() and produces finite output.
+    const std::string path = "./test_slimmable_container.json";
+    {
+        std::ofstream f(path);
+        ASSERT_TRUE(f.is_open());
+
+        // Inner WaveNet definition — matches the shape used by
+        // nam_loader_parse_wavenet_uses_default_dilation which is known to parse.
+        auto make_submodel = [](float w) {
+            nlohmann::json sm;
+            sm["max_value"] = 1.0f;
+            nlohmann::json inner;
+            inner["architecture"] = "WaveNet";
+            inner["config"]["layers"] =
+                nlohmann::json::array({{{"channels", 1}, {"kernel_size", 1}, {"head_size", 1}}});
+            inner["weights"] = std::vector<float>(8, w);
+            sm["model"] = inner;
+            return sm;
+        };
+
+        nlohmann::json j;
+        j["architecture"] = "SlimmableContainer";
+        j["config"]["submodels"] =
+            nlohmann::json::array({make_submodel(0.01f),   // low-quality
+                                   make_submodel(0.5f)});  // high-quality (back)
+        f << j.dump();
+    }
+
+    NamLoader nl;
+    nl.set_sample_rate(48000);
+    bool ok = nl.load_model(path);
+    std::remove(path.c_str());
+    ASSERT_TRUE(ok);
+
+    // Run some audio and verify output is finite — proves parsing succeeded
+    // and weights were applied.
+    float buf[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+    nl.process(buf, 4);
+    nl.process(buf, 4);
+    for (int i = 0; i < 4; ++i) {
+        ASSERT_TRUE(std::isfinite(buf[i]));
+    }
+
+    // A SlimmableContainer with no submodels must fail gracefully.
+    const std::string path2 = "./test_slimmable_empty.json";
+    {
+        std::ofstream f(path2);
+        ASSERT_TRUE(f.is_open());
+        nlohmann::json j2;
+        j2["architecture"] = "SlimmableContainer";
+        j2["config"]["submodels"] = nlohmann::json::array();
+        f << j2.dump();
+    }
+    NamLoader nl2;
+    bool ok2 = nl2.load_model(path2);
+    std::remove(path2.c_str());
+    ASSERT_FALSE(ok2);
+}

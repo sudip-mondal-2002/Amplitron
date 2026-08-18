@@ -99,6 +99,10 @@ class NamLoader : public Effect {
     static constexpr size_t kMaxGarbageSlots = 16;
     mutable std::atomic<RTNeural::Model<float>*> old_models_to_delete_[kMaxGarbageSlots]{};
     std::atomic<bool> clear_pending_{false};
+    // Incremented by clear_model() to invalidate any in-flight async load.
+    // The async lambda captures the value at launch; if the stored value has
+    // changed by the time parsing finishes, the result is silently discarded.
+    std::atomic<uint32_t> load_generation_{0};
 
     void check_pending_model();
     void push_garbage(RTNeural::Model<float>* old);

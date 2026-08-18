@@ -38,7 +38,9 @@ inline bool assert_eq_values(const A& a, const B& b) {
 struct TestResult {
     std::string name;
     bool passed;
-    std::string message;
+    // All failure messages accumulated during the test (EXPECT_ variants can
+    // fire multiple times; ASSERT_ aborts after the first via return).
+    std::vector<std::string> messages;
 };
 
 class Test {
@@ -71,17 +73,19 @@ class TestSuite {
             }
             current_test_ = name;
             current_failed_ = false;
+            current_messages_.clear();
             try {
                 fn();
             } catch (const std::exception& e) {
                 current_failed_ = true;
-                results_.push_back({name, false, std::string("EXCEPTION: ") + e.what()});
+                current_messages_.push_back(std::string("EXCEPTION: ") + e.what());
             }
             if (!current_failed_) {
-                results_.push_back({name, true, ""});
+                results_.push_back({name, true, {}});
                 ++passed;
                 std::cout << "  PASS  " << name << std::endl;
             } else {
+                results_.push_back({name, false, current_messages_});
                 ++failed;
             }
         }
@@ -96,7 +100,9 @@ class TestSuite {
             for (auto& r : results_) {
                 if (!r.passed) {
                     std::cout << "    FAIL  " << r.name << std::endl;
-                    std::cout << "          " << r.message << std::endl;
+                    for (const auto& msg : r.messages) {
+                        std::cout << "          " << msg << std::endl;
+                    }
                 }
             }
             std::cout << std::endl;
@@ -110,12 +116,14 @@ class TestSuite {
     }
 
     void fail(const std::string& msg) {
+        // Always record the message — EXPECT_ variants can fire multiple times
+        // within the same test and all messages must be preserved.
+        current_messages_.push_back(msg);
         if (!current_failed_) {
             current_failed_ = true;
-            results_.push_back({current_test_, false, msg});
             std::cout << "  FAIL  " << current_test_ << std::endl;
-            std::cout << "        " << msg << std::endl;
         }
+        std::cout << "        " << msg << std::endl;
     }
 
    private:
@@ -169,8 +177,14 @@ class TestSuite {
             xml << "    <testcase name=\"" << escape_xml(test_name) << "\" classname=\""
                 << escape_xml(suite_name) << "\" time=\"0.0\">\n";
             if (!r.passed) {
-                xml << "      <failure message=\"" << escape_xml(r.message)
-                    << "\" type=\"AssertionError\">" << escape_xml(r.message) << "</failure>\n";
+                // Concatenate all failure messages into a single <failure> element.
+                std::string combined;
+                for (size_t i = 0; i < r.messages.size(); ++i) {
+                    if (i > 0) combined += "\n";
+                    combined += r.messages[i];
+                }
+                xml << "      <failure message=\"" << escape_xml(combined)
+                    << "\" type=\"AssertionError\">" << escape_xml(combined) << "</failure>\n";
             }
             xml << "    </testcase>\n";
         }
@@ -183,6 +197,8 @@ class TestSuite {
     std::vector<TestResult> results_;
     std::string current_test_;
     bool current_failed_ = false;
+    // Messages accumulated by fail() for the currently-running test.
+    std::vector<std::string> current_messages_;
 };
 
 // Macros
@@ -459,12 +475,14 @@ class TestSuite {
 
 #define EXPECT_NEAR(a, b, eps)                                                                    \
     do {                                                                                          \
-        auto _a = (a);                                                                            \
-        auto _b = (b);                                                                            \
-        if (std::fabs(_a - _b) > (eps)) {                                                         \
+        /* Cast to double so unsigned subtraction cannot wrap. */                                 \
+        double _a = static_cast<double>(a);                                                       \
+        double _b = static_cast<double>(b);                                                       \
+        double _diff = _a - _b;                                                                   \
+        if (std::fabs(_diff) > static_cast<double>(eps)) {                                        \
             std::ostringstream _ss;                                                               \
             _ss << "EXPECT_NEAR failed: |" #a " - " #b "| <= " #eps << " (" << _a << " vs " << _b \
-                << ", diff=" << std::fabs(_a - _b) << ") (line " << __LINE__ << ")";              \
+                << ", diff=" << std::fabs(_diff) << ") (line " << __LINE__ << ")";                \
             TestFramework::TestSuite::instance().fail(_ss.str());                                 \
         }                                                                                         \
     } while (0)
