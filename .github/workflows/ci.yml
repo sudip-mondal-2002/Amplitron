@@ -34,12 +34,15 @@ jobs:
             echo "Restoring cached .deb packages..."
             sudo cp ~/apt-cache/*.deb /var/cache/apt/archives/ 2>/dev/null || true
           fi
+          export DEBIAN_FRONTEND=noninteractive
           # Drop broken Microsoft repos that ship on GitHub-hosted Ubuntu 24.04
           # runners and cause apt-get update to fail with NOSPLIT errors.
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list \
-                     /etc/apt/sources.list.d/azure-cli.list || true
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends \
+                     /etc/apt/sources.list.d/azure-cli.list \
+                     /etc/apt/sources.list.d/ubuntu-toolchain-r-*.list || true
+          sudo apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout="30" -o Acquire::https::Timeout="30"
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            -o Acquire::Retries=3 -o Acquire::http::Timeout="30" -o Acquire::https::Timeout="30" \
             build-essential cmake ninja-build lcov \
             libportaudio2 portaudio19-dev \
             libsdl2-dev libgl1-mesa-dev libglu1-mesa-dev \
@@ -809,11 +812,14 @@ jobs:
 
       - name: Install lcov
         run: |
+          export DEBIAN_FRONTEND=noninteractive
           # Drop broken Microsoft repos before updating
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list \
-                     /etc/apt/sources.list.d/azure-cli.list || true
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends lcov
+                     /etc/apt/sources.list.d/azure-cli.list \
+                     /etc/apt/sources.list.d/ubuntu-toolchain-r-*.list || true
+          sudo apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout="30" -o Acquire::https::Timeout="30"
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            -o Acquire::Retries=3 -o Acquire::http::Timeout="30" -o Acquire::https::Timeout="30" lcov
 
       - name: Download Linux Coverage
         uses: actions/download-artifact@v8
