@@ -60,6 +60,11 @@ static void em_main_loop() {
         emscripten_cancel_main_loop();
     }
 }
+extern "C" EMSCRIPTEN_KEEPALIVE void show_shared_preset_error() {
+    if (g_gui) {
+        g_gui->show_toast("Shared preset link could not be read.");
+    }
+}
 
 extern "C" EMSCRIPTEN_KEEPALIVE void on_midi_cc(int channel, int cc, int value) {
     // Validate MIDI ranges before processing
