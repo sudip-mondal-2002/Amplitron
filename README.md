@@ -103,7 +103,7 @@ Transform your computer into a complete guitar rig. Plug in your guitar via USB 
 | **Overdrive**     | Tube-style asymmetric soft clipping with tone control                                                             |
 | **Distortion**    | Hard clipping with tanh waveshaping and tone filter                                                               |
 | **Equalizer**     | 3-band parametric EQ (Bass/Mid/Treble/Presence) using biquad filters                                              |
-| **Amp Simulator** | Preamp models (Fender Twin, Marshall JCM800, Mesa Rectifier, Roland JC-120) with gain, tone stack, and saturation |
+| **Amp Simulator** | Preamp models (Clean American, British Crunch, High Gain Modern, Jazz Warm) with gain, tone stack, and saturation |
 | **Cabinet Sim**   | Speaker cabinet emulation with low/high rolloff and resonance                                                     |
 | **Chorus**        | LFO-modulated delay with rate and depth controls                                                                  |
 | **Delay**         | Up to 2 seconds, with feedback tone filtering                                                                     |

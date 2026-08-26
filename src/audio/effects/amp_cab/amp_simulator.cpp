@@ -13,11 +13,11 @@ static EffectRegistrar<AmpSimulator> reg_AmpSimulator("Amp Sim");
 const std::vector<AmpModel>& get_amp_models() {
     static const std::vector<AmpModel> models = {
         // ---------------------------------------------------------
-        // Clean American -- Fender Twin/Deluxe
+        // Clean American -- blackface-style clean combo
         // ---------------------------------------------------------
         {
             "Clean American",
-            "Fender Twin / Deluxe",
+            "Blackface-style clean combo",
             "Sparkling clean, scooped mids, glassy highs",
             200.0f,
             3.0f,
@@ -37,11 +37,11 @@ const std::vector<AmpModel>& get_amp_models() {
             0.0f,
         },
         // ---------------------------------------------------------
-        // British Crunch -- Marshall JCM800
+        // British Crunch -- British 800-style crunch
         // ---------------------------------------------------------
         {
             "British Crunch",
-            "Marshall JCM800",
+            "British 800-style crunch",
             "Warm breakup, mid-forward, classic rock crunch",
             180.0f,
             -1.0f,
@@ -61,11 +61,11 @@ const std::vector<AmpModel>& get_amp_models() {
             0.15f,
         },
         // ---------------------------------------------------------
-        // High Gain Modern -- Mesa Boogie Rectifier
+        // High Gain Modern -- modern high-gain stack
         // ---------------------------------------------------------
         {
             "High Gain Modern",
-            "Mesa Boogie Rectifier",
+            "Modern high-gain stack",
             "Tight low-end, scooped mids, aggressive distortion",
             150.0f,
             1.5f,
@@ -85,11 +85,11 @@ const std::vector<AmpModel>& get_amp_models() {
             0.25f,
         },
         // ---------------------------------------------------------
-        // Jazz Warm -- Roland JC-120
+        // Jazz Warm -- solid-state jazz clean
         // ---------------------------------------------------------
         {
             "Jazz Warm",
-            "Roland JC-120",
+            "Solid-state jazz clean",
             "Flat clean, warm highs rolloff, round tone",
             250.0f,
             2.0f,
