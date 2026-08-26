@@ -62,9 +62,27 @@ const std::vector<AmpModel>& get_amp_models();
  */
 class AmpSimulator : public Effect {
    public:
+    /**
+     * @brief Creates the amp simulator with factory parameters and default coefficients.
+     */
     AmpSimulator();
+
+    /**
+     * @brief Processes a mono audio buffer through the selected amp model.
+     * @param buffer Interleaved-free mono sample buffer to transform in place.
+     * @param num_samples Number of samples available in buffer.
+     */
     void process(float* buffer, int num_samples) override;
+
+    /**
+     * @brief Updates the processing sample rate and refreshes tone-stack coefficients.
+     * @param sample_rate New sample rate in Hz.
+     */
     void set_sample_rate(int sample_rate) override;
+
+    /**
+     * @brief Clears filter, envelope, and smoothing state before playback resumes.
+     */
     void reset() override;
     const char* name() const override { return "Amp Sim"; }
     const char* type_id() const override { return "Amp Sim"; }
@@ -99,6 +117,9 @@ class AmpSimulator : public Effect {
     float cached_treble_ = -999.0f;
     float cached_gain_ = -999.0f;
 
+    /**
+     * @brief Rebuilds tone-stack filter coefficients after model or trim changes.
+     */
     void recompute_coefficients_if_dirty();
 };
 
