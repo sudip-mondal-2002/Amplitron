@@ -465,6 +465,7 @@ if(EMSCRIPTEN)
         "-pthread"
         "-sSHARED_MEMORY=1"
         "-sEXPORTED_RUNTIME_METHODS=['ccall','cwrap','FS']"
+        "-lidbfs.js"
         "-sEXPORTED_FUNCTIONS=['_main','_amplitron_on_file_uploaded']"
         "-sSTACK_SIZE=1048576"
         "-sPTHREAD_POOL_SIZE=4"
