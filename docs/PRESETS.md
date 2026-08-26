@@ -10,37 +10,37 @@ You can load these presets directly from the "Presets" menu in the GUI.
 
 ### `01 Sparkling Clean`
 * **Style:** Lush, shimmering clean tone
-* **Amp Model:** Clean American (Fender Twin)
+* **Amp Model:** Clean American (blackface-style clean combo)
 * **Active Effects:** Noise Gate, Compressor, Chorus, Delay, Reverb, Amp Sim
-* **Use Case:** Perfect for arpeggiated chords, indie pop, and 80s ballads. Uses the Fender Twin emulation along with smooth chorus and warm hall-style reverb.
+* **Use Case:** Perfect for arpeggiated chords, indie pop, and 80s ballads. Uses a sparkling clean combo voice along with smooth chorus and warm hall-style reverb.
 
 ### `02 Classic Rock Crunch`
 * **Style:** Warm, mid-focused driven rock tone
-* **Amp Model:** British Crunch (Marshall JCM800)
+* **Amp Model:** British Crunch (British 800-style crunch)
 * **Active Effects:** Noise Gate, Overdrive, Equalizer, Phaser, Reverb, Amp Sim
-* **Use Case:** Excellent for classic rock rhythm playing, blues solos, and vintage-inspired tones. The Phaser adds classic 70s character to the Marshall punch.
+* **Use Case:** Excellent for classic rock rhythm playing, blues solos, and vintage-inspired tones. The Phaser adds classic 70s character to the mid-forward crunch.
 
 ### `03 Modern Metal Lead`
 * **Style:** High-gain, tight-tracking lead tone
-* **Amp Model:** High Gain Modern (Mesa Boogie Rectifier)
+* **Amp Model:** High Gain Modern (modern high-gain stack)
 * **Active Effects:** Noise Gate, Distortion, Equalizer (mid-scooped), Delay, Reverb, Amp Sim
 * **Use Case:** Fast alternate picking, sweep picking, and heavy breakdowns. The mid-scoop EQ tightens the tone, and the delay adds space without muddiness.
 
 ### `04 Ambient Swells`
 * **Style:** Spatially massive, washed-out tone
-* **Amp Model:** Jazz Warm (Roland JC-120)
+* **Amp Model:** Jazz Warm (solid-state jazz clean)
 * **Active Effects:** Noise Gate, Compressor (high sustain), Equalizer, Chorus, Flanger, Delay, Reverb, Amp Sim
 * **Use Case:** Ambient soundscapes, volume swells, and cinematic textures. Combines thick modulation (chorus + flanger) with long reverb decays for expansive, ethereal tones.
 
 ### `05 Phase Shift Lead`
 * **Style:** Slow, hypnotic phase sweep on a clean tone
-* **Amp Model:** Clean American (Fender Twin)
+* **Amp Model:** Clean American (blackface-style clean combo)
 * **Active Effects:** Noise Gate, Compressor, Equalizer, Phaser, Delay, Reverb, Amp Sim
 * **Use Case:** Classic rock solos, funky chords, and psychedelic textures. Inspired by the legendary MXR Phase 90 in 4-stage mode. Subtle delay adds depth to the sweep.
 
 ### `06 Jet Flanger`
 * **Style:** Dramatic jet-plane flanger sweep with strong resonance
-* **Amp Model:** Jazz Warm (Roland JC-120)
+* **Amp Model:** Jazz Warm (solid-state jazz clean)
 * **Active Effects:** Noise Gate, Compressor, Equalizer, Flanger, Reverb, Amp Sim
 * **Use Case:** Striking on open chords, harmonics, and slow single-note lines. Inspired by the MXR M117R and Boss BF-2. The high flanger feedback creates that classic "jet" effect.
 
