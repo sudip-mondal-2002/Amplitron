@@ -79,6 +79,10 @@ TEST(AudioCommandDispatcher_DrainCommands) {
     dispatcher.push_input_gain(0.2f);
     dispatcher.push_output_gain(0.3f);
 
+    // Verify error flag is clear before out-of-bounds push
+    dispatcher.drain_commands(input_gain, output_gain, executor, main_graph, dummy_effects);
+    ASSERT_FALSE(dispatcher.check_and_clear_error());
+
     // 6. Unknown command / failure to lookup completely (effect_index out of bounds for
     // dummy_effects)
     dispatcher.push_param_change(99, 0, 1.0f);
@@ -90,4 +94,7 @@ TEST(AudioCommandDispatcher_DrainCommands) {
     ASSERT_NEAR(fx1->get_mix(), 0.7f, 0.01f);
     ASSERT_NEAR(input_gain.load(), 0.2f, 0.01f);
     ASSERT_NEAR(output_gain.load(), 0.3f, 0.01f);
+    
+    // Verify that the invalid node lookup safely set the atomic error flag instead of throwing/printing
+    ASSERT_TRUE(dispatcher.check_and_clear_error());
 }

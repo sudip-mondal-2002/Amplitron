@@ -532,17 +532,21 @@ TEST_F(AudioEngineTest, TunerTapSampleRateAndReset) {
     engine.clear_tuner_tap();
 }
 
-TEST_F(AudioEngineTest, ProcessAudioResizesInternalBuffersWhenFrameCountExceedsCapacity) {
-    // Default internal buffer capacity is 16384. Request a size larger than this.
-    const int large_frame_count = 17000;
+TEST_F(AudioEngineTest, ProcessAudioZerosOutputWhenFrameCountExceedsCapacity) {
+    // Derive a frame count that exceeds the current internal buffer capacity.
+    const int large_frame_count = engine.test_process_buffer().capacity() + 1;
     std::vector<float> in(large_frame_count, 0.5f);
-    std::vector<float> out(large_frame_count * 2, 0.0f);
+    std::vector<float> out(large_frame_count * 2, 1.0f); // Pre-fill with 1.0f
 
     engine.process_audio(in.data(), out.data(), large_frame_count);
 
-    // Check that the internal buffers resized accordingly
-    ASSERT_GE(engine.test_process_buffer().size(), static_cast<size_t>(large_frame_count));
-    ASSERT_GE(engine.test_process_buffer_right().size(), static_cast<size_t>(large_frame_count));
+    // Check that the internal buffers did NOT resize (they stay at 16384)
+    ASSERT_LT(engine.test_process_buffer().size(), static_cast<size_t>(large_frame_count));
+    
+    // Check that the output was safely zeroed out
+    for (float sample : out) {
+        ASSERT_NEAR(sample, 0.0f, 1e-6f);
+    }
 }
 
 TEST_F(AudioEngineTest, GetterTestCoverage) {

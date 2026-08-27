@@ -14,8 +14,10 @@ void AudioEngine::process_audio(const float* input, float* output, int frame_cou
     dsp_profiler_.begin_callback(frame_count, sample_rate_, buffer_size_);
 
     if (frame_count > static_cast<int>(process_buffer_.size())) {
-        process_buffer_.resize(frame_count, 0.0f);
-        process_buffer_right_.resize(frame_count, 0.0f);
+        if (output) {
+            std::memset(output, 0, static_cast<size_t>(frame_count) * 2 * sizeof(float));
+        }
+        return;
     }
 
     const bool analyzer_on = analyzer_capture_->is_analyzer_enabled();
@@ -53,6 +55,11 @@ void AudioEngine::process_audio(const float* input, float* output, int frame_cou
     if (effect_mutex_.try_lock()) {
         command_dispatcher_.drain_commands(input_gain_, output_gain_, audio_shadow_executor_,
                                            main_graph_, dummy_effects_);
+        
+        // Consume the error flag so it doesn't stay latched forever.
+        // In a real application, this might trigger a GUI notification via a non-blocking queue.
+        command_dispatcher_.check_and_clear_error();
+
         if (topology_dirty_.exchange(false, std::memory_order_acq_rel)) {
             audio_shadow_executor_ = main_executor_;
             audio_shadow_tuner_ = tuner_tap_;
