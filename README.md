@@ -923,73 +923,35 @@ This project is licensed under the [MIT License](LICENSE). The audio DSP algorit
 
 ## Tech Stack
 
-Amplitron shares a C++17 DSP core across native apps, the browser demo, and the CLAP plugin. The diagram groups its main libraries and tools by role; platform-specific and optional dependencies are labeled.
+Amplitron shares a C++17 DSP core across native apps, the browser demo, and the CLAP plugin. The stack is arranged vertically by role; platform-specific and optional dependencies are labeled.
 
 ```mermaid
 flowchart TB
     core["Amplitron<br/>C++17 application and DSP core"]
 
     subgraph ui["User Interface"]
-        imgui["Dear ImGui<br/>Pedal board and controls"]
-        sdl["SDL2<br/>Windowing and input"]
-        graphics["OpenGL / OpenGL ES<br/>WebGL 2 in the browser"]
-        svg["NanoSVG<br/>SVG rasterization"]
-        imgui --> sdl
-        imgui --> graphics
-        imgui --> svg
+        uiStack["Dear ImGui — pedal board and controls<br/>SDL2 — windowing and input<br/>OpenGL / OpenGL ES — rendering<br/>WebGL 2 — browser rendering<br/>NanoSVG — SVG rasterization"]
     end
 
     subgraph audio["Audio and DSP"]
-        backends["Platform audio backends"]
-        portaudio["PortAudio<br/>Desktop"]
-        jack["JACK<br/>Optional on Linux"]
-        oboe["Oboe / AAudio<br/>Android"]
-        sdlaudio["SDL2 Audio<br/>Web, iOS, and desktop fallback"]
-        fft["kiss_fft<br/>FFT analysis and convolution"]
-        neural["RTNeural<br/>Neural amp model inference"]
-        midi["RtMidi<br/>Desktop MIDI input"]
-        backends --> portaudio
-        backends --> jack
-        backends --> oboe
-        backends --> sdlaudio
+        audioStack["PortAudio — desktop audio<br/>JACK — optional on Linux<br/>Oboe / AAudio — Android audio<br/>SDL2 Audio — web, iOS, desktop fallback<br/>kiss_fft — FFT analysis and convolution<br/>RTNeural — neural amp model inference<br/>RtMidi — desktop MIDI input"]
     end
 
     subgraph data["Presets and Audio Files"]
-        json["nlohmann/json<br/>Presets, sessions, and MIDI mappings"]
-        wav["dr_wav<br/>WAV loading and recording"]
+        dataStack["nlohmann/json — presets and sessions<br/>Also stores MIDI mappings<br/>dr_wav — WAV loading and recording"]
     end
 
     subgraph delivery["Build and Delivery"]
-        cmake["CMake<br/>Shared native and web builds"]
-        desktop["Native C++ toolchains<br/>Windows, macOS, and Linux"]
-        android["Gradle + Android NDK<br/>Android APK"]
-        ios["Xcode<br/>iOS app"]
-        web["Emscripten<br/>WebAssembly browser demo"]
-        clap["CLAP SDK<br/>Desktop audio plugin"]
-        cmake --> desktop
-        cmake --> android
-        cmake --> ios
-        cmake --> web
-        cmake --> clap
+        buildStack["CMake — shared build configuration<br/>Native C++ — Windows, macOS, Linux<br/>Gradle + Android NDK — Android APK<br/>Xcode — iOS app<br/>Emscripten — WebAssembly demo<br/>CLAP SDK — desktop audio plugin"]
     end
 
     subgraph quality["Testing and CI/CD"]
-        nativeTests["Custom C++ test framework + CTest<br/>GoogleTest for plugin tests"]
-        browserTests["Playwright + Node.js<br/>Browser end-to-end tests"]
-        ci["GitHub Actions<br/>Builds, tests, and releases"]
-        pages["GitHub Pages<br/>Website and web demo hosting"]
-        ci --> nativeTests
-        ci --> browserTests
-        ci --> cmake
-        ci --> pages
+        qualityStack["Custom C++ test framework + CTest<br/>GoogleTest — plugin tests<br/>Playwright + Node.js — browser tests<br/>GitHub Actions — builds and releases<br/>GitHub Pages — website and web demo"]
     end
 
-    core --> imgui
-    core --> backends
-    core --> fft
-    core --> neural
-    core --> midi
-    core --> json
-    core --> wav
-    core -. built with .-> cmake
+    core ~~~ uiStack
+    uiStack ~~~ audioStack
+    audioStack ~~~ dataStack
+    dataStack ~~~ buildStack
+    buildStack ~~~ qualityStack
 ```
