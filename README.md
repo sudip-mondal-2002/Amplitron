@@ -53,6 +53,7 @@ Professional real-time guitar amplifier simulator with ultra-low latency, 16 stu
   - [Contributing](#contributing)
   - [Contact](#contact)
 - [License](#license)
+- [Tech Stack](#tech-stack)
 
 ### Platform Downloads
 
@@ -917,3 +918,78 @@ This project is licensed under the [MIT License](LICENSE). The audio DSP algorit
 - [PortAudio](http://www.portaudio.com/) — MIT License
 - [SDL2](https://www.libsdl.org/) — zlib License
 - [Dear ImGui](https://github.com/ocornut/imgui) — MIT License
+
+---
+
+## Tech Stack
+
+Amplitron shares a C++17 DSP core across native apps, the browser demo, and the CLAP plugin. The diagram groups its main libraries and tools by role; platform-specific and optional dependencies are labeled.
+
+```mermaid
+flowchart TB
+    core["Amplitron<br/>C++17 application and DSP core"]
+
+    subgraph ui["User Interface"]
+        imgui["Dear ImGui<br/>Pedal board and controls"]
+        sdl["SDL2<br/>Windowing and input"]
+        graphics["OpenGL / OpenGL ES<br/>WebGL 2 in the browser"]
+        svg["NanoSVG<br/>SVG rasterization"]
+        imgui --> sdl
+        imgui --> graphics
+        imgui --> svg
+    end
+
+    subgraph audio["Audio and DSP"]
+        backends["Platform audio backends"]
+        portaudio["PortAudio<br/>Desktop"]
+        jack["JACK<br/>Optional on Linux"]
+        oboe["Oboe / AAudio<br/>Android"]
+        sdlaudio["SDL2 Audio<br/>Web, iOS, and desktop fallback"]
+        fft["kiss_fft<br/>FFT analysis and convolution"]
+        neural["RTNeural<br/>Neural amp model inference"]
+        midi["RtMidi<br/>Desktop MIDI input"]
+        backends --> portaudio
+        backends --> jack
+        backends --> oboe
+        backends --> sdlaudio
+    end
+
+    subgraph data["Presets and Audio Files"]
+        json["nlohmann/json<br/>Presets, sessions, and MIDI mappings"]
+        wav["dr_wav<br/>WAV loading and recording"]
+    end
+
+    subgraph delivery["Build and Delivery"]
+        cmake["CMake<br/>Shared native and web builds"]
+        desktop["Native C++ toolchains<br/>Windows, macOS, and Linux"]
+        android["Gradle + Android NDK<br/>Android APK"]
+        ios["Xcode<br/>iOS app"]
+        web["Emscripten<br/>WebAssembly browser demo"]
+        clap["CLAP SDK<br/>Desktop audio plugin"]
+        cmake --> desktop
+        cmake --> android
+        cmake --> ios
+        cmake --> web
+        cmake --> clap
+    end
+
+    subgraph quality["Testing and CI/CD"]
+        nativeTests["Custom C++ test framework + CTest<br/>GoogleTest for plugin tests"]
+        browserTests["Playwright + Node.js<br/>Browser end-to-end tests"]
+        ci["GitHub Actions<br/>Builds, tests, and releases"]
+        pages["GitHub Pages<br/>Website and web demo hosting"]
+        ci --> nativeTests
+        ci --> browserTests
+        ci --> cmake
+        ci --> pages
+    end
+
+    core --> imgui
+    core --> backends
+    core --> fft
+    core --> neural
+    core --> midi
+    core --> json
+    core --> wav
+    core -. built with .-> cmake
+```
