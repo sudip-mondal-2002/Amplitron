@@ -3,8 +3,7 @@
 // Preamp and tone-stack models for classic guitar amplifier voicings.
 // Signal model: y = L * sat(G * H_tone{x}, mix, asymmetry), where H_tone is
 // a low-shelf + peaking-mid + high-shelf biquad cascade. The factory models
-// cover Clean American / Fender Twin, British Crunch / Marshall JCM800,
-// High Gain Modern / Mesa Rectifier, and Jazz Warm / Roland JC-120. Dynamic
+// cover Clean American, British Crunch, High Gain Modern, and Jazz Warm. Dynamic
 // sag follows an envelope e[n] = a*x_abs[n] + (1-a)*e[n-1] and reduces gain
 // as the simulated supply is loaded.
 
@@ -22,7 +21,7 @@ namespace Amplitron {
  */
 struct AmpModel {
     const char* name;         ///< Display name (e.g. "Clean American")
-    const char* inspiration;  ///< Real-world amp inspiration
+    const char* inspiration;  ///< Generic tonal inspiration
     const char* description;  ///< Short tonal description
 
     // --- Tone stack (3-band biquad EQ) ---
@@ -63,9 +62,27 @@ const std::vector<AmpModel>& get_amp_models();
  */
 class AmpSimulator : public Effect {
    public:
+    /**
+     * @brief Creates the amp simulator with factory parameters and default coefficients.
+     */
     AmpSimulator();
+
+    /**
+     * @brief Processes a mono audio buffer through the selected amp model.
+     * @param buffer Interleaved-free mono sample buffer to transform in place.
+     * @param num_samples Number of samples available in buffer.
+     */
     void process(float* buffer, int num_samples) override;
+
+    /**
+     * @brief Updates the processing sample rate and refreshes tone-stack coefficients.
+     * @param sample_rate New sample rate in Hz.
+     */
     void set_sample_rate(int sample_rate) override;
+
+    /**
+     * @brief Clears filter, envelope, and smoothing state before playback resumes.
+     */
     void reset() override;
     const char* name() const override { return "Amp Sim"; }
     const char* type_id() const override { return "Amp Sim"; }
@@ -100,6 +117,9 @@ class AmpSimulator : public Effect {
     float cached_treble_ = -999.0f;
     float cached_gain_ = -999.0f;
 
+    /**
+     * @brief Rebuilds tone-stack filter coefficients after model or trim changes.
+     */
     void recompute_coefficients_if_dirty();
 };
 

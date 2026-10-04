@@ -1,7 +1,7 @@
 {
   "format_version": 1,
   "name": "Classic Rock Crunch",
-  "description": "Warm, mid-focused driven rock tone. Excellent for classic rock rhythm playing or blues solos. Uses the JCM800 emulation.",
+  "description": "Warm, mid-focused driven rock tone. Excellent for classic rock rhythm playing or blues solos. Uses a British 800-style crunch voice.",
   "saved_at": "2026-03-27T12:00:00",
   "input_gain": 0.8,
   "output_gain": 0.8,

@@ -1,7 +1,7 @@
 {
   "format_version": 1,
   "name": "Modern Metal Lead",
-  "description": "High-gain, tight tracking lead tone for fast picking and heavy breakdowns. Uses the Mesa Boogie emulation and hard-clipping.",
+  "description": "High-gain, tight tracking lead tone for fast picking and heavy breakdowns. Uses a modern high-gain stack voice and hard-clipping.",
   "saved_at": "2026-03-27T12:00:00",
   "input_gain": 0.85,
   "output_gain": 0.8,
