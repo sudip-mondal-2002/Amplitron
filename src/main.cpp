@@ -280,7 +280,51 @@ extern "C" EMSCRIPTEN_KEEPALIVE bool trigger_delete_last_node() {
     return false;  // No deletable node found
 }
 
-#endif
+// =========================================================================
+// Audio Visualizer Bridge Functions
+// =========================================================================
+
+/**
+ * @brief Enable or disable the real-time audio analyzer capture.
+ * @param enabled 1 to enable, 0 to disable.
+ *
+ * Called from JavaScript when the visualizer panel is opened/closed.
+ * The analyzer must be enabled for snapshot data to be available.
+ */
+extern "C" EMSCRIPTEN_KEEPALIVE void enable_analyzer(int enabled) {
+    if (!g_engine_ptr) return;
+    g_engine_ptr->set_analyzer_enabled(enabled != 0);
+}
+
+/**
+ * @brief Get the current analyzer sequence counter.
+ * @return uint64_t sequence number (0 if no analyzer data available).
+ *
+ * Called from JavaScript to check if new FFT snapshots are available.
+ */
+extern "C" EMSCRIPTEN_KEEPALIVE uint64_t get_analyzer_sequence() {
+    if (!g_engine_ptr) return 0;
+    return g_engine_ptr->get_analyzer_sequence();
+}
+
+/**
+ * @brief Copy the latest pre/post-chain analyzer snapshots into caller-provided buffers.
+ * @param input_dest_ptr  Pointer to a Float32Array in WASM heap for pre-chain samples.
+ * @param output_dest_ptr Pointer to a Float32Array in WASM heap for post-chain samples.
+ * @param sample_count    Number of float samples to copy (clamped to ANALYZER_FFT_SIZE).
+ * @return int Number of samples actually copied (0 if no snapshot available).
+ *
+ * Called from JavaScript via ccall to retrieve time-domain audio data for visualization.
+ */
+extern "C" EMSCRIPTEN_KEEPALIVE int copy_analyzer_snapshot(float* input_dest_ptr,
+                                                           float* output_dest_ptr,
+                                                           int sample_count) {
+    if (!g_engine_ptr || !input_dest_ptr || !output_dest_ptr || sample_count <= 0) return 0;
+    bool ok = g_engine_ptr->copy_analyzer_snapshot(input_dest_ptr, output_dest_ptr, sample_count);
+    return ok ? sample_count : 0;
+}
+
+#endif  // __EMSCRIPTEN__
 
 void signal_handler(int /*signal*/) { g_running = false; }
 
