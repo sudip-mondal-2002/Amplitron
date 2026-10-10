@@ -58,6 +58,7 @@ class GuiManager {
     void shutdown();
     bool run_frame();
     void force_rebuild_pedal_widgets();
+    void show_toast(const std::string& message);
 
     IMidiManager& midi_manager() { return midi_manager_; }
     IAudioEngine& audio_engine() { return engine_; }
